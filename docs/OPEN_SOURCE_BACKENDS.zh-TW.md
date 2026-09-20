@@ -2,7 +2,7 @@
 
 本文件取代先前的引擎採用方案。**使用者提供自己的模型；本 repo 參考 faster-whisper 與 sherpa-onnx 的語音處理思路，實作可對接自有模型的應用層。** 文件沿用原路徑，以維持既有連結有效。
 
-不指定這兩個套件、預訓練模型、Python、ONNX、CTranslate2、GPU 或部署位置。以下為規劃，尚未實作；引擎特有功能不視為自有模型已支援的能力。
+不指定這兩個套件、預訓練模型、Python、ONNX、CTranslate2、GPU 或部署位置。應用端已實作 WebSocket 傳輸、frame 序號、樣本位移、2 MB 背壓及字幕 revision；引擎特有功能不視為自有模型已支援的能力。
 
 ## 1. 參考內容與實際整合範圍
 
@@ -53,7 +53,7 @@
 - 收音與推論分開：音源只擷取一次，錄音保留完整時間軸；VAD 不能刪掉原始錄音的靜音。
 - 模型格式依契約設定：sampleRate、channels、PCM 位元深度／浮點格式或壓縮容器。實際重採樣，不只改標籤。
 - 分塊長度可設定：以模型要求及傳輸效率決定，不先硬編碼 16 kHz 或固定 chunk 大小。
-- 每塊記錄 sequence、startSample、frameCount 與 streamId。來源時鐘及模型輸入時鐘透過 offset／採樣率映射。
+- 每塊記錄 sequence、startSample、frameCount 與 streamId，並先傳 JSON header、後傳 Float32LE 二進位 payload。來源時鐘及模型輸入時鐘透過 offset／採樣率映射。
 - 切段保留前後緩衝與長句上限。裁切後時間戳需還原到錄音時間軸。
 - 限制佇列與在途請求；延遲過高時顯示狀態，超限標記缺口。補送要依模型去重／續傳能力決定。
 - 暫停、切換音源及停止均有 flush／reset 語意；切換前後結果不得混入同一串流狀態。

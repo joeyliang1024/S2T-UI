@@ -2,11 +2,19 @@
 
 ## 已實作的 WebSocket 第一版
 
-在設定頁填入 `ws://` 或 `wss://` 端點後，應用會建立 `WebSocketModelAdapter`。它會先傳送下列 JSON，再持續傳送單聲道、原生位元組序的 `Float32Array` 二進位訊框：
+在設定頁填入 `ws://` 或 `wss://` 端點後，應用會建立 `WebSocketModelAdapter`。它會先傳送下列 JSON：
 
 ```json
-{"type":"start","audioFormat":"f32le","channels":1,"sampleRate":48000,"language":"zh-TW","targetLanguage":"en"}
+{"type":"start","streamId":"uuid","audioFormat":"f32le","channels":1,"sampleRate":48000,"language":"zh-TW","targetLanguage":"en"}
 ```
+
+接著每個音訊 frame 都嚴格依序傳送一個 JSON header，再傳送一個單聲道、little-endian `Float32Array` 二進位訊框：
+
+```json
+{"type":"audio","streamId":"uuid","sequence":0,"startSample":0,"frameCount":4096}
+```
+
+`sequence` 用來偵測遺失／重複 frame，`startSample` 讓後端將結果映射回原始錄音時間軸；不得只憑接收時間猜測字幕時間。遇到 WebSocket 在途資料超過 2 MB 時，應用會暫停送入新 frame，以避免無限累積記憶體；後端應記錄 sequence 缺口並將其反映為可辨識的錯誤或時間缺口。
 
 停止時會傳送 `{"type":"stop"}`。伺服器可持續回傳以下 JSON；`id` 相同且 `revision` 較高的事件會取代先前字幕：
 
@@ -14,7 +22,7 @@
 {"type":"transcript","id":"seg-1","revision":1,"status":"final","startMs":0,"endMs":1320,"sourceText":"你好","translatedText":"Hello"}
 ```
 
-這是應用端的暫定整合協定，並非 Breeze TTS 2 的介面。你的 STT／翻譯服務只要實作此協定，即可直接顯示即時字幕。
+這是應用端的暫定整合協定，並非 Breeze TTS 2 的介面。你的 ASR gateway 應將 ASR 與翻譯模型的回應統一成 `transcript` 事件；若翻譯稍後完成，使用相同 `id` 與更高 `revision` 重送事件，並填入 `translatedText`。如此應用不需要知道兩種模型各自的 API。
 
 ## Breeze-ASR-26
 

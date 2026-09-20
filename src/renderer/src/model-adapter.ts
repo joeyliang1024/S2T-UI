@@ -49,6 +49,8 @@ type WireTranscript = {
 export class WebSocketModelAdapter implements ModelAdapter {
   private socket: WebSocket | null = null
   private listeners = new Set<(event: TranscriptEvent) => void>()
+  private sequence = 0
+  private streamId = ''
 
   constructor(private readonly endpoint: string) {}
 
@@ -63,8 +65,10 @@ export class WebSocketModelAdapter implements ModelAdapter {
       socket.onopen = () => {
         window.clearTimeout(timeout)
         this.socket = socket
+        this.sequence = 0
+        this.streamId = crypto.randomUUID()
         socket.send(JSON.stringify({
-          type: 'start', audioFormat: 'f32le', channels: 1,
+          type: 'start', streamId: this.streamId, audioFormat: 'f32le', channels: 1,
           sampleRate: input.sampleRate, language: input.language, targetLanguage: input.targetLanguage
         }))
         resolve()
@@ -78,9 +82,13 @@ export class WebSocketModelAdapter implements ModelAdapter {
     })
   }
 
-  pushAudio(chunk: Float32Array, _startSample: number): void {
+  pushAudio(chunk: Float32Array, startSample: number): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return
     if (this.socket.bufferedAmount > 2 * 1024 * 1024) return
+    this.socket.send(JSON.stringify({
+      type: 'audio', streamId: this.streamId, sequence: this.sequence++,
+      startSample, frameCount: chunk.length
+    }))
     const bytes = chunk.slice().buffer
     this.socket.send(bytes)
   }
