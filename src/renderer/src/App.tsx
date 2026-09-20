@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
-import { NoopModelAdapter, type TranscriptEvent } from './model-adapter'
+import { NoopModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
 import { synthesizeBreezeTts } from './breeze-tts'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
@@ -169,7 +169,8 @@ export default function App(): ReactElement {
   const pauseStartedAtRef = useRef<number | null>(null)
   const meterFrameRef = useRef<number | null>(null)
   const timerRef = useRef<number | null>(null)
-  const modelRef = useRef(new NoopModelAdapter())
+  const modelRef = useRef<ModelAdapter>(new NoopModelAdapter())
+  const unsubscribeModelRef = useRef<(() => void) | null>(null)
   const sampleOffsetRef = useRef(0)
   const activeDeviceIdRef = useRef('default')
 
@@ -193,7 +194,7 @@ export default function App(): ReactElement {
     return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
   }, [refreshDevices])
 
-  useEffect(() => modelRef.current.onTranscript((event) => {
+  const receiveTranscript = useCallback((event: TranscriptEvent): void => {
     setTranscripts((current) => {
       const existing = current.findIndex((entry) => entry.id === event.id)
       if (existing < 0) return [...current, event].sort((a, b) => a.startMs - b.startMs)
@@ -201,7 +202,12 @@ export default function App(): ReactElement {
       if (event.revision >= next[existing].revision) next[existing] = event
       return next
     })
-  }), [])
+  }, [])
+
+  useEffect(() => {
+    unsubscribeModelRef.current = modelRef.current.onTranscript(receiveTranscript)
+    return () => unsubscribeModelRef.current?.()
+  }, [receiveTranscript])
 
   useEffect(() => {
     if (!isFloatingCaptionWindow) return
@@ -328,6 +334,12 @@ export default function App(): ReactElement {
       streamRef.current = stream
       await refreshDevices()
 
+      unsubscribeModelRef.current?.()
+      modelRef.current = settings.modelEndpoint.trim()
+        ? new WebSocketModelAdapter(settings.modelEndpoint.trim())
+        : new NoopModelAdapter()
+      unsubscribeModelRef.current = modelRef.current.onTranscript(receiveTranscript)
+
       const context = new AudioContext()
       const analyser = context.createAnalyser()
       analyser.fftSize = 2048
@@ -367,7 +379,7 @@ export default function App(): ReactElement {
       setElapsedMs(0)
       timerRef.current = window.setInterval(() => setElapsedMs(Date.now() - startAtRef.current - pausedDurationRef.current), 250)
       setCaptureState('recording')
-      setStatus('收音中。模型尚未接入，字幕會在模型適配器完成後顯示。')
+      setStatus(settings.modelEndpoint.trim() ? '收音中，正在接收模型字幕。' : '收音中。模型尚未接入，字幕會在模型適配器完成後顯示。')
     } catch (error) {
       cleanUpCapture()
       setStatus(error instanceof Error ? `無法開始收音：${error.message}` : '無法開始收音')
