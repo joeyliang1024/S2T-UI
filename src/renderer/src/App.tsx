@@ -18,10 +18,12 @@ type SavedSession = {
 type Settings = {
   sourceLanguage: string
   targetLanguage: string
-  modelEndpoint: string
+  modelProfiles: ModelProfile[]
+  selectedModelId: string
   ttsEndpoint: string
   ttsInstruction: string
 }
+type ModelProfile = { id: string; name: string; endpoint: string; kind: 'websocket' }
 
 const sessionsKey = 's2t-ui.sessions.v1'
 const settingsKey = 's2t-ui.settings.v1'
@@ -55,6 +57,16 @@ const loadJson = <T,>(key: string, fallback: T): T => {
     return fallback
   }
 }
+
+const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', kind: 'websocket' }
+const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => ({
+  sourceLanguage: value.sourceLanguage ?? 'zh-TW',
+  targetLanguage: value.targetLanguage ?? 'en',
+  modelProfiles: value.modelProfiles?.length ? value.modelProfiles : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
+  selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
+  ttsEndpoint: value.ttsEndpoint ?? 'http://127.0.0.1:7860/v1/audio/speech',
+  ttsInstruction: value.ttsInstruction ?? ''
+})
 
 const browserDownload = (blob: Blob, filename: string): void => {
   const url = URL.createObjectURL(blob)
@@ -138,10 +150,7 @@ export default function App(): ReactElement {
   const [status, setStatus] = useState('準備就緒')
   const [view, setView] = useState<View>('live')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadJson<SavedSession[]>(sessionsKey, []))
-  const [settings, setSettings] = useState<Settings>(() => loadJson<Settings>(settingsKey, {
-    sourceLanguage: 'zh-TW', targetLanguage: 'en', modelEndpoint: '',
-    ttsEndpoint: 'http://127.0.0.1:7860/v1/audio/speech', ttsInstruction: ''
-  }))
+  const [settings, setSettings] = useState<Settings>(() => normalizeSettings(loadJson<Partial<Settings> & { modelEndpoint?: string }>(settingsKey, {})))
   const [importedFile, setImportedFile] = useState<File | null>(null)
   const [importError, setImportError] = useState('')
   const [settingsSaved, setSettingsSaved] = useState(false)
@@ -151,6 +160,7 @@ export default function App(): ReactElement {
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
   const [ttsText, setTtsText] = useState('這是 S2T UI 的 Breeze TTS 測試。')
   const [ttsStatus, setTtsStatus] = useState('')
+  const [newModelName, setNewModelName] = useState('')
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
@@ -173,6 +183,7 @@ export default function App(): ReactElement {
   const unsubscribeModelRef = useRef<(() => void) | null>(null)
   const sampleOffsetRef = useRef(0)
   const activeDeviceIdRef = useRef('default')
+  const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
 
   const refreshDevices = useCallback(async () => {
     const found = await navigator.mediaDevices.enumerateDevices()
@@ -335,8 +346,8 @@ export default function App(): ReactElement {
       await refreshDevices()
 
       unsubscribeModelRef.current?.()
-      modelRef.current = settings.modelEndpoint.trim()
-        ? new WebSocketModelAdapter(settings.modelEndpoint.trim())
+      modelRef.current = selectedModel.endpoint.trim()
+        ? new WebSocketModelAdapter(selectedModel.endpoint.trim())
         : new NoopModelAdapter()
       unsubscribeModelRef.current = modelRef.current.onTranscript(receiveTranscript)
 
@@ -379,7 +390,7 @@ export default function App(): ReactElement {
       setElapsedMs(0)
       timerRef.current = window.setInterval(() => setElapsedMs(Date.now() - startAtRef.current - pausedDurationRef.current), 250)
       setCaptureState('recording')
-      setStatus(settings.modelEndpoint.trim() ? '收音中，正在接收模型字幕。' : '收音中。模型尚未接入，字幕會在模型適配器完成後顯示。')
+      setStatus(selectedModel.endpoint.trim() ? `收音中，正在接收「${selectedModel.name}」字幕。` : '收音中。模型尚未接入，字幕會在模型適配器完成後顯示。')
     } catch (error) {
       cleanUpCapture()
       setStatus(error instanceof Error ? `無法開始收音：${error.message}` : '無法開始收音')
@@ -484,6 +495,26 @@ export default function App(): ReactElement {
   const saveSettings = (): void => {
     setSettingsSaved(true)
     window.setTimeout(() => setSettingsSaved(false), 2400)
+  }
+
+  const addModelProfile = (): void => {
+    const name = newModelName.trim()
+    if (!name) {
+      setStatus('請輸入模型名稱。')
+      return
+    }
+    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: '', kind: 'websocket' }
+    setSettings((current) => ({ ...current, modelProfiles: [...current.modelProfiles, profile], selectedModelId: profile.id }))
+    setNewModelName('')
+  }
+
+  const updateSelectedModel = (update: Partial<ModelProfile>): void => {
+    setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.map((profile) => profile.id === current.selectedModelId ? { ...profile, ...update } : profile) }))
+  }
+
+  const removeSelectedModel = (): void => {
+    if (selectedModel.id === 'none') return
+    setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.filter((profile) => profile.id !== current.selectedModelId), selectedModelId: 'none' }))
   }
 
   const toggleFloatingCaptions = (): void => {
@@ -653,8 +684,14 @@ export default function App(): ReactElement {
       <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>轉錄與模型設定</h2></div></div>
       <label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option></select></label>
       <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label>
-      <label>自有模型端點<input type="url" placeholder="例如 wss://model.example.com/stream" value={settings.modelEndpoint} onChange={(event) => setSettings((current) => ({ ...current, modelEndpoint: event.target.value }))} /></label>
-      <p className="hint">端點設定只保存在此裝置。實際傳輸協定與認證方式將在 ModelAdapter 串接時依你的模型介面實作。</p>
+      <div className="model-settings">
+        <p className="eyebrow">字幕／翻譯模型</p>
+        <label>目前模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+        <label>模型名稱<input value={selectedModel.name} disabled={selectedModel.id === 'none'} onChange={(event) => updateSelectedModel({ name: event.target.value })} /></label>
+        <label>WebSocket 端點<input type="url" placeholder="wss://model.example.com/stream" disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
+        <p className="hint">模型必須符合 [ModelAdapter](docs/MODEL_ADAPTER.md) 的音訊 frame 協定，並由你的 gateway 合併 ASR 與翻譯回應。</p>
+        <div className="model-actions"><input value={newModelName} placeholder="新模型名稱" onChange={(event) => setNewModelName(event.target.value)} /><button className="secondary" onClick={addModelProfile}>新增模型</button>{selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}</div>
+      </div>
       <div className="tts-settings">
         <p className="eyebrow">BREEZE TTS 2</p>
         <label>API 位址<input type="url" value={settings.ttsEndpoint} onChange={(event) => setSettings((current) => ({ ...current, ttsEndpoint: event.target.value }))} /></label>

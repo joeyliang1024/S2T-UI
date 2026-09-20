@@ -17,6 +17,8 @@
 
 - [x] 實作自有模型的 WebSocket `ModelAdapter` 第一版：連線、音訊送入、字幕事件與關閉流程；認證待模型規格確認。
 - [x] 定義並實作第一版音訊契約：單聲道 `f32le`、實際 AudioContext 取樣率、4096 sample frame、`streamId`／`sequence`／`startSample`／`frameCount` header、2 MB WebSocket 背壓上限。
+- [x] 支援模型設定檔：使用者可新增、選擇、編輯與刪除符合 WebSocket 協定的 ASR／翻譯 gateway。
+- [ ] 擴充使用者自訂模型：API Token 的安全保存、連線測試、模型能力宣告（ASR／翻譯／partial／時間戳）與非 WebSocket Adapter。
 - [ ] 將 Breeze-ASR-26 部署於自有服務並以 WebSocket 協定實機驗證；本專案依需求不使用 Python。
 - [ ] 接收並呈現 partial、final、revision 字幕及其時間戳。
 - [ ] 接收或請求翻譯字幕，處理原文與譯文對齊。
