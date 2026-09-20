@@ -138,10 +138,21 @@ const makeWav = (chunks: Float32Array[], sampleRate: number): Blob => {
   return new Blob([buffer], { type: 'audio/wav' })
 }
 
+const pcm16 = (samples: Float32Array): ArrayBuffer => {
+  const buffer = new ArrayBuffer(samples.length * 2)
+  const view = new DataView(buffer)
+  samples.forEach((sample, index) => {
+    const normalized = Math.max(-1, Math.min(1, sample))
+    view.setInt16(index * 2, normalized < 0 ? normalized * 0x8000 : normalized * 0x7fff, true)
+  })
+  return buffer
+}
+
 export default function App(): ReactElement {
   const isFloatingCaptionWindow = window.location.hash === '#floating'
   const [devices, setDevices] = useState<AudioDevice[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('default')
+  const [includeSystemAudio, setIncludeSystemAudio] = useState(false)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
   const [level, setLevel] = useState(-60)
   const [peak, setPeak] = useState(-60)
@@ -167,12 +178,15 @@ export default function App(): ReactElement {
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const systemStreamRef = useRef<MediaStream | null>(null)
+  const systemSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
   const silentGainRef = useRef<GainNode | null>(null)
   const recordingDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const pcmChunksRef = useRef<Float32Array[]>([])
+  const electronRecordingIdRef = useRef<string | null>(null)
   const sampleRateRef = useRef(48_000)
   const pausedRef = useRef(false)
   const playbackUrlRef = useRef<string | null>(null)
@@ -248,8 +262,12 @@ export default function App(): ReactElement {
     timerRef.current = null
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
+    systemStreamRef.current?.getTracks().forEach((track) => track.stop())
+    systemStreamRef.current = null
     sourceRef.current?.disconnect()
     sourceRef.current = null
+    systemSourceRef.current?.disconnect()
+    systemSourceRef.current = null
     void contextRef.current?.close()
     contextRef.current = null
     analyserRef.current = null
@@ -303,6 +321,23 @@ export default function App(): ReactElement {
       }, { once: true })
     })
   }, [refreshDevices])
+
+  const attachSystemAudio = useCallback((stream: MediaStream, context: AudioContext): void => {
+    if (stream.getAudioTracks().length === 0) throw new Error('選取的分享來源沒有提供系統音訊')
+    const analyser = analyserRef.current
+    const processor = processorRef.current
+    const recordingDestination = recordingDestinationRef.current
+    if (!analyser || !processor || !recordingDestination) throw new Error('音訊管線尚未就緒')
+    const source = context.createMediaStreamSource(stream)
+    source.connect(analyser)
+    source.connect(processor)
+    source.connect(recordingDestination)
+    systemSourceRef.current = source
+    systemStreamRef.current = stream
+    stream.getAudioTracks().forEach((track) => track.addEventListener('ended', () => {
+      setStatus('系統音訊分享已結束；麥克風收音會繼續。')
+    }, { once: true }))
+  }, [])
 
   const switchInput = useCallback(async (nextDeviceId: string): Promise<void> => {
     const context = contextRef.current
@@ -364,7 +399,9 @@ export default function App(): ReactElement {
       processor.onaudioprocess = (event) => {
         const samples = event.inputBuffer.getChannelData(0).slice()
         if (pausedRef.current) return
-        pcmChunksRef.current.push(samples)
+        const recordingId = electronRecordingIdRef.current
+        if (recordingId && window.s2t) window.s2t.appendPcm(recordingId, pcm16(samples))
+        else pcmChunksRef.current.push(samples)
         modelRef.current.pushAudio(samples, sampleOffsetRef.current)
         sampleOffsetRef.current += samples.length
       }
@@ -375,11 +412,16 @@ export default function App(): ReactElement {
       processorRef.current = processor
       silentGainRef.current = silentGain
       recordingDestinationRef.current = recordingDestination
-      attachInput(stream, context)
-      meterFrameRef.current = requestAnimationFrame(updateMeter)
-
       pcmChunksRef.current = []
       sampleRateRef.current = context.sampleRate
+      electronRecordingIdRef.current = window.s2t ? (await window.s2t.startPcmRecording(context.sampleRate)).id : null
+      attachInput(stream, context)
+      if (includeSystemAudio) {
+        setStatus('請在系統分享視窗中選擇音源並啟用分享音訊…')
+        const systemStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
+        attachSystemAudio(systemStream, context)
+      }
+      meterFrameRef.current = requestAnimationFrame(updateMeter)
       pausedRef.current = false
       const recorder = new MediaRecorder(recordingDestination.stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined })
       recorderRef.current = recorder
@@ -392,8 +434,11 @@ export default function App(): ReactElement {
       setElapsedMs(0)
       timerRef.current = window.setInterval(() => setElapsedMs(Date.now() - startAtRef.current - pausedDurationRef.current), 250)
       setCaptureState('recording')
-      setStatus(selectedModel.endpoint.trim() ? `收音中，正在接收「${selectedModel.name}」字幕。` : '收音中。模型尚未接入，字幕會在模型適配器完成後顯示。')
+      const sourceDescription = includeSystemAudio ? '麥克風與系統音訊混音中' : '收音中'
+      setStatus(selectedModel.endpoint.trim() ? `${sourceDescription}，正在接收「${selectedModel.name}」字幕。` : `${sourceDescription}。模型尚未接入，字幕會在模型適配器完成後顯示。`)
     } catch (error) {
+      if (electronRecordingIdRef.current) void window.s2t?.abortPcmRecording(electronRecordingIdRef.current)
+      electronRecordingIdRef.current = null
       cleanUpCapture()
       setStatus(error instanceof Error ? `無法開始收音：${error.message}` : '無法開始收音')
     }
@@ -429,28 +474,33 @@ export default function App(): ReactElement {
     })
     try {
       await modelRef.current.stop()
-      const blob = makeWav(pcmChunksRef.current, sampleRateRef.current)
+      const recordingId = electronRecordingIdRef.current
+      const recordingPath = recordingId && window.s2t ? (await window.s2t.finishPcmRecording(recordingId)).audioPath : undefined
+      electronRecordingIdRef.current = null
+      const blob = recordingPath ? undefined : makeWav(pcmChunksRef.current, sampleRateRef.current)
       const finalSegments = transcripts.filter((entry) => entry.status === 'final')
       const transcript = makeTranscriptText(finalSegments)
       const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
       const sessionId = crypto.randomUUID()
       const createdAt = new Date().toISOString()
-      const source = selectedDeviceId === 'default' ? '系統預設麥克風' : (devices.find((device) => device.deviceId === selectedDeviceId)?.label ?? '已選擇的音源')
+      const microphoneName = selectedDeviceId === 'default' ? '系統預設麥克風' : (devices.find((device) => device.deviceId === selectedDeviceId)?.label ?? '已選擇的音源')
+      const source = includeSystemAudio ? `${microphoneName} + 系統音訊` : microphoneName
 
       if (window.s2t) {
-        const result = await window.s2t.saveSession({ name, audio: await blob.arrayBuffer(), transcript, createdAt, durationMs: elapsedMs, source, segments: finalSegments })
+        const result = await window.s2t.saveSession({ name, audio: blob ? await blob.arrayBuffer() : undefined, recordingPath, transcript, createdAt, durationMs: elapsedMs, source, segments: finalSegments })
         if (result.canceled) {
           setStatus('已取消儲存')
           return
         }
         setStatus(`已儲存錄音與逐字稿：${result.audioPath}`)
       } else {
+        if (!blob) throw new Error('瀏覽器模式沒有可下載的音訊')
         browserDownload(blob, `${name}.wav`)
         browserDownload(new Blob([transcript], { type: 'text/plain;charset=utf-8' }), `${name}.txt`)
         setStatus('已下載錄音與逐字稿')
       }
       try {
-        await saveRecording(sessionId, blob)
+        if (blob) await saveRecording(sessionId, blob)
       } catch {
         setStatus('已儲存錄音與逐字稿；此瀏覽器無法保存歷史音檔。')
       }
@@ -470,6 +520,7 @@ export default function App(): ReactElement {
       cleanUpCapture()
       recorderRef.current = null
       pcmChunksRef.current = []
+      electronRecordingIdRef.current = null
       setCaptureState('idle')
       setLevel(-60)
       setPeak(-60)
@@ -477,9 +528,11 @@ export default function App(): ReactElement {
   }
 
   const forceReleaseCapture = (): void => {
+    if (electronRecordingIdRef.current) void window.s2t?.abortPcmRecording(electronRecordingIdRef.current)
     cleanUpCapture()
     recorderRef.current = null
     pcmChunksRef.current = []
+    electronRecordingIdRef.current = null
     pausedRef.current = false
     setCaptureState('idle')
     setLevel(-60)
@@ -631,6 +684,7 @@ export default function App(): ReactElement {
             {devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}
           </select>
         </label>
+        <label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} />混入系統音訊<span>開始後請在分享視窗啟用音訊</span></label>
         <button className="secondary" onClick={() => void refreshDevices()} disabled={captureState === 'saving'}>重新整理裝置</button>
         <div className="meter" aria-label={`目前音量 ${level.toFixed(0)} dBFS`}>
           <div className="meter-label"><span>輸入音量</span><strong>{level.toFixed(0)} dBFS</strong></div>

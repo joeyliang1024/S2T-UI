@@ -13,9 +13,12 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 h1 { font-size: clamp(1.75rem, 4vw, 2.6rem); margin: 0; }
 .status { max-width: 440px; color: #b8c0d0; line-height: 1.45; font-size: .9rem; text-align: right; }
 .status.active { color: #b5ffcf; }
-.capture-panel { display: grid; grid-template-columns: minmax(180px, 1fr) auto minmax(280px, 1.6fr) auto; gap: 16px; align-items: end; background: #1a2130; border: 1px solid #28344a; border-radius: 14px; padding: 18px; }
+.capture-panel { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, auto) auto minmax(280px, 1.6fr) auto; gap: 16px; align-items: end; background: #1a2130; border: 1px solid #28344a; border-radius: 14px; padding: 18px; }
 label { display: grid; gap: 8px; color: #abb7cc; font-size: .84rem; font-weight: 700; }
 select { background: #101723; color: #eef2fa; border: 1px solid #3a4963; border-radius: 8px; min-height: 42px; padding: 0 10px; }
+.system-audio-option { align-content: end; gap: 5px; grid-template-columns: auto 1fr; max-width: 190px; min-height: 42px; }
+.system-audio-option input { accent-color: #83a7ff; margin: 0; }
+.system-audio-option span { color: #8795ae; font-size: .73rem; font-weight: 500; grid-column: 2; line-height: 1.3; }
 .secondary { color: #dbe5f8; background: #2a3548; }
 .primary { background: #6c91ff; color: #06112a; }
 .danger { background: #ef6c75; color: #2d050b; }
