@@ -651,7 +651,7 @@ export default function App(): ReactElement {
   ) : (
     <section className="page-panel settings-panel">
       <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>轉錄與模型設定</h2></div></div>
-      <label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option></select></label>
+      <label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option></select></label>
       <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label>
       <label>自有模型端點<input type="url" placeholder="例如 wss://model.example.com/stream" value={settings.modelEndpoint} onChange={(event) => setSettings((current) => ({ ...current, modelEndpoint: event.target.value }))} /></label>
       <p className="hint">端點設定只保存在此裝置。實際傳輸協定與認證方式將在 ModelAdapter 串接時依你的模型介面實作。</p>

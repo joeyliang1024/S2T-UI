@@ -17,6 +17,7 @@
 
 - [x] 實作自有模型的 WebSocket `ModelAdapter` 第一版：連線、音訊送入、字幕事件與關閉流程；認證待模型規格確認。
 - [x] 定義第一版音訊契約：單聲道 `f32le`、實際 AudioContext 取樣率、4096 sample frame、2 MB WebSocket 背壓上限。
+- [x] 提供 Breeze-ASR-26 本機 WebSocket bridge：8 秒分段 ASR、字幕時間戳與可設定模型識別碼。
 - [ ] 接收並呈現 partial、final、revision 字幕及其時間戳。
 - [ ] 接收或請求翻譯字幕，處理原文與譯文對齊。
 - [ ] 將匯入檔案送到模型的離線／批次轉錄流程。

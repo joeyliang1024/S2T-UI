@@ -16,6 +16,10 @@
 
 這是應用端的暫定整合協定，並非 Breeze TTS 2 的介面。你的 STT／翻譯服務只要實作此協定，即可直接顯示即時字幕。
 
+## Breeze-ASR-26 橋接服務
+
+專案提供 [橋接服務](../services/breeze-asr/README.md)，可將 `MediaTek-Research/Breeze-ASR-26` 接到上述協定。該模型是台語 ASR，並以中文漢字輸出；它不提供翻譯，也不是文字轉語音模型。啟動後，設定端點為 `ws://127.0.0.1:8000/stream`。
+
 Electron 應用已透過 `src/renderer/src/model-adapter.ts` 將收音與字幕 UI 分離。整合自有模型時，實作 `ModelAdapter` 並替換 `NoopModelAdapter` 即可；收音、音量、錄音、逐字稿版本控制與匯出不需要重寫。
 
 模型適配器在 `start()` 收到音訊採樣率、來源語言及目標語言。收音期間，`pushAudio()` 會收到單聲道 Float32 PCM 分塊與從會議開始累積的樣本位移。模型需要其他格式時，在適配器中重採樣、量化或封裝，不要修改錄音分支。
