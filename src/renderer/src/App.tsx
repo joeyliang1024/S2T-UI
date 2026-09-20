@@ -49,6 +49,38 @@ const browserDownload = (blob: Blob, filename: string): void => {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
+const makeWav = (chunks: Float32Array[], sampleRate: number): Blob => {
+  const sampleCount = chunks.reduce((total, chunk) => total + chunk.length, 0)
+  const bytesPerSample = 2
+  const buffer = new ArrayBuffer(44 + sampleCount * bytesPerSample)
+  const view = new DataView(buffer)
+  const writeText = (offset: number, value: string): void => {
+    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index))
+  }
+  writeText(0, 'RIFF')
+  view.setUint32(4, 36 + sampleCount * bytesPerSample, true)
+  writeText(8, 'WAVE')
+  writeText(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * bytesPerSample, true)
+  view.setUint16(32, bytesPerSample, true)
+  view.setUint16(34, 16, true)
+  writeText(36, 'data')
+  view.setUint32(40, sampleCount * bytesPerSample, true)
+  let offset = 44
+  for (const chunk of chunks) {
+    for (const sample of chunk) {
+      const normalized = Math.max(-1, Math.min(1, sample))
+      view.setInt16(offset, normalized < 0 ? normalized * 0x8000 : normalized * 0x7fff, true)
+      offset += bytesPerSample
+    }
+  }
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
 export default function App(): ReactElement {
   const isFloatingCaptionWindow = window.location.hash === '#floating'
   const [devices, setDevices] = useState<AudioDevice[]>([])
@@ -78,7 +110,9 @@ export default function App(): ReactElement {
   const silentGainRef = useRef<GainNode | null>(null)
   const recordingDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+  const pcmChunksRef = useRef<Float32Array[]>([])
+  const sampleRateRef = useRef(48_000)
+  const pausedRef = useRef(false)
   const startAtRef = useRef(0)
   const pausedDurationRef = useRef(0)
   const pauseStartedAtRef = useRef<number | null>(null)
@@ -250,6 +284,8 @@ export default function App(): ReactElement {
       sampleOffsetRef.current = 0
       processor.onaudioprocess = (event) => {
         const samples = event.inputBuffer.getChannelData(0).slice()
+        if (pausedRef.current) return
+        pcmChunksRef.current.push(samples)
         modelRef.current.pushAudio(samples, sampleOffsetRef.current)
         sampleOffsetRef.current += samples.length
       }
@@ -263,11 +299,10 @@ export default function App(): ReactElement {
       attachInput(stream, context)
       meterFrameRef.current = requestAnimationFrame(updateMeter)
 
-      chunksRef.current = []
+      pcmChunksRef.current = []
+      sampleRateRef.current = context.sampleRate
+      pausedRef.current = false
       const recorder = new MediaRecorder(recordingDestination.stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined })
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data)
-      }
       recorderRef.current = recorder
       recorder.start(1000)
       await modelRef.current.start({ sampleRate: context.sampleRate, language: settings.sourceLanguage, targetLanguage: settings.targetLanguage })
@@ -290,11 +325,13 @@ export default function App(): ReactElement {
     if (!recorder) return
     if (captureState === 'recording') {
       recorder.pause()
+      pausedRef.current = true
       pauseStartedAtRef.current = Date.now()
       setCaptureState('paused')
       setStatus('已暫停')
     } else if (captureState === 'paused') {
       recorder.resume()
+      pausedRef.current = false
       if (pauseStartedAtRef.current) pausedDurationRef.current += Date.now() - pauseStartedAtRef.current
       pauseStartedAtRef.current = null
       setCaptureState('recording')
@@ -313,7 +350,7 @@ export default function App(): ReactElement {
     })
     try {
       await modelRef.current.stop()
-      const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+      const blob = makeWav(pcmChunksRef.current, sampleRateRef.current)
       const transcript = transcripts
         .filter((entry) => entry.status === 'final')
         .map((entry) => `[${timestamp(entry.startMs)}] ${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`)
@@ -324,7 +361,7 @@ export default function App(): ReactElement {
         const result = await window.s2t.saveSession({ name, audio: await blob.arrayBuffer(), transcript })
         setStatus(result.canceled ? '已取消儲存' : `已儲存錄音與逐字稿：${result.audioPath}`)
       } else {
-        browserDownload(blob, `${name}.webm`)
+        browserDownload(blob, `${name}.wav`)
         browserDownload(new Blob([transcript], { type: 'text/plain;charset=utf-8' }), `${name}.txt`)
         setStatus('已下載錄音與逐字稿')
       }
@@ -341,6 +378,7 @@ export default function App(): ReactElement {
     } finally {
       cleanUpCapture()
       recorderRef.current = null
+      pcmChunksRef.current = []
       setCaptureState('idle')
       setLevel(-60)
       setPeak(-60)
@@ -350,6 +388,8 @@ export default function App(): ReactElement {
   const forceReleaseCapture = (): void => {
     cleanUpCapture()
     recorderRef.current = null
+    pcmChunksRef.current = []
+    pausedRef.current = false
     setCaptureState('idle')
     setLevel(-60)
     setPeak(-60)

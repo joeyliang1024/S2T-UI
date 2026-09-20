@@ -69,13 +69,13 @@ app.whenReady().then(() => {
   ipcMain.handle('session:save', async (_event, input: { name: string; audio: ArrayBuffer; transcript: string }) => {
     const result = await dialog.showSaveDialog({
       title: '儲存錄音',
-      defaultPath: `${input.name || 'recording'}.webm`,
-      filters: [{ name: 'WebM audio', extensions: ['webm'] }]
+      defaultPath: `${input.name || 'recording'}.wav`,
+      filters: [{ name: 'WAV audio', extensions: ['wav'] }]
     })
     if (result.canceled || !result.filePath) return { canceled: true }
 
     await writeFile(result.filePath, Buffer.from(input.audio))
-    await writeFile(result.filePath.replace(/\.webm$/i, '.txt'), input.transcript, 'utf8')
+    await writeFile(result.filePath.replace(/\.wav$/i, '.txt'), input.transcript, 'utf8')
     return { canceled: false, audioPath: result.filePath }
   })
 
