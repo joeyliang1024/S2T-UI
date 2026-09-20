@@ -35,6 +35,13 @@ article time { color: #8795ae; font-variant-numeric: tabular-nums; font-size: .8
 article p { font-size: 1.1rem; line-height: 1.55; margin: 0; }
 article.partial { opacity: .7; }
 article .translation { color: #9fc1ff; grid-column: 2; }
+.transcript-tools { align-items: center; display: flex; gap: 10px; justify-content: space-between; padding-bottom: 10px; }
+.transcript-tools input, .transcript-edit textarea { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; font: inherit; padding: 9px 10px; }
+.transcript-tools input { min-height: 38px; width: min(360px, 78%); }
+.transcript-tools span { color: #9daac0; font-size: .84rem; }
+.transcript-edit { display: grid; gap: 8px; }
+.transcript-edit textarea { min-height: 72px; resize: vertical; width: 100%; }
+.edit-button { background: transparent; color: #9fc1ff; font-size: .78rem; grid-column: 2; justify-self: start; padding: 2px 0; }
 .export-bar { align-items: center; border-top: 1px solid #28344a; color: #9daac0; display: flex; gap: 8px; padding: 16px 0 96px; }
 .text-button { background: #202b3d; color: #cfdaed; font-size: .78rem; padding: 7px 10px; }
 .page-panel { background: #171e2b; border: 1px solid #28344a; border-radius: 14px; min-height: 480px; padding: 26px; }

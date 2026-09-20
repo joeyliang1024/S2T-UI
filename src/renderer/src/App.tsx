@@ -161,6 +161,8 @@ export default function App(): ReactElement {
   const [ttsText, setTtsText] = useState('這是 S2T UI 的 Breeze TTS 測試。')
   const [ttsStatus, setTtsStatus] = useState('')
   const [newModelName, setNewModelName] = useState('')
+  const [transcriptSearch, setTranscriptSearch] = useState('')
+  const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
@@ -494,6 +496,12 @@ export default function App(): ReactElement {
     setStatus(`已下載 ${format.toUpperCase()} 字幕檔`)
   }
 
+  const updateTranscript = (id: string, sourceText: string, translatedText: string): void => {
+    setTranscripts((current) => current.map((entry) => entry.id === id
+      ? { ...entry, sourceText, translatedText: translatedText || undefined, revision: entry.revision + 1, status: 'final' }
+      : entry))
+  }
+
   const saveSettings = (): void => {
     setSettingsSaved(true)
     window.setTimeout(() => setSettingsSaved(false), 2400)
@@ -634,13 +642,12 @@ export default function App(): ReactElement {
       <section className="transcript" aria-live="polite">
         {transcripts.length === 0 ? (
           <div className="empty"><h2>等待語音</h2><p>開始收音後，原文與翻譯會顯示在這裡。</p></div>
-        ) : transcripts.map((entry) => (
+        ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
           <article key={entry.id} className={entry.status}>
             <time>{timestamp(entry.startMs)}</time>
-            <p>{entry.sourceText}</p>
-            {entry.translatedText && <p className="translation">{entry.translatedText}</p>}
+            {editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
           </article>
-        ))}
+        ))}</>}
       </section>
 
       <div className="export-bar">
