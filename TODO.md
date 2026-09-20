@@ -5,7 +5,7 @@
 ## 下一輪：不依賴模型 API
 
 - [ ] 將錄音由停止後產生的記憶體 WAV 改為可持續寫入的 WAV 工作階段檔案，避免長時間錄音佔用記憶體。
-- [ ] 建立工作階段資料結構：`session.json`、音檔、`transcript.jsonl`、事件紀錄。
+- [x] 建立 Electron 工作階段資料結構：`session.json`、`audio.wav`、`transcript.txt`、`transcript.jsonl`、`events.jsonl`。
 - [x] 將歷史紀錄改為可讀取已儲存的工作階段，支援音檔播放、WAV 下載與 TXT／SRT／JSON 重新匯出。（桌面跨重啟資料夾工作階段仍在保存架構項目處理。）
 - [x] 支援裝置拔除、音軌結束後的明確錯誤提示與音源切換復原；睡眠喚醒待實機驗證。
 - [x] 補齊檔案匯入的本機驗證、格式與大小提示。

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('s2t', {
-  saveSession: (input: { name: string; audio: ArrayBuffer; transcript: string }) => ipcRenderer.invoke('session:save', input),
+  saveSession: (input: { name: string; audio: ArrayBuffer; transcript: string; createdAt: string; durationMs: number; source: string; segments: unknown[] }) => ipcRenderer.invoke('session:save', input),
   toggleFloatingCaptions: (visible: boolean) => ipcRenderer.send('captions:toggle-floating', visible),
   updateFloatingCaption: (text: string) => ipcRenderer.send('captions:update-floating', text),
   onFloatingCaption: (listener: (text: string) => void) => {

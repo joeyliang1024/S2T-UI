@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { join } from 'node:path'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
 
 let captionWindow: BrowserWindow | null = null
@@ -66,17 +66,28 @@ app.whenReady().then(() => {
     callback(permission === 'media')
   })
 
-  ipcMain.handle('session:save', async (_event, input: { name: string; audio: ArrayBuffer; transcript: string }) => {
-    const result = await dialog.showSaveDialog({
-      title: '儲存錄音',
-      defaultPath: `${input.name || 'recording'}.wav`,
-      filters: [{ name: 'WAV audio', extensions: ['wav'] }]
+  ipcMain.handle('session:save', async (_event, input: {
+    name: string; audio: ArrayBuffer; transcript: string; createdAt: string; durationMs: number; source: string; segments: unknown[]
+  }) => {
+    const result = await dialog.showOpenDialog({
+      title: '選擇工作階段保存位置',
+      properties: ['openDirectory', 'createDirectory']
     })
-    if (result.canceled || !result.filePath) return { canceled: true }
+    const parentDirectory = result.filePaths[0]
+    if (result.canceled || !parentDirectory) return { canceled: true }
 
-    await writeFile(result.filePath, Buffer.from(input.audio))
-    await writeFile(result.filePath.replace(/\.wav$/i, '.txt'), input.transcript, 'utf8')
-    return { canceled: false, audioPath: result.filePath }
+    const directory = join(parentDirectory, input.name || 'recording')
+    await mkdir(directory, { recursive: true })
+    const audioPath = join(directory, 'audio.wav')
+    await writeFile(audioPath, Buffer.from(input.audio))
+    await writeFile(join(directory, 'transcript.txt'), input.transcript, 'utf8')
+    await writeFile(join(directory, 'transcript.jsonl'), input.segments.map((segment) => JSON.stringify(segment)).join('\n') + (input.segments.length ? '\n' : ''), 'utf8')
+    await writeFile(join(directory, 'events.jsonl'), '', 'utf8')
+    await writeFile(join(directory, 'session.json'), JSON.stringify({
+      version: 1, name: input.name, createdAt: input.createdAt, durationMs: input.durationMs,
+      source: input.source, audioFile: 'audio.wav', transcriptFile: 'transcript.jsonl'
+    }, null, 2), 'utf8')
+    return { canceled: false, audioPath, directory }
   })
 
   ipcMain.on('captions:toggle-floating', (_event, visible: boolean) => {

@@ -432,9 +432,11 @@ export default function App(): ReactElement {
       const transcript = makeTranscriptText(finalSegments)
       const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
       const sessionId = crypto.randomUUID()
+      const createdAt = new Date().toISOString()
+      const source = selectedDeviceId === 'default' ? '系統預設麥克風' : (devices.find((device) => device.deviceId === selectedDeviceId)?.label ?? '已選擇的音源')
 
       if (window.s2t) {
-        const result = await window.s2t.saveSession({ name, audio: await blob.arrayBuffer(), transcript })
+        const result = await window.s2t.saveSession({ name, audio: await blob.arrayBuffer(), transcript, createdAt, durationMs: elapsedMs, source, segments: finalSegments })
         if (result.canceled) {
           setStatus('已取消儲存')
           return
@@ -453,9 +455,9 @@ export default function App(): ReactElement {
       setSessions((current) => [{
         id: sessionId,
         title: name,
-        createdAt: new Date().toISOString(),
+        createdAt,
         durationMs: elapsedMs,
-        source: selectedDeviceId === 'default' ? '系統預設麥克風' : (devices.find((device) => device.deviceId === selectedDeviceId)?.label ?? '已選擇的音源'),
+        source,
         transcript,
         audioKey: sessionId,
         segments: finalSegments
