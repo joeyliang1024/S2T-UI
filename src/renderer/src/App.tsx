@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
 import { NoopModelAdapter, type TranscriptEvent } from './model-adapter'
+import { synthesizeBreezeTts } from './breeze-tts'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
 type AudioDevice = { deviceId: string; label: string }
@@ -11,11 +12,21 @@ type SavedSession = {
   durationMs: number
   source: string
   transcript: string
+  audioKey: string
+  segments: TranscriptEvent[]
 }
-type Settings = { sourceLanguage: string; targetLanguage: string; modelEndpoint: string }
+type Settings = {
+  sourceLanguage: string
+  targetLanguage: string
+  modelEndpoint: string
+  ttsEndpoint: string
+  ttsInstruction: string
+}
 
 const sessionsKey = 's2t-ui.sessions.v1'
 const settingsKey = 's2t-ui.settings.v1'
+const recordingsDatabase = 's2t-ui.recordings.v1'
+const recordingsStore = 'audio'
 
 const dbfs = (value: number): number => (value > 0 ? Math.max(-60, 20 * Math.log10(value)) : -60)
 const timestamp = (milliseconds: number): string => {
@@ -29,6 +40,11 @@ const makeSrt = (entries: TranscriptEvent[]): string => entries
     const format = (ms: number): string => `${new Date(ms).toISOString().slice(11, 23).replace('.', ',')}`
     return `${index + 1}\n${format(entry.startMs)} --> ${format(entry.endMs)}\n${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`
   })
+  .join('\n\n')
+
+const makeTranscriptText = (entries: TranscriptEvent[]): string => entries
+  .filter((entry) => entry.status === 'final')
+  .map((entry) => `[${timestamp(entry.startMs)}] ${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`)
   .join('\n\n')
 
 const loadJson = <T,>(key: string, fallback: T): T => {
@@ -47,6 +63,35 @@ const browserDownload = (blob: Blob, filename: string): void => {
   anchor.download = filename
   anchor.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+const openRecordingsDatabase = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
+  const request = indexedDB.open(recordingsDatabase, 1)
+  request.onupgradeneeded = () => request.result.createObjectStore(recordingsStore)
+  request.onsuccess = () => resolve(request.result)
+  request.onerror = () => reject(request.error)
+})
+
+const saveRecording = async (key: string, audio: Blob): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(recordingsStore, 'readwrite')
+    transaction.objectStore(recordingsStore).put(audio, key)
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
+}
+
+const loadRecording = async (key: string): Promise<Blob | undefined> => {
+  const database = await openRecordingsDatabase()
+  const audio = await new Promise<Blob | undefined>((resolve, reject) => {
+    const request = database.transaction(recordingsStore, 'readonly').objectStore(recordingsStore).get(key)
+    request.onsuccess = () => resolve(request.result as Blob | undefined)
+    request.onerror = () => reject(request.error)
+  })
+  database.close()
+  return audio
 }
 
 const makeWav = (chunks: Float32Array[], sampleRate: number): Blob => {
@@ -94,13 +139,18 @@ export default function App(): ReactElement {
   const [view, setView] = useState<View>('live')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadJson<SavedSession[]>(sessionsKey, []))
   const [settings, setSettings] = useState<Settings>(() => loadJson<Settings>(settingsKey, {
-    sourceLanguage: 'zh-TW', targetLanguage: 'en', modelEndpoint: ''
+    sourceLanguage: 'zh-TW', targetLanguage: 'en', modelEndpoint: '',
+    ttsEndpoint: 'http://127.0.0.1:7860/v1/audio/speech', ttsInstruction: ''
   }))
   const [importedFile, setImportedFile] = useState<File | null>(null)
   const [importError, setImportError] = useState('')
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [floatingCaptions, setFloatingCaptions] = useState(false)
   const [floatingCaptionText, setFloatingCaptionText] = useState('等待字幕')
+  const [playingSessionId, setPlayingSessionId] = useState<string | null>(null)
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
+  const [ttsText, setTtsText] = useState('這是 S2T UI 的 Breeze TTS 測試。')
+  const [ttsStatus, setTtsStatus] = useState('')
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
@@ -113,6 +163,7 @@ export default function App(): ReactElement {
   const pcmChunksRef = useRef<Float32Array[]>([])
   const sampleRateRef = useRef(48_000)
   const pausedRef = useRef(false)
+  const playbackUrlRef = useRef<string | null>(null)
   const startAtRef = useRef(0)
   const pausedDurationRef = useRef(0)
   const pauseStartedAtRef = useRef<number | null>(null)
@@ -191,7 +242,10 @@ export default function App(): ReactElement {
     recordingDestinationRef.current = null
   }, [])
 
-  useEffect(() => cleanUpCapture, [cleanUpCapture])
+  useEffect(() => () => {
+    cleanUpCapture()
+    if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current)
+  }, [cleanUpCapture])
 
   const updateMeter = useCallback(() => {
     const analyser = analyserRef.current
@@ -351,27 +405,37 @@ export default function App(): ReactElement {
     try {
       await modelRef.current.stop()
       const blob = makeWav(pcmChunksRef.current, sampleRateRef.current)
-      const transcript = transcripts
-        .filter((entry) => entry.status === 'final')
-        .map((entry) => `[${timestamp(entry.startMs)}] ${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`)
-        .join('\n\n')
+      const finalSegments = transcripts.filter((entry) => entry.status === 'final')
+      const transcript = makeTranscriptText(finalSegments)
       const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
+      const sessionId = crypto.randomUUID()
 
       if (window.s2t) {
         const result = await window.s2t.saveSession({ name, audio: await blob.arrayBuffer(), transcript })
-        setStatus(result.canceled ? '已取消儲存' : `已儲存錄音與逐字稿：${result.audioPath}`)
+        if (result.canceled) {
+          setStatus('已取消儲存')
+          return
+        }
+        setStatus(`已儲存錄音與逐字稿：${result.audioPath}`)
       } else {
         browserDownload(blob, `${name}.wav`)
         browserDownload(new Blob([transcript], { type: 'text/plain;charset=utf-8' }), `${name}.txt`)
         setStatus('已下載錄音與逐字稿')
       }
+      try {
+        await saveRecording(sessionId, blob)
+      } catch {
+        setStatus('已儲存錄音與逐字稿；此瀏覽器無法保存歷史音檔。')
+      }
       setSessions((current) => [{
-        id: crypto.randomUUID(),
+        id: sessionId,
         title: name,
         createdAt: new Date().toISOString(),
         durationMs: elapsedMs,
         source: selectedDeviceId === 'default' ? '系統預設麥克風' : (devices.find((device) => device.deviceId === selectedDeviceId)?.label ?? '已選擇的音源'),
-        transcript
+        transcript,
+        audioKey: sessionId,
+        segments: finalSegments
       }, ...current])
     } catch (error) {
       setStatus(error instanceof Error ? `儲存失敗：${error.message}` : '儲存失敗')
@@ -400,7 +464,7 @@ export default function App(): ReactElement {
     const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
     const content = format === 'srt' ? makeSrt(transcripts) : format === 'json'
       ? JSON.stringify(transcripts.filter((entry) => entry.status === 'final'), null, 2)
-      : transcripts.filter((entry) => entry.status === 'final').map((entry) => `[${timestamp(entry.startMs)}] ${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`).join('\n\n')
+      : makeTranscriptText(transcripts)
     browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' }), `${name}.${format}`)
     setStatus(`已下載 ${format.toUpperCase()} 字幕檔`)
   }
@@ -436,6 +500,69 @@ export default function App(): ReactElement {
       return
     }
     setImportedFile(file)
+  }
+
+  const playSession = async (entry: SavedSession): Promise<void> => {
+    try {
+      const audio = await loadRecording(entry.audioKey)
+      if (!audio) {
+        setStatus('找不到此記錄的本機音檔。')
+        return
+      }
+      if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current)
+      const url = URL.createObjectURL(audio)
+      playbackUrlRef.current = url
+      setPlaybackUrl(url)
+      setPlayingSessionId(entry.id)
+      setStatus(`正在準備播放：${entry.title}`)
+    } catch {
+      setStatus('無法讀取此記錄的音檔。')
+    }
+  }
+
+  const exportSavedTranscript = (entry: SavedSession, format: 'txt' | 'srt' | 'json'): void => {
+    const segments = entry.segments ?? []
+    const content = format === 'txt' ? entry.transcript : format === 'srt'
+      ? makeSrt(segments)
+      : JSON.stringify(segments, null, 2)
+    if (format !== 'txt' && segments.length === 0) {
+      setStatus('此舊記錄沒有時間軸資料，僅能匯出 TXT。')
+      return
+    }
+    browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' }), `${entry.title}.${format}`)
+    setStatus(`已匯出 ${format.toUpperCase()} 逐字稿`)
+  }
+
+  const downloadSessionAudio = async (entry: SavedSession): Promise<void> => {
+    try {
+      const audio = await loadRecording(entry.audioKey)
+      if (!audio) throw new Error('找不到本機音檔')
+      browserDownload(audio, `${entry.title}.wav`)
+      setStatus('已下載 WAV 錄音')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '無法下載錄音')
+    }
+  }
+
+  const testBreezeTts = async (): Promise<void> => {
+    if (!settings.ttsEndpoint.trim() || !ttsText.trim()) {
+      setTtsStatus('請輸入 Breeze API 位址與要朗讀的文字。')
+      return
+    }
+    setTtsStatus('正在請求 Breeze TTS…')
+    try {
+      const audio = await synthesizeBreezeTts({
+        endpoint: settings.ttsEndpoint.trim(), text: ttsText.trim(), instruction: settings.ttsInstruction, cfgScale: 4
+      })
+      if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current)
+      const url = URL.createObjectURL(audio)
+      playbackUrlRef.current = url
+      setPlaybackUrl(url)
+      setPlayingSessionId('breeze-test')
+      setTtsStatus('Breeze TTS 已產生音訊。')
+    } catch (error) {
+      setTtsStatus(error instanceof Error ? `Breeze TTS 失敗：${error.message}` : 'Breeze TTS 失敗。')
+    }
   }
 
   const canRecord = captureState === 'idle'
@@ -499,7 +626,7 @@ export default function App(): ReactElement {
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><span>{sessions.length} 筆</span></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
-        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}</p></div><button className="secondary" onClick={() => { navigator.clipboard.writeText(entry.transcript).then(() => setStatus('已複製逐字稿')).catch(() => setStatus('無法複製逐字稿')) }}>複製逐字稿</button></article>)}</div>
+        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions"><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => { navigator.clipboard.writeText(entry.transcript).then(() => setStatus('已複製逐字稿')).catch(() => setStatus('無法複製逐字稿')) }}>複製逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'txt')}>TXT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button></div></article>)}</div>
       )}
     </section>
   ) : view === 'import' ? (
@@ -516,6 +643,15 @@ export default function App(): ReactElement {
       <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label>
       <label>自有模型端點<input type="url" placeholder="例如 wss://model.example.com/stream" value={settings.modelEndpoint} onChange={(event) => setSettings((current) => ({ ...current, modelEndpoint: event.target.value }))} /></label>
       <p className="hint">端點設定只保存在此裝置。實際傳輸協定與認證方式將在 ModelAdapter 串接時依你的模型介面實作。</p>
+      <div className="tts-settings">
+        <p className="eyebrow">BREEZE TTS 2</p>
+        <label>API 位址<input type="url" value={settings.ttsEndpoint} onChange={(event) => setSettings((current) => ({ ...current, ttsEndpoint: event.target.value }))} /></label>
+        <label>語音指令（選填）<input value={settings.ttsInstruction} placeholder="例如：以清晰、平穩的中文語氣朗讀" onChange={(event) => setSettings((current) => ({ ...current, ttsInstruction: event.target.value }))} /></label>
+        <label>測試文字<textarea value={ttsText} onChange={(event) => setTtsText(event.target.value)} /></label>
+        <button className="secondary" onClick={() => void testBreezeTts()}>測試並播放 Breeze TTS</button>
+        {ttsStatus && <p className="hint">{ttsStatus}</p>}
+        {playingSessionId === 'breeze-test' && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}
+      </div>
       <button className="primary" onClick={saveSettings}>儲存設定</button>{settingsSaved && <span className="saved">已儲存</span>}
     </section>
   )

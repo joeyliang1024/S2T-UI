@@ -45,6 +45,8 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .session-item { align-items: center; background: #111824; border: 1px solid #2b374c; border-radius: 10px; display: flex; justify-content: space-between; padding: 15px; }
 .session-item strong { color: #edf2fb; }
 .session-item p { color: #9daac0; font-size: .85rem; margin: 5px 0 0; }
+.session-item audio { display: block; margin-top: 12px; max-width: 100%; }
+.session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .drop-zone { align-content: center; border: 2px dashed #3d5275; border-radius: 12px; color: #abb7cc; cursor: pointer; display: grid; gap: 8px; justify-items: center; min-height: 240px; padding: 24px; text-align: center; }
 .drop-zone:hover { background: #1b2638; border-color: #83a7ff; }
 .drop-zone input { height: 1px; overflow: hidden; position: absolute; width: 1px; }
@@ -58,6 +60,10 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .settings-panel label { color: #abb7cc; max-width: 600px; }
 .settings-panel input { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; min-height: 42px; padding: 0 10px; }
 .settings-panel .hint { margin: 0; max-width: 700px; }
+.tts-settings { border-top: 1px solid #2a3548; display: grid; gap: 14px; margin-top: 8px; max-width: 700px; padding-top: 20px; }
+.tts-settings .eyebrow { margin: 0; }
+.tts-settings textarea { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; font: inherit; min-height: 76px; padding: 10px; resize: vertical; }
+.tts-settings audio { max-width: 100%; }
 .saved { color: #8be0aa; font-size: .9rem; margin-left: 10px; }
 footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; display: flex; gap: 12px; justify-content: center; left: 0; padding: 28px; position: fixed; right: 0; }
 .floating-caption { align-items: center; background: rgba(9, 13, 22, .86); border: 1px solid rgba(154, 184, 255, .72); border-radius: 14px; display: flex; justify-content: center; margin: 0; min-height: 100vh; padding: 20px 28px; text-align: center; }
