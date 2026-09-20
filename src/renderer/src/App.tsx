@@ -50,6 +50,7 @@ const browserDownload = (blob: Blob, filename: string): void => {
 }
 
 export default function App(): ReactElement {
+  const isFloatingCaptionWindow = window.location.hash === '#floating'
   const [devices, setDevices] = useState<AudioDevice[]>([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('default')
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
@@ -64,7 +65,10 @@ export default function App(): ReactElement {
     sourceLanguage: 'zh-TW', targetLanguage: 'en', modelEndpoint: ''
   }))
   const [importedFile, setImportedFile] = useState<File | null>(null)
+  const [importError, setImportError] = useState('')
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [floatingCaptions, setFloatingCaptions] = useState(false)
+  const [floatingCaptionText, setFloatingCaptionText] = useState('等待字幕')
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
@@ -93,9 +97,15 @@ export default function App(): ReactElement {
   }, [])
 
   useEffect(() => {
+    const onDeviceChange = (): void => {
+      void refreshDevices()
+      if (streamRef.current?.getAudioTracks().some((track) => track.readyState === 'ended')) {
+        setStatus('目前音源已移除。請選擇其他音源，錄音會持續寫入。')
+      }
+    }
     void refreshDevices()
-    navigator.mediaDevices.addEventListener('devicechange', refreshDevices)
-    return () => navigator.mediaDevices.removeEventListener('devicechange', refreshDevices)
+    navigator.mediaDevices.addEventListener('devicechange', onDeviceChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
   }, [refreshDevices])
 
   useEffect(() => modelRef.current.onTranscript((event) => {
@@ -107,6 +117,17 @@ export default function App(): ReactElement {
       return next
     })
   }), [])
+
+  useEffect(() => {
+    if (!isFloatingCaptionWindow) return
+    return window.s2t?.onFloatingCaption(setFloatingCaptionText)
+  }, [isFloatingCaptionWindow])
+
+  useEffect(() => {
+    if (isFloatingCaptionWindow || !floatingCaptions) return
+    const latest = [...transcripts].reverse().find((entry) => entry.sourceText.trim())
+    window.s2t?.updateFloatingCaption(latest ? `${latest.sourceText}${latest.translatedText ? `\n${latest.translatedText}` : ''}` : '等待字幕')
+  }, [floatingCaptions, isFloatingCaptionWindow, transcripts])
 
   useEffect(() => {
     window.localStorage.setItem(sessionsKey, JSON.stringify(sessions))
@@ -166,7 +187,15 @@ export default function App(): ReactElement {
     source.connect(recordingDestination)
     sourceRef.current = source
     streamRef.current = stream
-  }, [])
+    stream.getAudioTracks().forEach((track) => {
+      track.addEventListener('ended', () => {
+        if (streamRef.current === stream) {
+          setStatus('目前音源已中斷。請從音源選單切換至可用裝置。')
+          void refreshDevices()
+        }
+      }, { once: true })
+    })
+  }, [refreshDevices])
 
   const switchInput = useCallback(async (nextDeviceId: string): Promise<void> => {
     const context = contextRef.current
@@ -341,6 +370,34 @@ export default function App(): ReactElement {
     window.setTimeout(() => setSettingsSaved(false), 2400)
   }
 
+  const toggleFloatingCaptions = (): void => {
+    const next = !floatingCaptions
+    setFloatingCaptions(next)
+    window.s2t?.toggleFloatingCaptions(next)
+    setStatus(next ? '已開啟浮動字幕窗' : '已隱藏浮動字幕窗')
+  }
+
+  const selectImportFile = (file: File | null): void => {
+    setImportedFile(null)
+    setImportError('')
+    if (!file) return
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    const acceptedExtensions = new Set(['wav', 'mp3', 'm4a', 'aac', 'ogg', 'webm', 'flac', 'mp4', 'mov'])
+    if (!acceptedExtensions.has(extension ?? '')) {
+      setImportError('不支援此檔案格式。請選擇 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4 或 MOV。')
+      return
+    }
+    if (file.size === 0) {
+      setImportError('無法匯入空白檔案。')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024 * 1024) {
+      setImportError('檔案超過 2 GB，目前版本無法安全處理。')
+      return
+    }
+    setImportedFile(file)
+  }
+
   const canRecord = captureState === 'idle'
   const isActive = captureState === 'recording' || captureState === 'paused'
 
@@ -379,6 +436,7 @@ export default function App(): ReactElement {
         <button className="text-button" onClick={() => exportTranscript('txt')}>TXT</button>
         <button className="text-button" onClick={() => exportTranscript('srt')}>SRT</button>
         <button className="text-button" onClick={() => exportTranscript('json')}>JSON</button>
+        {window.s2t && <button className="text-button" onClick={toggleFloatingCaptions}>{floatingCaptions ? '隱藏浮動字幕' : '浮動字幕'}</button>}
       </div>
       <footer>
         {canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : (
@@ -407,7 +465,8 @@ export default function App(): ReactElement {
   ) : view === 'import' ? (
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">IMPORT</p><h2>匯入音訊或影片</h2></div></div>
-      <label className="drop-zone"><input type="file" accept="audio/*,video/mp4,video/quicktime" onChange={(event) => setImportedFile(event.target.files?.[0] ?? null)} /><strong>選擇檔案</strong><span>支援瀏覽器可讀取的音訊與 MP4／MOV 影片</span></label>
+      <label className="drop-zone"><input type="file" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,.flac,.mp4,.mov" onChange={(event) => selectImportFile(event.target.files?.[0] ?? null)} /><strong>選擇檔案</strong><span>支援 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV，最大 2 GB</span></label>
+      {importError && <p className="import-error" role="alert">{importError}</p>}
       {importedFile && <div className="import-result"><strong>{importedFile.name}</strong><span>{(importedFile.size / 1024 / 1024).toFixed(1)} MB · {importedFile.type || '未知格式'}</span><p>檔案已可供自有模型適配器提交。模型端點尚未設定前，不會上傳或處理檔案。</p></div>}
     </section>
   ) : (
@@ -420,6 +479,10 @@ export default function App(): ReactElement {
       <button className="primary" onClick={saveSettings}>儲存設定</button>{settingsSaved && <span className="saved">已儲存</span>}
     </section>
   )
+
+  if (isFloatingCaptionWindow) {
+    return <main className="floating-caption" aria-live="polite"><p>{floatingCaptionText}</p></main>
+  }
 
   return (
     <main>

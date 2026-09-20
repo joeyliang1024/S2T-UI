@@ -52,6 +52,7 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .import-result { background: #111824; border: 1px solid #2b374c; border-radius: 10px; display: grid; gap: 7px; margin-top: 18px; padding: 18px; }
 .import-result span, .hint { color: #9daac0; font-size: .9rem; line-height: 1.55; }
 .import-result p { color: #c0ccdf; margin: 0; }
+.import-error { background: #3c2029; border: 1px solid #9d4756; border-radius: 10px; color: #ffc0c6; margin: 18px 0 0; padding: 13px 15px; }
 .settings-panel { display: grid; align-content: start; gap: 18px; }
 .settings-panel .page-title { margin-bottom: 2px; }
 .settings-panel label { color: #abb7cc; max-width: 600px; }
@@ -59,4 +60,6 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .settings-panel .hint { margin: 0; max-width: 700px; }
 .saved { color: #8be0aa; font-size: .9rem; margin-left: 10px; }
 footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; display: flex; gap: 12px; justify-content: center; left: 0; padding: 28px; position: fixed; right: 0; }
+.floating-caption { align-items: center; background: rgba(9, 13, 22, .86); border: 1px solid rgba(154, 184, 255, .72); border-radius: 14px; display: flex; justify-content: center; margin: 0; min-height: 100vh; padding: 20px 28px; text-align: center; }
+.floating-caption p { color: #f2f5ff; font-size: clamp(1.1rem, 2.5vw, 2rem); font-weight: 750; line-height: 1.45; margin: 0; text-shadow: 0 2px 7px #000; white-space: pre-line; }
 @media (max-width: 820px) { .capture-panel { grid-template-columns: 1fr 1fr; } .meter { grid-column: 1 / -1; } header { flex-direction: column; } .status { text-align: left; } .session-item { align-items: flex-start; flex-direction: column; gap: 12px; } nav { overflow-x: auto; } }
