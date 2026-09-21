@@ -297,11 +297,16 @@ export default function App(): ReactElement {
   }, [settings])
 
   useEffect(() => {
-    if (!window.s2t) return
-    void window.s2t.getEnvironmentAsr().then((environment) => {
-      if (!environment.configured) return
+    const browserEnvironment = {
+      endpoint: import.meta.env.VITE_S2T_ASR_ENDPOINT ?? '',
+      model: import.meta.env.VITE_S2T_ASR_MODEL ?? '',
+      configured: Boolean(import.meta.env.VITE_S2T_ASR_ENDPOINT && import.meta.env.VITE_S2T_ASR_MODEL)
+    }
+    const environmentRequest = window.s2t ? window.s2t.getEnvironmentAsr() : Promise.resolve(browserEnvironment)
+    void environmentRequest.then((environment) => {
+      if (!environment.endpoint || !environment.model) return
       setSettings((current) => {
-        const profile = { id: 'environment-asr', name: environment.model, endpoint: environment.endpoint, model: environment.model, kind: 'openai-http' as const }
+        const profile = { id: 'environment-asr', name: `${environment.model}（環境設定）`, endpoint: environment.endpoint, model: environment.model, kind: 'openai-http' as const }
         const profiles = current.modelProfiles.some((item) => item.id === profile.id)
           ? current.modelProfiles.map((item) => item.id === profile.id ? profile : item)
           : [...current.modelProfiles, profile]
@@ -859,7 +864,7 @@ export default function App(): ReactElement {
       <label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option></select></label>
       <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label>
       <div className="model-settings">
-        <p className="eyebrow">字幕／翻譯模型</p>
+        <p className="eyebrow">ASR 語音模型</p>
         <label>目前模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
         <label>模型名稱<input value={selectedModel.name} disabled={selectedModel.id === 'none'} onChange={(event) => updateSelectedModel({ name: event.target.value })} /></label>
         <label>連線類型<select disabled={selectedModel.id === 'none'} value={selectedModel.kind} onChange={(event) => updateSelectedModel({ kind: event.target.value as ModelProfile['kind'] })}><option value="websocket">WebSocket 即時 gateway</option><option value="openai-http">OpenAI 相容轉錄 API</option></select></label>

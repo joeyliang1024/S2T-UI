@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, session } from 'electron'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -6,6 +5,9 @@ import { createWriteStream, type WriteStream } from 'node:fs'
 import { copyFile, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
 import OpenAI, { toFile } from 'openai'
+import { config as loadDotenv } from 'dotenv'
+
+loadDotenv({ path: join(process.cwd(), '.env') })
 
 let captionWindow: BrowserWindow | null = null
 type PcmRecording = { path: string; stream: WriteStream; sampleRate: number; bytesWritten: number; writes: Promise<void> }
