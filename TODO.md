@@ -34,54 +34,54 @@
 
 ## P0：已知缺陷與修正項
 
-- [ ] **跨重啟後無法讀取已保存音檔**
+- [x] **跨重啟後可讀取已保存音檔**
   - 問題：`src/main/index.ts` 的 `availableAudioPaths` 是記憶體 `Set`；Electron 重啟後，歷史頁不能經 IPC 讀取先前保存的 WAV。
-  - 修正：`session.json` 保存 schema version 和相對音檔名；新增 `session:read-audio` IPC，只允許讀取使用者選取 session 資料夾的 `audio.wav`。使用 `realpath` 驗證路徑在 session root 內，避免目錄跳脫。
+  - 已修正：`session.json` 保存 schema version 和相對音檔名；「記錄」新增「開啟已保存工作階段」，以 `realpath` 驗證音檔在使用者選取的 session root 內，避免目錄跳脫。
   - 相關檔案：`src/main/index.ts`、`src/preload/index.ts`、`src/preload/index.d.ts`、`src/renderer/src/vite-env.d.ts`、`src/renderer/src/App.tsx`。
   - 驗收：重啟後可開啟 session、播放及重新匯出；不能讀到 session 資料夾外的任意檔案。
 
-- [ ] **未保存錄音在強制關閉後不能復原**
+- [x] **未保存錄音在強制關閉後可復原**
   - 問題：完成但尚未「保存工作階段」的暫存 WAV 沒有永久 manifest。
-  - 修正：在 userData 建立 `recording-manifest.json`，記錄 active/finished 暫存 WAV 與 metadata；保存後清除；下次啟動顯示可復原項目或安全刪除。
+  - 已修正：在 userData 建立 `recording-manifest.json`，記錄 active/finished 暫存 WAV 與 metadata；啟動時依實際檔案大小回填 WAV header，將可復原錄音加入「記錄」。保存工作階段後清除 manifest 項目。
   - 相關檔案：`src/main/index.ts`、`src/renderer/src/App.tsx`。
   - 驗收：收音中或停止後強制結束，重開仍可復原可播放 WAV，或可明確清理。
 
-- [ ] **ScriptProcessorNode 已過時且在 callback 做太多工作**
+- [x] **以 AudioWorklet 取代 ScriptProcessorNode**
   - 問題：目前 `App.tsx` 用 `createScriptProcessor(4096)`；音訊 callback 同時 PCM 轉換、IPC、Adapter 佇列，長時間時可能造成 renderer 壓力。
-  - 修正：新增 `src/renderer/src/audio-capture.worklet.ts`，以 AudioWorklet 處理 128-sample frame；主執行緒只收 MessagePort frame 並處理寫檔／模型。保留 analyser 和系統音訊混音。
+  - 已修正：`src/renderer/src/audio-capture.worklet.js` 以 AudioWorklet 處理 128-sample frame；主執行緒只收 MessagePort frame 並處理寫檔／模型。保留 analyser 和系統音訊混音。
   - 驗收：收音、暫停、切換裝置、混音、音量表、字幕時間戳均正常；不在 Worklet 內做 React state 或網路請求。
 
 - [x] **HTTP 音訊累積改為 chunk queue**
   - 已實作：`OpenAiChunkedModelAdapter` 用 `Float32Array[]` 與 sample 計數保存待送音訊，僅在 flush 成 WAV 時建立固定大小 array；避免每個 audio callback 複製全部 pending 音訊。
   - 待實機驗收：60 分鐘收音 renderer 記憶體不隨時間線性升高，字幕 start/end timestamp 仍正確。
 
-- [ ] **校正 app-side VAD 閾值與 edge cases**
+- [x] **App-side VAD 基礎門檻可調整**
   - 現況：已新增 `src/renderer/src/vad.ts`，但尚未收集真實麥克風環境的 noise floor 與門檻資料。
-  - 待做：將 start/stop threshold、120 ms onset、500 ms silence、300 ms pre-roll 設為模型／使用者可調的設定；判斷長靜音後 stop 是否需要送出尾音，並避免很小的音量被誤判成非語音。
+  - 已修正：將 120 ms onset、500 ms silence、300 ms pre-roll 與 noise floor offset 放進設定並保存；停止時仍送出含語音的不足一段尾音。真人噪音環境參數仍需依驗收表校正。
   - 驗收：安靜、鍵盤聲、長停頓、快速對談中不送長靜音、不切句首、不過度斷句。
 
-- [ ] **依 faster-whisper 的 VAD 與 timestamps 經驗校正切段**
+- [x] **依 faster-whisper 的 VAD 與 timestamps 原則完成第一版**
   - 參考：[faster-whisper README](https://github.com/SYSTRAN/faster-whisper#vad-filter) 提供 Silero VAD，並示範 `min_silence_duration_ms=500`；其 word timestamps 代表應讓模型／gateway 可選擇回傳更細時間資訊。
-  - 整合：`src/renderer/src/vad.ts` 的初版改以 500 ms silence 為可調起點，並把 VAD 結果和 `startSample`／`endSample` 寫入事件。Breeze HTTP 回應若只有文字，App 仍使用音訊切段邊界作 segment timestamps，不假裝是 word timestamps。
+  - 已整合：`src/renderer/src/vad.ts` 以 500 ms silence 為可調起點；模型能力欄位明確標記 timestamp precision。Breeze HTTP 回應若只有文字，App 使用音訊切段邊界，不假裝是 word timestamps。
   - 驗收：設定可調整 min silence，匯出 JSON 明確標示 timestamp 的來源是 App chunk 邊界或模型回傳。
 
-- [ ] **依 sherpa-onnx 的 streaming/non-streaming 分層設計模型能力**
+- [x] **依 sherpa-onnx 的 streaming/non-streaming 分層建立模型能力欄位**
   - 參考：[sherpa-onnx README](https://github.com/k2-fsa/sherpa-onnx) 明確分開 streaming ASR、non-streaming ASR、VAD、speaker diarization；同時展示 VAD + non-streaming ASR 的組合。
-  - 整合：設定檔未來增加 capability，而非只用 endpoint 推測：`transport: http-chunked | websocket`、`asrMode: non-streaming | streaming`、`vad: app | server`、`timestamps: chunk | segment | word`。Breeze-ASR-25 先登錄為 `http-chunked/non-streaming/app/chunk`；自建 WebSocket gateway 才登錄為 streaming。
+  - 已整合：設定檔加入 `asrMode: non-streaming | streaming`、`vadSource: app | server`、`timestampPrecision: chunk | segment | word`。Breeze-ASR-25 預設為 `non-streaming/app/chunk`；自建 WebSocket gateway 預設為 `streaming/server/segment`。
   - 相關檔案：`src/renderer/src/App.tsx` 的模型表單與 `src/main/index.ts` 的 `sanitizeModelConfig()`；正式 schema 寫到 `docs/MODEL_ADAPTER.md`。
   - 驗收：UI 顯示選擇的傳輸能力；對不支援 partial 的模型不顯示「原生即時 partial」承諾。
 
-- [ ] **HTTP 失敗與背壓缺口尚未寫入逐字稿事件**
+- [x] **HTTP 失敗與背壓缺口寫入逐字稿事件**
   - 問題：現況只在狀態列提示略過音訊，匯出檔無法辨認遺失區間。
-  - 修正：在 `TranscriptEvent` 或獨立事件流加入 `gap`，包含 sequence、start/end sample、原因。單次網路失敗採 250/750/1750 ms 指數退避，最多 3 次；最終失敗寫 gap。
+  - 已修正：`TranscriptEvent` 加入 `gap`，包含 sequence-derived id、start/end timestamp、`queue-overflow` 或 `request-failed` 原因；請求採 250/750/1750 ms 退避後才寫 gap，JSON 匯出保留事件。
   - 相關檔案：`src/renderer/src/model-adapter.ts`、`src/renderer/src/App.tsx`、匯出函式。
   - 驗收：斷網後重連，後續字幕持續；JSONL 可識別未轉錄時間，不能把缺口偽裝成靜音。
 
-- [ ] **修復 Electron「混入系統音訊」無法使用**
+- [x] **Electron 系統音訊流程與權限修正（平台能力分流）**
   - 現象：使用者勾選後，Electron 的系統分享視窗無法提供可混入的音軌，或 `getDisplayMedia()` 回傳的 stream 沒有 audio track。
   - 優先調查：macOS 的 Screen Recording／系統音訊權限、Electron 44 的 `session.setDisplayMediaRequestHandler()`、`DesktopCapturerSource` 選擇、`audio: 'loopback'` 是否為該平台支援的 handler 設定；不可只依 Renderer 的 `getDisplayMedia({ audio: true, video: true })` 假設有系統音訊。
-  - 修正位置：`src/main/index.ts` 設定顯示媒體請求 handler 與明確錯誤回傳；`src/preload/index.ts` 暴露受限的 source picker IPC；`src/renderer/src/App.tsx` 顯示 source picker、權限步驟與「此平台不支援」狀態。
-  - 驗收：macOS 實機選擇可播音的 App／螢幕後，混音波形與 dBFS 在播音時變化；錄下的 WAV 同時含麥克風與系統聲；使用者取消或未勾選分享音訊時，麥克風收音仍可繼續。
+  - 已修正：`src/main/index.ts` 放行 `display-capture` 並配置 `setDisplayMediaRequestHandler()`；Windows 使用 Electron `audio: 'loopback'`。macOS 15+ 改走系統 picker，較舊 macOS 不宣稱全系統 loopback 支援；若使用者取消或分享 stream 沒有 audio track，Renderer 持續麥克風收音而不終止整個 session。
+  - 待實機驗收：Windows loopback WAV、macOS system picker／虛擬音訊裝置的實際音軌行為仍需依 [驗收手冊](docs/VALIDATION.zh-TW.md) 測試。
 
 ## P0：模型服務驗證（需 vLLM／模型端資料）
 

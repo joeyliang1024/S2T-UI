@@ -16,6 +16,9 @@ declare global {
       abortPcmRecording: (id: string) => Promise<void>
       readAudio: (audioPath: string) => Promise<ArrayBuffer>
       saveSession: (input: { name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; segments: unknown[] }) => Promise<{ canceled: boolean; audioPath?: string; directory?: string }>
+      openSession: () => Promise<{ canceled: boolean; session?: { id: string; title: string; createdAt: string; durationMs: number; source: string; transcript: string; audioKey: string; nativeAudioPath: string; savedToDisk: boolean; segments: unknown[] } }>
+      listRecoverableRecordings: () => Promise<Array<{ id: string; path: string; audioPath: string; sampleRate: number; createdAt: string; state: 'active' | 'finished' }>>
+      discardRecoverableRecording: (id: string) => Promise<void>
       toggleFloatingCaptions: (visible: boolean) => void
       updateFloatingCaption: (text: string) => void
       onFloatingCaption: (listener: (text: string) => void) => () => void
@@ -26,13 +29,14 @@ declare global {
 interface SettingsConfig {
   sourceLanguage: string
   targetLanguage: string
-  modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }>
+  modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' } }>
   selectedModelId: string
   translationEndpoint: string
   translationModel: string
   summaryEndpoint: string
   summaryModel: string
   glossary: string
+  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
 }
 
 export {}

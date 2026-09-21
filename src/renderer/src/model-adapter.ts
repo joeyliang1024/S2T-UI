@@ -1,14 +1,17 @@
-import { EnergyVad } from './vad'
+import { EnergyVad, type VadConfig } from './vad'
 
 export type TranscriptEvent = {
   id: string
   revision: number
-  status: 'partial' | 'final'
+  status: 'partial' | 'final' | 'gap'
   startMs: number
   endMs: number
   sourceText: string
   translatedText?: string
   speaker?: string
+  /** Present only when audio could not be transcribed. Export this event so a
+   * reviewer can distinguish an ASR failure from a genuine silent interval. */
+  gapReason?: 'queue-overflow' | 'request-failed'
 }
 
 export interface ModelAdapter {
@@ -203,7 +206,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private vad: EnergyVad | null = null
   private pendingContainsSpeech = false
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; prompt?: string }) {}
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; prompt?: string; vadConfig?: VadConfig }) {}
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
     if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
@@ -218,7 +221,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.sequence = 0
     this.stopped = false
     this.queuedChunks = 0
-    this.vad = new EnergyVad(this.sampleRate)
+    this.vad = new EnergyVad(this.sampleRate, this.profile.vadConfig)
     this.pendingContainsSpeech = false
   }
 
@@ -237,7 +240,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     // Keep 300 ms of room tone before a voice onset, but avoid sending empty
     // requests while nobody is speaking.
     if (!this.pendingContainsSpeech && this.pendingSamples > maximumChunkSamples) {
-      const preRollSamples = Math.floor(this.sampleRate * 0.3)
+      const preRollSamples = Math.floor(this.sampleRate * (this.profile.vadConfig?.preRollMs ?? 300) / 1000)
       this.discardPending(this.pendingSamples - preRollSamples)
       return
     }
@@ -274,27 +277,48 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   }
 
   private enqueue(audio: Float32Array, startSample: number): void {
+    const sequence = this.sequence++
+    const startMs = Math.round(startSample / this.sampleRate * 1000)
+    const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
     if (this.queuedChunks >= this.maximumQueuedChunks) {
       this.emitError('模型處理過慢，部分即時字幕音訊已略過；完整錄音仍會保存')
+      this.emitGap(sequence, startMs, endMs, 'queue-overflow')
       return
     }
     this.queuedChunks += 1
-    const sequence = this.sequence++
     this.queued = this.queued.catch(() => undefined).then(async () => {
       const wav = wavFromFloat32(audio, this.sampleRate)
-      const response = window.s2t ? await window.s2t.transcribeAudioChunk({
-        profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
-        language: this.language, prompt: this.profile.prompt, audio: wav
-      }) : await this.transcribeThroughWebGateway(wav)
+      const response = await this.transcribeWithRetry(wav)
       const sourceText = response.text.trim()
       if (!sourceText) return
-      const startMs = Math.round(startSample / this.sampleRate * 1000)
-      const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText }
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
       this.emitError(error instanceof Error ? error.message : '模型轉錄失敗')
+      this.emitGap(sequence, startMs, endMs, 'request-failed')
     }).finally(() => { this.queuedChunks -= 1 })
+  }
+
+  private emitGap(sequence: number, startMs: number, endMs: number, gapReason: TranscriptEvent['gapReason']): void {
+    const event: TranscriptEvent = { id: `gap-${sequence}`, revision: 1, status: 'gap', startMs, endMs, sourceText: '', gapReason }
+    this.listeners.forEach((listener) => listener(event))
+  }
+
+  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string }> {
+    const delays = [0, 250, 750, 1750]
+    let lastError: unknown
+    for (const delay of delays) {
+      if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
+      try {
+        return window.s2t ? await window.s2t.transcribeAudioChunk({
+          profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
+          language: this.language, prompt: this.profile.prompt, audio
+        }) : await this.transcribeThroughWebGateway(audio)
+      } catch (error) {
+        lastError = error
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('模型轉錄失敗')
   }
 
   private emitError(message: string): void {

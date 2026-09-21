@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
+import { defaultVadConfig, type VadConfig } from './vad'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
 type AudioDevice = { deviceId: string; label: string }
@@ -26,8 +27,10 @@ type Settings = {
   summaryEndpoint: string
   summaryModel: string
   glossary: string
+  vadConfig: VadConfig
 }
-type ModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }
+type ModelCapabilities = { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' }
+type ModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: ModelCapabilities }
 
 const sessionsKey = 's2t-ui.sessions.v1'
 const settingsKey = 's2t-ui.settings.v1'
@@ -84,21 +87,24 @@ const loadJson = <T,>(key: string, fallback: T): T => {
   }
 }
 
-const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', model: '', kind: 'websocket' }
+const defaultWebSocketCapabilities: ModelCapabilities = { asrMode: 'streaming', vadSource: 'server', timestampPrecision: 'segment' }
+const defaultHttpCapabilities: ModelCapabilities = { asrMode: 'non-streaming', vadSource: 'app', timestampPrecision: 'chunk' }
+const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', model: '', kind: 'websocket', capabilities: defaultWebSocketCapabilities }
 const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => ({
   sourceLanguage: value.sourceLanguage ?? 'zh-TW',
   targetLanguage: value.targetLanguage ?? 'en',
-  modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket' })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
+  modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', capabilities: profile.capabilities ?? (profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities) })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
   translationEndpoint: value.translationEndpoint ?? '',
   translationModel: value.translationModel ?? '',
   summaryEndpoint: value.summaryEndpoint ?? '',
   summaryModel: value.summaryModel ?? '',
-  glossary: value.glossary ?? ''
+  glossary: value.glossary ?? '',
+  vadConfig: { ...defaultVadConfig, ...value.vadConfig }
 })
 const webEnvironmentProfile = (): ModelProfile | null => {
   const model = import.meta.env.VITE_S2T_ASR_MODEL ?? ''
-  return model ? { id: 'web-environment-asr', name: `${model}（Web gateway）`, endpoint: '/api/transcriptions', model, kind: 'openai-http' } : null
+  return model ? { id: 'web-environment-asr', name: `${model}（Web gateway）`, endpoint: '/api/transcriptions', model, kind: 'openai-http', capabilities: defaultHttpCapabilities } : null
 }
 const initialSettings = (): Settings => {
   const settings = normalizeSettings(loadJson<Partial<Settings> & { modelEndpoint?: string }>(settingsKey, {}))
@@ -231,7 +237,7 @@ export default function App(): ReactElement {
   const systemSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const meterAnalyserRef = useRef<AnalyserNode | null>(null)
   const meterSinkGainRef = useRef<GainNode | null>(null)
-  const processorRef = useRef<ScriptProcessorNode | null>(null)
+  const audioWorkletRef = useRef<AudioWorkletNode | null>(null)
   const silentGainRef = useRef<GainNode | null>(null)
   const recordingDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -369,10 +375,30 @@ export default function App(): ReactElement {
 
   useEffect(() => {
     if (!window.s2t) return
+    void window.s2t.listRecoverableRecordings().then((recordings) => {
+      if (!recordings.length) return
+      setSessions((current) => {
+        const known = new Set(current.map((entry) => entry.id))
+        const recovered = recordings.flatMap((entry): SavedSession[] => {
+          const id = `recovery-${entry.id}`
+          return known.has(id) ? [] : [{
+            id, title: `復原錄音 ${new Date(entry.createdAt).toLocaleString('zh-TW')}`,
+            createdAt: entry.createdAt, durationMs: 0, source: '強制關閉後復原', transcript: '', audioKey: '',
+            nativeAudioPath: entry.audioPath, savedToDisk: false, segments: []
+          }]
+        })
+        return recovered.length ? [...recovered, ...current] : current
+      })
+      setStatus('找到未保存錄音；已加入「記錄」，請播放確認後保存或下載。')
+    }).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    if (!window.s2t) return
     void window.s2t.getEnvironmentAsr().then((environment) => {
       if (!environment.endpoint || !environment.model) return
       setSettings((current) => {
-        const profile = { id: 'environment-asr', name: `${environment.model}（環境設定）`, endpoint: environment.endpoint, model: environment.model, kind: 'openai-http' as const }
+        const profile: ModelProfile = { id: 'environment-asr', name: `${environment.model}（環境設定）`, endpoint: environment.endpoint, model: environment.model, kind: 'openai-http', capabilities: defaultHttpCapabilities }
         const profiles = current.modelProfiles.some((item) => item.id === profile.id)
           ? current.modelProfiles.map((item) => item.id === profile.id ? profile : item)
           : [...current.modelProfiles, profile]
@@ -386,7 +412,7 @@ export default function App(): ReactElement {
     void fetch('/api/config').then(async (response) => {
       const payload = await response.json() as { configured?: boolean; model?: { id: string; name: string; model: string; kind: 'openai-http' } | null }
       if (!response.ok || !payload.configured || !payload.model) throw new Error('Web ASR gateway 尚未設定')
-      const profile: ModelProfile = { ...payload.model, endpoint: '/api/transcriptions' }
+      const profile: ModelProfile = { ...payload.model, endpoint: '/api/transcriptions', capabilities: defaultHttpCapabilities }
       setSettings((current) => {
         const profiles = current.modelProfiles.some((item) => item.id === profile.id)
           ? current.modelProfiles.map((item) => item.id === profile.id ? profile : item)
@@ -414,8 +440,8 @@ export default function App(): ReactElement {
     meterAnalyserRef.current = null
     meterSinkGainRef.current?.disconnect()
     meterSinkGainRef.current = null
-    processorRef.current?.disconnect()
-    processorRef.current = null
+    audioWorkletRef.current?.disconnect()
+    audioWorkletRef.current = null
     silentGainRef.current?.disconnect()
     silentGainRef.current = null
     recordingDestinationRef.current?.disconnect()
@@ -451,7 +477,7 @@ export default function App(): ReactElement {
   const attachInput = useCallback((stream: MediaStream, context: AudioContext): void => {
     const source = context.createMediaStreamSource(stream)
     const analyser = meterAnalyserRef.current
-    const processor = processorRef.current
+    const processor = audioWorkletRef.current
     const recordingDestination = recordingDestinationRef.current
     if (!analyser || !processor || !recordingDestination) throw new Error('音訊管線尚未就緒')
     source.connect(analyser)
@@ -472,7 +498,7 @@ export default function App(): ReactElement {
   const attachSystemAudio = useCallback((stream: MediaStream, context: AudioContext): void => {
     if (stream.getAudioTracks().length === 0) throw new Error('選取的分享來源沒有提供系統音訊')
     const analyser = meterAnalyserRef.current
-    const processor = processorRef.current
+    const processor = audioWorkletRef.current
     const recordingDestination = recordingDestinationRef.current
     if (!analyser || !processor || !recordingDestination) throw new Error('音訊管線尚未就緒')
     const source = context.createMediaStreamSource(stream)
@@ -520,6 +546,7 @@ export default function App(): ReactElement {
 
   const startCapture = async (): Promise<void> => {
     try {
+      let systemAudioAttached = false
       setStatus('正在要求麥克風權限…')
       const deviceId = selectedDeviceId === 'default' ? undefined : { exact: selectedDeviceId }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -532,7 +559,7 @@ export default function App(): ReactElement {
       unsubscribeModelRef.current?.()
       unsubscribeModelErrorRef.current?.()
       modelRef.current = selectedModel.kind === 'openai-http'
-        ? new OpenAiChunkedModelAdapter({ ...selectedModel, prompt: settings.glossary.trim() || undefined })
+        ? new OpenAiChunkedModelAdapter({ ...selectedModel, prompt: settings.glossary.trim() || undefined, vadConfig: settings.vadConfig })
         : selectedModel.endpoint.trim()
           ? new WebSocketModelAdapter(selectedModel.endpoint.trim())
           : new NoopModelAdapter()
@@ -542,7 +569,10 @@ export default function App(): ReactElement {
       const context = new AudioContext()
       const meterAnalyser = context.createAnalyser()
       meterAnalyser.fftSize = 1024
-      const processor = context.createScriptProcessor(4096, 1, 1)
+      await context.audioWorklet.addModule(new URL('./audio-capture.worklet.js', import.meta.url))
+      const processor = new AudioWorkletNode(context, 's2t-audio-capture', {
+        numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1, channelCountMode: 'explicit'
+      })
       const silentGain = context.createGain()
       const meterSinkGain = context.createGain()
       const recordingDestination = context.createMediaStreamDestination()
@@ -554,8 +584,8 @@ export default function App(): ReactElement {
       meterAnalyser.connect(meterSinkGain)
       meterSinkGain.connect(context.destination)
       sampleOffsetRef.current = 0
-      processor.onaudioprocess = (event) => {
-        const samples = event.inputBuffer.getChannelData(0).slice()
+      processor.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
+        const samples = new Float32Array(event.data)
         if (pausedRef.current) return
         const recordingId = electronRecordingIdRef.current
         if (recordingId && window.s2t) window.s2t.appendPcm(recordingId, pcm16(samples))
@@ -568,7 +598,7 @@ export default function App(): ReactElement {
       contextRef.current = context
       meterAnalyserRef.current = meterAnalyser
       meterSinkGainRef.current = meterSinkGain
-      processorRef.current = processor
+      audioWorkletRef.current = processor
       silentGainRef.current = silentGain
       recordingDestinationRef.current = recordingDestination
       pcmChunksRef.current = []
@@ -578,8 +608,15 @@ export default function App(): ReactElement {
       attachInput(stream, context)
       if (includeSystemAudio) {
         setStatus('請在系統分享視窗中選擇音源並啟用分享音訊…')
-        const systemStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
-        attachSystemAudio(systemStream, context)
+        try {
+          const systemStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
+          attachSystemAudio(systemStream, context)
+          systemAudioAttached = true
+        } catch (error) {
+          // Cancelling a picker or a platform that supplies no audio must not
+          // throw away an already-authorised microphone session.
+          setStatus(error instanceof Error ? `無法混入系統音訊；將繼續只收麥克風：${error.message}` : '無法混入系統音訊；將繼續只收麥克風。')
+        }
       }
       meterFrameRef.current = requestAnimationFrame(updateMeter)
       pausedRef.current = false
@@ -593,7 +630,7 @@ export default function App(): ReactElement {
       setElapsedMs(0)
       timerRef.current = window.setInterval(() => setElapsedMs(Date.now() - startAtRef.current - pausedDurationRef.current), 250)
       setCaptureState('recording')
-      const sourceDescription = includeSystemAudio ? '麥克風與系統音訊混音中' : '收音中'
+      const sourceDescription = systemAudioAttached ? '麥克風與系統音訊混音中' : '收音中'
       setStatus(selectedModel.endpoint.trim() ? `${sourceDescription}，正在接收「${selectedModel.name}」字幕。` : `${sourceDescription}。模型尚未接入，字幕會在模型適配器完成後顯示。`)
     } catch (error) {
       if (electronRecordingIdRef.current) void window.s2t?.abortPcmRecording(electronRecordingIdRef.current)
@@ -691,7 +728,7 @@ export default function App(): ReactElement {
   const exportTranscript = (format: 'txt' | 'srt' | 'json'): void => {
     const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
     const content = format === 'srt' ? makeSrt(transcripts) : format === 'json'
-      ? JSON.stringify(transcripts.filter((entry) => entry.status === 'final'), null, 2)
+      ? JSON.stringify(transcripts, null, 2)
       : makeTranscriptText(transcripts)
     browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' }), `${name}.${format}`)
     setStatus(`已下載 ${format.toUpperCase()} 字幕檔`)
@@ -722,7 +759,7 @@ export default function App(): ReactElement {
       return
     }
     const kind: ModelProfile['kind'] = newModelUsesBuiltin ? 'openai-http' : 'websocket'
-    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: modelEndpoint(rawEndpoint, kind), model, kind }
+    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: modelEndpoint(rawEndpoint, kind), model, kind, capabilities: kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities }
     try {
       if (window.s2t && newModelApiKey.trim()) await window.s2t.saveModelApiKey(profile.id, newModelApiKey.trim())
       setSettings((current) => {
@@ -871,6 +908,19 @@ export default function App(): ReactElement {
     } catch (error) { setStatus(error instanceof Error ? error.message : '保存工作階段失敗') }
   }
 
+  const openSavedSession = async (): Promise<void> => {
+    if (!window.s2t) return
+    try {
+      const result = await window.s2t.openSession()
+      if (result.canceled || !result.session) return
+      const loaded: SavedSession = { ...result.session, segments: result.session.segments as TranscriptEvent[] }
+      setSessions((current) => [loaded, ...current.filter((entry) => entry.nativeAudioPath !== loaded.nativeAudioPath)])
+      setStatus(`已開啟工作階段：${loaded.title}`)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '無法開啟工作階段')
+    }
+  }
+
   const saveTextServiceKey = async (profileId: 'translation' | 'summary', key: string, clear: () => void): Promise<void> => {
     if (!window.s2t || !key.trim()) { setStatus('請貼上 API key。'); return }
     try {
@@ -923,7 +973,7 @@ export default function App(): ReactElement {
         ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
           <article key={entry.id} className={entry.status}>
             <time>{timestamp(entry.startMs)}</time>
-            {editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
+            {entry.status === 'gap' ? <p className="transcript-gap">此時段未取得字幕：{entry.gapReason === 'queue-overflow' ? '模型處理超載' : 'ASR 請求失敗'}。完整 WAV 仍已保存。</p> : editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
           </article>
         ))}</>}
       </section>
@@ -956,7 +1006,7 @@ export default function App(): ReactElement {
 
   const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     <section className="page-panel">
-      <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><span>{sessions.length} 筆</span></div>
+      <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{sessions.length} 筆</span></div></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
         <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button></div></article>)}</div>
       )}
@@ -984,9 +1034,22 @@ export default function App(): ReactElement {
         <p className="hint model-api-kind">{selectedModel.kind === 'openai-http' ? 'OpenAI Speech-to-Text：multipart/form-data → /v1/audio/transcriptions（0.8–1.5 秒音訊片段）' : 'Realtime WebSocket：本 App 使用 docs/MODEL_ADAPTER.md 的自建 gateway 協定。'}</p>
         <label>{selectedModel.kind === 'openai-http' ? 'ASR API endpoint' : 'Realtime WebSocket endpoint'}<input type="url" placeholder={selectedModel.kind === 'openai-http' ? 'https://host.example/v1/audio/transcriptions' : 'wss://host.example/v1/realtime'} disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
         <label>ASR model ID<input placeholder="Breeze-ASR-25" disabled={selectedModel.id === 'none'} value={selectedModel.model} onChange={(event) => updateSelectedModel({ model: event.target.value })} /></label>
+        <div className="capability-fields">
+          <label>ASR 模式<select disabled={selectedModel.id === 'none'} value={selectedModel.capabilities.asrMode} onChange={(event) => updateSelectedModel({ capabilities: { ...selectedModel.capabilities, asrMode: event.target.value as ModelCapabilities['asrMode'] } })}><option value="non-streaming">Non-streaming（分段）</option><option value="streaming">Streaming（原生串流）</option></select></label>
+          <label>VAD 來源<select disabled={selectedModel.id === 'none'} value={selectedModel.capabilities.vadSource} onChange={(event) => updateSelectedModel({ capabilities: { ...selectedModel.capabilities, vadSource: event.target.value as ModelCapabilities['vadSource'] } })}><option value="app">App VAD</option><option value="server">模型／Gateway VAD</option></select></label>
+          <label>時間戳精度<select disabled={selectedModel.id === 'none'} value={selectedModel.capabilities.timestampPrecision} onChange={(event) => updateSelectedModel({ capabilities: { ...selectedModel.capabilities, timestampPrecision: event.target.value as ModelCapabilities['timestampPrecision'] } })}><option value="chunk">Chunk 邊界</option><option value="segment">Segment</option><option value="word">Word</option></select></label>
+        </div>
         {window.s2t && <div className="api-key-row"><label>ASR API key<input type="password" autoComplete="off" placeholder="貼上後會加密儲存" value={apiKeyDraft} onChange={(event) => setApiKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveApiKey()} disabled={selectedModel.id === 'none'}>儲存 API key</button></div>}
         {apiKeyStatus && <p className="hint">{apiKeyStatus}</p>}<p className="hint">{selectedModel.kind === 'openai-http' ? '收音時將 WAV 分段送到 ASR endpoint，回應文字後立即顯示字幕。' : 'Realtime 模式需要 gateway 實作音訊事件與字幕事件；API key 不會由 Renderer 放進 WebSocket query string。'}</p>
         <div className="model-actions"><input value={newModelName} placeholder="模型顯示名稱" onChange={(event) => setNewModelName(event.target.value)} /><input type="url" value={newModelEndpoint} placeholder={newModelUsesBuiltin ? 'https://host.example 或完整 ASR URL' : 'https://host.example（自動轉為 wss://…/v1/realtime）'} onChange={(event) => setNewModelEndpoint(event.target.value)} /><input value={newModelId} placeholder="model name / model ID" onChange={(event) => setNewModelId(event.target.value)} /><input type="password" autoComplete="off" value={newModelApiKey} placeholder="API key（Electron 加密保存）" onChange={(event) => setNewModelApiKey(event.target.value)} /><label className="model-transport-toggle"><input type="checkbox" checked={newModelUsesBuiltin} onChange={(event) => setNewModelUsesBuiltin(event.target.checked)} />使用內建分段轉錄</label><button className="secondary" onClick={() => void addModelProfile()}>新增並保存模型</button>{selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}</div>
+      </div>
+      <div className="text-service-settings vad-settings">
+        <p className="eyebrow">App VAD 與字幕切段</p>
+        <label>句首保留（ms）<input type="number" min="0" max="1000" value={settings.vadConfig.preRollMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, preRollMs: Number(event.target.value) || 0 } }))} /></label>
+        <label>起音持續（ms）<input type="number" min="20" max="1000" value={settings.vadConfig.minSpeechMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSpeechMs: Number(event.target.value) || defaultVadConfig.minSpeechMs } }))} /></label>
+        <label>停頓斷句（ms）<input type="number" min="100" max="5000" value={settings.vadConfig.minSilenceMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSilenceMs: Number(event.target.value) || defaultVadConfig.minSilenceMs } }))} /></label>
+        <label>噪音底線偏移（dB）<input type="number" min="3" max="30" value={settings.vadConfig.noiseFloorOffsetDb} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, noiseFloorOffsetDb: Number(event.target.value) || defaultVadConfig.noiseFloorOffsetDb } }))} /></label>
+        <p className="hint">預設值採 faster-whisper 常用的 500 ms 靜音起點；Breeze HTTP 的時間戳是 App 音訊 chunk 邊界，不是模型 word timestamps。</p>
       </div>
       <div className="text-service-settings">
         <p className="eyebrow">翻譯 API</p>

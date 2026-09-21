@@ -1,8 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, safeStorage, session } from 'electron'
-import { join } from 'node:path'
+import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
+import { basename, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { createWriteStream, type WriteStream } from 'node:fs'
-import { copyFile, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
 import OpenAI, { toFile } from 'openai'
 import { config as loadDotenv } from 'dotenv'
@@ -11,9 +11,38 @@ loadDotenv({ path: join(process.cwd(), '.env') })
 
 let captionWindow: BrowserWindow | null = null
 type PcmRecording = { path: string; stream: WriteStream; sampleRate: number; bytesWritten: number; writes: Promise<void> }
+type RecoverableRecording = { id: string; path: string; sampleRate: number; createdAt: string; state: 'active' | 'finished' }
 const pcmRecordings = new Map<string, PcmRecording>()
 const completedRecordings = new Set<string>()
 const availableAudioPaths = new Set<string>()
+
+const recoveryManifestPath = (): string => join(app.getPath('userData'), 'recording-manifest.json')
+const recoveryDirectory = (): string => join(app.getPath('userData'), 'recoverable-recordings')
+const readRecoveryManifest = async (): Promise<RecoverableRecording[]> => {
+  try {
+    const value = JSON.parse(await readFile(recoveryManifestPath(), 'utf8')) as unknown
+    return Array.isArray(value) ? value.flatMap((item): RecoverableRecording[] => {
+      if (!item || typeof item !== 'object') return []
+      const entry = item as Partial<RecoverableRecording>
+      return typeof entry.id === 'string' && typeof entry.path === 'string' && Number.isFinite(entry.sampleRate) &&
+        typeof entry.createdAt === 'string' && (entry.state === 'active' || entry.state === 'finished') ? [entry as RecoverableRecording] : []
+    }) : []
+  } catch { return [] }
+}
+const writeRecoveryManifest = async (entries: RecoverableRecording[]): Promise<void> => {
+  const file = recoveryManifestPath()
+  await mkdir(join(file, '..'), { recursive: true })
+  const temporary = `${file}.tmp`
+  await writeFile(temporary, JSON.stringify(entries, null, 2), { mode: 0o600 })
+  await rename(temporary, file)
+}
+const updateRecoveryManifest = async (update: (entries: RecoverableRecording[]) => RecoverableRecording[]): Promise<void> => {
+  await writeRecoveryManifest(update(await readRecoveryManifest()))
+}
+const pathInside = (root: string, candidate: string): boolean => {
+  const difference = relative(root, candidate)
+  return difference !== '' && difference !== '..' && !difference.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(difference)
+}
 
 const wavHeader = (sampleRate: number, dataBytes: number): Buffer => {
   const header = Buffer.alloc(44)
@@ -73,10 +102,11 @@ const environmentKey = (profileId: string): string | undefined => {
   return process.env.S2T_ASR_API_KEY
 }
 
-type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }
+type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' } }
 type StoredModelConfig = {
   sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
   translationEndpoint: string; translationModel: string; summaryEndpoint: string; summaryModel: string; glossary: string
+  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
 const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
@@ -90,13 +120,22 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     const endpoint = shortText(profile.endpoint, 2_000)
     const model = shortText(profile.model, 200)
     const kind = profile.kind === 'openai-http' ? 'openai-http' : 'websocket'
-    return id && name ? [{ id, name, endpoint, model, kind }] : []
+    const capabilityInput = profile.capabilities && typeof profile.capabilities === 'object' ? profile.capabilities as Record<string, unknown> : {}
+    const capabilities = {
+      asrMode: capabilityInput.asrMode === 'non-streaming' ? 'non-streaming' as const : 'streaming' as const,
+      vadSource: capabilityInput.vadSource === 'app' ? 'app' as const : 'server' as const,
+      timestampPrecision: capabilityInput.timestampPrecision === 'word' ? 'word' as const : capabilityInput.timestampPrecision === 'segment' ? 'segment' as const : 'chunk' as const
+    }
+    return id && name ? [{ id, name, endpoint, model, kind, capabilities }] : []
   }).slice(0, 30) : []
+  const vadInput = input.vadConfig && typeof input.vadConfig === 'object' ? input.vadConfig as Record<string, unknown> : {}
+  const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum: number): number => typeof value === 'number' && Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback
   return {
     sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
-    summaryModel: shortText(input.summaryModel, 200), glossary: shortText(input.glossary, 20_000)
+    summaryModel: shortText(input.summaryModel, 200), glossary: shortText(input.glossary, 20_000),
+    vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30) }
   }
 }
 
@@ -157,9 +196,29 @@ const createWindow = (): void => {
 }
 
 app.whenReady().then(() => {
+  // `media` alone does not grant getDisplayMedia in Electron. Display capture
+  // must be permitted separately or the Renderer never receives the audio
+  // track it requested.
+  session.defaultSession.setPermissionCheckHandler((_contents, permission) => permission === 'media' || permission === 'display-capture')
   session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
-    callback(permission === 'media')
+    callback(permission === 'media' || permission === 'display-capture')
   })
+  // Windows supports Electron's native loopback source. macOS has no Electron
+  // loopback equivalent; macOS 15+ can use its system picker, which is the only
+  // supported route for a share-provided audio track without a virtual device.
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    if (process.platform !== 'win32') {
+      callback({})
+      return
+    }
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'] })
+      const source = sources[0]
+      callback(source ? { video: source, audio: 'loopback' } : {})
+    } catch {
+      callback({})
+    }
+  }, { useSystemPicker: process.platform === 'darwin' })
 
   ipcMain.handle('model:save-api-key', async (_event, input: { profileId: string; apiKey: string }) => {
     if (!validSecretId(input.profileId) || typeof input.apiKey !== 'string' || input.apiKey.trim().length < 8) throw new Error('無效的 API key 設定')
@@ -218,7 +277,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('recording:start', async (_event, sampleRate: number) => {
     if (!Number.isFinite(sampleRate) || sampleRate < 8_000 || sampleRate > 192_000) throw new Error('無效的錄音取樣率')
-    const directory = join(app.getPath('temp'), 's2t-ui-recordings')
+    const directory = recoveryDirectory()
     await mkdir(directory, { recursive: true })
     const id = randomUUID()
     const path = join(directory, `${id}.wav.part`)
@@ -230,6 +289,7 @@ app.whenReady().then(() => {
     })
     pcmRecordings.set(id, recording)
     await recording.writes
+    await updateRecoveryManifest((entries) => [...entries.filter((entry) => entry.id !== id), { id, path, sampleRate, createdAt: new Date().toISOString(), state: 'active' }])
     return { id }
   })
 
@@ -258,6 +318,7 @@ app.whenReady().then(() => {
       }
       completedRecordings.add(recording.path)
       availableAudioPaths.add(recording.path)
+      await updateRecoveryManifest((entries) => entries.map((entry) => entry.id === id ? { ...entry, state: 'finished' } : entry))
       return { audioPath: recording.path }
     } finally {
       pcmRecordings.delete(id)
@@ -270,6 +331,7 @@ app.whenReady().then(() => {
     pcmRecordings.delete(id)
     recording.stream.destroy()
     await rm(recording.path, { force: true })
+    await updateRecoveryManifest((entries) => entries.filter((entry) => entry.id !== id))
   })
 
   ipcMain.handle('session:save', async (_event, input: {
@@ -290,6 +352,7 @@ app.whenReady().then(() => {
       await rm(input.recordingPath, { force: true })
       completedRecordings.delete(input.recordingPath)
       availableAudioPaths.delete(input.recordingPath)
+      await updateRecoveryManifest((entries) => entries.filter((entry) => entry.path !== input.recordingPath))
     } else if (input.audio) {
       await writeFile(audioPath, Buffer.from(input.audio))
     } else {
@@ -310,6 +373,50 @@ app.whenReady().then(() => {
     if (typeof audioPath !== 'string' || !availableAudioPaths.has(audioPath)) throw new Error('無法讀取此音檔')
     const audio = await readFile(audioPath)
     return audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength)
+  })
+
+  ipcMain.handle('session:open', async () => {
+    const result = await dialog.showOpenDialog({ title: '開啟已保存工作階段', properties: ['openDirectory'] })
+    const directory = result.filePaths[0]
+    if (result.canceled || !directory) return { canceled: true }
+    const root = await realpath(directory)
+    const metadata = JSON.parse(await readFile(join(root, 'session.json'), 'utf8')) as Record<string, unknown>
+    if (metadata.version !== 1 || typeof metadata.audioFile !== 'string' || basename(metadata.audioFile) !== metadata.audioFile) throw new Error('不是有效的 S2T UI 工作階段')
+    const audioPath = await realpath(join(root, metadata.audioFile))
+    if (!pathInside(root, audioPath)) throw new Error('工作階段音檔位置無效')
+    const transcriptFile = typeof metadata.transcriptFile === 'string' && basename(metadata.transcriptFile) === metadata.transcriptFile ? metadata.transcriptFile : 'transcript.jsonl'
+    const lines = (await readFile(join(root, transcriptFile), 'utf8')).split('\n').filter(Boolean)
+    const segments = lines.flatMap((line) => { try { return [JSON.parse(line)] } catch { return [] } })
+    availableAudioPaths.add(audioPath)
+    return { canceled: false, session: {
+      id: `disk-${randomUUID()}`, title: typeof metadata.name === 'string' ? metadata.name : '已保存工作階段',
+      createdAt: typeof metadata.createdAt === 'string' ? metadata.createdAt : new Date().toISOString(),
+      durationMs: typeof metadata.durationMs === 'number' ? metadata.durationMs : 0,
+      source: typeof metadata.source === 'string' ? metadata.source : '已保存工作階段', transcript: await readFile(join(root, 'transcript.txt'), 'utf8'),
+      audioKey: '', nativeAudioPath: audioPath, savedToDisk: true, segments
+    } }
+  })
+  ipcMain.handle('recording:recoverable', async () => {
+    const entries = await readRecoveryManifest()
+    const recovered: Array<RecoverableRecording & { audioPath: string }> = []
+    for (const entry of entries) {
+      try {
+        const info = await stat(entry.path)
+        if (info.size <= 44) continue
+        const file = await open(entry.path, 'r+')
+        try { await file.write(wavHeader(entry.sampleRate, info.size - 44), 0) } finally { await file.close() }
+        availableAudioPaths.add(entry.path)
+        recovered.push({ ...entry, audioPath: entry.path })
+      } catch { /* stale manifests are omitted below */ }
+    }
+    await writeRecoveryManifest(recovered.map(({ audioPath: _audioPath, ...entry }) => ({ ...entry, state: 'finished' })))
+    return recovered
+  })
+  ipcMain.handle('recording:discard-recoverable', async (_event, id: string) => {
+    const entries = await readRecoveryManifest()
+    const target = entries.find((entry) => entry.id === id)
+    if (target) await rm(target.path, { force: true })
+    await writeRecoveryManifest(entries.filter((entry) => entry.id !== id))
   })
 
   ipcMain.on('captions:toggle-floating', (_event, visible: boolean) => {

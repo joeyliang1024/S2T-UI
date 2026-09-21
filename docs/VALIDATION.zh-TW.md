@@ -64,8 +64,9 @@ npm run dev
 | PCM16 WAV 持續寫入 | 已實作 | 錄製、停止、保存後可播放 WAV；TXT/SRT/JSON 可下載。 |
 | API key safeStorage | 已實作 | 在完整設定保存 key 後可收音；key 不顯示於設定檔。 |
 | 浮動字幕 | 已實作 | 開啟後顯示最新字幕；關閉可回到主視窗。 |
-| 系統音訊混入 | 待修復 | 目前不可驗收；需完成 `desktopCapturer`、平台權限與 loopback 實作。 |
-| 跨重啟 session | 待修復 | 目前不能宣稱重啟後可重新讀取任何已保存 session 音檔。 |
+| 系統音訊混入 | 已實作平台分流 | Windows 使用 Electron loopback；macOS 15+ 使用 system picker。若取消或無 audio track，麥克風 session 必須持續；實際 audio track 仍需逐平台驗收。 |
+| 跨重啟 session | 已實作 | 在「記錄」按「開啟已保存工作階段」，選擇含 `session.json` 的資料夾後可播放或再次匯出 WAV。 |
+| 強制關閉錄音復原 | 已實作 | 強制關閉後重開，復原 WAV 應出現在「記錄」；先播放確認，再保存或下載。 |
 
 ## Web 專屬驗收
 
@@ -81,7 +82,7 @@ npm run dev
 
 - Realtime WebSocket partial 字幕：等待自建 gateway 協定、認證與重連語義。
 - 翻譯可靠性：今天 ASR 驗收不設定翻譯 endpoint；翻譯錯誤不得阻擋原文字幕。
-- 60 分鐘穩定性、睡眠喚醒、低磁碟、強制關閉復原。
+- 60 分鐘穩定性、睡眠喚醒、低磁碟。
 - 自動說話者分離、批次大檔、MP3/M4A、打包簽署與 Windows 實機。
 
 詳細開發工作請見 [TODO](../TODO.md)，模型傳輸協定見 [MODEL_ADAPTER.md](MODEL_ADAPTER.md)。
