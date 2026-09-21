@@ -8,6 +8,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "web:serve": "node server/index.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

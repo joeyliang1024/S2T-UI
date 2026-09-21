@@ -4,7 +4,7 @@
 
 後端研究詳見 [語音處理技術參考與自有模型整合方案](OPEN_SOURCE_BACKENDS.zh-TW.md)。
 
-目前已完成：Electron 主程序與安全 Preload、麥克風列舉與選擇、錄音中切換輸入、RMS／peak 音量條、停止後輸出 PCM16 WAV、音檔與 TXT 保存、TXT／SRT／JSON 字幕匯出、記錄工作區、檔案匯入入口、設定工作區、浮動字幕窗，以及自有模型的字幕適配器契約。待完成：串接實際模型並取得即時原文與譯文、將匯入檔案提交至模型、系統音源、長時間錄音的 WAV 持續寫入與跨平台 Electron 實機驗收。模型接入說明見 [自有模型接入契約](MODEL_ADAPTER.md)。
+目前已完成：Electron 主程序與安全 Preload、麥克風列舉與選擇、錄音中切換輸入、獨立音量分析支線、PCM16 WAV 持續寫入、TXT／SRT／JSON 匯出、記錄／匯入／設定工作區、浮動字幕窗、OpenAI 相容 HTTP 分段 ASR、Breeze-ASR-25 實際 API 驗證，以及 Web BFF。未完成項目與驗收狀態以 [TODO](../TODO.md) 和 [驗收手冊](VALIDATION.zh-TW.md) 為準；不要以本文件較早的規劃文字判斷實作狀態。
 
 ## 1. 目標與範圍
 
@@ -188,4 +188,4 @@ sessions/<sessionId>/
 4. 首批來源／目標語言，是否需要中文英文混說？
 5. WAV／TXT／SRT 是否足夠，或必須首版提供 MP3／M4A／Word／Excel？
 
-目前 repo 僅有 LICENSE、README 與規劃文件，尚無應用程式或模型依賴。本次只更新文件，未安裝任何引擎、下載模型或開始實作。
+目前 repo 已有 Electron／React／TypeScript 應用、Node.js Web BFF 與 OpenAI SDK；不內嵌 Python、模型權重或推論服務。

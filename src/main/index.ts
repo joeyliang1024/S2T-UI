@@ -73,6 +73,33 @@ const environmentKey = (profileId: string): string | undefined => {
   return process.env.S2T_ASR_API_KEY
 }
 
+type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }
+type StoredModelConfig = {
+  sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
+  translationEndpoint: string; translationModel: string; summaryEndpoint: string; summaryModel: string; glossary: string
+}
+const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
+const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
+  if (!value || typeof value !== 'object') throw new Error('無效的模型設定')
+  const input = value as Record<string, unknown>
+  const modelProfiles = Array.isArray(input.modelProfiles) ? input.modelProfiles.flatMap((item): StoredModelProfile[] => {
+    if (!item || typeof item !== 'object') return []
+    const profile = item as Record<string, unknown>
+    const id = shortText(profile.id, 100)
+    const name = shortText(profile.name, 100)
+    const endpoint = shortText(profile.endpoint, 2_000)
+    const model = shortText(profile.model, 200)
+    const kind = profile.kind === 'openai-http' ? 'openai-http' : 'websocket'
+    return id && name ? [{ id, name, endpoint, model, kind }] : []
+  }).slice(0, 30) : []
+  return {
+    sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
+    selectedModelId: shortText(input.selectedModelId, 100), translationEndpoint: shortText(input.translationEndpoint, 2_000),
+    translationModel: shortText(input.translationModel, 200), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
+    summaryModel: shortText(input.summaryModel, 200), glossary: shortText(input.glossary, 20_000)
+  }
+}
+
 const loadRenderer = (window: BrowserWindow, fragment = ''): void => {
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}${fragment}`)
@@ -151,8 +178,8 @@ app.whenReady().then(() => {
     try { return JSON.parse(await readFile(modelConfigPath(), 'utf8')) } catch { return null }
   })
   ipcMain.handle('models:save-config', async (_event, config: unknown) => {
-    if (!config || typeof config !== 'object') throw new Error('無效的模型設定')
-    await writeFile(modelConfigPath(), JSON.stringify(config, null, 2), { mode: 0o600 })
+    const sanitized = sanitizeModelConfig(config)
+    await writeFile(modelConfigPath(), JSON.stringify(sanitized, null, 2), { mode: 0o600 })
     return { saved: true }
   })
   ipcMain.handle('model:transcribe', async (_event, input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => {

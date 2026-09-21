@@ -1,6 +1,14 @@
 # 自有模型接入契約
 
-## 已實作的 WebSocket 第一版
+## 目前支援的模型介面
+
+### OpenAI 相容 HTTP（目前即時字幕預設）
+
+在設定頁新增 ASR 模型時，應用會以 OpenAI 相容的 `POST /v1/audio/transcriptions` 送出 WAV 檔案。這類 API 是「短片段請求／回應」：app-side VAD 過濾純靜音並將連續音訊切成約 0.8–1.5 秒片段，收到回應後新增一筆 **final** 字幕。因此可做到接近即時的字幕，但不會產生串流中的 partial 字元。
+
+這是適合 vLLM 或自有 ASR gateway 的預設整合方式，前提是服務確實實作 audio transcriptions 格式。Chat Completions 的 `stream: true` 只代表文字回應可以串流，不能據此假設服務接受 `input_audio`，也不能取代音訊持續輸入協定。
+
+### WebSocket（自有服務的明確協定）
 
 在設定頁填入 `ws://` 或 `wss://` 端點後，應用會建立 `WebSocketModelAdapter`。它會先傳送下列 JSON：
 
@@ -26,7 +34,7 @@
 
 ## Breeze-ASR-26
 
-`MediaTek-Research/Breeze-ASR-26` 是台語 ASR，並以中文漢字輸出；它不提供翻譯，也不是文字轉語音模型。此 Electron／TypeScript 專案不內嵌 Python 執行環境或模型推論服務。若要使用此模型，請將模型部署在你自己的服務中，並實作上述 WebSocket 協定，再於設定頁填入該服務端點。
+`MediaTek-Research/Breeze-ASR-26` 是台語 ASR，並以中文漢字輸出；它不提供翻譯，也不是文字轉語音模型。此 Electron／TypeScript 專案不內嵌 Python 執行環境或模型推論服務。若以 vLLM 或其他自有服務部署，優先確認其是否提供 OpenAI 相容 `/audio/transcriptions`；只有在服務另行提供並約定 WebSocket 串流格式時，才使用下列 WebSocket 協定。
 
 Electron 應用已透過 `src/renderer/src/model-adapter.ts` 將收音與字幕 UI 分離。整合自有模型時，實作 `ModelAdapter` 並替換 `NoopModelAdapter` 即可；收音、音量、錄音、逐字稿版本控制與匯出不需要重寫。
 
@@ -51,4 +59,4 @@ Electron 應用已透過 `src/renderer/src/model-adapter.ts` 將收音與字幕 
 
 設定頁可選擇「OpenAI 相容轉錄 API」，填入完整的 `/v1/audio/transcriptions` URL、模型 ID（例如 `Breeze-ASR-25`）並儲存 API key。API key 僅交給 Electron 主程序，使用 Electron `safeStorage` 加密後保存，不會寫進 renderer 設定、錄音檔或 Git。
 
-此類 API 本身不是雙向串流，應用會將錄音切成約 2.5 秒的單聲道 PCM WAV，按順序以 `multipart/form-data` 送出 `model`、`language`、`file`。每個回應的 `text` 會立即成為一個 final 字幕段落；時間軸根據原始 sample offset 計算。API 沒有 partial 回應時，無法在該 2.5 秒片段完成前顯示同一段的暫定文字。
+此類 API 本身不是雙向串流，應用會將錄音切成約 0.8–1.5 秒的單聲道 PCM WAV，按順序以 `multipart/form-data` 送出 `model`、`language`、`file`。每個回應的 `text` 會立即成為一個 final 字幕段落；時間軸根據原始 sample offset 計算。API 沒有 partial 回應時，無法在該片段完成前顯示同一段的暫定文字。

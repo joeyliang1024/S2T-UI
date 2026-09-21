@@ -1,3 +1,5 @@
+import { EnergyVad } from './vad'
+
 export type TranscriptEvent = {
   id: string
   revision: number
@@ -14,6 +16,7 @@ export interface ModelAdapter {
   pushAudio(chunk: Float32Array, startSample: number): void
   stop(): Promise<void>
   onTranscript(listener: (event: TranscriptEvent) => void): () => void
+  onError(listener: (message: string) => void): () => void
 }
 
 /**
@@ -22,6 +25,7 @@ export interface ModelAdapter {
  */
 export class NoopModelAdapter implements ModelAdapter {
   private listeners = new Set<(event: TranscriptEvent) => void>()
+  private errorListeners = new Set<(message: string) => void>()
 
   async start(_input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {}
   pushAudio(_chunk: Float32Array, _startSample: number): void {}
@@ -29,6 +33,10 @@ export class NoopModelAdapter implements ModelAdapter {
   onTranscript(listener: (event: TranscriptEvent) => void): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
+  }
+  onError(listener: (message: string) => void): () => void {
+    this.errorListeners.add(listener)
+    return () => this.errorListeners.delete(listener)
   }
 }
 
@@ -52,6 +60,9 @@ export class WebSocketModelAdapter implements ModelAdapter {
   private listeners = new Set<(event: TranscriptEvent) => void>()
   private sequence = 0
   private streamId = ''
+  private stopping = false
+  private lastBackpressureWarning = 0
+  private errorListeners = new Set<(message: string) => void>()
 
   constructor(private readonly endpoint: string) {}
 
@@ -66,6 +77,7 @@ export class WebSocketModelAdapter implements ModelAdapter {
       socket.onopen = () => {
         window.clearTimeout(timeout)
         this.socket = socket
+        this.stopping = false
         this.sequence = 0
         this.streamId = crypto.randomUUID()
         socket.send(JSON.stringify({
@@ -76,16 +88,27 @@ export class WebSocketModelAdapter implements ModelAdapter {
       }
       socket.onerror = () => {
         window.clearTimeout(timeout)
+        if (this.socket === socket) this.emitError('模型 WebSocket 連線發生錯誤')
         reject(new Error('無法連線至模型服務'))
       }
       socket.onmessage = (message) => this.handleMessage(message.data)
-      socket.onclose = () => { if (this.socket === socket) this.socket = null }
+      socket.onclose = () => {
+        if (this.socket !== socket) return
+        this.socket = null
+        if (!this.stopping) this.emitError('模型 WebSocket 已中斷；錄音仍會繼續保存')
+      }
     })
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return
-    if (this.socket.bufferedAmount > 2 * 1024 * 1024) return
+    if (this.socket.bufferedAmount > 2 * 1024 * 1024) {
+      if (Date.now() - this.lastBackpressureWarning > 5_000) {
+        this.lastBackpressureWarning = Date.now()
+        this.emitError('模型處理過慢，部分即時字幕音訊已略過；完整錄音仍會保存')
+      }
+      return
+    }
     this.socket.send(JSON.stringify({
       type: 'audio', streamId: this.streamId, sequence: this.sequence++,
       startSample, frameCount: chunk.length
@@ -97,6 +120,7 @@ export class WebSocketModelAdapter implements ModelAdapter {
   async stop(): Promise<void> {
     const socket = this.socket
     if (!socket) return
+    this.stopping = true
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'stop' }))
     await new Promise<void>((resolve) => {
       const timeout = window.setTimeout(resolve, 2_000)
@@ -112,6 +136,14 @@ export class WebSocketModelAdapter implements ModelAdapter {
   onTranscript(listener: (event: TranscriptEvent) => void): () => void {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
+  }
+  onError(listener: (message: string) => void): () => void {
+    this.errorListeners.add(listener)
+    return () => this.errorListeners.delete(listener)
+  }
+
+  private emitError(message: string): void {
+    this.errorListeners.forEach((listener) => listener(message))
   }
 
   private handleMessage(data: unknown): void {
@@ -157,56 +189,78 @@ const wavFromFloat32 = (samples: Float32Array, sampleRate: number): ArrayBuffer 
  */
 export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private listeners = new Set<(event: TranscriptEvent) => void>()
+  private errorListeners = new Set<(message: string) => void>()
   private sampleRate = 48_000
   private language = 'zh'
-  private pending = new Float32Array(0)
+  private pendingChunks: Float32Array[] = []
+  private pendingSamples = 0
   private pendingStart = 0
   private queued = Promise.resolve()
   private sequence = 0
   private stopped = false
+  private queuedChunks = 0
+  private readonly maximumQueuedChunks = 4
+  private vad: EnergyVad | null = null
+  private pendingContainsSpeech = false
 
   constructor(private readonly profile: { id: string; endpoint: string; model: string; prompt?: string }) {}
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
-    if (!window.s2t) throw new Error('OpenAI 相容轉錄僅能在 Electron 應用程式中使用')
     if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
-    if (!(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
+    if (window.s2t && !(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
+    if (!window.s2t && this.profile.id !== 'web-environment-asr') throw new Error('Web 版只能使用網站管理者設定的 ASR 模型')
     this.sampleRate = input.sampleRate
     this.language = input.language.split('-')[0]
-    this.pending = new Float32Array(0)
+    this.pendingChunks = []
+    this.pendingSamples = 0
     this.pendingStart = 0
     this.queued = Promise.resolve()
     this.sequence = 0
     this.stopped = false
+    this.queuedChunks = 0
+    this.vad = new EnergyVad(this.sampleRate)
+    this.pendingContainsSpeech = false
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
     if (this.stopped) return
-    if (this.pending.length === 0) this.pendingStart = startSample
-    const merged = new Float32Array(this.pending.length + chunk.length)
-    merged.set(this.pending)
-    merged.set(chunk, this.pending.length)
-    this.pending = merged
-    const maximumChunkSamples = Math.floor(this.sampleRate * 3)
-    const minimumChunkSamples = Math.floor(this.sampleRate * 1.2)
-    const rms = Math.sqrt(chunk.reduce((sum, sample) => sum + sample * sample, 0) / chunk.length)
-    const reachedNaturalBoundary = this.pending.length >= minimumChunkSamples && rms < 0.012
-    while (this.pending.length >= maximumChunkSamples || reachedNaturalBoundary) {
-      const size = reachedNaturalBoundary ? this.pending.length : maximumChunkSamples
-      const audio = this.pending.slice(0, size)
+    const vadFrame = this.vad?.process(chunk)
+    if (this.pendingSamples === 0) this.pendingStart = startSample
+    this.pendingChunks.push(chunk)
+    this.pendingSamples += chunk.length
+    // Breeze-ASR is non-streaming. A short ceiling keeps the perceived latency
+    // near one second without shipping frames too small for stable recognition.
+    const maximumChunkSamples = Math.floor(this.sampleRate * 1.5)
+    const minimumChunkSamples = Math.floor(this.sampleRate * 0.8)
+    this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || vadFrame?.speaking)
+    const reachedNaturalBoundary = this.pendingSamples >= minimumChunkSamples && Boolean(vadFrame?.speechEnded)
+    // Keep 300 ms of room tone before a voice onset, but avoid sending empty
+    // requests while nobody is speaking.
+    if (!this.pendingContainsSpeech && this.pendingSamples > maximumChunkSamples) {
+      const preRollSamples = Math.floor(this.sampleRate * 0.3)
+      this.discardPending(this.pendingSamples - preRollSamples)
+      return
+    }
+    while (this.pendingSamples >= maximumChunkSamples || reachedNaturalBoundary) {
+      const size = reachedNaturalBoundary ? this.pendingSamples : maximumChunkSamples
       const start = this.pendingStart
-      this.pending = this.pending.slice(size)
-      this.pendingStart += size
+      const audio = this.takePending(size)
       this.enqueue(audio, start)
-      if (this.pending.length < minimumChunkSamples) break
+      this.pendingContainsSpeech = Boolean(vadFrame?.speaking)
+      if (this.pendingSamples < minimumChunkSamples) break
     }
   }
 
   async stop(): Promise<void> {
     if (this.stopped) return
     this.stopped = true
-    if (this.pending.length) this.enqueue(this.pending, this.pendingStart)
-    this.pending = new Float32Array(0)
+    if (this.pendingSamples && this.pendingContainsSpeech) {
+      const start = this.pendingStart
+      this.enqueue(this.takePending(this.pendingSamples), start)
+    }
+    this.pendingChunks = []
+    this.pendingSamples = 0
+    this.pendingContainsSpeech = false
     await this.queued
   }
 
@@ -214,21 +268,84 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.listeners.add(listener)
     return () => this.listeners.delete(listener)
   }
+  onError(listener: (message: string) => void): () => void {
+    this.errorListeners.add(listener)
+    return () => this.errorListeners.delete(listener)
+  }
 
   private enqueue(audio: Float32Array, startSample: number): void {
+    if (this.queuedChunks >= this.maximumQueuedChunks) {
+      this.emitError('模型處理過慢，部分即時字幕音訊已略過；完整錄音仍會保存')
+      return
+    }
+    this.queuedChunks += 1
     const sequence = this.sequence++
-    this.queued = this.queued.then(async () => {
-      if (!window.s2t) return
-      const response = await window.s2t.transcribeAudioChunk({
+    this.queued = this.queued.catch(() => undefined).then(async () => {
+      const wav = wavFromFloat32(audio, this.sampleRate)
+      const response = window.s2t ? await window.s2t.transcribeAudioChunk({
         profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
-        language: this.language, prompt: this.profile.prompt, audio: wavFromFloat32(audio, this.sampleRate)
-      })
+        language: this.language, prompt: this.profile.prompt, audio: wav
+      }) : await this.transcribeThroughWebGateway(wav)
       const sourceText = response.text.trim()
       if (!sourceText) return
       const startMs = Math.round(startSample / this.sampleRate * 1000)
       const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText }
       this.listeners.forEach((listener) => listener(event))
+    }).catch((error: unknown) => {
+      this.emitError(error instanceof Error ? error.message : '模型轉錄失敗')
+    }).finally(() => { this.queuedChunks -= 1 })
+  }
+
+  private emitError(message: string): void {
+    this.errorListeners.forEach((listener) => listener(message))
+  }
+
+  private takePending(sampleCount: number): Float32Array {
+    const result = new Float32Array(sampleCount)
+    let written = 0
+    while (written < sampleCount && this.pendingChunks.length) {
+      const chunk = this.pendingChunks[0]
+      const take = Math.min(chunk.length, sampleCount - written)
+      result.set(chunk.subarray(0, take), written)
+      written += take
+      if (take === chunk.length) this.pendingChunks.shift()
+      else this.pendingChunks[0] = chunk.subarray(take)
+    }
+    this.pendingSamples -= written
+    this.pendingStart += written
+    return result
+  }
+
+  private discardPending(sampleCount: number): void {
+    let remaining = sampleCount
+    while (remaining > 0 && this.pendingChunks.length) {
+      const chunk = this.pendingChunks[0]
+      if (remaining >= chunk.length) {
+        remaining -= chunk.length
+        this.pendingChunks.shift()
+      } else {
+        this.pendingChunks[0] = chunk.subarray(remaining)
+        remaining = 0
+      }
+    }
+    const discarded = sampleCount - remaining
+    this.pendingSamples -= discarded
+    this.pendingStart += discarded
+  }
+
+  private async transcribeThroughWebGateway(audio: ArrayBuffer): Promise<{ text: string }> {
+    const response = await fetch('/api/transcriptions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'audio/wav',
+        'x-s2t-language': this.language,
+        ...(this.profile.prompt ? { 'x-s2t-prompt': this.profile.prompt } : {})
+      },
+      body: audio
     })
+    const payload = await response.json() as { text?: string; error?: string }
+    if (!response.ok) throw new Error(payload.error || `Web ASR gateway failed (${response.status})`)
+    return { text: payload.text || '' }
   }
 }
