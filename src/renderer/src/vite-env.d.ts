@@ -10,6 +10,7 @@ declare global {
       saveModelConfig: (config: SettingsConfig) => Promise<{ saved: boolean }>
       transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string }>
       completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
+      diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => Promise<unknown>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
       appendPcm: (id: string, audio: ArrayBuffer) => void
       finishPcmRecording: (id: string) => Promise<{ audioPath: string }>
@@ -35,6 +36,8 @@ interface SettingsConfig {
   translationModel: string
   summaryEndpoint: string
   summaryModel: string
+  diarizationEndpoint: string
+  diarizationModel: string
   glossary: string
   vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
 }

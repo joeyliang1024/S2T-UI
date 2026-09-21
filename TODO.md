@@ -153,10 +153,10 @@
   - 現況：100 MB 以下直接上傳。待做：依服務上限切 WAV/影片解音訊、重疊去重、timestamp 合併、進度與取消。
   - 前提：模型端提供最大檔案、容器格式與非同步 job API（如有）。
 
-- [ ] **說話者分離與會議紀錄**
+- [x] **說話者分離 API 整合與會議紀錄**
   - 檔案：`src/renderer/src/App.tsx`、必要時 `src/main/index.ts`。
-  - 現況：人工講者標記、術語提示、摘要 Chat Completions 已有；自動 diarization 未實作。
-  - 需要 API：speaker/timestamp schema；摘要 JSON schema（summary、decisions、action_items）。
+  - 已實作：人工講者標記、術語提示、摘要 Chat Completions，以及完整 WAV 後處理的自動 diarization。設定 endpoint、model、key 後，記錄頁可上傳 WAV 並按最大時間重疊回填講者。契約見 [DIARIZATION_API.zh-TW.md](docs/DIARIZATION_API.zh-TW.md)。
+  - 待 API 驗收：確認服務回傳 `exclusive_diarization` / `segments` / `diarization` 的 speaker/timestamp schema；摘要 JSON schema（summary、decisions、action_items）仍可依服務端補強。
 
 ## P2：發布與品質
 

@@ -99,13 +99,14 @@ const openAiChatBaseUrl = (endpoint: string): string => {
 const environmentKey = (profileId: string): string | undefined => {
   if (profileId === 'translation') return process.env.S2T_TRANSLATION_API_KEY
   if (profileId === 'summary') return process.env.S2T_SUMMARY_API_KEY
+  if (profileId === 'diarization') return process.env.S2T_DIARIZATION_API_KEY
   return process.env.S2T_ASR_API_KEY
 }
 
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' } }
 type StoredModelConfig = {
   sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
-  translationEndpoint: string; translationModel: string; summaryEndpoint: string; summaryModel: string; glossary: string
+  translationEndpoint: string; translationModel: string; summaryEndpoint: string; summaryModel: string; diarizationEndpoint: string; diarizationModel: string; glossary: string
   vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
@@ -134,7 +135,7 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
-    summaryModel: shortText(input.summaryModel, 200), glossary: shortText(input.glossary, 20_000),
+    summaryModel: shortText(input.summaryModel, 200), diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), glossary: shortText(input.glossary, 20_000),
     vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30) }
   }
 }
@@ -272,6 +273,24 @@ app.whenReady().then(() => {
       return { text: result.choices[0]?.message.content?.trim() ?? '' }
     } catch (error) {
       throw new Error(error instanceof Error ? `文字模型請求失敗：${error.message}` : '文字模型請求失敗')
+    }
+  })
+  ipcMain.handle('model:diarize', async (_event, input: { endpoint: string; model: string; audio: ArrayBuffer }) => {
+    if (!(input.audio instanceof ArrayBuffer) || !input.audio.byteLength || input.audio.byteLength > 500 * 1024 * 1024) throw new Error('無效的講者分離音檔')
+    const apiKey = environmentKey('diarization') || (await readSecrets()).diarization
+    if (!apiKey) throw new Error('請先在設定中儲存講者分離 API key')
+    let endpoint: URL
+    try { endpoint = new URL(input.endpoint) } catch { throw new Error('無效的講者分離 API 位址') }
+    const form = new FormData()
+    form.set('model', input.model)
+    form.set('file', new Blob([input.audio], { type: 'audio/wav' }), 'recording.wav')
+    try {
+      const response = await fetch(endpoint, { method: 'POST', headers: { authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(120_000) })
+      const payload = await response.json() as unknown
+      if (!response.ok) throw new Error(typeof payload === 'object' && payload && 'error' in payload ? String((payload as { error: unknown }).error) : `HTTP ${response.status}`)
+      return payload
+    } catch (error) {
+      throw new Error(error instanceof Error ? `講者分離失敗：${error.message}` : '講者分離失敗')
     }
   })
 
