@@ -40,6 +40,7 @@ const waitForStreamEnd = (stream: WriteStream): Promise<void> => new Promise((re
 })
 
 const secretStorePath = (): string => join(app.getPath('userData'), 'model-secrets.json')
+const modelConfigPath = (): string => join(app.getPath('userData'), 'models.json')
 const validSecretId = (id: unknown): id is string => typeof id === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(id)
 const readSecrets = async (): Promise<Record<string, string>> => {
   try {
@@ -146,6 +147,14 @@ app.whenReady().then(() => {
     model: process.env.S2T_ASR_MODEL ?? '',
     configured: Boolean(process.env.S2T_ASR_API_KEY && process.env.S2T_ASR_ENDPOINT && process.env.S2T_ASR_MODEL)
   }))
+  ipcMain.handle('models:load-config', async () => {
+    try { return JSON.parse(await readFile(modelConfigPath(), 'utf8')) } catch { return null }
+  })
+  ipcMain.handle('models:save-config', async (_event, config: unknown) => {
+    if (!config || typeof config !== 'object') throw new Error('無效的模型設定')
+    await writeFile(modelConfigPath(), JSON.stringify(config, null, 2), { mode: 0o600 })
+    return { saved: true }
+  })
   ipcMain.handle('model:transcribe', async (_event, input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => {
     if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 100 * 1024 * 1024) throw new Error('無效的音訊分段')
     const apiKey = environmentKey(input.profileId) || (await readSecrets())[input.profileId]

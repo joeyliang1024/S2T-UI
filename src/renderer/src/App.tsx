@@ -178,6 +178,9 @@ export default function App(): ReactElement {
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null)
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
   const [newModelName, setNewModelName] = useState('')
+  const [newModelEndpoint, setNewModelEndpoint] = useState('')
+  const [newModelId, setNewModelId] = useState('')
+  const [newModelApiKey, setNewModelApiKey] = useState('')
   const [apiKeyDraft, setApiKeyDraft] = useState('')
   const [apiKeyStatus, setApiKeyStatus] = useState('')
   const [translationKeyDraft, setTranslationKeyDraft] = useState('')
@@ -295,6 +298,13 @@ export default function App(): ReactElement {
   useEffect(() => {
     window.localStorage.setItem(settingsKey, JSON.stringify(settings))
   }, [settings])
+
+  useEffect(() => {
+    if (!window.s2t) return
+    void window.s2t.loadModelConfig().then((config) => {
+      if (config) setSettings((current) => normalizeSettings({ ...current, ...config }))
+    }).catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     const browserEnvironment = {
@@ -611,19 +621,27 @@ export default function App(): ReactElement {
   }
 
   const saveSettings = (): void => {
+    if (window.s2t) void window.s2t.saveModelConfig(settings).catch(() => setStatus('模型設定保存失敗'))
     setSettingsSaved(true)
     window.setTimeout(() => setSettingsSaved(false), 2400)
   }
 
-  const addModelProfile = (): void => {
+  const addModelProfile = async (): Promise<void> => {
     const name = newModelName.trim()
-    if (!name) {
-      setStatus('請輸入模型名稱。')
+    const endpoint = newModelEndpoint.trim()
+    const model = newModelId.trim()
+    if (!name || !endpoint || !model) {
+      setStatus('請輸入模型名稱、endpoint 與 model name。')
       return
     }
-    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: '', model: '', kind: 'websocket' }
-    setSettings((current) => ({ ...current, modelProfiles: [...current.modelProfiles, profile], selectedModelId: profile.id }))
-    setNewModelName('')
+    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint, model, kind: 'openai-http' }
+    setSettings((current) => {
+      const next = { ...current, modelProfiles: [...current.modelProfiles, profile], selectedModelId: profile.id }
+      if (window.s2t) void window.s2t.saveModelConfig(next)
+      return next
+    })
+    if (window.s2t && newModelApiKey.trim()) await window.s2t.saveModelApiKey(profile.id, newModelApiKey.trim())
+    setNewModelName(''); setNewModelEndpoint(''); setNewModelId(''); setNewModelApiKey('')
   }
 
   const updateSelectedModel = (update: Partial<ModelProfile>): void => {
@@ -870,7 +888,7 @@ export default function App(): ReactElement {
         <label>連線類型<select disabled={selectedModel.id === 'none'} value={selectedModel.kind} onChange={(event) => updateSelectedModel({ kind: event.target.value as ModelProfile['kind'] })}><option value="websocket">WebSocket 即時 gateway</option><option value="openai-http">OpenAI 相容轉錄 API</option></select></label>
         <label>{selectedModel.kind === 'openai-http' ? '轉錄 API 位址' : 'WebSocket 端點'}<input type="url" placeholder={selectedModel.kind === 'openai-http' ? 'https://host.example/v1/audio/transcriptions' : 'wss://model.example.com/stream'} disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
         {selectedModel.kind === 'openai-http' ? <><label>模型 ID<input placeholder="Breeze-ASR-25" disabled={selectedModel.id === 'none'} value={selectedModel.model} onChange={(event) => updateSelectedModel({ model: event.target.value })} /></label>{window.s2t && <div className="api-key-row"><label>API key<input type="password" autoComplete="off" placeholder="貼上後會加密儲存" value={apiKeyDraft} onChange={(event) => setApiKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveApiKey()} disabled={selectedModel.id === 'none'}>儲存 API key</button></div>}{apiKeyStatus && <p className="hint">{apiKeyStatus}</p>}<p className="hint">此 API 為 request/response，應用每約 2.5 秒送出一個 WAV chunk；每段回傳後會立刻顯示為即時字幕。</p></> : <p className="hint">模型必須符合 [ModelAdapter](docs/MODEL_ADAPTER.md) 的音訊 frame 協定，並由你的 gateway 合併 ASR 與翻譯回應。</p>}
-        <div className="model-actions"><input value={newModelName} placeholder="新模型名稱" onChange={(event) => setNewModelName(event.target.value)} /><button className="secondary" onClick={addModelProfile}>新增模型</button>{selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}</div>
+        <div className="model-actions"><input value={newModelName} placeholder="模型顯示名稱" onChange={(event) => setNewModelName(event.target.value)} /><input type="url" value={newModelEndpoint} placeholder="endpoint" onChange={(event) => setNewModelEndpoint(event.target.value)} /><input value={newModelId} placeholder="model name / model ID" onChange={(event) => setNewModelId(event.target.value)} /><input type="password" autoComplete="off" value={newModelApiKey} placeholder="API key（Electron 加密保存）" onChange={(event) => setNewModelApiKey(event.target.value)} /><button className="secondary" onClick={() => void addModelProfile()}>新增並保存模型</button>{selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}</div>
       </div>
       <div className="text-service-settings">
         <p className="eyebrow">翻譯 API</p>

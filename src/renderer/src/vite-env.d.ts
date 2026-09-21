@@ -6,6 +6,8 @@ declare global {
       saveModelApiKey: (profileId: string, apiKey: string) => Promise<void>
       hasModelApiKey: (profileId: string) => Promise<boolean>
       getEnvironmentAsr: () => Promise<{ endpoint: string; model: string; configured: boolean }>
+      loadModelConfig: () => Promise<Partial<SettingsConfig> | null>
+      saveModelConfig: (config: SettingsConfig) => Promise<{ saved: boolean }>
       transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string }>
       completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
@@ -19,6 +21,18 @@ declare global {
       onFloatingCaption: (listener: (text: string) => void) => () => void
     }
   }
+}
+
+interface SettingsConfig {
+  sourceLanguage: string
+  targetLanguage: string
+  modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }>
+  selectedModelId: string
+  translationEndpoint: string
+  translationModel: string
+  summaryEndpoint: string
+  summaryModel: string
+  glossary: string
 }
 
 export {}
