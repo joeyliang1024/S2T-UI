@@ -148,10 +148,10 @@
   - 已實作：翻譯採 250/750 ms retry，失敗標記在同一段字幕並提供「重新翻譯」；人工修改原文會清除失敗狀態並可再次翻譯。原文與譯文維持同一 `TranscriptEvent.id`。
   - 待 API 驗收：翻譯服務壞掉不影響 ASR；同段不重複翻譯；術語表隨 prompt 傳送可驗證。
 
-- [ ] **大檔批次切分、重疊與合併**
+- [x] **大檔 PCM16 WAV 批次切分、重疊與合併（第一版）**
   - 檔案：`src/renderer/src/App.tsx`、`src/main/index.ts`。
-  - 現況：100 MB 以下直接上傳。待做：依服務上限切 WAV/影片解音訊、重疊去重、timestamp 合併、進度與取消。
-  - 前提：模型端提供最大檔案、容器格式與非同步 job API（如有）。
+  - 已實作：`src/renderer/src/wav-batch.ts` 解析 PCM16 RIFF/WAV，按 45 秒切分、保留 1.5 秒重疊，逐段最多重試三次，以文字 suffix/prefix 去除 overlap 重複內容；UI 顯示進度並可在目前 request 完成後取消後續段落。
+  - 限制：MP3/M4A/影片仍只支援 100 MB 以下單次上傳。瀏覽器端不內嵌 FFmpeg；要支援這些大檔，模型端需提供檔案轉碼或非同步 job API。
 
 - [x] **說話者分離 API 整合與會議紀錄**
   - 檔案：`src/renderer/src/App.tsx`、必要時 `src/main/index.ts`。

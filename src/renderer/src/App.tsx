@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
 import { defaultVadConfig, type VadConfig } from './vad'
 import { assignSpeakersByOverlap, parseSpeakerTurns } from './diarization'
+import { joinOverlappedText, splitPcmWav } from './wav-batch'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
 type AudioDevice = { deviceId: string; label: string }
@@ -215,6 +216,7 @@ export default function App(): ReactElement {
   const [settings, setSettings] = useState<Settings>(initialSettings)
   const [importedFile, setImportedFile] = useState<File | null>(null)
   const [importError, setImportError] = useState('')
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null)
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [floatingCaptions, setFloatingCaptions] = useState(false)
   const [floatingCaptionText, setFloatingCaptionText] = useState('等待字幕')
@@ -265,6 +267,7 @@ export default function App(): ReactElement {
   const sampleOffsetRef = useRef(0)
   const activeDeviceIdRef = useRef('default')
   const translatingIdsRef = useRef(new Set<string>())
+  const cancelImportRef = useRef(false)
   const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
 
   const refreshDevices = useCallback(async () => {
@@ -819,6 +822,7 @@ export default function App(): ReactElement {
   }
 
   const selectImportFile = (file: File | null): void => {
+    if (importProgress) return
     setImportedFile(null)
     setImportError('')
     if (!file) return
@@ -840,27 +844,60 @@ export default function App(): ReactElement {
   }
 
   const transcribeImportedFile = async (): Promise<void> => {
-    if (!importedFile || !window.s2t || selectedModel.kind !== 'openai-http') {
+    if (!importedFile || selectedModel.kind !== 'openai-http') {
       setImportError('請先選擇檔案，並在設定中選擇 OpenAI 相容 ASR 模型。')
       return
     }
-    if (importedFile.size > 100 * 1024 * 1024) {
-      setImportError('此版本的 HTTP 匯入上限為 100 MB；較大檔案需要後端分段上傳 API。')
+    const isWav = importedFile.name.toLowerCase().endsWith('.wav')
+    if (!isWav && importedFile.size > 100 * 1024 * 1024) {
+      setImportError('大檔批次目前支援 PCM16 WAV。請先轉成 WAV，或使用小於 100 MB 的其他格式。')
       return
     }
-    setImportError('正在上傳並轉錄…')
+    cancelImportRef.current = false
+    setImportError('正在準備批次轉錄…')
     try {
-      const response = await window.s2t.transcribeAudioChunk({
-        profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model,
-        language: settings.sourceLanguage.split('-')[0], prompt: settings.glossary || undefined,
-        filename: importedFile.name, contentType: importedFile.type || undefined, audio: await importedFile.arrayBuffer()
-      })
-      const sourceText = response.text.trim()
-      if (!sourceText) throw new Error('模型沒有回傳逐字稿')
-      setTranscripts([{ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: 0, endMs: 0, sourceText }])
+      const input = await importedFile.arrayBuffer()
+      const chunks = isWav ? splitPcmWav(input) : [{ audio: input, startMs: 0, endMs: 0 }]
+      const segments: TranscriptEvent[] = []
+      let merged = ''
+      setImportProgress({ current: 0, total: chunks.length })
+      for (let index = 0; index < chunks.length; index += 1) {
+        if (cancelImportRef.current) throw new Error('已取消批次轉錄；已完成的段落不會被覆蓋。')
+        const chunk = chunks[index]
+        setImportProgress({ current: index + 1, total: chunks.length })
+        let response: { text: string } | undefined
+        let lastError: unknown
+        for (const delay of [0, 400, 1_200]) {
+          if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
+          try {
+            response = window.s2t ? await window.s2t.transcribeAudioChunk({
+              profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model,
+              language: settings.sourceLanguage.split('-')[0], prompt: settings.glossary || undefined,
+              filename: isWav ? `batch-${index + 1}.wav` : importedFile.name, contentType: isWav ? 'audio/wav' : importedFile.type || undefined, audio: chunk.audio
+            }) : await fetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-language': settings.sourceLanguage.split('-')[0], ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {}) }, body: chunk.audio }).then(async (result) => {
+              const payload = await result.json() as { text?: string; error?: string }
+              if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
+              return { text: payload.text || '' }
+            })
+            break
+          } catch (error) { lastError = error }
+        }
+        if (!response) throw lastError instanceof Error ? lastError : new Error(`第 ${index + 1} 段轉錄失敗`)
+        const mergedNext = joinOverlappedText(merged, response.text)
+        const appended = mergedNext.slice(merged.length).trim()
+        if (appended) segments.push({ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: appended })
+        merged = mergedNext
+      }
+      if (!segments.length) throw new Error('模型沒有回傳逐字稿')
+      setTranscripts(segments)
       setImportError('轉錄完成，已切換至即時字幕頁，可下載逐字稿。')
       setView('live')
-    } catch (error) { setImportError(error instanceof Error ? error.message : '匯入轉錄失敗') }
+    } catch (error) { setImportError(error instanceof Error ? error.message : '匯入轉錄失敗') } finally { setImportProgress(null); cancelImportRef.current = false }
+  }
+
+  const cancelImport = (): void => {
+    cancelImportRef.current = true
+    setImportError('正在取消；目前上傳的分段完成後不會送出下一段。')
   }
 
   const playSession = async (entry: SavedSession): Promise<void> => {
@@ -1052,9 +1089,9 @@ export default function App(): ReactElement {
   ) : view === 'import' ? (
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">IMPORT</p><h2>匯入音訊或影片</h2></div></div>
-      <label className="drop-zone"><input type="file" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,.flac,.mp4,.mov" onChange={(event) => selectImportFile(event.target.files?.[0] ?? null)} /><strong>選擇檔案</strong><span>支援 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV，最大 2 GB</span></label>
+      <label className="drop-zone"><input type="file" disabled={Boolean(importProgress)} accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,.flac,.mp4,.mov" onChange={(event) => selectImportFile(event.target.files?.[0] ?? null)} /><strong>選擇檔案</strong><span>支援 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV，最大 2 GB</span></label>
       {importError && <p className="import-error" role="alert">{importError}</p>}
-      {importedFile && <div className="import-result"><strong>{importedFile.name}</strong><span>{(importedFile.size / 1024 / 1024).toFixed(1)} MB · {importedFile.type || '未知格式'}</span><p>使用 OpenAI 相容 ASR 模型時，可直接上傳並取得逐字稿；上傳前不會傳送檔案。</p><button className="primary" onClick={() => void transcribeImportedFile()}>開始批次轉錄</button></div>}
+      {importedFile && <div className="import-result"><strong>{importedFile.name}</strong><span>{(importedFile.size / 1024 / 1024).toFixed(1)} MB · {importedFile.type || '未知格式'}</span><p>{importedFile.name.toLowerCase().endsWith('.wav') ? 'PCM16 WAV 會每 45 秒切段，保留 1.5 秒重疊並自動去除重複文字。' : '其他格式會以單一請求上傳；大於 100 MB 時請先轉成 PCM16 WAV。'}</p>{importProgress ? <div className="batch-progress"><span>正在轉錄第 {importProgress.current} / {importProgress.total} 段</span><progress value={importProgress.current} max={importProgress.total} /><button className="danger" onClick={cancelImport}>取消批次轉錄</button></div> : <button className="primary" onClick={() => void transcribeImportedFile()}>開始批次轉錄</button>}</div>}
     </section>
   ) : (
     <section className="page-panel settings-panel">

@@ -88,6 +88,9 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .import-result { background: #111824; border: 1px solid #2b374c; border-radius: 10px; display: grid; gap: 7px; margin-top: 18px; padding: 18px; }
 .import-result span, .hint { color: #9daac0; font-size: .9rem; line-height: 1.55; }
 .import-result p { color: #c0ccdf; margin: 0; }
+.batch-progress { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
+.batch-progress span { color: #cbd8ee; font-size: .86rem; }
+.batch-progress progress { accent-color: #83a7ff; flex: 1 1 180px; height: 12px; }
 .import-error { background: #3c2029; border: 1px solid #9d4756; border-radius: 10px; color: #ffc0c6; margin: 18px 0 0; padding: 13px 15px; }
 .settings-panel { align-content: start; display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .settings-panel .page-title { grid-column: 1 / -1; margin-bottom: 2px; }
