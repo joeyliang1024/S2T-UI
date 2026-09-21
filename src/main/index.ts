@@ -138,8 +138,7 @@ app.whenReady().then(() => {
       const result = await client.audio.transcriptions.create({
         file: await toFile(Buffer.from(input.audio), 'live-chunk.wav', { type: 'audio/wav' }),
         model: input.model,
-        language: input.language,
-        response_format: 'verbose_json'
+        language: input.language
       })
       return { text: result.text ?? '' }
     } catch (error) {
