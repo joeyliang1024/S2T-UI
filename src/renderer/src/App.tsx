@@ -168,7 +168,7 @@ export default function App(): ReactElement {
   const [selectedDeviceId, setSelectedDeviceId] = useState('default')
   const [includeSystemAudio, setIncludeSystemAudio] = useState(false)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
-  const [level, setLevel] = useState(-60)
+  const [level, setLevel] = useState(Number.NEGATIVE_INFINITY)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [transcripts, setTranscripts] = useState<TranscriptEvent[]>([])
   const [status, setStatus] = useState('準備就緒')
