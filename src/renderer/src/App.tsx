@@ -37,9 +37,9 @@ const settingsKey = 's2t-ui.settings.v1'
 const recordingsDatabase = 's2t-ui.recordings.v1'
 const recordingsStore = 'audio'
 
-const dbfs = (value: number): number => (value > 0 ? 20 * Math.log10(value) : Number.NEGATIVE_INFINITY)
-const dbfsLabel = (value: number): string => Number.isFinite(value) ? `${value.toFixed(0)} dBFS` : '−∞ dBFS'
-const meterPercent = (value: number): number => Number.isFinite(value) ? Math.max(0, Math.min(100, ((value + 60) / 60) * 100)) : 0
+const dbfs = (value: number): number => (value > 0 ? Math.max(-60, 20 * Math.log10(value)) : -60)
+const dbfsLabel = (value: number): string => `${value.toFixed(0)} dBFS`
+const meterPercent = (value: number): number => Math.max(0, Math.min(100, ((value + 60) / 60) * 100))
 const timestamp = (milliseconds: number): string => {
   const total = Math.floor(milliseconds / 1000)
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
@@ -168,7 +168,7 @@ export default function App(): ReactElement {
   const [selectedDeviceId, setSelectedDeviceId] = useState('default')
   const [includeSystemAudio, setIncludeSystemAudio] = useState(false)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
-  const [level, setLevel] = useState(Number.NEGATIVE_INFINITY)
+  const [level, setLevel] = useState(-60)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [transcripts, setTranscripts] = useState<TranscriptEvent[]>([])
   const [status, setStatus] = useState('準備就緒')
@@ -577,7 +577,7 @@ export default function App(): ReactElement {
       pcmChunksRef.current = []
       electronRecordingIdRef.current = null
       setCaptureState('idle')
-      setLevel(Number.NEGATIVE_INFINITY)
+      setLevel(-60)
     }
   }
 
@@ -589,7 +589,7 @@ export default function App(): ReactElement {
     electronRecordingIdRef.current = null
     pausedRef.current = false
     setCaptureState('idle')
-    setLevel(Number.NEGATIVE_INFINITY)
+    setLevel(-60)
     setStatus('已停止並釋放麥克風；未完成的儲存可能遺失。')
   }
 
