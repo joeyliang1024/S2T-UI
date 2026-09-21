@@ -91,6 +91,7 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .text-service-settings { border-top: 1px solid #2a3548; display: grid; gap: 14px; margin-top: 8px; max-width: 700px; padding-top: 20px; }
 .model-settings { border-top: 1px solid #2a3548; display: grid; gap: 14px; margin-top: 8px; max-width: 700px; padding-top: 20px; }
 .model-settings .eyebrow { margin: 0; }
+.model-api-kind { color: #9fc1ff; }
 .model-actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .model-actions button { min-height: 42px; }
 .api-key-row { align-items: end; display: flex; flex-wrap: wrap; gap: 10px; }
