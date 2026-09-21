@@ -22,7 +22,7 @@
 {"type":"transcript","id":"seg-1","revision":1,"status":"final","startMs":0,"endMs":1320,"sourceText":"你好","translatedText":"Hello"}
 ```
 
-這是應用端的暫定整合協定，並非 Breeze TTS 2 的介面。你的 ASR gateway 應將 ASR 與翻譯模型的回應統一成 `transcript` 事件；若翻譯稍後完成，使用相同 `id` 與更高 `revision` 重送事件，並填入 `translatedText`。如此應用不需要知道兩種模型各自的 API。
+這是應用端的暫定 S2T 整合協定。你的 ASR gateway 應將 ASR 與翻譯模型的回應統一成 `transcript` 事件；若翻譯稍後完成，使用相同 `id` 與更高 `revision` 重送事件，並填入 `translatedText`。如此應用不需要知道兩種模型各自的 API。
 
 ## Breeze-ASR-26
 

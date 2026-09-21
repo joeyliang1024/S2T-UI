@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
-import { synthesizeBreezeTts } from './breeze-tts'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
 type AudioDevice = { deviceId: string; label: string }
@@ -22,8 +21,6 @@ type Settings = {
   targetLanguage: string
   modelProfiles: ModelProfile[]
   selectedModelId: string
-  ttsEndpoint: string
-  ttsInstruction: string
   translationEndpoint: string
   translationModel: string
   summaryEndpoint: string
@@ -73,8 +70,6 @@ const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }
   targetLanguage: value.targetLanguage ?? 'en',
   modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket' })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
-  ttsEndpoint: value.ttsEndpoint ?? 'http://127.0.0.1:7860/v1/audio/speech',
-  ttsInstruction: value.ttsInstruction ?? '',
   translationEndpoint: value.translationEndpoint ?? '',
   translationModel: value.translationModel ?? '',
   summaryEndpoint: value.summaryEndpoint ?? '',
@@ -182,8 +177,6 @@ export default function App(): ReactElement {
   const [floatingCaptionText, setFloatingCaptionText] = useState('等待字幕')
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null)
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null)
-  const [ttsText, setTtsText] = useState('這是 S2T UI 的 Breeze TTS 測試。')
-  const [ttsStatus, setTtsStatus] = useState('')
   const [newModelName, setNewModelName] = useState('')
   const [apiKeyDraft, setApiKeyDraft] = useState('')
   const [apiKeyStatus, setApiKeyStatus] = useState('')
@@ -762,27 +755,6 @@ export default function App(): ReactElement {
     } catch (error) { setStatus(error instanceof Error ? error.message : '保存工作階段失敗') }
   }
 
-  const testBreezeTts = async (): Promise<void> => {
-    if (!settings.ttsEndpoint.trim() || !ttsText.trim()) {
-      setTtsStatus('請輸入 Breeze API 位址與要朗讀的文字。')
-      return
-    }
-    setTtsStatus('正在請求 Breeze TTS…')
-    try {
-      const audio = await synthesizeBreezeTts({
-        endpoint: settings.ttsEndpoint.trim(), text: ttsText.trim(), instruction: settings.ttsInstruction, cfgScale: 4
-      })
-      if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current)
-      const url = URL.createObjectURL(audio)
-      playbackUrlRef.current = url
-      setPlaybackUrl(url)
-      setPlayingSessionId('breeze-test')
-      setTtsStatus('Breeze TTS 已產生音訊。')
-    } catch (error) {
-      setTtsStatus(error instanceof Error ? `Breeze TTS 失敗：${error.message}` : 'Breeze TTS 失敗。')
-    }
-  }
-
   const saveTextServiceKey = async (profileId: 'translation' | 'summary', key: string, clear: () => void): Promise<void> => {
     if (!window.s2t || !key.trim()) { setStatus('請貼上 API key。'); return }
     try {
@@ -894,15 +866,6 @@ export default function App(): ReactElement {
         <label>{selectedModel.kind === 'openai-http' ? '轉錄 API 位址' : 'WebSocket 端點'}<input type="url" placeholder={selectedModel.kind === 'openai-http' ? 'https://host.example/v1/audio/transcriptions' : 'wss://model.example.com/stream'} disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
         {selectedModel.kind === 'openai-http' ? <><label>模型 ID<input placeholder="Breeze-ASR-25" disabled={selectedModel.id === 'none'} value={selectedModel.model} onChange={(event) => updateSelectedModel({ model: event.target.value })} /></label>{window.s2t && <div className="api-key-row"><label>API key<input type="password" autoComplete="off" placeholder="貼上後會加密儲存" value={apiKeyDraft} onChange={(event) => setApiKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveApiKey()} disabled={selectedModel.id === 'none'}>儲存 API key</button></div>}{apiKeyStatus && <p className="hint">{apiKeyStatus}</p>}<p className="hint">此 API 為 request/response，應用每約 2.5 秒送出一個 WAV chunk；每段回傳後會立刻顯示為即時字幕。</p></> : <p className="hint">模型必須符合 [ModelAdapter](docs/MODEL_ADAPTER.md) 的音訊 frame 協定，並由你的 gateway 合併 ASR 與翻譯回應。</p>}
         <div className="model-actions"><input value={newModelName} placeholder="新模型名稱" onChange={(event) => setNewModelName(event.target.value)} /><button className="secondary" onClick={addModelProfile}>新增模型</button>{selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}</div>
-      </div>
-      <div className="tts-settings">
-        <p className="eyebrow">BREEZE TTS 2</p>
-        <label>API 位址<input type="url" value={settings.ttsEndpoint} onChange={(event) => setSettings((current) => ({ ...current, ttsEndpoint: event.target.value }))} /></label>
-        <label>語音指令（選填）<input value={settings.ttsInstruction} placeholder="例如：以清晰、平穩的中文語氣朗讀" onChange={(event) => setSettings((current) => ({ ...current, ttsInstruction: event.target.value }))} /></label>
-        <label>測試文字<textarea value={ttsText} onChange={(event) => setTtsText(event.target.value)} /></label>
-        <button className="secondary" onClick={() => void testBreezeTts()}>測試並播放 Breeze TTS</button>
-        {ttsStatus && <p className="hint">{ttsStatus}</p>}
-        {playingSessionId === 'breeze-test' && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}
       </div>
       <div className="text-service-settings">
         <p className="eyebrow">翻譯 API</p>
