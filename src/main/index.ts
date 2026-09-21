@@ -1,9 +1,10 @@
-import { app, BrowserWindow, dialog, ipcMain, session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, session } from 'electron'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { createWriteStream, type WriteStream } from 'node:fs'
-import { copyFile, mkdir, open, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile, rm, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
+import OpenAI, { toFile } from 'openai'
 
 let captionWindow: BrowserWindow | null = null
 type PcmRecording = { path: string; stream: WriteStream; sampleRate: number; bytesWritten: number; writes: Promise<void> }
@@ -33,6 +34,29 @@ const waitForStreamEnd = (stream: WriteStream): Promise<void> => new Promise((re
   stream.once('error', reject)
   stream.end()
 })
+
+const secretStorePath = (): string => join(app.getPath('userData'), 'model-secrets.json')
+const validSecretId = (id: unknown): id is string => typeof id === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(id)
+const readSecrets = async (): Promise<Record<string, string>> => {
+  try {
+    const stored = JSON.parse(await readFile(secretStorePath(), 'utf8')) as Record<string, string>
+    return Object.fromEntries(Object.entries(stored).flatMap(([id, value]) => {
+      try { return [[id, safeStorage.decryptString(Buffer.from(value, 'base64'))]] } catch { return [] }
+    }))
+  } catch { return {} }
+}
+const saveSecret = async (id: string, value: string): Promise<void> => {
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('此系統無法使用 Electron 安全儲存區')
+  const current = await readSecrets()
+  current[id] = value
+  const encrypted = Object.fromEntries(Object.entries(current).map(([key, secret]) => [key, safeStorage.encryptString(secret).toString('base64')]))
+  await writeFile(secretStorePath(), JSON.stringify(encrypted), { mode: 0o600 })
+}
+const openAiBaseUrl = (endpoint: string): string => {
+  const url = new URL(endpoint)
+  url.pathname = url.pathname.replace(/\/audio\/transcriptions\/?$/, '').replace(/\/$/, '')
+  return url.toString().replace(/\/$/, '')
+}
 
 const loadRenderer = (window: BrowserWindow, fragment = ''): void => {
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
@@ -93,6 +117,34 @@ const createWindow = (): void => {
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
     callback(permission === 'media')
+  })
+
+  ipcMain.handle('model:save-api-key', async (_event, input: { profileId: string; apiKey: string }) => {
+    if (!validSecretId(input.profileId) || typeof input.apiKey !== 'string' || input.apiKey.trim().length < 8) throw new Error('無效的 API key 設定')
+    await saveSecret(input.profileId, input.apiKey.trim())
+  })
+  ipcMain.handle('model:has-api-key', async (_event, profileId: string) => {
+    if (!validSecretId(profileId)) return false
+    return Boolean((await readSecrets())[profileId])
+  })
+  ipcMain.handle('model:transcribe', async (_event, input: { profileId: string; endpoint: string; model: string; language: string; audio: ArrayBuffer }) => {
+    if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 2 * 1024 * 1024) throw new Error('無效的音訊分段')
+    const apiKey = (await readSecrets())[input.profileId]
+    if (!apiKey) throw new Error('請先在設定中儲存此模型的 API key')
+    let baseURL: string
+    try { baseURL = openAiBaseUrl(input.endpoint) } catch { throw new Error('無效的轉錄 API 位址') }
+    const client = new OpenAI({ apiKey, baseURL, timeout: 20_000, maxRetries: 1 })
+    try {
+      const result = await client.audio.transcriptions.create({
+        file: await toFile(Buffer.from(input.audio), 'live-chunk.wav', { type: 'audio/wav' }),
+        model: input.model,
+        language: input.language,
+        response_format: 'verbose_json'
+      })
+      return { text: result.text ?? '' }
+    } catch (error) {
+      throw new Error(error instanceof Error ? `模型轉錄失敗：${error.message}` : '模型轉錄失敗')
+    }
   })
 
   ipcMain.handle('recording:start', async (_event, sampleRate: number) => {

@@ -131,3 +131,98 @@ export class WebSocketModelAdapter implements ModelAdapter {
     }
   }
 }
+
+const wavFromFloat32 = (samples: Float32Array, sampleRate: number): ArrayBuffer => {
+  const buffer = new ArrayBuffer(44 + samples.length * 2)
+  const view = new DataView(buffer)
+  const write = (offset: number, value: string): void => {
+    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index))
+  }
+  write(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); write(8, 'WAVE'); write(12, 'fmt ')
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true)
+  write(36, 'data'); view.setUint32(40, samples.length * 2, true)
+  samples.forEach((sample, index) => {
+    const normalized = Math.max(-1, Math.min(1, sample))
+    view.setInt16(44 + index * 2, normalized < 0 ? normalized * 0x8000 : normalized * 0x7fff, true)
+  })
+  return buffer
+}
+
+/**
+ * OpenAI-compatible `/v1/audio/transcriptions` endpoints are request/response,
+ * so the adapter sends consecutive short WAV chunks and emits each answer as it
+ * arrives. The key never enters this adapter; Electron main owns it.
+ */
+export class OpenAiChunkedModelAdapter implements ModelAdapter {
+  private listeners = new Set<(event: TranscriptEvent) => void>()
+  private sampleRate = 48_000
+  private language = 'zh'
+  private pending = new Float32Array(0)
+  private pendingStart = 0
+  private queued = Promise.resolve()
+  private sequence = 0
+  private stopped = false
+
+  constructor(private readonly profile: { id: string; endpoint: string; model: string }) {}
+
+  async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
+    if (!window.s2t) throw new Error('OpenAI 相容轉錄僅能在 Electron 應用程式中使用')
+    if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
+    if (!(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
+    this.sampleRate = input.sampleRate
+    this.language = input.language.split('-')[0]
+    this.pending = new Float32Array(0)
+    this.pendingStart = 0
+    this.queued = Promise.resolve()
+    this.sequence = 0
+    this.stopped = false
+  }
+
+  pushAudio(chunk: Float32Array, startSample: number): void {
+    if (this.stopped) return
+    if (this.pending.length === 0) this.pendingStart = startSample
+    const merged = new Float32Array(this.pending.length + chunk.length)
+    merged.set(this.pending)
+    merged.set(chunk, this.pending.length)
+    this.pending = merged
+    const chunkSamples = Math.floor(this.sampleRate * 2.5)
+    while (this.pending.length >= chunkSamples) {
+      const audio = this.pending.slice(0, chunkSamples)
+      const start = this.pendingStart
+      this.pending = this.pending.slice(chunkSamples)
+      this.pendingStart += chunkSamples
+      this.enqueue(audio, start)
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (this.stopped) return
+    this.stopped = true
+    if (this.pending.length) this.enqueue(this.pending, this.pendingStart)
+    this.pending = new Float32Array(0)
+    await this.queued
+  }
+
+  onTranscript(listener: (event: TranscriptEvent) => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  private enqueue(audio: Float32Array, startSample: number): void {
+    const sequence = this.sequence++
+    this.queued = this.queued.then(async () => {
+      if (!window.s2t) return
+      const response = await window.s2t.transcribeAudioChunk({
+        profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
+        language: this.language, audio: wavFromFloat32(audio, this.sampleRate)
+      })
+      const sourceText = response.text.trim()
+      if (!sourceText) return
+      const startMs = Math.round(startSample / this.sampleRate * 1000)
+      const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
+      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText }
+      this.listeners.forEach((listener) => listener(event))
+    })
+  }
+}

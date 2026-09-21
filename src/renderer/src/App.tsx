@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
-import { NoopModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
+import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
 import { synthesizeBreezeTts } from './breeze-tts'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
@@ -23,7 +23,7 @@ type Settings = {
   ttsEndpoint: string
   ttsInstruction: string
 }
-type ModelProfile = { id: string; name: string; endpoint: string; kind: 'websocket' }
+type ModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }
 
 const sessionsKey = 's2t-ui.sessions.v1'
 const settingsKey = 's2t-ui.settings.v1'
@@ -58,11 +58,11 @@ const loadJson = <T,>(key: string, fallback: T): T => {
   }
 }
 
-const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', kind: 'websocket' }
+const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', model: '', kind: 'websocket' }
 const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => ({
   sourceLanguage: value.sourceLanguage ?? 'zh-TW',
   targetLanguage: value.targetLanguage ?? 'en',
-  modelProfiles: value.modelProfiles?.length ? value.modelProfiles : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
+  modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket' })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
   ttsEndpoint: value.ttsEndpoint ?? 'http://127.0.0.1:7860/v1/audio/speech',
   ttsInstruction: value.ttsInstruction ?? ''
@@ -172,6 +172,8 @@ export default function App(): ReactElement {
   const [ttsText, setTtsText] = useState('這是 S2T UI 的 Breeze TTS 測試。')
   const [ttsStatus, setTtsStatus] = useState('')
   const [newModelName, setNewModelName] = useState('')
+  const [apiKeyDraft, setApiKeyDraft] = useState('')
+  const [apiKeyStatus, setApiKeyStatus] = useState('')
   const [transcriptSearch, setTranscriptSearch] = useState('')
   const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null)
 
@@ -383,9 +385,11 @@ export default function App(): ReactElement {
       await refreshDevices()
 
       unsubscribeModelRef.current?.()
-      modelRef.current = selectedModel.endpoint.trim()
-        ? new WebSocketModelAdapter(selectedModel.endpoint.trim())
-        : new NoopModelAdapter()
+      modelRef.current = selectedModel.kind === 'openai-http'
+        ? new OpenAiChunkedModelAdapter(selectedModel)
+        : selectedModel.endpoint.trim()
+          ? new WebSocketModelAdapter(selectedModel.endpoint.trim())
+          : new NoopModelAdapter()
       unsubscribeModelRef.current = modelRef.current.onTranscript(receiveTranscript)
 
       const context = new AudioContext()
@@ -566,7 +570,7 @@ export default function App(): ReactElement {
       setStatus('請輸入模型名稱。')
       return
     }
-    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: '', kind: 'websocket' }
+    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: '', model: '', kind: 'websocket' }
     setSettings((current) => ({ ...current, modelProfiles: [...current.modelProfiles, profile], selectedModelId: profile.id }))
     setNewModelName('')
   }
@@ -578,6 +582,18 @@ export default function App(): ReactElement {
   const removeSelectedModel = (): void => {
     if (selectedModel.id === 'none') return
     setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.filter((profile) => profile.id !== current.selectedModelId), selectedModelId: 'none' }))
+  }
+
+  const saveApiKey = async (): Promise<void> => {
+    if (!window.s2t || selectedModel.kind !== 'openai-http') return
+    if (!apiKeyDraft.trim()) { setApiKeyStatus('請貼上 API key。'); return }
+    try {
+      await window.s2t.saveModelApiKey(selectedModel.id, apiKeyDraft.trim())
+      setApiKeyDraft('')
+      setApiKeyStatus('API key 已加密儲存於此電腦的 Electron 安全儲存區。')
+    } catch (error) {
+      setApiKeyStatus(error instanceof Error ? error.message : '無法儲存 API key。')
+    }
   }
 
   const toggleFloatingCaptions = (): void => {
@@ -751,8 +767,9 @@ export default function App(): ReactElement {
         <p className="eyebrow">字幕／翻譯模型</p>
         <label>目前模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
         <label>模型名稱<input value={selectedModel.name} disabled={selectedModel.id === 'none'} onChange={(event) => updateSelectedModel({ name: event.target.value })} /></label>
-        <label>WebSocket 端點<input type="url" placeholder="wss://model.example.com/stream" disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
-        <p className="hint">模型必須符合 [ModelAdapter](docs/MODEL_ADAPTER.md) 的音訊 frame 協定，並由你的 gateway 合併 ASR 與翻譯回應。</p>
+        <label>連線類型<select disabled={selectedModel.id === 'none'} value={selectedModel.kind} onChange={(event) => updateSelectedModel({ kind: event.target.value as ModelProfile['kind'] })}><option value="websocket">WebSocket 即時 gateway</option><option value="openai-http">OpenAI 相容轉錄 API</option></select></label>
+        <label>{selectedModel.kind === 'openai-http' ? '轉錄 API 位址' : 'WebSocket 端點'}<input type="url" placeholder={selectedModel.kind === 'openai-http' ? 'https://host.example/v1/audio/transcriptions' : 'wss://model.example.com/stream'} disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
+        {selectedModel.kind === 'openai-http' ? <><label>模型 ID<input placeholder="Breeze-ASR-25" disabled={selectedModel.id === 'none'} value={selectedModel.model} onChange={(event) => updateSelectedModel({ model: event.target.value })} /></label>{window.s2t && <div className="api-key-row"><label>API key<input type="password" autoComplete="off" placeholder="貼上後會加密儲存" value={apiKeyDraft} onChange={(event) => setApiKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveApiKey()} disabled={selectedModel.id === 'none'}>儲存 API key</button></div>}{apiKeyStatus && <p className="hint">{apiKeyStatus}</p>}<p className="hint">此 API 為 request/response，應用每約 2.5 秒送出一個 WAV chunk；每段回傳後會立刻顯示為即時字幕。</p></> : <p className="hint">模型必須符合 [ModelAdapter](docs/MODEL_ADAPTER.md) 的音訊 frame 協定，並由你的 gateway 合併 ASR 與翻譯回應。</p>}
         <div className="model-actions"><input value={newModelName} placeholder="新模型名稱" onChange={(event) => setNewModelName(event.target.value)} /><button className="secondary" onClick={addModelProfile}>新增模型</button>{selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}</div>
       </div>
       <div className="tts-settings">

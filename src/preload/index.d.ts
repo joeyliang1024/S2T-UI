@@ -3,6 +3,9 @@ export {}
 declare global {
   interface Window {
     s2t?: {
+      saveModelApiKey: (profileId: string, apiKey: string) => Promise<void>
+      hasModelApiKey: (profileId: string) => Promise<boolean>
+      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; audio: ArrayBuffer }) => Promise<{ text: string }>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
       appendPcm: (id: string, audio: ArrayBuffer) => void
       finishPcmRecording: (id: string) => Promise<{ audioPath: string }>

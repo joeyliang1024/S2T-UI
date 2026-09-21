@@ -46,3 +46,9 @@ Electron 應用已透過 `src/renderer/src/model-adapter.ts` 將收音與字幕 
 串流模型應持續更新相同 `id` 的 partial，完成時發出 final。只支援片段請求的模型可在 adapter 外側加入切段器；切段前後的緩衝時間與原始樣本 offset 必須保留，才能維持 SRT 時間正確。
 
 `stop()` 應排空模型端尾段並停止串流。模型故障時應讓呼叫端收到可辨識的錯誤；應用仍會保留已錄下的 WAV，避免模型問題造成錄音遺失。
+
+## OpenAI 相容 HTTP 轉錄
+
+設定頁可選擇「OpenAI 相容轉錄 API」，填入完整的 `/v1/audio/transcriptions` URL、模型 ID（例如 `Breeze-ASR-25`）並儲存 API key。API key 僅交給 Electron 主程序，使用 Electron `safeStorage` 加密後保存，不會寫進 renderer 設定、錄音檔或 Git。
+
+此類 API 本身不是雙向串流，應用會將錄音切成約 2.5 秒的單聲道 PCM WAV，按順序以 `multipart/form-data` 送出 `model`、`language`、`file`。每個回應的 `text` 會立即成為一個 final 字幕段落；時間軸根據原始 sample offset 計算。API 沒有 partial 回應時，無法在該 2.5 秒片段完成前顯示同一段的暫定文字。
