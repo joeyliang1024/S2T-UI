@@ -6,6 +6,7 @@ export type TranscriptEvent = {
   endMs: number
   sourceText: string
   translatedText?: string
+  speaker?: string
 }
 
 export interface ModelAdapter {
@@ -164,7 +165,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private sequence = 0
   private stopped = false
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string }) {}
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; prompt?: string }) {}
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
     if (!window.s2t) throw new Error('OpenAI 相容轉錄僅能在 Electron 應用程式中使用')
@@ -186,13 +187,18 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     merged.set(this.pending)
     merged.set(chunk, this.pending.length)
     this.pending = merged
-    const chunkSamples = Math.floor(this.sampleRate * 2.5)
-    while (this.pending.length >= chunkSamples) {
-      const audio = this.pending.slice(0, chunkSamples)
+    const maximumChunkSamples = Math.floor(this.sampleRate * 3)
+    const minimumChunkSamples = Math.floor(this.sampleRate * 1.2)
+    const rms = Math.sqrt(chunk.reduce((sum, sample) => sum + sample * sample, 0) / chunk.length)
+    const reachedNaturalBoundary = this.pending.length >= minimumChunkSamples && rms < 0.012
+    while (this.pending.length >= maximumChunkSamples || reachedNaturalBoundary) {
+      const size = reachedNaturalBoundary ? this.pending.length : maximumChunkSamples
+      const audio = this.pending.slice(0, size)
       const start = this.pendingStart
-      this.pending = this.pending.slice(chunkSamples)
-      this.pendingStart += chunkSamples
+      this.pending = this.pending.slice(size)
+      this.pendingStart += size
       this.enqueue(audio, start)
+      if (this.pending.length < minimumChunkSamples) break
     }
   }
 
@@ -215,7 +221,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       if (!window.s2t) return
       const response = await window.s2t.transcribeAudioChunk({
         profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
-        language: this.language, audio: wavFromFloat32(audio, this.sampleRate)
+        language: this.language, prompt: this.profile.prompt, audio: wavFromFloat32(audio, this.sampleRate)
       })
       const sourceText = response.text.trim()
       if (!sourceText) return

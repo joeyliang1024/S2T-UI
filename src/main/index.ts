@@ -57,6 +57,11 @@ const openAiBaseUrl = (endpoint: string): string => {
   url.pathname = url.pathname.replace(/\/audio\/transcriptions\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
 }
+const openAiChatBaseUrl = (endpoint: string): string => {
+  const url = new URL(endpoint)
+  url.pathname = url.pathname.replace(/\/(chat\/completions|responses)\/?$/, '').replace(/\/$/, '')
+  return url.toString().replace(/\/$/, '')
+}
 
 const loadRenderer = (window: BrowserWindow, fragment = ''): void => {
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
@@ -127,8 +132,8 @@ app.whenReady().then(() => {
     if (!validSecretId(profileId)) return false
     return Boolean((await readSecrets())[profileId])
   })
-  ipcMain.handle('model:transcribe', async (_event, input: { profileId: string; endpoint: string; model: string; language: string; audio: ArrayBuffer }) => {
-    if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 2 * 1024 * 1024) throw new Error('無效的音訊分段')
+  ipcMain.handle('model:transcribe', async (_event, input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => {
+    if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 100 * 1024 * 1024) throw new Error('無效的音訊分段')
     const apiKey = (await readSecrets())[input.profileId]
     if (!apiKey) throw new Error('請先在設定中儲存此模型的 API key')
     let baseURL: string
@@ -136,13 +141,28 @@ app.whenReady().then(() => {
     const client = new OpenAI({ apiKey, baseURL, timeout: 20_000, maxRetries: 1 })
     try {
       const result = await client.audio.transcriptions.create({
-        file: await toFile(Buffer.from(input.audio), 'live-chunk.wav', { type: 'audio/wav' }),
+        file: await toFile(Buffer.from(input.audio), input.filename || 'live-chunk.wav', { type: input.contentType || 'audio/wav' }),
         model: input.model,
-        language: input.language
+        language: input.language,
+        ...(input.prompt?.trim() ? { prompt: input.prompt.trim() } : {})
       })
       return { text: result.text ?? '' }
     } catch (error) {
       throw new Error(error instanceof Error ? `模型轉錄失敗：${error.message}` : '模型轉錄失敗')
+    }
+  })
+  ipcMain.handle('model:complete', async (_event, input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
+    if (!validSecretId(input.profileId) || !Array.isArray(input.messages) || !input.model.trim()) throw new Error('無效的文字模型請求')
+    const apiKey = (await readSecrets())[input.profileId]
+    if (!apiKey) throw new Error('請先在設定中儲存此服務的 API key')
+    let baseURL: string
+    try { baseURL = openAiChatBaseUrl(input.endpoint) } catch { throw new Error('無效的文字 API 位址') }
+    const client = new OpenAI({ apiKey, baseURL, timeout: 30_000, maxRetries: 1 })
+    try {
+      const result = await client.chat.completions.create({ model: input.model, messages: input.messages, temperature: 0.2 })
+      return { text: result.choices[0]?.message.content?.trim() ?? '' }
+    } catch (error) {
+      throw new Error(error instanceof Error ? `文字模型請求失敗：${error.message}` : '文字模型請求失敗')
     }
   })
 

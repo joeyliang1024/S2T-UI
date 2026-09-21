@@ -5,7 +5,8 @@ declare global {
     s2t?: {
       saveModelApiKey: (profileId: string, apiKey: string) => Promise<void>
       hasModelApiKey: (profileId: string) => Promise<boolean>
-      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; audio: ArrayBuffer }) => Promise<{ text: string }>
+      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string }>
+      completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
       appendPcm: (id: string, audio: ArrayBuffer) => void
       finishPcmRecording: (id: string) => Promise<{ audioPath: string }>

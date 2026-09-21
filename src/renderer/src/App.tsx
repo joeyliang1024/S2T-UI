@@ -22,6 +22,11 @@ type Settings = {
   selectedModelId: string
   ttsEndpoint: string
   ttsInstruction: string
+  translationEndpoint: string
+  translationModel: string
+  summaryEndpoint: string
+  summaryModel: string
+  glossary: string
 }
 type ModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http' }
 
@@ -65,7 +70,12 @@ const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }
   modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket' })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
   ttsEndpoint: value.ttsEndpoint ?? 'http://127.0.0.1:7860/v1/audio/speech',
-  ttsInstruction: value.ttsInstruction ?? ''
+  ttsInstruction: value.ttsInstruction ?? '',
+  translationEndpoint: value.translationEndpoint ?? '',
+  translationModel: value.translationModel ?? '',
+  summaryEndpoint: value.summaryEndpoint ?? '',
+  summaryModel: value.summaryModel ?? '',
+  glossary: value.glossary ?? ''
 })
 
 const browserDownload = (blob: Blob, filename: string): void => {
@@ -174,8 +184,13 @@ export default function App(): ReactElement {
   const [newModelName, setNewModelName] = useState('')
   const [apiKeyDraft, setApiKeyDraft] = useState('')
   const [apiKeyStatus, setApiKeyStatus] = useState('')
+  const [translationKeyDraft, setTranslationKeyDraft] = useState('')
+  const [summaryKeyDraft, setSummaryKeyDraft] = useState('')
   const [transcriptSearch, setTranscriptSearch] = useState('')
   const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [summaryText, setSummaryText] = useState('')
+  const [summaryStatus, setSummaryStatus] = useState('')
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
@@ -201,6 +216,7 @@ export default function App(): ReactElement {
   const unsubscribeModelRef = useRef<(() => void) | null>(null)
   const sampleOffsetRef = useRef(0)
   const activeDeviceIdRef = useRef('default')
+  const translatingIdsRef = useRef(new Set<string>())
   const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
 
   const refreshDevices = useCallback(async () => {
@@ -232,6 +248,33 @@ export default function App(): ReactElement {
       return next
     })
   }, [])
+
+  const requestTranslation = useCallback(async (entry: TranscriptEvent): Promise<void> => {
+    if (!window.s2t || !settings.translationEndpoint.trim() || !settings.translationModel.trim() || !entry.sourceText.trim()) return
+    if (translatingIdsRef.current.has(entry.id)) return
+    translatingIdsRef.current.add(entry.id)
+    try {
+      const glossary = settings.glossary.trim() ? `\n術語表（請保留或採用指定譯法）：${settings.glossary.trim()}` : ''
+      const result = await window.s2t.completeText({
+        profileId: 'translation', endpoint: settings.translationEndpoint, model: settings.translationModel,
+        messages: [
+          { role: 'system', content: `你是字幕翻譯器。將使用者文字翻譯成 ${settings.targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary}` },
+          { role: 'user', content: entry.sourceText }
+        ]
+      })
+      if (result.text) setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id
+        ? { ...currentEntry, translatedText: result.text, revision: Math.max(currentEntry.revision, entry.revision) + 1 }
+        : currentEntry))
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '翻譯失敗')
+    } finally {
+      translatingIdsRef.current.delete(entry.id)
+    }
+  }, [settings.glossary, settings.targetLanguage, settings.translationEndpoint, settings.translationModel])
+
+  useEffect(() => {
+    transcripts.filter((entry) => entry.status === 'final' && !entry.translatedText).forEach((entry) => { void requestTranslation(entry) })
+  }, [requestTranslation, transcripts])
 
   useEffect(() => {
     unsubscribeModelRef.current = modelRef.current.onTranscript(receiveTranscript)
@@ -386,7 +429,7 @@ export default function App(): ReactElement {
 
       unsubscribeModelRef.current?.()
       modelRef.current = selectedModel.kind === 'openai-http'
-        ? new OpenAiChunkedModelAdapter(selectedModel)
+        ? new OpenAiChunkedModelAdapter({ ...selectedModel, prompt: settings.glossary.trim() || undefined })
         : selectedModel.endpoint.trim()
           ? new WebSocketModelAdapter(selectedModel.endpoint.trim())
           : new NoopModelAdapter()
@@ -559,6 +602,10 @@ export default function App(): ReactElement {
       : entry))
   }
 
+  const updateSpeaker = (id: string, speaker: string): void => {
+    setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, speaker: speaker || undefined } : entry))
+  }
+
   const saveSettings = (): void => {
     setSettingsSaved(true)
     window.setTimeout(() => setSettingsSaved(false), 2400)
@@ -624,6 +671,30 @@ export default function App(): ReactElement {
     setImportedFile(file)
   }
 
+  const transcribeImportedFile = async (): Promise<void> => {
+    if (!importedFile || !window.s2t || selectedModel.kind !== 'openai-http') {
+      setImportError('請先選擇檔案，並在設定中選擇 OpenAI 相容 ASR 模型。')
+      return
+    }
+    if (importedFile.size > 100 * 1024 * 1024) {
+      setImportError('此版本的 HTTP 匯入上限為 100 MB；較大檔案需要後端分段上傳 API。')
+      return
+    }
+    setImportError('正在上傳並轉錄…')
+    try {
+      const response = await window.s2t.transcribeAudioChunk({
+        profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model,
+        language: settings.sourceLanguage.split('-')[0], prompt: settings.glossary || undefined,
+        filename: importedFile.name, contentType: importedFile.type || undefined, audio: await importedFile.arrayBuffer()
+      })
+      const sourceText = response.text.trim()
+      if (!sourceText) throw new Error('模型沒有回傳逐字稿')
+      setTranscripts([{ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: 0, endMs: 0, sourceText }])
+      setImportError('轉錄完成，已切換至即時字幕頁，可下載逐字稿。')
+      setView('live')
+    } catch (error) { setImportError(error instanceof Error ? error.message : '匯入轉錄失敗') }
+  }
+
   const playSession = async (entry: SavedSession): Promise<void> => {
     try {
       const audio = await loadRecording(entry.audioKey)
@@ -687,6 +758,32 @@ export default function App(): ReactElement {
     }
   }
 
+  const saveTextServiceKey = async (profileId: 'translation' | 'summary', key: string, clear: () => void): Promise<void> => {
+    if (!window.s2t || !key.trim()) { setStatus('請貼上 API key。'); return }
+    try {
+      await window.s2t.saveModelApiKey(profileId, key.trim())
+      clear()
+      setStatus(`${profileId === 'translation' ? '翻譯' : '摘要'} API key 已安全儲存。`)
+    } catch (error) { setStatus(error instanceof Error ? error.message : '無法儲存 API key。') }
+  }
+
+  const createSummary = async (): Promise<void> => {
+    const transcript = makeTranscriptText(transcripts.filter((entry) => entry.status === 'final'))
+    if (!window.s2t || !settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript) {
+      setSummaryStatus('請先設定摘要 API，並完成至少一段逐字稿。')
+      return
+    }
+    setSummaryStatus('正在產生會議紀錄…')
+    try {
+      const result = await window.s2t.completeText({
+        profileId: 'summary', endpoint: settings.summaryEndpoint, model: settings.summaryModel,
+        messages: [{ role: 'system', content: '請以繁體中文整理會議紀錄，包含：摘要、重點、決策、待辦事項。請使用清楚的 Markdown 標題與項目。' }, { role: 'user', content: transcript }]
+      })
+      setSummaryText(result.text)
+      setSummaryStatus(result.text ? '會議紀錄已產生。' : '摘要服務沒有回傳內容。')
+    } catch (error) { setSummaryStatus(error instanceof Error ? error.message : '產生摘要失敗') }
+  }
+
   const canRecord = captureState === 'idle'
   const isActive = captureState === 'recording' || captureState === 'paused'
 
@@ -715,7 +812,7 @@ export default function App(): ReactElement {
         ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
           <article key={entry.id} className={entry.status}>
             <time>{timestamp(entry.startMs)}</time>
-            {editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
+            {editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
           </article>
         ))}</>}
       </section>
@@ -725,8 +822,10 @@ export default function App(): ReactElement {
         <button className="text-button" onClick={() => exportTranscript('txt')}>TXT</button>
         <button className="text-button" onClick={() => exportTranscript('srt')}>SRT</button>
         <button className="text-button" onClick={() => exportTranscript('json')}>JSON</button>
+        <button className="text-button" onClick={() => void createSummary()}>產生會議紀錄</button>
         {window.s2t && <button className="text-button" onClick={toggleFloatingCaptions}>{floatingCaptions ? '隱藏浮動字幕' : '浮動字幕'}</button>}
       </div>
+      {(summaryStatus || summaryText) && <section className="summary-panel"><div className="meter-label"><span>會議紀錄</span><strong>{summaryStatus}</strong></div>{summaryText && <pre>{summaryText}</pre>}</section>}
       <footer>
         {canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : (
           <>
@@ -756,7 +855,7 @@ export default function App(): ReactElement {
       <div className="page-title"><div><p className="eyebrow">IMPORT</p><h2>匯入音訊或影片</h2></div></div>
       <label className="drop-zone"><input type="file" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,.flac,.mp4,.mov" onChange={(event) => selectImportFile(event.target.files?.[0] ?? null)} /><strong>選擇檔案</strong><span>支援 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV，最大 2 GB</span></label>
       {importError && <p className="import-error" role="alert">{importError}</p>}
-      {importedFile && <div className="import-result"><strong>{importedFile.name}</strong><span>{(importedFile.size / 1024 / 1024).toFixed(1)} MB · {importedFile.type || '未知格式'}</span><p>檔案已可供自有模型適配器提交。模型端點尚未設定前，不會上傳或處理檔案。</p></div>}
+      {importedFile && <div className="import-result"><strong>{importedFile.name}</strong><span>{(importedFile.size / 1024 / 1024).toFixed(1)} MB · {importedFile.type || '未知格式'}</span><p>使用 OpenAI 相容 ASR 模型時，可直接上傳並取得逐字稿；上傳前不會傳送檔案。</p><button className="primary" onClick={() => void transcribeImportedFile()}>開始批次轉錄</button></div>}
     </section>
   ) : (
     <section className="page-panel settings-panel">
@@ -781,6 +880,21 @@ export default function App(): ReactElement {
         {ttsStatus && <p className="hint">{ttsStatus}</p>}
         {playingSessionId === 'breeze-test' && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}
       </div>
+      <div className="text-service-settings">
+        <p className="eyebrow">翻譯 API</p>
+        <label>Chat Completions 位址<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.translationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, translationEndpoint: event.target.value }))} /></label>
+        <label>模型 ID<input value={settings.translationModel} onChange={(event) => setSettings((current) => ({ ...current, translationModel: event.target.value }))} /></label>
+        {window.s2t && <div className="api-key-row"><label>翻譯 API key<input type="password" autoComplete="off" value={translationKeyDraft} onChange={(event) => setTranslationKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('translation', translationKeyDraft, () => setTranslationKeyDraft(''))}>儲存 API key</button></div>}
+        <p className="hint">每段 ASR final 字幕會自動送到此 OpenAI 相容 Chat Completions endpoint，並更新同一段的譯文。</p>
+      </div>
+      <div className="text-service-settings">
+        <p className="eyebrow">術語與摘要</p>
+        <label>熱詞／術語表<textarea value={settings.glossary} placeholder="例如：Codex、Breeze、公司名稱、專有名詞" onChange={(event) => setSettings((current) => ({ ...current, glossary: event.target.value }))} /></label>
+        <label>摘要 Chat Completions 位址<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.summaryEndpoint} onChange={(event) => setSettings((current) => ({ ...current, summaryEndpoint: event.target.value }))} /></label>
+        <label>摘要模型 ID<input value={settings.summaryModel} onChange={(event) => setSettings((current) => ({ ...current, summaryModel: event.target.value }))} /></label>
+        {window.s2t && <div className="api-key-row"><label>摘要 API key<input type="password" autoComplete="off" value={summaryKeyDraft} onChange={(event) => setSummaryKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('summary', summaryKeyDraft, () => setSummaryKeyDraft(''))}>儲存 API key</button></div>}
+        <p className="hint">術語會送給 HTTP ASR 的 prompt 與翻譯提示；摘要會從 final 逐字稿生成。</p>
+      </div>
       <button className="primary" onClick={saveSettings}>儲存設定</button>{settingsSaved && <span className="saved">已儲存</span>}
     </section>
   )
@@ -798,8 +912,11 @@ export default function App(): ReactElement {
         </div>
         <span className={`status ${isActive ? 'active' : ''}`}>{status}</span>
       </header>
-      <nav aria-label="主要功能"><button className={view === 'live' ? 'nav-active' : ''} onClick={() => setView('live')}>即時轉錄</button><button className={view === 'history' ? 'nav-active' : ''} onClick={() => setView('history')}>記錄</button><button className={view === 'import' ? 'nav-active' : ''} onClick={() => setView('import')}>匯入檔案</button><button className={view === 'settings' ? 'nav-active' : ''} onClick={() => setView('settings')}>設定</button></nav>
-      {workspace}
+      <nav aria-label="主要功能"><button className={view === 'live' ? 'nav-active' : ''} onClick={() => setView('live')}>即時轉錄</button><button className={view === 'history' ? 'nav-active' : ''} onClick={() => setView('history')}>記錄</button><button className={view === 'import' ? 'nav-active' : ''} onClick={() => setView('import')}>匯入檔案</button><button className={view === 'settings' ? 'nav-active' : ''} onClick={() => setView('settings')}>完整設定</button><button className="sidebar-toggle" onClick={() => setSidebarOpen((current) => !current)}>{sidebarOpen ? '隱藏側欄' : '顯示側欄'}</button></nav>
+      <div className={`app-layout ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
+        {sidebarOpen && <aside className="settings-sidebar" aria-label="快速設定"><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option></select></label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><p className="hint">在完整設定頁可設定 API、術語、翻譯與摘要。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside>}
+        <section className="workspace-content">{workspace}</section>
+      </div>
     </main>
   )
 }

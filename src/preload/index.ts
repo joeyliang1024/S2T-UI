@@ -3,7 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 contextBridge.exposeInMainWorld('s2t', {
   saveModelApiKey: (profileId: string, apiKey: string) => ipcRenderer.invoke('model:save-api-key', { profileId, apiKey }),
   hasModelApiKey: (profileId: string) => ipcRenderer.invoke('model:has-api-key', profileId),
-  transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:transcribe', input),
+  transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:transcribe', input),
+  completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => ipcRenderer.invoke('model:complete', input),
   startPcmRecording: (sampleRate: number) => ipcRenderer.invoke('recording:start', sampleRate),
   appendPcm: (id: string, audio: ArrayBuffer) => ipcRenderer.send('recording:append', { id, audio }),
   finishPcmRecording: (id: string) => ipcRenderer.invoke('recording:finish', id),
