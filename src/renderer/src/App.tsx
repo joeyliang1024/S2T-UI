@@ -317,25 +317,35 @@ export default function App(): ReactElement {
     translatingIdsRef.current.add(entry.id)
     try {
       const glossary = settings.glossary.trim() ? `\n術語表（請保留或採用指定譯法）：${settings.glossary.trim()}` : ''
-      const result = await window.s2t.completeText({
-        profileId: 'translation', endpoint: settings.translationEndpoint, model: settings.translationModel,
-        messages: [
-          { role: 'system', content: `你是字幕翻譯器。將使用者文字翻譯成 ${settings.targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary}` },
-          { role: 'user', content: entry.sourceText }
-        ]
-      })
+      let result: { text: string } | null = null
+      let lastError: unknown
+      for (const delay of [0, 250, 750]) {
+        if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
+        try {
+          result = await window.s2t.completeText({
+            profileId: 'translation', endpoint: settings.translationEndpoint, model: settings.translationModel,
+            messages: [
+              { role: 'system', content: `你是字幕翻譯器。將使用者文字翻譯成 ${settings.targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary}` },
+              { role: 'user', content: entry.sourceText }
+            ]
+          })
+          break
+        } catch (error) { lastError = error }
+      }
+      if (!result) throw lastError instanceof Error ? lastError : new Error('翻譯服務沒有回應')
       if (result.text) setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id
-        ? { ...currentEntry, translatedText: result.text, revision: Math.max(currentEntry.revision, entry.revision) + 1 }
+        ? { ...currentEntry, translatedText: result.text, translationStatus: undefined, revision: Math.max(currentEntry.revision, entry.revision) + 1 }
         : currentEntry))
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : '翻譯失敗')
+      setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: 'failed' } : currentEntry))
+      setStatus(error instanceof Error ? error.message : '翻譯失敗，可手動重新翻譯')
     } finally {
       translatingIdsRef.current.delete(entry.id)
     }
   }, [settings.glossary, settings.targetLanguage, settings.translationEndpoint, settings.translationModel])
 
   useEffect(() => {
-    transcripts.filter((entry) => entry.status === 'final' && !entry.translatedText).forEach((entry) => { void requestTranslation(entry) })
+    transcripts.filter((entry) => entry.status === 'final' && !entry.translatedText && !entry.translationStatus).forEach((entry) => { void requestTranslation(entry) })
   }, [requestTranslation, transcripts])
 
   useEffect(() => {
@@ -736,7 +746,7 @@ export default function App(): ReactElement {
 
   const updateTranscript = (id: string, sourceText: string, translatedText: string): void => {
     setTranscripts((current) => current.map((entry) => entry.id === id
-      ? { ...entry, sourceText, translatedText: translatedText || undefined, revision: entry.revision + 1, status: 'final' }
+      ? { ...entry, sourceText, translatedText: translatedText || undefined, translationStatus: undefined, revision: entry.revision + 1, status: 'final' }
       : entry))
   }
 
@@ -973,7 +983,7 @@ export default function App(): ReactElement {
         ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
           <article key={entry.id} className={entry.status}>
             <time>{timestamp(entry.startMs)}</time>
-            {entry.status === 'gap' ? <p className="transcript-gap">此時段未取得字幕：{entry.gapReason === 'queue-overflow' ? '模型處理超載' : 'ASR 請求失敗'}。完整 WAV 仍已保存。</p> : editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
+            {entry.status === 'gap' ? <p className="transcript-gap">此時段未取得字幕：{entry.gapReason === 'queue-overflow' ? '模型處理超載' : 'ASR 請求失敗'}。完整 WAV 仍已保存。</p> : editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: undefined } : currentEntry)); void requestTranslation({ ...entry, translationStatus: undefined }) }}>重新翻譯</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
           </article>
         ))}</>}
       </section>

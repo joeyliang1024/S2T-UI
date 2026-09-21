@@ -9,6 +9,7 @@ export type TranscriptEvent = {
   sourceText: string
   translatedText?: string
   speaker?: string
+  translationStatus?: 'failed'
   /** Present only when audio could not be transcribed. Export this event so a
    * reviewer can distinguish an ASR failure from a genuine silent interval. */
   gapReason?: 'queue-overflow' | 'request-failed'

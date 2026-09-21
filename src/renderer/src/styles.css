@@ -56,6 +56,7 @@ article > p { font-size: 1.1rem; grid-column: 2; line-height: 1.55; margin: 0; m
 article.partial { opacity: .7; }
 article.gap { background: rgba(239, 108, 117, .06); }
 .transcript-gap { color: #ffb6bd; font-size: .9rem; }
+.translation-retry { grid-column: 2; justify-self: start; }
 article .translation { color: #9fc1ff; grid-column: 2; }
 .transcript-tools { align-items: center; display: flex; gap: 10px; justify-content: space-between; padding-bottom: 10px; }
 .transcript-tools input, .transcript-edit textarea { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; font: inherit; padding: 9px 10px; }

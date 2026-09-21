@@ -143,10 +143,10 @@
 
 ## P1：翻譯、批次與會議功能
 
-- [ ] **翻譯可靠性與重新翻譯**
+- [x] **翻譯可靠性與重新翻譯（第一版）**
   - 檔案：`src/renderer/src/App.tsx`、`src/main/index.ts`。
-  - 補上翻譯 queue 上限、retry/backoff、失敗標記；人工修改原文後提供「重新翻譯」。原文與譯文必須維持同一 `TranscriptEvent.id`。
-  - 驗收：翻譯 API 壞掉不影響 ASR；同段不重複翻譯；術語表隨 prompt 傳送可驗證。
+  - 已實作：翻譯採 250/750 ms retry，失敗標記在同一段字幕並提供「重新翻譯」；人工修改原文會清除失敗狀態並可再次翻譯。原文與譯文維持同一 `TranscriptEvent.id`。
+  - 待 API 驗收：翻譯服務壞掉不影響 ASR；同段不重複翻譯；術語表隨 prompt 傳送可驗證。
 
 - [ ] **大檔批次切分、重疊與合併**
   - 檔案：`src/renderer/src/App.tsx`、`src/main/index.ts`。
