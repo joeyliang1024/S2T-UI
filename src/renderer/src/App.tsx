@@ -13,6 +13,8 @@ type SavedSession = {
   source: string
   transcript: string
   audioKey: string
+  nativeAudioPath?: string
+  savedToDisk?: boolean
   segments: TranscriptEvent[]
 }
 type Settings = {
@@ -35,7 +37,9 @@ const settingsKey = 's2t-ui.settings.v1'
 const recordingsDatabase = 's2t-ui.recordings.v1'
 const recordingsStore = 'audio'
 
-const dbfs = (value: number): number => (value > 0 ? Math.max(-60, 20 * Math.log10(value)) : -60)
+const dbfs = (value: number): number => (value > 0 ? 20 * Math.log10(value) : Number.NEGATIVE_INFINITY)
+const dbfsLabel = (value: number): string => Number.isFinite(value) ? `${value.toFixed(0)} dBFS` : '−∞ dBFS'
+const meterPercent = (value: number): number => Number.isFinite(value) ? Math.max(0, Math.min(100, ((value + 60) / 60) * 100)) : 0
 const timestamp = (milliseconds: number): string => {
   const total = Math.floor(milliseconds / 1000)
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
@@ -165,7 +169,6 @@ export default function App(): ReactElement {
   const [includeSystemAudio, setIncludeSystemAudio] = useState(false)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
   const [level, setLevel] = useState(-60)
-  const [peak, setPeak] = useState(-60)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [transcripts, setTranscripts] = useState<TranscriptEvent[]>([])
   const [status, setStatus] = useState('準備就緒')
@@ -300,6 +303,20 @@ export default function App(): ReactElement {
     window.localStorage.setItem(settingsKey, JSON.stringify(settings))
   }, [settings])
 
+  useEffect(() => {
+    if (!window.s2t) return
+    void window.s2t.getEnvironmentAsr().then((environment) => {
+      if (!environment.configured) return
+      setSettings((current) => {
+        const profile = { id: 'environment-asr', name: environment.model, endpoint: environment.endpoint, model: environment.model, kind: 'openai-http' as const }
+        const profiles = current.modelProfiles.some((item) => item.id === profile.id)
+          ? current.modelProfiles.map((item) => item.id === profile.id ? profile : item)
+          : [...current.modelProfiles, profile]
+        return { ...current, modelProfiles: profiles, selectedModelId: current.selectedModelId === 'none' ? profile.id : current.selectedModelId }
+      })
+    }).catch(() => undefined)
+  }, [])
+
   const cleanUpCapture = useCallback(() => {
     if (meterFrameRef.current) cancelAnimationFrame(meterFrameRef.current)
     if (timerRef.current) window.clearInterval(timerRef.current)
@@ -335,14 +352,11 @@ export default function App(): ReactElement {
     const samples = new Float32Array(analyser.fftSize)
     analyser.getFloatTimeDomainData(samples)
     let sum = 0
-    let max = 0
     for (const sample of samples) {
       sum += sample * sample
-      max = Math.max(max, Math.abs(sample))
     }
     const rms = dbfs(Math.sqrt(sum / samples.length))
     setLevel(rms)
-    setPeak((current) => Math.max(rms, current - 0.8, dbfs(max)))
     meterFrameRef.current = requestAnimationFrame(updateMeter)
   }, [])
 
@@ -442,6 +456,9 @@ export default function App(): ReactElement {
       const silentGain = context.createGain()
       const recordingDestination = context.createMediaStreamDestination()
       silentGain.gain.value = 0
+      // AnalyserNode must be part of an active graph for all Electron audio
+      // backends to update its time-domain buffer reliably.
+      analyser.connect(silentGain)
       sampleOffsetRef.current = 0
       processor.onaudioprocess = (event) => {
         const samples = event.inputBuffer.getChannelData(0).slice()
@@ -510,11 +527,11 @@ export default function App(): ReactElement {
     }
   }
 
-  const stopAndSave = async (): Promise<void> => {
+  const stopCapture = async (): Promise<void> => {
     const recorder = recorderRef.current
     if (!recorder) return
     setCaptureState('saving')
-    setStatus('正在完成錄音並儲存…')
+    setStatus('正在完成錄音…')
     await new Promise<void>((resolve) => {
       recorder.addEventListener('stop', () => resolve(), { once: true })
       recorder.stop()
@@ -533,23 +550,10 @@ export default function App(): ReactElement {
       const microphoneName = selectedDeviceId === 'default' ? '系統預設麥克風' : (devices.find((device) => device.deviceId === selectedDeviceId)?.label ?? '已選擇的音源')
       const source = includeSystemAudio ? `${microphoneName} + 系統音訊` : microphoneName
 
-      if (window.s2t) {
-        const result = await window.s2t.saveSession({ name, audio: blob ? await blob.arrayBuffer() : undefined, recordingPath, transcript, createdAt, durationMs: elapsedMs, source, segments: finalSegments })
-        if (result.canceled) {
-          setStatus('已取消儲存')
-          return
-        }
-        setStatus(`已儲存錄音與逐字稿：${result.audioPath}`)
-      } else {
-        if (!blob) throw new Error('瀏覽器模式沒有可下載的音訊')
-        browserDownload(blob, `${name}.wav`)
-        browserDownload(new Blob([transcript], { type: 'text/plain;charset=utf-8' }), `${name}.txt`)
-        setStatus('已下載錄音與逐字稿')
-      }
       try {
         if (blob) await saveRecording(sessionId, blob)
       } catch {
-        setStatus('已儲存錄音與逐字稿；此瀏覽器無法保存歷史音檔。')
+        setStatus('收音已結束；此瀏覽器無法保存本機歷史音檔。')
       }
       setSessions((current) => [{
         id: sessionId,
@@ -559,8 +563,12 @@ export default function App(): ReactElement {
         source,
         transcript,
         audioKey: sessionId,
+        nativeAudioPath: recordingPath,
+        savedToDisk: false,
         segments: finalSegments
       }, ...current])
+      setView('history')
+      setStatus('收音已結束。請在「記錄」頁選擇保存位置。')
     } catch (error) {
       setStatus(error instanceof Error ? `儲存失敗：${error.message}` : '儲存失敗')
     } finally {
@@ -569,8 +577,7 @@ export default function App(): ReactElement {
       pcmChunksRef.current = []
       electronRecordingIdRef.current = null
       setCaptureState('idle')
-      setLevel(-60)
-      setPeak(-60)
+      setLevel(Number.NEGATIVE_INFINITY)
     }
   }
 
@@ -582,8 +589,7 @@ export default function App(): ReactElement {
     electronRecordingIdRef.current = null
     pausedRef.current = false
     setCaptureState('idle')
-    setLevel(-60)
-    setPeak(-60)
+    setLevel(Number.NEGATIVE_INFINITY)
     setStatus('已停止並釋放麥克風；未完成的儲存可能遺失。')
   }
 
@@ -697,7 +703,9 @@ export default function App(): ReactElement {
 
   const playSession = async (entry: SavedSession): Promise<void> => {
     try {
-      const audio = await loadRecording(entry.audioKey)
+      const audio = entry.nativeAudioPath && window.s2t
+        ? new Blob([await window.s2t.readAudio(entry.nativeAudioPath)], { type: 'audio/wav' })
+        : await loadRecording(entry.audioKey)
       if (!audio) {
         setStatus('找不到此記錄的本機音檔。')
         return
@@ -728,13 +736,30 @@ export default function App(): ReactElement {
 
   const downloadSessionAudio = async (entry: SavedSession): Promise<void> => {
     try {
-      const audio = await loadRecording(entry.audioKey)
+      const audio = entry.nativeAudioPath && window.s2t
+        ? new Blob([await window.s2t.readAudio(entry.nativeAudioPath)], { type: 'audio/wav' })
+        : await loadRecording(entry.audioKey)
       if (!audio) throw new Error('找不到本機音檔')
       browserDownload(audio, `${entry.title}.wav`)
       setStatus('已下載 WAV 錄音')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '無法下載錄音')
     }
+  }
+
+  const saveSessionToDisk = async (entry: SavedSession): Promise<void> => {
+    try {
+      const audio = entry.nativeAudioPath && window.s2t
+        ? undefined
+        : await loadRecording(entry.audioKey)
+      if (!window.s2t && !audio) throw new Error('找不到本機音檔')
+      const result = window.s2t
+        ? await window.s2t.saveSession({ name: entry.title, recordingPath: entry.nativeAudioPath, audio: audio ? await audio.arrayBuffer() : undefined, transcript: entry.transcript, createdAt: entry.createdAt, durationMs: entry.durationMs, source: entry.source, segments: entry.segments })
+        : undefined
+      if (result?.canceled) return
+      setSessions((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, nativeAudioPath: result?.audioPath ?? currentEntry.nativeAudioPath, savedToDisk: true } : currentEntry))
+      setStatus(result?.audioPath ? `已保存工作階段：${result.audioPath}` : '已保存工作階段')
+    } catch (error) { setStatus(error instanceof Error ? error.message : '保存工作階段失敗') }
   }
 
   const testBreezeTts = async (): Promise<void> => {
@@ -790,18 +815,17 @@ export default function App(): ReactElement {
   const liveWorkspace = (
     <>
       <section className="capture-panel" aria-label="音訊來源與音量">
-        <label>
+        <div className="audio-source-field"><label>
           音源
           <select value={selectedDeviceId} onChange={(event) => selectDevice(event.target.value)} disabled={captureState === 'saving'}>
             <option value="default">系統預設麥克風</option>
             {devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}
           </select>
-        </label>
-        <label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} />混入系統音訊<span>開始後請在分享視窗啟用音訊</span></label>
+        </label><label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} /><span><strong>混入系統音訊</strong>開始後請在分享視窗啟用音訊</span></label></div>
         <button className="secondary" onClick={() => void refreshDevices()} disabled={captureState === 'saving'}>重新整理裝置</button>
-        <div className="meter" aria-label={`目前音量 ${level.toFixed(0)} dBFS`}>
-          <div className="meter-label"><span>輸入音量</span><strong>{level.toFixed(0)} dBFS</strong></div>
-          <div className="meter-track"><div className="meter-value" style={{ width: `${Math.max(0, Math.min(100, ((level + 60) / 60) * 100))}%` }} /><i style={{ left: `${Math.max(0, Math.min(100, ((peak + 60) / 60) * 100))}%` }} /></div>
+        <div className="meter" aria-label={`目前音量 ${dbfsLabel(level)}`}>
+          <div className="meter-label"><span>輸入音量</span><strong>{dbfsLabel(level)}</strong></div>
+          <div className="meter-track"><div className="meter-value" style={{ width: `${meterPercent(level)}%` }} /></div>
         </div>
         <div className="timer">{timestamp(elapsedMs)}</div>
       </section>
@@ -834,7 +858,7 @@ export default function App(): ReactElement {
             ) : (
               <>
                 <button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button>
-                <button className="danger" onClick={() => void stopAndSave()}>停止並儲存</button>
+                <button className="danger" onClick={() => void stopCapture()}>結束收音</button>
               </>
             )}
           </>
@@ -847,7 +871,7 @@ export default function App(): ReactElement {
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><span>{sessions.length} 筆</span></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
-        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions"><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button></div></article>)}</div>
+        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button></div></article>)}</div>
       )}
     </section>
   ) : view === 'import' ? (

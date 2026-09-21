@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, session } from 'electron'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -10,6 +11,7 @@ let captionWindow: BrowserWindow | null = null
 type PcmRecording = { path: string; stream: WriteStream; sampleRate: number; bytesWritten: number; writes: Promise<void> }
 const pcmRecordings = new Map<string, PcmRecording>()
 const completedRecordings = new Set<string>()
+const availableAudioPaths = new Set<string>()
 
 const wavHeader = (sampleRate: number, dataBytes: number): Buffer => {
   const header = Buffer.alloc(44)
@@ -61,6 +63,11 @@ const openAiChatBaseUrl = (endpoint: string): string => {
   const url = new URL(endpoint)
   url.pathname = url.pathname.replace(/\/(chat\/completions|responses)\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
+}
+const environmentKey = (profileId: string): string | undefined => {
+  if (profileId === 'translation') return process.env.S2T_TRANSLATION_API_KEY
+  if (profileId === 'summary') return process.env.S2T_SUMMARY_API_KEY
+  return process.env.S2T_ASR_API_KEY
 }
 
 const loadRenderer = (window: BrowserWindow, fragment = ''): void => {
@@ -130,11 +137,16 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('model:has-api-key', async (_event, profileId: string) => {
     if (!validSecretId(profileId)) return false
-    return Boolean((await readSecrets())[profileId])
+    return Boolean(environmentKey(profileId) || (await readSecrets())[profileId])
   })
+  ipcMain.handle('model:environment-asr', () => ({
+    endpoint: process.env.S2T_ASR_ENDPOINT ?? '',
+    model: process.env.S2T_ASR_MODEL ?? '',
+    configured: Boolean(process.env.S2T_ASR_API_KEY && process.env.S2T_ASR_ENDPOINT && process.env.S2T_ASR_MODEL)
+  }))
   ipcMain.handle('model:transcribe', async (_event, input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => {
     if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 100 * 1024 * 1024) throw new Error('無效的音訊分段')
-    const apiKey = (await readSecrets())[input.profileId]
+    const apiKey = environmentKey(input.profileId) || (await readSecrets())[input.profileId]
     if (!apiKey) throw new Error('請先在設定中儲存此模型的 API key')
     let baseURL: string
     try { baseURL = openAiBaseUrl(input.endpoint) } catch { throw new Error('無效的轉錄 API 位址') }
@@ -153,7 +165,7 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('model:complete', async (_event, input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
     if (!validSecretId(input.profileId) || !Array.isArray(input.messages) || !input.model.trim()) throw new Error('無效的文字模型請求')
-    const apiKey = (await readSecrets())[input.profileId]
+    const apiKey = environmentKey(input.profileId) || (await readSecrets())[input.profileId]
     if (!apiKey) throw new Error('請先在設定中儲存此服務的 API key')
     let baseURL: string
     try { baseURL = openAiChatBaseUrl(input.endpoint) } catch { throw new Error('無效的文字 API 位址') }
@@ -207,6 +219,7 @@ app.whenReady().then(() => {
         await file.close()
       }
       completedRecordings.add(recording.path)
+      availableAudioPaths.add(recording.path)
       return { audioPath: recording.path }
     } finally {
       pcmRecordings.delete(id)
@@ -238,6 +251,7 @@ app.whenReady().then(() => {
       await copyFile(input.recordingPath, audioPath)
       await rm(input.recordingPath, { force: true })
       completedRecordings.delete(input.recordingPath)
+      availableAudioPaths.delete(input.recordingPath)
     } else if (input.audio) {
       await writeFile(audioPath, Buffer.from(input.audio))
     } else {
@@ -250,7 +264,14 @@ app.whenReady().then(() => {
       version: 1, name: input.name, createdAt: input.createdAt, durationMs: input.durationMs,
       source: input.source, audioFile: 'audio.wav', transcriptFile: 'transcript.jsonl'
     }, null, 2), 'utf8')
+    availableAudioPaths.add(audioPath)
     return { canceled: false, audioPath, directory }
+  })
+
+  ipcMain.handle('audio:read', async (_event, audioPath: string) => {
+    if (typeof audioPath !== 'string' || !availableAudioPaths.has(audioPath)) throw new Error('無法讀取此音檔')
+    const audio = await readFile(audioPath)
+    return audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength)
   })
 
   ipcMain.on('captions:toggle-floating', (_event, visible: boolean) => {
