@@ -300,6 +300,7 @@ export default function App(): ReactElement {
   const [transcriptSearch, setTranscriptSearch] = useState('')
   const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [exportSidebarOpen, setExportSidebarOpen] = useState(true)
   const [summaryText, setSummaryText] = useState('')
   const [summaryStatus, setSummaryStatus] = useState('')
   const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization'>('all')
@@ -1208,15 +1209,6 @@ export default function App(): ReactElement {
         ))}</>}
       </section>
 
-      <div className="export-bar">
-        <span>字幕匯出</span>
-        <button className="text-button" onClick={() => exportTranscript('csv')}>下載逐字稿</button>
-        <button className="text-button" onClick={() => exportTranscript('srt')}>SRT</button>
-        <button className="text-button" onClick={() => exportTranscript('json')}>JSON</button>
-        <button className="text-button" onClick={() => void createSummary()}>產生會議紀錄</button>
-        {window.s2t && <button className="text-button" onClick={toggleFloatingCaptions}>{floatingCaptions ? '隱藏浮動字幕' : '浮動字幕'}</button>}
-      </div>
-
       <section className="capture-panel" aria-label="音訊來源與音量">
         <div className="audio-source-field"><label>音源<div className="source-select-row"><select value={selectedDeviceId} onChange={(event) => selectDevice(event.target.value)} disabled={captureState === 'saving'}><option value="default">系統預設麥克風</option>{devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}</select><button className="icon-button" aria-label="重新整理裝置" title="重新整理裝置" onClick={() => void refreshDevices()} disabled={captureState === 'saving'}>↻</button></div></label><div className="audio-source-actions"><label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} /><span><strong>混入系統音訊</strong>（開始後請在分享視窗啟用音訊）</span></label></div><div className="source-capture-row"><div className="capture-controls">{canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : captureState === 'saving' ? <button className="secondary" onClick={forceReleaseCapture}>結束並釋放麥克風</button> : <><button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button><button className="danger" onClick={() => void stopCapture()}>結束收音</button></>}</div><div className="timer">{timestamp(elapsedMs)}</div></div></div>
         <div className="meters">
@@ -1329,9 +1321,10 @@ export default function App(): ReactElement {
         <nav aria-label="主要功能"><button className={view === 'live' ? 'nav-active' : ''} onClick={() => setView('live')}>即時轉錄</button><button className={view === 'history' ? 'nav-active' : ''} onClick={() => setView('history')}>記錄</button><button className={view === 'import' ? 'nav-active' : ''} onClick={() => setView('import')}>匯入檔案</button><button className={view === 'models' ? 'nav-active' : ''} onClick={() => setView('models')}>模型列表</button><button className={view === 'settings' ? 'nav-active' : ''} onClick={() => setView('settings')}>完整設定</button></nav>
         <span className={`status ${isActive ? 'active' : ''}`}>{status}</span>
       </header>
-      <div className={`app-layout ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
+      <div className={`app-layout ${sidebarOpen ? '' : 'sidebar-hidden'} ${view === 'live' ? 'live-layout' : ''} ${exportSidebarOpen ? '' : 'export-sidebar-hidden'}`}>
         {sidebarOpen ? <aside className="settings-sidebar" aria-label="快速設定"><button className="drawer-handle drawer-handle-open" aria-label="收合設定側欄" title="收合設定側欄" onClick={() => setSidebarOpen(false)}>‹</button><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option></select></label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>摘要模型<select value={settings.summaryModel || 'none'} disabled><option value="none">未設定摘要模型</option>{settings.summaryModel && <option value={settings.summaryModel}>{settings.summaryModel}</option>}</select></label><label>講者分離模型<select value={settings.diarizationModel || 'none'} disabled><option value="none">未設定講者分離模型</option>{settings.diarizationModel && <option value={settings.diarizationModel}>{settings.diarizationModel}</option>}</select></label><p className="hint">在完整設定頁可設定 API、術語、翻譯與摘要。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside> : <button className="drawer-handle drawer-handle-closed" aria-label="展開設定側欄" onClick={() => setSidebarOpen(true)}>設定 ›</button>}
         <section className="workspace-content">{workspace}</section>
+        {view === 'live' && (exportSidebarOpen ? <aside className="export-sidebar" aria-label="字幕匯出"><button className="export-drawer-handle" aria-label="收合字幕匯出側欄" title="收合字幕匯出側欄" onClick={() => setExportSidebarOpen(false)}>›</button><div><p className="eyebrow">EXPORT</p><h2>字幕匯出</h2></div><button className="secondary" onClick={() => exportTranscript('csv')}>下載逐字稿</button><button className="secondary" onClick={() => exportTranscript('srt')}>下載 SRT</button><button className="secondary" onClick={() => exportTranscript('json')}>下載 JSON</button><button className="secondary" onClick={() => void createSummary()}>產生會議紀錄</button>{window.s2t && <button className="secondary" onClick={toggleFloatingCaptions}>{floatingCaptions ? '隱藏浮動字幕' : '浮動字幕'}</button>}</aside> : <button className="export-drawer-handle export-drawer-closed" aria-label="展開字幕匯出側欄" title="展開字幕匯出側欄" onClick={() => setExportSidebarOpen(true)}>匯出 ‹</button>)}
       </div>
     </main>
   )
