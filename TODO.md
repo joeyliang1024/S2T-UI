@@ -85,6 +85,48 @@
 
 ## P0：模型服務驗證（需 vLLM／模型端資料）
 
+### 今日 P0：Web 即時字幕翻譯
+
+- [x] **HY-MT1.5-1.8B 即時翻譯接入（Web gateway）**
+  - 已知契約：使用 OpenAI 相容 `POST /v1/chat/completions`；Web gateway 的 endpoint、model、key 只讀 `.env` 的 `S2T_WEB_TRANSLATION_*`，不得進入 `VITE_*`、renderer、localStorage、文件或 Git。
+  - 檔案：`server/index.cjs` 新增 `POST /api/translations`，固定模型端設定、只接受 ASR final text/目標語言/術語；`src/renderer/src/App.tsx` 在 Web 模式以此 BFF 呼叫，Electron 保持 Main process safeStorage 路徑。
+  - 延遲策略：ASR final 到達後立即非阻塞翻譯同一 `TranscriptEvent.id`；250/750 ms 僅在暫時失敗時重試；不得等下一筆 ASR 或阻塞錄音、VAD、WAV 寫入。翻譯回來時 revision 更新同段，避免產生第二段字幕。
+  - 已驗證：以實際 endpoint 發送「你好，這是一個即時字幕翻譯測試。」得到正確英文；經 `127.0.0.1:5173/api/translations` Vite proxy 再驗證，`/api/config` 也正確公布 `HY-MT1.5-1.8B` 的公開模型資訊，未包含 key。
+  - 待真人驗收：Web 說 30 秒繁中，原文段落後出現英文譯文，譯文語意大致正確；ASR 仍可在翻譯服務超時時繼續。
+
+- [x] **逐字稿 CSV 匯出**
+  - 檔案：`src/renderer/src/App.tsx`。
+  - schema：UTF-8 BOM CSV，欄位 `start_ms,end_ms,start_time,end_time,speaker,source_text,translated_text,status,gap_reason`；以 RFC 4180 雙引號逸出逗號、換行與引號。
+  - 已實作：即時字幕匯出列與記錄頁都提供 CSV；會連同原文、譯文、講者、時間軸與缺口原因匯出。
+  - 待真人驗收：含中文、英文、逗號、換行的原文與譯文能以 Numbers/Excel 開啟。
+
+## P0：收音與字幕操作體驗
+
+- [ ] **分離麥克風與系統音訊的即時音量表**
+  - 目的：混音後的總 dBFS 無法判斷是講者太小聲、系統音訊太小聲，或只有其中一個音源沒有接上；保留獨立音量表才有明確的使用者診斷價值。
+  - 檔案：`src/renderer/src/App.tsx`、`src/renderer/src/styles.css`。
+  - 實作：新增 `microphoneAnalyserRef` 與 `systemAnalyserRef`，各自接在 source node 後、混音 bus 前；各自以 `requestAnimationFrame` 讀 RMS、換算 `-60..0 dBFS`。既有混音 source 繼續送入 AudioWorklet、WAV writer 與 ASR，**不得**用顯示用 analyser 的值改變後端音訊資料。
+  - UI：顯示「講者音量」與「系統音訊」兩條彩色表；沒有系統 track 時顯示「未連接」，不可偽裝為靜音。保留目前不帶白色游標的彩色填滿樣式。
+  - 驗收：只講話時只有講者表移動；只播放系統聲時只有系統表移動；兩者同時輸入時兩條都移動，錄下的 WAV 與 ASR 仍是混音結果。
+
+- [ ] **收音中途啟用／停用系統音訊**
+  - 現況：`src/renderer/src/App.tsx` 的 checkbox 在 active capture 時被 disabled，只能在開始收音前選擇。
+  - 實作：把 `getDisplayMedia()` 與 `AudioContext.createMediaStreamSource()` 抽成 `attachSystemAudio()`；收音期間打開時顯示原生分享選擇器，取得 audio track 後連到既有 mix bus 與獨立 system analyser。取消分享、沒有 audio track 或權限失敗時，繼續麥克風與字幕，不終止工作階段。關閉時只 disconnect／stop 系統 track，麥克風、計時、Worklet、WAV 寫入及 Adapter 佇列持續運作。
+  - 平台限制：瀏覽器與 Electron 都必須由使用者每次在分享視窗明確授權音訊；macOS 是否提供全系統 loopback 仍取決於系統 picker／虛擬音訊裝置。不能繞過系統權限或在背景靜默開啟系統音訊。
+  - 驗收：收音 10 秒後啟用系統音訊，再關閉；session 不重置、字幕 id/timestamp 單調遞增、WAV 前段只有麥克風／中段混音／後段只有麥克風。
+
+- [ ] **字幕預設跟隨最新進度**
+  - 檔案：`src/renderer/src/App.tsx`、`src/renderer/src/styles.css`。
+  - 實作：以 transcript scroll container ref 判斷使用者是否在底部 48 px；預設 pinned，新增 final/partial 字幕後 `scrollTo({ top: scrollHeight, behavior: 'smooth' })`。使用者向上捲動後取消 pinned，不強制拉回閱讀位置；在底部顯示「回到最新字幕」按鈕與未讀段數，按下後重啟 pinned 並清零。
+  - 驗收：持續收音時自動停在最新字幕；閱讀舊字幕時不跳動；按回到最新後恢復自動跟隨；搜尋／編輯字幕不造成焦點被捲走。
+
+- [ ] **模型列表依使用類別分頁**
+  - 檔案：`src/renderer/src/App.tsx`、`src/main/index.ts`、`src/preload/index.d.ts`、`TODO.md`。
+  - 現況：模型列表把 ASR、翻譯與講者分離依序列出，但沒有使用類別切換；ASR profile 的 `kind` 是 HTTP/WebSocket 傳輸方式，不能當作模型用途。
+  - 資料模型：保存 model registry item 的 `category: 'asr' | 'translation' | 'summary' | 'diarization'`、`name`、`endpoint`、`model`、`transport`、`capabilities`；API key 只維持 Electron safeStorage 參照，不存入 renderer config 或清單 UI。
+  - UI：在「模型列表」內加入 `全部 / ASR / 翻譯 / 摘要 / 講者分離` 分頁，顯示各類數量、endpoint、model ID 與適用傳輸模式；使用者從完整設定新增或刪除模型後即時更新。舊版 `translationProfiles` 與現有單一 diarization 設定需在 `normalizeSettings()`／`sanitizeModelConfig()` 自動遷移，不遺失既有設定。
+  - 驗收：每個類別只顯示對應模型；重新整理及 Electron 重啟後分類不變；API key 永不出現在 DOM、localStorage 或匯出資料。
+
 - [ ] **真人語音端到端驗收目前 ASR endpoint**
   - 無需先改程式；測試結果記到新增的 `docs/VALIDATION.zh-TW.md`。
   - 設定：Electron「完整設定」填 `/v1/audio/transcriptions` endpoint、model、API key；不可把 key 寫入 git 或 `VITE_*`。

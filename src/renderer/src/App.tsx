@@ -86,6 +86,13 @@ const makeTranscriptText = (entries: TranscriptEvent[]): string => entries
   .map((entry) => `[${timestamp(entry.startMs)}] ${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`)
   .join('\n\n')
 
+const makeTranscriptCsv = (entries: TranscriptEvent[]): string => {
+  const escape = (value: unknown): string => `"${String(value ?? '').replace(/"/g, '""')}"`
+  const header = ['start_ms', 'end_ms', 'start_time', 'end_time', 'speaker', 'source_text', 'translated_text', 'status', 'gap_reason']
+  const rows = entries.map((entry) => [entry.startMs, entry.endMs, timestamp(entry.startMs), timestamp(entry.endMs), entry.speaker, entry.sourceText, entry.translatedText, entry.status, entry.gapReason].map(escape).join(','))
+  return `\uFEFF${header.join(',')}\n${rows.join('\n')}`
+}
+
 const loadJson = <T,>(key: string, fallback: T): T => {
   try {
     const value = window.localStorage.getItem(key)
@@ -376,7 +383,7 @@ export default function App(): ReactElement {
   }, [])
 
   const requestTranslation = useCallback(async (entry: TranscriptEvent): Promise<void> => {
-    if (!window.s2t || !settings.translationEndpoint.trim() || !settings.translationModel.trim() || !entry.sourceText.trim()) return
+    if ((!window.s2t && !settings.translationModel.trim()) || (window.s2t && (!settings.translationEndpoint.trim() || !settings.translationModel.trim())) || !entry.sourceText.trim()) return
     if (translatingIdsRef.current.has(entry.id)) return
     translatingIdsRef.current.add(entry.id)
     try {
@@ -386,13 +393,15 @@ export default function App(): ReactElement {
       for (const delay of [0, 250, 750]) {
         if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
         try {
-          result = await window.s2t.completeText({
-            profileId: 'translation', endpoint: settings.translationEndpoint, model: settings.translationModel,
-            messages: [
-              { role: 'system', content: `你是字幕翻譯器。將使用者文字翻譯成 ${settings.targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary}` },
-              { role: 'user', content: entry.sourceText }
-            ]
-          })
+          result = window.s2t
+            ? await window.s2t.completeText({
+              profileId: 'translation', endpoint: settings.translationEndpoint, model: settings.translationModel,
+              messages: [
+                { role: 'system', content: `你是字幕翻譯器。將使用者文字翻譯成 ${settings.targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary}` },
+                { role: 'user', content: entry.sourceText }
+              ]
+            })
+            : await readJsonResponse<{ text: string }>(await fetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: entry.sourceText, targetLanguage: settings.targetLanguage, glossary: settings.glossary }) }), 'Web 翻譯 gateway')
           break
         } catch (error) { lastError = error }
       }
@@ -497,14 +506,16 @@ export default function App(): ReactElement {
   useEffect(() => {
     if (window.s2t) return
     void fetch('/api/config').then(async (response) => {
-      const payload = await readJsonResponse<{ configured?: boolean; model?: { id: string; name: string; model: string; kind: 'openai-http' } | null }>(response, 'Web ASR gateway')
+      const payload = await readJsonResponse<{ configured?: boolean; model?: { id: string; name: string; model: string; kind: 'openai-http' } | null; translation?: { id: string; name: string; model: string } | null }>(response, 'Web ASR gateway')
       if (!response.ok || !payload.configured || !payload.model) throw new Error('Web ASR gateway 尚未設定')
       const profile: ModelProfile = { ...payload.model, endpoint: '/api/transcriptions', capabilities: defaultHttpCapabilities }
       setSettings((current) => {
         const profiles = current.modelProfiles.some((item) => item.id === profile.id)
           ? current.modelProfiles.map((item) => item.id === profile.id ? profile : item)
           : [...current.modelProfiles, profile]
-        return { ...current, modelProfiles: profiles, selectedModelId: current.selectedModelId === 'none' ? profile.id : current.selectedModelId }
+        const translation = payload.translation
+        const translationProfiles = translation ? (current.translationProfiles.some((item) => item.id === translation.id) ? current.translationProfiles.map((item) => item.id === translation.id ? { ...translation, endpoint: '/api/translations' } : item) : [...current.translationProfiles, { ...translation, endpoint: '/api/translations' }]) : current.translationProfiles
+        return { ...current, modelProfiles: profiles, selectedModelId: current.selectedModelId === 'none' ? profile.id : current.selectedModelId, translationProfiles, selectedTranslationModelId: translation && current.selectedTranslationModelId === 'none' ? translation.id : current.selectedTranslationModelId, translationEndpoint: translation && !current.translationEndpoint ? '/api/translations' : current.translationEndpoint, translationModel: translation && !current.translationModel ? translation.model : current.translationModel }
       })
     }).catch((error: unknown) => setStatus(error instanceof Error ? error.message : '無法載入 Web ASR gateway'))
   }, [])
@@ -812,12 +823,12 @@ export default function App(): ReactElement {
     setStatus('已停止並釋放麥克風；未完成的儲存可能遺失。')
   }
 
-  const exportTranscript = (format: 'txt' | 'srt' | 'json'): void => {
+  const exportTranscript = (format: 'txt' | 'srt' | 'json' | 'csv'): void => {
     const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
-    const content = format === 'srt' ? makeSrt(transcripts) : format === 'json'
+    const content = format === 'srt' ? makeSrt(transcripts) : format === 'csv' ? makeTranscriptCsv(transcripts) : format === 'json'
       ? JSON.stringify(transcripts, null, 2)
       : makeTranscriptText(transcripts)
-    browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' }), `${name}.${format}`)
+    browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }), `${name}.${format}`)
     setStatus(`已下載 ${format.toUpperCase()} 字幕檔`)
   }
 
@@ -1011,16 +1022,16 @@ export default function App(): ReactElement {
     }
   }
 
-  const exportSavedTranscript = (entry: SavedSession, format: 'txt' | 'srt' | 'json'): void => {
+  const exportSavedTranscript = (entry: SavedSession, format: 'txt' | 'srt' | 'json' | 'csv'): void => {
     const segments = entry.segments ?? []
-    const content = format === 'txt' ? entry.transcript : format === 'srt'
+    const content = format === 'txt' ? entry.transcript : format === 'csv' ? makeTranscriptCsv(segments) : format === 'srt'
       ? makeSrt(segments)
       : JSON.stringify(segments, null, 2)
     if (format !== 'txt' && segments.length === 0) {
       setStatus('此舊記錄沒有時間軸資料，僅能匯出 TXT。')
       return
     }
-    browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : 'text/plain;charset=utf-8' }), `${entry.title}.${format}`)
+    browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }), `${entry.title}.${format}`)
     setStatus(`已匯出 ${format.toUpperCase()} 逐字稿`)
   }
 
@@ -1161,6 +1172,7 @@ export default function App(): ReactElement {
         <button className="text-button" onClick={() => exportTranscript('txt')}>TXT</button>
         <button className="text-button" onClick={() => exportTranscript('srt')}>SRT</button>
         <button className="text-button" onClick={() => exportTranscript('json')}>JSON</button>
+        <button className="text-button" onClick={() => exportTranscript('csv')}>CSV</button>
         <button className="text-button" onClick={() => void createSummary()}>產生會議紀錄</button>
         {window.s2t && <button className="text-button" onClick={toggleFloatingCaptions}>{floatingCaptions ? '隱藏浮動字幕' : '浮動字幕'}</button>}
       </div>
@@ -1186,7 +1198,7 @@ export default function App(): ReactElement {
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{sessions.length} 筆</span></div></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
-        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div>
+        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'csv')}>CSV</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div>
       )}
     </section>
   ) : view === 'models' ? (

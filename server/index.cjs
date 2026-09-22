@@ -13,13 +13,16 @@ const endpoint = process.env.S2T_WEB_ASR_ENDPOINT || process.env.S2T_ASR_ENDPOIN
 const model = process.env.S2T_WEB_ASR_MODEL || process.env.S2T_ASR_MODEL || ''
 const apiKey = process.env.S2T_WEB_ASR_API_KEY || process.env.S2T_ASR_API_KEY || ''
 const publicName = process.env.S2T_WEB_ASR_NAME || model || '未設定 ASR 模型'
+const translationEndpoint = process.env.S2T_WEB_TRANSLATION_ENDPOINT || ''
+const translationModel = process.env.S2T_WEB_TRANSLATION_MODEL || ''
+const translationApiKey = process.env.S2T_WEB_TRANSLATION_API_KEY || ''
 const staticRoot = join(process.cwd(), 'out/renderer')
 const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
 const requestsByIp = new Map()
 
 const baseUrl = (value) => {
   const url = new URL(value)
-  url.pathname = url.pathname.replace(/\/audio\/transcriptions\/?$/, '').replace(/\/$/, '')
+  url.pathname = url.pathname.replace(/\/(audio\/transcriptions|chat\/completions)\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
 }
 const send = (response, status, body, type = 'application/json; charset=utf-8') => {
@@ -68,7 +71,10 @@ createServer(async (request, response) => {
   if (origin) response.setHeader('access-control-allow-origin', origin)
   response.setHeader('vary', 'Origin')
   if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, x-s2t-language, x-s2t-prompt' }); return response.end() }
-  if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, { configured: Boolean(endpoint && model && apiKey), model: endpoint && model ? { id: 'web-environment-asr', name: publicName, model, kind: 'openai-http' } : null })
+  if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
+    configured: Boolean(endpoint && model && apiKey), model: endpoint && model ? { id: 'web-environment-asr', name: publicName, model, kind: 'openai-http' } : null,
+    translation: translationEndpoint && translationModel && translationApiKey ? { id: 'web-environment-translation', name: `${translationModel}（Web 翻譯）`, model: translationModel } : null
+  })
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
     if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many transcription requests. Try again in one minute.' })
     if (!endpoint || !model || !apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
@@ -84,6 +90,29 @@ createServer(async (request, response) => {
       return send(response, 200, { text: result.text || '' })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
+    }
+  }
+  if (request.method === 'POST' && request.url === '/api/translations') {
+    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many translation requests. Try again in one minute.' })
+    if (!translationEndpoint || !translationModel || !translationApiKey) return send(response, 503, { error: 'Web translation gateway has not been configured.' })
+    try {
+      const raw = await readBody(request, 256 * 1024)
+      const input = JSON.parse(raw.toString('utf8'))
+      const text = typeof input.text === 'string' ? input.text.trim().slice(0, 20_000) : ''
+      const targetLanguage = typeof input.targetLanguage === 'string' ? input.targetLanguage.slice(0, 60) : 'en'
+      const glossary = typeof input.glossary === 'string' ? input.glossary.trim().slice(0, 10_000) : ''
+      if (!text) return send(response, 400, { error: 'Text is required.' })
+      const client = new OpenAI({ apiKey: translationApiKey, baseURL: baseUrl(translationEndpoint), timeout: 12_000, maxRetries: 0 })
+      const result = await client.chat.completions.create({
+        model: translationModel, temperature: 0,
+        messages: [
+          { role: 'system', content: `你是即時字幕翻譯器。將使用者文字翻譯成 ${targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary ? `\n術語表（請保留或採用指定譯法）：${glossary}` : ''}` },
+          { role: 'user', content: text }
+        ]
+      })
+      return send(response, 200, { text: result.choices[0]?.message.content?.trim() || '' })
+    } catch (error) {
+      return send(response, 502, { error: error instanceof Error ? error.message : 'Translation request failed' })
     }
   }
   if (request.method === 'POST' && request.url === '/api/diarizations') {
