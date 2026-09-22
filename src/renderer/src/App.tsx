@@ -1195,8 +1195,9 @@ export default function App(): ReactElement {
   const isActive = captureState === 'recording' || captureState === 'paused'
 
   const liveWorkspace = (
-    <>
+    <div className="live-workspace">
       <section ref={transcriptContainerRef} className="transcript" aria-live="polite">
+        <div className="live-caption-heading"><div><p className="eyebrow">LIVE CAPTIONS</p><h2>即時字幕</h2></div><span>{transcripts.length} 段</span></div>
         {transcripts.length === 0 ? (
           <div className="empty"><h2>等待語音</h2><p>開始收音後，原文與翻譯會顯示在這裡。</p></div>
         ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
@@ -1226,7 +1227,7 @@ export default function App(): ReactElement {
       </div>
       {(summaryStatus || summaryText) && <section className="summary-panel"><div className="meter-label"><span>會議紀錄</span><strong>{summaryStatus}</strong></div>{summaryText && <pre>{summaryText}</pre>}</section>}
 
-    </>
+    </div>
   )
 
   const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
@@ -1330,7 +1331,7 @@ export default function App(): ReactElement {
         <span className={`status ${isActive ? 'active' : ''}`}>{status}</span>
       </header>
       <div className={`app-layout ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
-        {sidebarOpen ? <aside className="settings-sidebar" aria-label="快速設定"><button className="drawer-handle drawer-handle-open" aria-label="收合設定側欄" title="收合設定側欄" onClick={() => setSidebarOpen(false)}>‹</button><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option></select></label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><p className="hint">在完整設定頁可設定 API、術語、翻譯與摘要。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside> : <button className="drawer-handle drawer-handle-closed" aria-label="展開設定側欄" onClick={() => setSidebarOpen(true)}>設定 ›</button>}
+        {sidebarOpen ? <aside className="settings-sidebar" aria-label="快速設定"><button className="drawer-handle drawer-handle-open" aria-label="收合設定側欄" title="收合設定側欄" onClick={() => setSidebarOpen(false)}>‹</button><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option></select></label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>摘要模型<select value={settings.summaryModel || 'none'} disabled><option value="none">未設定摘要模型</option>{settings.summaryModel && <option value={settings.summaryModel}>{settings.summaryModel}</option>}</select></label><label>講者分離模型<select value={settings.diarizationModel || 'none'} disabled><option value="none">未設定講者分離模型</option>{settings.diarizationModel && <option value={settings.diarizationModel}>{settings.diarizationModel}</option>}</select></label><p className="hint">在完整設定頁可設定 API、術語、翻譯與摘要。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside> : <button className="drawer-handle drawer-handle-closed" aria-label="展開設定側欄" onClick={() => setSidebarOpen(true)}>設定 ›</button>}
         <section className="workspace-content">{workspace}</section>
       </div>
     </main>
