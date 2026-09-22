@@ -25,7 +25,10 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 .drawer-handle-open { border-radius: 0 8px 8px 0; font-size: 1.6rem; height: 64px; right: -14px; top: 28px; width: 28px; }
 .drawer-handle-closed { border-left: 0; border-radius: 0 9px 9px 0; font-size: .76rem; height: 92px; left: -28px; top: 34px; writing-mode: vertical-rl; width: 28px; }
 .export-drawer-handle { align-items: center; background: #293852; border: 1px solid #425777; border-radius: 8px 0 0 8px; color: #dbe5f8; display: flex; font-size: 1.4rem; height: 64px; justify-content: center; left: -14px; padding: 0; position: absolute; top: 28px; width: 28px; z-index: 2; }
-.live-layout .export-drawer-closed { align-self: start; border-radius: 8px 0 0 8px; font-size: .76rem; grid-column: -1; grid-row: 1; height: 92px; margin: 34px 0 0; position: relative; top: 0; width: 28px; writing-mode: vertical-rl; }
+.live-layout .export-drawer-closed { border-radius: 8px 0 0 8px; font-size: .76rem; height: 92px; margin: 0; position: absolute; right: 0; top: 34px; width: 28px; writing-mode: vertical-rl; }
+.live-layout .drawer-handle-open, .live-layout .export-drawer-handle { top: 50%; transform: translateY(-50%); }
+.live-layout .export-drawer-handle.export-drawer-closed { left: auto; top: 34px; transform: none; }
+.live-layout .drawer-handle-closed { border-radius: 8px 0 0 8px; left: auto; right: 0; top: 142px; }
 .settings-sidebar h2 { font-size: 1.05rem; margin: 0; }
 .settings-sidebar .eyebrow { margin-bottom: 5px; }
 .workspace-content { min-width: 0; }
@@ -95,6 +98,10 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .page-title > span { color: #9daac0; font-variant-numeric: tabular-nums; }
 .history-title-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
 .history-title-actions > span { color: #9daac0; font-variant-numeric: tabular-nums; }
+.history-pagination { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin: -10px 0 16px; }
+.history-pagination label { align-items: center; display: flex; gap: 7px; width: auto; }
+.history-pagination select { min-height: 34px; width: 76px; }
+.history-pagination > span { color: #9daac0; font-size: .84rem; }
 .session-list { display: grid; gap: 8px; }
 .session-item { align-items: center; background: #111824; border: 1px solid #2b374c; border-radius: 10px; display: flex; justify-content: space-between; padding: 15px; }
 .session-item strong { color: #edf2fb; }

@@ -301,6 +301,8 @@ export default function App(): ReactElement {
   const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [exportSidebarOpen, setExportSidebarOpen] = useState(true)
+  const [historyPageSize, setHistoryPageSize] = useState(10)
+  const [historyPage, setHistoryPage] = useState(1)
   const [summaryText, setSummaryText] = useState('')
   const [summaryStatus, setSummaryStatus] = useState('')
   const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization'>('all')
@@ -1194,6 +1196,9 @@ export default function App(): ReactElement {
 
   const canRecord = captureState === 'idle'
   const isActive = captureState === 'recording' || captureState === 'paused'
+  const historyPageCount = Math.max(1, Math.ceil(sessions.length / historyPageSize))
+  const currentHistoryPage = Math.min(historyPage, historyPageCount)
+  const pagedSessions = sessions.slice((currentHistoryPage - 1) * historyPageSize, currentHistoryPage * historyPageSize)
 
   const liveWorkspace = (
     <div className="live-workspace">
@@ -1224,9 +1229,7 @@ export default function App(): ReactElement {
   const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{sessions.length} 筆</span></div></div>
-      {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
-        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{entry.summary && <p className="session-summary">摘要：{entry.summary}</p>}{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'csv')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div>
-      )}
+      {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (<><div className="history-pagination"><label>每頁筆數<select value={historyPageSize} onChange={(event) => { setHistoryPageSize(Number(event.target.value)); setHistoryPage(1) }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label><span>第 {currentHistoryPage}／{historyPageCount} 頁</span><button className="text-button" disabled={currentHistoryPage === 1} onClick={() => setHistoryPage((current) => Math.max(1, current - 1))}>上一頁</button><button className="text-button" disabled={currentHistoryPage === historyPageCount} onClick={() => setHistoryPage((current) => Math.min(historyPageCount, current + 1))}>下一頁</button></div><div className="session-list">{pagedSessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{entry.summary && <p className="session-summary">摘要：{entry.summary}</p>}{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'csv')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div></>) }
     </section>
   ) : view === 'models' ? (
     <section className="page-panel">
