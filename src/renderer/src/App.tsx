@@ -18,6 +18,7 @@ type SavedSession = {
   nativeAudioPath?: string
   savedToDisk?: boolean
   segments: TranscriptEvent[]
+  summary?: string
 }
 type Settings = {
   sourceLanguage: string
@@ -269,7 +270,8 @@ export default function App(): ReactElement {
   const [selectedDeviceId, setSelectedDeviceId] = useState('default')
   const [includeSystemAudio, setIncludeSystemAudio] = useState(false)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
-  const [level, setLevel] = useState(-60)
+  const [microphoneLevel, setMicrophoneLevel] = useState(-60)
+  const [systemLevel, setSystemLevel] = useState(-60)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [transcripts, setTranscripts] = useState<TranscriptEvent[]>([])
   const [status, setStatus] = useState('準備就緒')
@@ -300,13 +302,15 @@ export default function App(): ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [summaryText, setSummaryText] = useState('')
   const [summaryStatus, setSummaryStatus] = useState('')
+  const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization'>('all')
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const systemStreamRef = useRef<MediaStream | null>(null)
   const systemSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-  const meterAnalyserRef = useRef<AnalyserNode | null>(null)
+  const microphoneAnalyserRef = useRef<AnalyserNode | null>(null)
+  const systemAnalyserRef = useRef<AnalyserNode | null>(null)
   const meterSinkGainRef = useRef<GainNode | null>(null)
   const audioWorkletRef = useRef<AudioWorkletNode | null>(null)
   const silentGainRef = useRef<GainNode | null>(null)
@@ -321,7 +325,8 @@ export default function App(): ReactElement {
   const pausedDurationRef = useRef(0)
   const pauseStartedAtRef = useRef<number | null>(null)
   const meterFrameRef = useRef<number | null>(null)
-  const meterValueRef = useRef<HTMLDivElement | null>(null)
+  const microphoneMeterValueRef = useRef<HTMLDivElement | null>(null)
+  const systemMeterValueRef = useRef<HTMLDivElement | null>(null)
   const meterLastUiUpdateRef = useRef(0)
   const timerRef = useRef<number | null>(null)
   const modelRef = useRef<ModelAdapter>(new NoopModelAdapter())
@@ -331,6 +336,7 @@ export default function App(): ReactElement {
   const activeDeviceIdRef = useRef('default')
   const translatingIdsRef = useRef(new Set<string>())
   const cancelImportRef = useRef(false)
+  const liveDiarizationRunningRef = useRef(false)
   const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
 
   const refreshDevices = useCallback(async () => {
@@ -428,6 +434,23 @@ export default function App(): ReactElement {
   useEffect(() => {
     transcripts.filter((entry) => entry.status === 'final' && !entry.translatedText && !entry.translationStatus).forEach((entry) => { void requestTranslation(entry) })
   }, [requestTranslation, transcripts])
+
+  useEffect(() => {
+    if (window.s2t || captureState !== 'recording') return
+    const timer = window.setInterval(() => {
+      if (liveDiarizationRunningRef.current || pcmChunksRef.current.length === 0) return
+      liveDiarizationRunningRef.current = true
+      const audio = makeWav(pcmChunksRef.current, sampleRateRef.current)
+      void (async () => {
+        try {
+          const payload = await readJsonResponse<unknown>(await fetch(settings.diarizationEndpoint.trim() || '/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }), '即時講者識別')
+          const turns = parseSpeakerTurns(payload)
+          if (turns.length) setTranscripts((current) => assignSpeakersByOverlap(current, turns))
+        } catch { /* Preview must never affect recording, captions, or status. */ } finally { liveDiarizationRunningRef.current = false }
+      })()
+    }, 15_000)
+    return () => window.clearInterval(timer)
+  }, [captureState, settings.diarizationEndpoint])
 
   useEffect(() => {
     unsubscribeModelRef.current = modelRef.current.onTranscript(receiveTranscript)
@@ -543,7 +566,8 @@ export default function App(): ReactElement {
     systemSourceRef.current = null
     void contextRef.current?.close()
     contextRef.current = null
-    meterAnalyserRef.current = null
+    microphoneAnalyserRef.current = null
+    systemAnalyserRef.current = null
     meterSinkGainRef.current?.disconnect()
     meterSinkGainRef.current = null
     audioWorkletRef.current?.disconnect()
@@ -560,29 +584,29 @@ export default function App(): ReactElement {
   }, [cleanUpCapture])
 
   const updateMeter = useCallback(() => {
-    const analyser = meterAnalyserRef.current
-    if (!analyser) return
-    const samples = new Float32Array(analyser.fftSize)
-    analyser.getFloatTimeDomainData(samples)
-    let sum = 0
-    for (const sample of samples) {
-      sum += sample * sample
+    const read = (analyser: AnalyserNode | null): number => {
+      if (!analyser) return -60
+      const samples = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(samples)
+      let sum = 0; for (const sample of samples) sum += sample * sample
+      return dbfs(Math.sqrt(sum / samples.length))
     }
-    const rms = dbfs(Math.sqrt(sum / samples.length))
+    const microphone = read(microphoneAnalyserRef.current)
+    const system = read(systemAnalyserRef.current)
     // Update the coloured bar directly on every animation frame. React state
     // remains for the readable dBFS label, but must not delay the meter while
     // transcription requests or transcript rendering keep the UI busy.
-    meterValueRef.current?.style.setProperty('width', `${meterPercent(rms)}%`)
+    microphoneMeterValueRef.current?.style.setProperty('width', `${meterPercent(microphone)}%`)
+    systemMeterValueRef.current?.style.setProperty('width', `${meterPercent(system)}%`)
     if (performance.now() - meterLastUiUpdateRef.current > 100) {
       meterLastUiUpdateRef.current = performance.now()
-      setLevel(rms)
+      setMicrophoneLevel(microphone); setSystemLevel(system)
     }
     meterFrameRef.current = requestAnimationFrame(updateMeter)
   }, [])
 
   const attachInput = useCallback((stream: MediaStream, context: AudioContext): void => {
     const source = context.createMediaStreamSource(stream)
-    const analyser = meterAnalyserRef.current
+    const analyser = microphoneAnalyserRef.current
     const processor = audioWorkletRef.current
     const recordingDestination = recordingDestinationRef.current
     if (!analyser || !processor || !recordingDestination) throw new Error('音訊管線尚未就緒')
@@ -603,7 +627,7 @@ export default function App(): ReactElement {
 
   const attachSystemAudio = useCallback((stream: MediaStream, context: AudioContext): void => {
     if (stream.getAudioTracks().length === 0) throw new Error('選取的分享來源沒有提供系統音訊')
-    const analyser = meterAnalyserRef.current
+    const analyser = systemAnalyserRef.current
     const processor = audioWorkletRef.current
     const recordingDestination = recordingDestinationRef.current
     if (!analyser || !processor || !recordingDestination) throw new Error('音訊管線尚未就緒')
@@ -673,8 +697,8 @@ export default function App(): ReactElement {
       unsubscribeModelErrorRef.current = modelRef.current.onError(setStatus)
 
       const context = new AudioContext()
-      const meterAnalyser = context.createAnalyser()
-      meterAnalyser.fftSize = 1024
+      const microphoneAnalyser = context.createAnalyser(); microphoneAnalyser.fftSize = 1024
+      const systemAnalyser = context.createAnalyser(); systemAnalyser.fftSize = 1024
       await context.audioWorklet.addModule(new URL('./audio-capture.worklet.js', import.meta.url))
       const processor = new AudioWorkletNode(context, 's2t-audio-capture', {
         numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1, channelCountMode: 'explicit'
@@ -687,7 +711,7 @@ export default function App(): ReactElement {
       await context.resume()
       // The meter has its own direct, silent branch. WAV writing, VAD and ASR
       // operate in the processor branch and cannot pause the user-facing bar.
-      meterAnalyser.connect(meterSinkGain)
+      microphoneAnalyser.connect(meterSinkGain); systemAnalyser.connect(meterSinkGain)
       meterSinkGain.connect(context.destination)
       sampleOffsetRef.current = 0
       processor.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
@@ -702,7 +726,8 @@ export default function App(): ReactElement {
       processor.connect(silentGain)
       silentGain.connect(context.destination)
       contextRef.current = context
-      meterAnalyserRef.current = meterAnalyser
+      microphoneAnalyserRef.current = microphoneAnalyser
+      systemAnalyserRef.current = systemAnalyser
       meterSinkGainRef.current = meterSinkGain
       audioWorkletRef.current = processor
       silentGainRef.current = silentGain
@@ -805,6 +830,7 @@ export default function App(): ReactElement {
         savedToDisk: false,
         segments: finalSegments
       }, ...current])
+      void createSessionSummary(sessionId, transcript)
       setView('history')
       setStatus('收音已結束。請在「記錄」頁選擇保存位置。')
     } catch (error) {
@@ -815,7 +841,7 @@ export default function App(): ReactElement {
       pcmChunksRef.current = []
       electronRecordingIdRef.current = null
       setCaptureState('idle')
-      setLevel(-60)
+      setMicrophoneLevel(-60); setSystemLevel(-60)
     }
   }
 
@@ -827,7 +853,7 @@ export default function App(): ReactElement {
     electronRecordingIdRef.current = null
     pausedRef.current = false
     setCaptureState('idle')
-    setLevel(-60)
+    setMicrophoneLevel(-60); setSystemLevel(-60)
     setStatus('已停止並釋放麥克風；未完成的儲存可能遺失。')
   }
 
@@ -1127,6 +1153,20 @@ export default function App(): ReactElement {
     } catch (error) { setStatus(error instanceof Error ? error.message : '無法儲存 API key。') }
   }
 
+  const createSessionSummary = async (sessionId: string, transcript: string): Promise<void> => {
+    if (!window.s2t || !settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
+    setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: '正在產生摘要…' } : entry))
+    try {
+      const result = await window.s2t.completeText({
+        profileId: 'summary', endpoint: settings.summaryEndpoint, model: settings.summaryModel,
+        messages: [{ role: 'system', content: '請用繁體中文為這段逐字稿寫一句不超過 60 字的摘要。只輸出摘要句子，不加標題、說明或條列。' }, { role: 'user', content: transcript.slice(0, 30_000) }]
+      })
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: result.text || '未產生摘要。' } : entry))
+    } catch {
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: '摘要產生失敗。' } : entry))
+    }
+  }
+
   const createSummary = async (): Promise<void> => {
     const transcript = makeTranscriptText(transcripts.filter((entry) => entry.status === 'final'))
     if (!window.s2t || !settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript) {
@@ -1157,9 +1197,9 @@ export default function App(): ReactElement {
             {devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}
           </select>
         </label><div className="audio-source-actions"><label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} /><span><strong>混入系統音訊</strong>開始後請在分享視窗啟用音訊</span></label><button className="secondary" onClick={() => void refreshDevices()} disabled={captureState === 'saving'}>重新整理裝置</button></div></div>
-        <div className="meter" aria-label={`目前音量 ${dbfsLabel(level)}`}>
-          <div className="meter-label"><span>輸入音量</span><strong>{dbfsLabel(level)}</strong></div>
-          <div className="meter-track"><div ref={meterValueRef} className="meter-value" style={{ width: `${meterPercent(level)}%` }} /></div>
+        <div className="meters">
+          <div className="meter" aria-label={`麥克風音量 ${dbfsLabel(microphoneLevel)}`}><div className="meter-label"><span>講者／麥克風</span><strong>{dbfsLabel(microphoneLevel)}</strong></div><div className="meter-track"><div ref={microphoneMeterValueRef} className="meter-value" style={{ width: `${meterPercent(microphoneLevel)}%` }} /></div></div>
+          <div className="meter" aria-label={`系統音訊音量 ${dbfsLabel(systemLevel)}`}><div className="meter-label"><span>系統音訊</span><strong>{systemStreamRef.current ? dbfsLabel(systemLevel) : '未連接'}</strong></div><div className="meter-track"><div ref={systemMeterValueRef} className="meter-value" style={{ width: `${meterPercent(systemLevel)}%` }} /></div></div>
         </div>
         <div className="timer">{timestamp(elapsedMs)}</div>
       </section>
@@ -1205,16 +1245,18 @@ export default function App(): ReactElement {
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{sessions.length} 筆</span></div></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
-        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'csv')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div>
+        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{entry.summary && <p className="session-summary">摘要：{entry.summary}</p>}{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'csv')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div>
       )}
     </section>
   ) : view === 'models' ? (
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">MODELS</p><h2>已設定模型</h2></div><span>{settings.modelProfiles.filter((profile) => profile.id !== 'none').length + settings.translationProfiles.length + (settings.diarizationModel ? 1 : 0)} 個</span></div>
+      <nav className="model-filter" aria-label="模型類別">{(['all', 'asr', 'translation', 'summary', 'diarization'] as const).map((filter) => <button key={filter} className={modelFilter === filter ? 'nav-active' : ''} onClick={() => setModelFilter(filter)}>{{ all: '全部', asr: 'ASR', translation: '翻譯', summary: '摘要', diarization: '講者分離' }[filter]}</button>)}</nav>
       <div className="model-list">
-        {settings.modelProfiles.filter((profile) => profile.id !== 'none').map((profile) => <article className="model-list-item" key={profile.id}><div><strong>{profile.name}</strong><p>ASR · {profile.kind === 'openai-http' ? 'OpenAI Speech-to-Text / 分段 HTTP' : 'Realtime WebSocket'} · {profile.model}</p><code>{modelEndpoint(profile.endpoint, profile.kind)}</code></div></article>)}
-        {settings.translationProfiles.map((profile) => <article className="model-list-item" key={profile.id}><div><strong>{profile.name}</strong><p>翻譯 · OpenAI Chat Completions · {profile.model}</p><code>{profile.endpoint}</code></div></article>)}
-        {settings.diarizationModel && <article className="model-list-item"><div><strong>{settings.diarizationModel}</strong><p>講者分離 · {settings.diarizationEndpoint.includes('127.0.0.1') || settings.diarizationEndpoint.includes('localhost') ? '本機 sherpa-onnx' : '遠端 API'}</p><code>{settings.diarizationEndpoint}</code></div></article>}
+        {(modelFilter === 'all' || modelFilter === 'asr') && settings.modelProfiles.filter((profile) => profile.id !== 'none').map((profile) => <article className="model-list-item model-asr" key={profile.id}><div><strong>{profile.name}</strong><p>ASR · {profile.kind === 'openai-http' ? 'OpenAI Speech-to-Text / 分段 HTTP' : 'Realtime WebSocket'} · {profile.model}</p><code>{modelEndpoint(profile.endpoint, profile.kind)}</code></div></article>)}
+        {(modelFilter === 'all' || modelFilter === 'translation') && settings.translationProfiles.map((profile) => <article className="model-list-item model-translation" key={profile.id}><div><strong>{profile.name}</strong><p>翻譯 · OpenAI Chat Completions · {profile.model}</p><code>{profile.endpoint}</code></div></article>)}
+        {(modelFilter === 'all' || modelFilter === 'summary') && settings.summaryModel && <article className="model-list-item model-summary"><div><strong>{settings.summaryModel}</strong><p>摘要 · OpenAI Chat Completions</p><code>{settings.summaryEndpoint}</code></div></article>}
+        {(modelFilter === 'all' || modelFilter === 'diarization') && settings.diarizationModel && <article className="model-list-item model-diarization"><div><strong>{settings.diarizationModel}</strong><p>講者分離 · {settings.diarizationEndpoint.includes('127.0.0.1') || settings.diarizationEndpoint.includes('localhost') ? '本機 sherpa-onnx' : '遠端 API'}</p><code>{settings.diarizationEndpoint}</code></div></article>}
         {settings.modelProfiles.every((profile) => profile.id === 'none') && !settings.translationProfiles.length && !settings.diarizationModel && <div className="empty compact"><h2>尚未設定模型</h2><p>請到完整設定新增模型與服務。</p></div>}
       </div>
     </section>

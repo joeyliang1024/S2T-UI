@@ -113,6 +113,17 @@
 
 ## P0：收音與字幕操作體驗
 
+- [x] **模型分類色塊與篩選、雙音源音量表、錄音摘要**
+  - 已實作：模型列表加入全部／ASR／翻譯／摘要／講者分離篩選，並依類別使用不同 block 底色。講者麥克風與系統音訊各自使用相同格式的 RMS dBFS 彩色跑條；系統未連接時明確顯示。
+  - 摘要：錄音完成後，若 Electron 已設定摘要 Chat Completions endpoint、model、key，會在背景產生不超過 60 字的一句繁中摘要並顯示於記錄卡片。沒有設定摘要模型時只保存記錄，不使用翻譯模型冒充摘要。
+  - UI：meter 改為可縮小的雙列 grid，窄螢幕時 capture panel 會依序堆疊 source、meters、timer；模型 endpoint 採 `overflow-wrap:anywhere`，避免畫出框外。
+
+- [x] **收音期間的低頻率講者辨識 preview（Web 實驗）**
+  - 現況：sherpa-onnx 的 `OfflineSpeakerDiarization` 要處理完整 PCM buffer，適合錄音完成後精準回填，沒有原生逐 frame speaker event。
+  - 已實作：Web 版收音時每 15 秒在背景對目前 PCM WAV 呼叫 `/api/diarizations`，只回填已 final 的字幕。此 request 與 ASR、翻譯、WAV 寫入分離，失敗時不改變收音狀態。
+  - 待改善：目前每輪分群的 `SPEAKER_nn` 仍可能重編號；需以 speaker embedding／重疊窗口對齊前次 label。Electron 要從暫存 WAV 讀 snapshot，不能讓 renderer 長時間保留全錄音副本。
+  - 風險與驗收：CPU 高、短窗口分群不穩，必須可關閉；ASR/翻譯、WAV 寫入與音量表不能被阻塞。先以兩人交替中文測試，speaker label 僅為 provisional，停止後仍用完整 WAV 做最終識別。
+
 - [ ] **分離麥克風與系統音訊的即時音量表**
   - 目的：混音後的總 dBFS 無法判斷是講者太小聲、系統音訊太小聲，或只有其中一個音源沒有接上；保留獨立音量表才有明確的使用者診斷價值。
   - 檔案：`src/renderer/src/App.tsx`、`src/renderer/src/styles.css`。
