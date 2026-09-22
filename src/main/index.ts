@@ -106,7 +106,7 @@ const environmentKey = (profileId: string): string | undefined => {
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' } }
 type StoredModelConfig = {
   sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
-  translationEndpoint: string; translationModel: string; summaryEndpoint: string; summaryModel: string; diarizationEndpoint: string; diarizationModel: string; glossary: string
+  translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; diarizationEndpoint: string; diarizationModel: string; glossary: string
   vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
@@ -129,12 +129,18 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     }
     return id && name ? [{ id, name, endpoint, model, kind, capabilities }] : []
   }).slice(0, 30) : []
+  const translationProfiles = Array.isArray(input.translationProfiles) ? input.translationProfiles.flatMap((item): Array<{ id: string; name: string; endpoint: string; model: string }> => {
+    if (!item || typeof item !== 'object') return []
+    const profile = item as Record<string, unknown>
+    const id = shortText(profile.id, 100); const name = shortText(profile.name, 100); const endpoint = shortText(profile.endpoint, 2_000); const model = shortText(profile.model, 200)
+    return id && name && endpoint && model ? [{ id, name, endpoint, model }] : []
+  }).slice(0, 30) : []
   const vadInput = input.vadConfig && typeof input.vadConfig === 'object' ? input.vadConfig as Record<string, unknown> : {}
   const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum: number): number => typeof value === 'number' && Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback
   return {
     sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEndpoint: shortText(input.translationEndpoint, 2_000),
-    translationModel: shortText(input.translationModel, 200), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
+    translationModel: shortText(input.translationModel, 200), translationProfiles, selectedTranslationModelId: shortText(input.selectedTranslationModelId, 100), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
     summaryModel: shortText(input.summaryModel, 200), diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), glossary: shortText(input.glossary, 20_000),
     vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30) }
   }

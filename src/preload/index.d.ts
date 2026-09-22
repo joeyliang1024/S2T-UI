@@ -34,6 +34,8 @@ interface SettingsConfig {
   selectedModelId: string
   translationEndpoint: string
   translationModel: string
+  translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string }>
+  selectedTranslationModelId: string
   summaryEndpoint: string
   summaryModel: string
   diarizationEndpoint: string

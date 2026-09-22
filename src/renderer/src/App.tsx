@@ -26,6 +26,8 @@ type Settings = {
   selectedModelId: string
   translationEndpoint: string
   translationModel: string
+  translationProfiles: TextModelProfile[]
+  selectedTranslationModelId: string
   summaryEndpoint: string
   summaryModel: string
   diarizationEndpoint: string
@@ -35,11 +37,13 @@ type Settings = {
 }
 type ModelCapabilities = { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' }
 type ModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: ModelCapabilities }
+type TextModelProfile = { id: string; name: string; endpoint: string; model: string }
 
 const sessionsKey = 's2t-ui.sessions.v1'
 const settingsKey = 's2t-ui.settings.v1'
 const recordingsDatabase = 's2t-ui.recordings.v1'
 const recordingsStore = 'audio'
+const sessionsStore = 'sessions'
 
 const dbfs = (value: number): number => (value > 0 ? Math.max(-60, 20 * Math.log10(value)) : -60)
 const dbfsLabel = (value: number): string => `${value.toFixed(0)} dBFS`
@@ -94,20 +98,28 @@ const loadJson = <T,>(key: string, fallback: T): T => {
 const defaultWebSocketCapabilities: ModelCapabilities = { asrMode: 'streaming', vadSource: 'server', timestampPrecision: 'segment' }
 const defaultHttpCapabilities: ModelCapabilities = { asrMode: 'non-streaming', vadSource: 'app', timestampPrecision: 'chunk' }
 const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', model: '', kind: 'websocket', capabilities: defaultWebSocketCapabilities }
-const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => ({
+const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => {
+  const fallbackTranslationProfile: TextModelProfile[] = value.translationEndpoint && value.translationModel
+    ? [{ id: 'translation-default', name: `${value.translationModel}（翻譯）`, endpoint: value.translationEndpoint, model: value.translationModel }]
+    : []
+  const translationProfiles = value.translationProfiles?.length ? value.translationProfiles : fallbackTranslationProfile
+  return {
   sourceLanguage: value.sourceLanguage ?? 'zh-TW',
   targetLanguage: value.targetLanguage ?? 'en',
   modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', capabilities: profile.capabilities ?? (profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities) })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
   translationEndpoint: value.translationEndpoint ?? '',
   translationModel: value.translationModel ?? '',
+  translationProfiles,
+  selectedTranslationModelId: value.selectedTranslationModelId ?? translationProfiles[0]?.id ?? 'none',
   summaryEndpoint: value.summaryEndpoint ?? '',
   summaryModel: value.summaryModel ?? '',
   diarizationEndpoint: value.diarizationEndpoint ?? '',
   diarizationModel: value.diarizationModel ?? '',
   glossary: value.glossary ?? '',
   vadConfig: { ...defaultVadConfig, ...value.vadConfig }
-})
+  }
+}
 const webEnvironmentProfile = (): ModelProfile | null => {
   const model = import.meta.env.VITE_S2T_ASR_MODEL ?? ''
   return model ? { id: 'web-environment-asr', name: `${model}（Web gateway）`, endpoint: '/api/transcriptions', model, kind: 'openai-http', capabilities: defaultHttpCapabilities } : null
@@ -131,11 +143,36 @@ const browserDownload = (blob: Blob, filename: string): void => {
 }
 
 const openRecordingsDatabase = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
-  const request = indexedDB.open(recordingsDatabase, 1)
-  request.onupgradeneeded = () => request.result.createObjectStore(recordingsStore)
+  const request = indexedDB.open(recordingsDatabase, 2)
+  request.onupgradeneeded = () => {
+    if (!request.result.objectStoreNames.contains(recordingsStore)) request.result.createObjectStore(recordingsStore)
+    if (!request.result.objectStoreNames.contains(sessionsStore)) request.result.createObjectStore(sessionsStore)
+  }
   request.onsuccess = () => resolve(request.result)
   request.onerror = () => reject(request.error)
 })
+
+const saveSessions = async (sessions: SavedSession[]): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(sessionsStore, 'readwrite')
+    transaction.objectStore(sessionsStore).put(sessions, 'all')
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
+}
+
+const loadSessions = async (): Promise<SavedSession[] | undefined> => {
+  const database = await openRecordingsDatabase()
+  const sessions = await new Promise<SavedSession[] | undefined>((resolve, reject) => {
+    const request = database.transaction(sessionsStore, 'readonly').objectStore(sessionsStore).get('all')
+    request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result as SavedSession[] : undefined)
+    request.onerror = () => reject(request.error)
+  })
+  database.close()
+  return sessions
+}
 
 const saveRecording = async (key: string, audio: Blob): Promise<void> => {
   const database = await openRecordingsDatabase()
@@ -213,6 +250,7 @@ export default function App(): ReactElement {
   const [status, setStatus] = useState('準備就緒')
   const [view, setView] = useState<View>('live')
   const [sessions, setSessions] = useState<SavedSession[]>(() => loadJson<SavedSession[]>(sessionsKey, []))
+  const [sessionsHydrated, setSessionsHydrated] = useState(false)
   const [settings, setSettings] = useState<Settings>(initialSettings)
   const [importedFile, setImportedFile] = useState<File | null>(null)
   const [importError, setImportError] = useState('')
@@ -378,8 +416,21 @@ export default function App(): ReactElement {
   }, [floatingCaptions, isFloatingCaptionWindow, transcripts])
 
   useEffect(() => {
-    window.localStorage.setItem(sessionsKey, JSON.stringify(sessions))
-  }, [sessions])
+    void loadSessions().then((stored) => {
+      if (stored?.length) setSessions((current) => {
+        const currentById = new Map(current.map((entry) => [entry.id, entry]))
+        stored.forEach((entry) => currentById.set(entry.id, entry))
+        return [...currentById.values()].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      })
+    }).catch(() => undefined).finally(() => setSessionsHydrated(true))
+    void navigator.storage?.persist?.().catch(() => false)
+  }, [])
+
+  useEffect(() => {
+    if (!sessionsHydrated) return
+    try { window.localStorage.setItem(sessionsKey, JSON.stringify(sessions)) } catch { /* IndexedDB remains the durable store. */ }
+    void saveSessions(sessions).catch(() => setStatus('無法保存本機記錄；請確認瀏覽器儲存空間。'))
+  }, [sessions, sessionsHydrated])
 
   useEffect(() => {
     window.localStorage.setItem(settingsKey, JSON.stringify(settings))
@@ -797,6 +848,29 @@ export default function App(): ReactElement {
     setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.map((profile) => profile.id === current.selectedModelId ? { ...profile, ...update } : profile) }))
   }
 
+  const selectTranslationProfile = (id: string): void => {
+    setSettings((current) => {
+      const profile = current.translationProfiles.find((item) => item.id === id)
+      return profile ? { ...current, selectedTranslationModelId: id, translationEndpoint: profile.endpoint, translationModel: profile.model } : { ...current, selectedTranslationModelId: 'none' }
+    })
+  }
+
+  const saveTranslationProfile = (): void => {
+    setSettings((current) => {
+      if (!current.translationEndpoint.trim() || !current.translationModel.trim()) {
+        setStatus('請先填入翻譯 endpoint 與 model ID。')
+        return current
+      }
+      const existing = current.translationProfiles.find((item) => item.id === current.selectedTranslationModelId)
+      const profile: TextModelProfile = existing
+        ? { ...existing, endpoint: current.translationEndpoint.trim(), model: current.translationModel.trim(), name: `${current.translationModel.trim()}（翻譯）` }
+        : { id: crypto.randomUUID(), name: `${current.translationModel.trim()}（翻譯）`, endpoint: current.translationEndpoint.trim(), model: current.translationModel.trim() }
+      const translationProfiles = existing ? current.translationProfiles.map((item) => item.id === profile.id ? profile : item) : [...current.translationProfiles, profile]
+      return { ...current, translationProfiles, selectedTranslationModelId: profile.id }
+    })
+    setStatus('翻譯模型已加入快速設定選單。')
+  }
+
   const removeSelectedModel = (): void => {
     if (selectedModel.id === 'none') return
     setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.filter((profile) => profile.id !== current.selectedModelId), selectedModelId: 'none' }))
@@ -1128,9 +1202,10 @@ export default function App(): ReactElement {
       </div>
       <div className="text-service-settings">
         <p className="eyebrow">翻譯 API</p>
+        <label>目前翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
         <label>Chat Completions endpoint<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.translationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, translationEndpoint: event.target.value }))} /></label>
         <label>Translation model ID<input value={settings.translationModel} onChange={(event) => setSettings((current) => ({ ...current, translationModel: event.target.value }))} /></label>
-        {window.s2t && <div className="api-key-row"><label>翻譯 API key<input type="password" autoComplete="off" value={translationKeyDraft} onChange={(event) => setTranslationKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('translation', translationKeyDraft, () => setTranslationKeyDraft(''))}>儲存 API key</button></div>}
+        {window.s2t && <div className="api-key-row"><label>翻譯 API key<input type="password" autoComplete="off" value={translationKeyDraft} onChange={(event) => setTranslationKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('translation', translationKeyDraft, () => setTranslationKeyDraft(''))}>儲存 API key</button><button className="secondary" onClick={saveTranslationProfile}>儲存為翻譯模型</button></div>}
         <p className="hint">每段 ASR final 字幕會自動送到此 OpenAI 相容 Chat Completions endpoint，並更新同一段的譯文。</p>
       </div>
       <div className="text-service-settings">
@@ -1167,7 +1242,7 @@ export default function App(): ReactElement {
         <span className={`status ${isActive ? 'active' : ''}`}>{status}</span>
       </header>
       <div className={`app-layout ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
-        {sidebarOpen ? <aside className="settings-sidebar" aria-label="快速設定"><button className="drawer-handle drawer-handle-open" aria-label="收合設定側欄" title="收合設定側欄" onClick={() => setSidebarOpen(false)}>‹</button><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option></select></label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><p className="hint">在完整設定頁可設定 API、術語、翻譯與摘要。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside> : <button className="drawer-handle drawer-handle-closed" aria-label="展開設定側欄" onClick={() => setSidebarOpen(true)}>設定 ›</button>}
+        {sidebarOpen ? <aside className="settings-sidebar" aria-label="快速設定"><button className="drawer-handle drawer-handle-open" aria-label="收合設定側欄" title="收合設定側欄" onClick={() => setSidebarOpen(false)}>‹</button><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="nan-TW">台語</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option></select></label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="en">English</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><p className="hint">在完整設定頁可設定 API、術語、翻譯與摘要。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside> : <button className="drawer-handle drawer-handle-closed" aria-label="展開設定側欄" onClick={() => setSidebarOpen(true)}>設定 ›</button>}
         <section className="workspace-content">{workspace}</section>
       </div>
     </main>
