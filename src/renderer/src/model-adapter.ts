@@ -186,6 +186,12 @@ const wavFromFloat32 = (samples: Float32Array, sampleRate: number): ArrayBuffer 
   return buffer
 }
 
+const readGatewayPayload = async (response: Response): Promise<{ text?: string; error?: string }> => {
+  const body = await response.text()
+  if (!body.trim()) throw new Error(`Web ASR gateway 沒有回傳資料（HTTP ${response.status}）。請確認本機 gateway 是否已啟動。`)
+  try { return JSON.parse(body) as { text?: string; error?: string } } catch { throw new Error(`Web ASR gateway 回傳非 JSON 資料（HTTP ${response.status}）。`) }
+}
+
 /**
  * OpenAI-compatible `/v1/audio/transcriptions` endpoints are request/response,
  * so the adapter sends consecutive short WAV chunks and emits each answer as it
@@ -369,7 +375,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       },
       body: audio
     })
-    const payload = await response.json() as { text?: string; error?: string }
+    const payload = await readGatewayPayload(response)
     if (!response.ok) throw new Error(payload.error || `Web ASR gateway failed (${response.status})`)
     return { text: payload.text || '' }
   }

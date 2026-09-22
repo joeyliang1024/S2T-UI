@@ -142,6 +142,12 @@ const browserDownload = (blob: Blob, filename: string): void => {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
+const readJsonResponse = async <T,>(response: Response, service: string): Promise<T> => {
+  const body = await response.text()
+  if (!body.trim()) throw new Error(`${service} 沒有回傳資料（HTTP ${response.status}）。請確認本機 gateway 是否已啟動。`)
+  try { return JSON.parse(body) as T } catch { throw new Error(`${service} 回傳非 JSON 資料（HTTP ${response.status}）。`) }
+}
+
 const openRecordingsDatabase = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
   const request = indexedDB.open(recordingsDatabase, 2)
   request.onupgradeneeded = () => {
@@ -480,7 +486,7 @@ export default function App(): ReactElement {
   useEffect(() => {
     if (window.s2t) return
     void fetch('/api/config').then(async (response) => {
-      const payload = await response.json() as { configured?: boolean; model?: { id: string; name: string; model: string; kind: 'openai-http' } | null }
+      const payload = await readJsonResponse<{ configured?: boolean; model?: { id: string; name: string; model: string; kind: 'openai-http' } | null }>(response, 'Web ASR gateway')
       if (!response.ok || !payload.configured || !payload.model) throw new Error('Web ASR gateway 尚未設定')
       const profile: ModelProfile = { ...payload.model, endpoint: '/api/transcriptions', capabilities: defaultHttpCapabilities }
       setSettings((current) => {
@@ -949,7 +955,7 @@ export default function App(): ReactElement {
               language: settings.sourceLanguage.split('-')[0], prompt: settings.glossary || undefined,
               filename: isWav ? `batch-${index + 1}.wav` : importedFile.name, contentType: isWav ? 'audio/wav' : importedFile.type || undefined, audio: chunk.audio
             }) : await fetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-language': settings.sourceLanguage.split('-')[0], ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {}) }, body: chunk.audio }).then(async (result) => {
-              const payload = await result.json() as { text?: string; error?: string }
+              const payload = await readJsonResponse<{ text?: string; error?: string }>(result, '批次 ASR gateway')
               if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
               return { text: payload.text || '' }
             })
