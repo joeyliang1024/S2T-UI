@@ -1208,20 +1208,10 @@ export default function App(): ReactElement {
       </section>
 
       <section className="capture-panel" aria-label="音訊來源與音量">
-        <div className="audio-source-field"><label>
-          音源
-          <select value={selectedDeviceId} onChange={(event) => selectDevice(event.target.value)} disabled={captureState === 'saving'}>
-            <option value="default">系統預設麥克風</option>
-            {devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}
-          </select>
-        </label><div className="audio-source-actions"><label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} /><span><strong>混入系統音訊</strong>開始後請在分享視窗啟用音訊</span></label><button className="secondary" onClick={() => void refreshDevices()} disabled={captureState === 'saving'}>重新整理裝置</button></div></div>
+        <div className="audio-source-field"><label>音源<div className="source-select-row"><select value={selectedDeviceId} onChange={(event) => selectDevice(event.target.value)} disabled={captureState === 'saving'}><option value="default">系統預設麥克風</option>{devices.map((device) => <option key={device.deviceId} value={device.deviceId}>{device.label}</option>)}</select><button className="icon-button" aria-label="重新整理裝置" title="重新整理裝置" onClick={() => void refreshDevices()} disabled={captureState === 'saving'}>↻</button></div></label><div className="audio-source-actions"><label className="system-audio-option"><input type="checkbox" checked={includeSystemAudio} onChange={(event) => setIncludeSystemAudio(event.target.checked)} disabled={isActive || captureState === 'saving'} /><span><strong>混入系統音訊</strong>（開始後請在分享視窗啟用音訊）</span></label></div><div className="source-capture-row"><div className="capture-controls">{canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : captureState === 'saving' ? <button className="secondary" onClick={forceReleaseCapture}>結束並釋放麥克風</button> : <><button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button><button className="danger" onClick={() => void stopCapture()}>結束收音</button></>}</div><div className="timer">{timestamp(elapsedMs)}</div></div></div>
         <div className="meters">
           <div className="meter" aria-label={`麥克風音量 ${dbfsLabel(microphoneLevel)}`}><div className="meter-label"><span>講者／麥克風</span><strong>{dbfsLabel(microphoneLevel)}</strong></div><div className="meter-track"><div ref={microphoneMeterValueRef} className="meter-value" style={{ width: `${meterPercent(microphoneLevel)}%` }} /></div></div>
           <div className="meter" aria-label={`系統音訊音量 ${dbfsLabel(systemLevel)}`}><div className="meter-label"><span>系統音訊</span><strong>{systemStreamRef.current ? dbfsLabel(systemLevel) : '未連接'}</strong></div><div className="meter-track"><div ref={systemMeterValueRef} className="meter-value" style={{ width: `${meterPercent(systemLevel)}%` }} /></div></div>
-        </div>
-        <div className="timer">{timestamp(elapsedMs)}</div>
-        <div className="capture-controls">
-          {canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : captureState === 'saving' ? <button className="secondary" onClick={forceReleaseCapture}>結束並釋放麥克風</button> : <><button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button><button className="danger" onClick={() => void stopCapture()}>結束收音</button></>}
         </div>
       </section>
 
