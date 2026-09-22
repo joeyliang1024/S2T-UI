@@ -19,6 +19,14 @@ const translationApiKey = process.env.S2T_WEB_TRANSLATION_API_KEY || ''
 const staticRoot = join(process.cwd(), 'out/renderer')
 const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
 const requestsByIp = new Map()
+const hyLanguageName = (value) => ({ 'zh-TW': '繁体中文', 'nan-TW': '闽南语', 'en-US': '英语', en: '英语', ja: '日语', ko: '韩语', fr: '法语', de: '德语', es: '西班牙语' }[value] || value)
+const isChineseLanguage = (value) => /^zh|^nan|^yue/.test(value)
+const hyTranslationPrompt = (text, sourceLanguage, targetLanguage, glossary) => {
+  const terms = glossary ? `\n术语表：${glossary}` : ''
+  return isChineseLanguage(sourceLanguage) || isChineseLanguage(targetLanguage)
+    ? `将以下文本翻译为${hyLanguageName(targetLanguage)}，注意只需要输出翻译后的结果，不要额外解释：${terms}\n\n${text}`
+    : `Translate the following segment into ${hyLanguageName(targetLanguage)}, without additional explanation.${terms}\n\n${text}`
+}
 
 const baseUrl = (value) => {
   const url = new URL(value)
@@ -99,15 +107,15 @@ createServer(async (request, response) => {
       const raw = await readBody(request, 256 * 1024)
       const input = JSON.parse(raw.toString('utf8'))
       const text = typeof input.text === 'string' ? input.text.trim().slice(0, 20_000) : ''
+      const sourceLanguage = typeof input.sourceLanguage === 'string' ? input.sourceLanguage.slice(0, 60) : 'zh-TW'
       const targetLanguage = typeof input.targetLanguage === 'string' ? input.targetLanguage.slice(0, 60) : 'en'
       const glossary = typeof input.glossary === 'string' ? input.glossary.trim().slice(0, 10_000) : ''
       if (!text) return send(response, 400, { error: 'Text is required.' })
       const client = new OpenAI({ apiKey: translationApiKey, baseURL: baseUrl(translationEndpoint), timeout: 12_000, maxRetries: 0 })
       const result = await client.chat.completions.create({
-        model: translationModel, temperature: 0,
+        model: translationModel, temperature: 0.7, top_p: 0.6,
         messages: [
-          { role: 'system', content: `你是即時字幕翻譯器。將使用者文字翻譯成 ${targetLanguage}。只輸出翻譯結果，不要加入說明。${glossary ? `\n術語表（請保留或採用指定譯法）：${glossary}` : ''}` },
-          { role: 'user', content: text }
+          { role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }
         ]
       })
       return send(response, 200, { text: result.choices[0]?.message.content?.trim() || '' })

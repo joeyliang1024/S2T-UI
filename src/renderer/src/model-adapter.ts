@@ -238,10 +238,10 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     if (this.pendingSamples === 0) this.pendingStart = startSample
     this.pendingChunks.push(chunk)
     this.pendingSamples += chunk.length
-    // Breeze-ASR is non-streaming. A short ceiling keeps the perceived latency
-    // near one second without shipping frames too small for stable recognition.
-    const maximumChunkSamples = Math.floor(this.sampleRate * 1.5)
-    const minimumChunkSamples = Math.floor(this.sampleRate * 0.8)
+    // Request/response Whisper-like models are less stable on sub-second clips.
+    // Keep ASR latency bounded while preferring natural VAD sentence boundaries.
+    const maximumChunkSamples = Math.floor(this.sampleRate * 2.4)
+    const minimumChunkSamples = Math.floor(this.sampleRate * 1.0)
     this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || vadFrame?.speaking)
     const reachedNaturalBoundary = this.pendingSamples >= minimumChunkSamples && Boolean(vadFrame?.speechEnded)
     // Keep 300 ms of room tone before a voice onset, but avoid sending empty
