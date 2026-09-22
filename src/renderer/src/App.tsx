@@ -364,6 +364,7 @@ export default function App(): ReactElement {
         const previous = current[previousIndex]
         const canJoin = event.id.startsWith('http-') && previous?.id.startsWith('http-') &&
           previous.status === 'final' && event.status === 'final' &&
+          !previous.isSentenceBoundary &&
           event.startMs - previous.endMs < 900 && event.endMs - previous.startMs < 12_000
         if (canJoin) {
           const next = [...current]
@@ -376,7 +377,8 @@ export default function App(): ReactElement {
             endMs: event.endMs,
             sourceText: joinCaptionText(previous.sourceText, event.sourceText),
             translatedText: undefined,
-            translationStatus: undefined
+            translationStatus: undefined,
+            isSentenceBoundary: event.isSentenceBoundary
           }
           return next
         }

@@ -10,6 +10,10 @@ export type TranscriptEvent = {
   translatedText?: string
   speaker?: string
   translationStatus?: 'failed'
+  /** True only when app-side VAD observed a natural silence boundary. HTTP
+   * chunks sent while speech continues deliberately keep this false so the UI
+   * can extend one readable caption instead of making a new row. */
+  isSentenceBoundary?: boolean
   /** Present only when audio could not be transcribed. Export this event so a
    * reviewer can distinguish an ASR failure from a genuine silent interval. */
   gapReason?: 'queue-overflow' | 'request-failed'
@@ -255,7 +259,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const size = reachedNaturalBoundary ? this.pendingSamples : maximumChunkSamples
       const start = this.pendingStart
       const audio = this.takePending(size)
-      this.enqueue(audio, start)
+      this.enqueue(audio, start, reachedNaturalBoundary)
       this.pendingContainsSpeech = Boolean(vadFrame?.speaking)
       if (this.pendingSamples < minimumChunkSamples) break
     }
@@ -266,7 +270,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.stopped = true
     if (this.pendingSamples && this.pendingContainsSpeech) {
       const start = this.pendingStart
-      this.enqueue(this.takePending(this.pendingSamples), start)
+      this.enqueue(this.takePending(this.pendingSamples), start, true)
     }
     this.pendingChunks = []
     this.pendingSamples = 0
@@ -283,7 +287,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     return () => this.errorListeners.delete(listener)
   }
 
-  private enqueue(audio: Float32Array, startSample: number): void {
+  private enqueue(audio: Float32Array, startSample: number, isSentenceBoundary = false): void {
     const sequence = this.sequence++
     const startMs = Math.round(startSample / this.sampleRate * 1000)
     const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
@@ -298,7 +302,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const response = await this.transcribeWithRetry(wav)
       const sourceText = response.text.trim()
       if (!sourceText) return
-      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText }
+      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, isSentenceBoundary }
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
       this.emitError(error instanceof Error ? error.message : '模型轉錄失敗')
