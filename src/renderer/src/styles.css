@@ -4,7 +4,7 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, select { font: inherit; }
 button { cursor: pointer; border: 0; border-radius: 9px; padding: 11px 16px; font-weight: 700; }
 button:disabled { cursor: not-allowed; opacity: .5; }
-main { margin: 0; min-height: 100vh; padding: 22px 28px 128px; width: 100%; }
+main { margin: 0; min-height: 100vh; padding: 22px 28px 28px; width: 100%; }
 header { align-items: center; border-bottom: 1px solid #28344a; display: grid; gap: 24px; grid-template-columns: 250px minmax(0, 1fr) minmax(180px, 300px); margin-bottom: 20px; padding-bottom: 14px; }
 header > div { min-width: 0; }
 header nav { align-items: center; border: 0; margin: 0; min-width: 0; }
@@ -15,8 +15,8 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 .app-layout.sidebar-hidden { grid-template-columns: minmax(0, 1fr); }
 .live-layout { height: calc(100vh - 172px); min-height: 560px; grid-template-columns: 240px minmax(0, 1fr) 188px; }
 .live-layout.sidebar-hidden { grid-template-columns: minmax(0, 1fr) 188px; }
-.live-layout.export-sidebar-hidden { grid-template-columns: 240px minmax(0, 1fr); }
-.live-layout.sidebar-hidden.export-sidebar-hidden { grid-template-columns: minmax(0, 1fr); }
+.live-layout.export-sidebar-hidden { grid-template-columns: 240px minmax(0, 1fr) 28px; }
+.live-layout.sidebar-hidden.export-sidebar-hidden { grid-template-columns: minmax(0, 1fr) 28px; }
 .settings-sidebar, .export-sidebar { align-content: start; background: #171e2b; border: 1px solid #28344a; border-radius: 12px; display: grid; gap: 16px; min-width: 0; overflow: hidden; padding: 18px; position: sticky; top: 18px; }
 .live-layout .settings-sidebar, .live-layout .export-sidebar { height: 100%; position: relative; top: 0; }
 .export-sidebar h2 { font-size: 1.05rem; margin: 0; }
@@ -25,7 +25,7 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 .drawer-handle-open { border-radius: 0 8px 8px 0; font-size: 1.6rem; height: 64px; right: -14px; top: 28px; width: 28px; }
 .drawer-handle-closed { border-left: 0; border-radius: 0 9px 9px 0; font-size: .76rem; height: 92px; left: -28px; top: 34px; writing-mode: vertical-rl; width: 28px; }
 .export-drawer-handle { align-items: center; background: #293852; border: 1px solid #425777; border-radius: 8px 0 0 8px; color: #dbe5f8; display: flex; font-size: 1.4rem; height: 64px; justify-content: center; left: -14px; padding: 0; position: absolute; top: 28px; width: 28px; z-index: 2; }
-.export-drawer-closed { border-radius: 8px 0 0 8px; font-size: .76rem; height: 92px; justify-self: end; margin-left: -8px; position: relative; top: 34px; width: 28px; writing-mode: vertical-rl; }
+.live-layout .export-drawer-closed { align-self: start; border-radius: 8px 0 0 8px; font-size: .76rem; grid-column: -1; grid-row: 1; height: 92px; margin: 34px 0 0; position: relative; top: 0; width: 28px; writing-mode: vertical-rl; }
 .settings-sidebar h2 { font-size: 1.05rem; margin: 0; }
 .settings-sidebar .eyebrow { margin-bottom: 5px; }
 .workspace-content { min-width: 0; }
