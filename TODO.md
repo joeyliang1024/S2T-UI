@@ -137,10 +137,10 @@
   - 平台限制：瀏覽器與 Electron 都必須由使用者每次在分享視窗明確授權音訊；macOS 是否提供全系統 loopback 仍取決於系統 picker／虛擬音訊裝置。不能繞過系統權限或在背景靜默開啟系統音訊。
   - 驗收：收音 10 秒後啟用系統音訊，再關閉；session 不重置、字幕 id/timestamp 單調遞增、WAV 前段只有麥克風／中段混音／後段只有麥克風。
 
-- [ ] **字幕預設跟隨最新進度**
+- [x] **字幕預設跟隨最新進度與收音卡片重排**
   - 檔案：`src/renderer/src/App.tsx`、`src/renderer/src/styles.css`。
-  - 實作：以 transcript scroll container ref 判斷使用者是否在底部 48 px；預設 pinned，新增 final/partial 字幕後 `scrollTo({ top: scrollHeight, behavior: 'smooth' })`。使用者向上捲動後取消 pinned，不強制拉回閱讀位置；在底部顯示「回到最新字幕」按鈕與未讀段數，按下後重啟 pinned 並清零。
-  - 驗收：持續收音時自動停在最新字幕；閱讀舊字幕時不跳動；按回到最新後恢復自動跟隨；搜尋／編輯字幕不造成焦點被捲走。
+  - 已實作：字幕區移到音源卡片上方，使用獨立捲動容器；每次 final、合併或翻譯回填時平滑捲至最新內容。開始／暫停／停止收音控制移入音源與雙音量表卡片，避免頁面底部固定按鈕遮住內容。
+  - 驗收：持續收音時自動停在最新字幕；窄螢幕時字幕、音源、計時與控制按鈕改為單欄，不畫出容器外。
 
 - [ ] **模型列表依使用類別分頁**
   - 檔案：`src/renderer/src/App.tsx`、`src/main/index.ts`、`src/preload/index.d.ts`、`TODO.md`。

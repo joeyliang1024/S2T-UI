@@ -337,6 +337,7 @@ export default function App(): ReactElement {
   const translatingIdsRef = useRef(new Set<string>())
   const cancelImportRef = useRef(false)
   const liveDiarizationRunningRef = useRef(false)
+  const transcriptContainerRef = useRef<HTMLElement | null>(null)
   const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
 
   const refreshDevices = useCallback(async () => {
@@ -434,6 +435,12 @@ export default function App(): ReactElement {
   useEffect(() => {
     transcripts.filter((entry) => entry.status === 'final' && !entry.translatedText && !entry.translationStatus).forEach((entry) => { void requestTranslation(entry) })
   }, [requestTranslation, transcripts])
+
+  useEffect(() => {
+    const container = transcriptContainerRef.current
+    if (!container) return
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+  }, [transcripts])
 
   useEffect(() => {
     if (window.s2t || captureState !== 'recording') return
@@ -1189,6 +1196,17 @@ export default function App(): ReactElement {
 
   const liveWorkspace = (
     <>
+      <section ref={transcriptContainerRef} className="transcript" aria-live="polite">
+        {transcripts.length === 0 ? (
+          <div className="empty"><h2>等待語音</h2><p>開始收音後，原文與翻譯會顯示在這裡。</p></div>
+        ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
+          <article key={entry.id} className={entry.status}>
+            <time>{timestamp(entry.startMs)}</time>
+            {entry.status === 'gap' ? <p className="transcript-gap">此時段未取得字幕：{entry.gapReason === 'queue-overflow' ? '模型處理超載' : 'ASR 請求失敗'}。完整 WAV 仍已保存。</p> : editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: undefined } : currentEntry)); void requestTranslation({ ...entry, translationStatus: undefined }) }}>重新翻譯</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
+          </article>
+        ))}</>}
+      </section>
+
       <section className="capture-panel" aria-label="音訊來源與音量">
         <div className="audio-source-field"><label>
           音源
@@ -1202,18 +1220,11 @@ export default function App(): ReactElement {
           <div className="meter" aria-label={`系統音訊音量 ${dbfsLabel(systemLevel)}`}><div className="meter-label"><span>系統音訊</span><strong>{systemStreamRef.current ? dbfsLabel(systemLevel) : '未連接'}</strong></div><div className="meter-track"><div ref={systemMeterValueRef} className="meter-value" style={{ width: `${meterPercent(systemLevel)}%` }} /></div></div>
         </div>
         <div className="timer">{timestamp(elapsedMs)}</div>
+        <div className="capture-controls">
+          {canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : captureState === 'saving' ? <button className="secondary" onClick={forceReleaseCapture}>結束並釋放麥克風</button> : <><button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button><button className="danger" onClick={() => void stopCapture()}>結束收音</button></>}
+        </div>
       </section>
 
-      <section className="transcript" aria-live="polite">
-        {transcripts.length === 0 ? (
-          <div className="empty"><h2>等待語音</h2><p>開始收音後，原文與翻譯會顯示在這裡。</p></div>
-        ) : <>{<div className="transcript-tools"><input value={transcriptSearch} placeholder="搜尋字幕" onChange={(event) => setTranscriptSearch(event.target.value)} /><span>{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).length} 段</span></div>}{transcripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase())).map((entry) => (
-          <article key={entry.id} className={entry.status}>
-            <time>{timestamp(entry.startMs)}</time>
-            {entry.status === 'gap' ? <p className="transcript-gap">此時段未取得字幕：{entry.gapReason === 'queue-overflow' ? '模型處理超載' : 'ASR 請求失敗'}。完整 WAV 仍已保存。</p> : editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><select value={entry.speaker ?? ''} onChange={(event) => updateSpeaker(entry.id, event.target.value)}><option value="">未標記講者</option><option value="講者 1">講者 1</option><option value="講者 2">講者 2</option><option value="講者 3">講者 3</option></select></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: undefined } : currentEntry)); void requestTranslation({ ...entry, translationStatus: undefined }) }}>重新翻譯</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
-          </article>
-        ))}</>}
-      </section>
 
       <div className="export-bar">
         <span>字幕匯出</span>
@@ -1224,20 +1235,7 @@ export default function App(): ReactElement {
         {window.s2t && <button className="text-button" onClick={toggleFloatingCaptions}>{floatingCaptions ? '隱藏浮動字幕' : '浮動字幕'}</button>}
       </div>
       {(summaryStatus || summaryText) && <section className="summary-panel"><div className="meter-label"><span>會議紀錄</span><strong>{summaryStatus}</strong></div>{summaryText && <pre>{summaryText}</pre>}</section>}
-      <footer>
-        {canRecord ? <button className="primary" onClick={() => void startCapture()}>開始收音</button> : (
-          <>
-            {captureState === 'saving' ? (
-              <button className="secondary" onClick={forceReleaseCapture}>結束並釋放麥克風</button>
-            ) : (
-              <>
-                <button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button>
-                <button className="danger" onClick={() => void stopCapture()}>結束收音</button>
-              </>
-            )}
-          </>
-        )}
-      </footer>
+
     </>
   )
 

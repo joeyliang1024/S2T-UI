@@ -24,7 +24,7 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 h1 { font-size: clamp(1.45rem, 2.2vw, 2rem); margin: 0; }
 .status { color: #b8c0d0; flex: 0 1 360px; font-size: .82rem; line-height: 1.4; text-align: right; }
 .status.active { color: #b5ffcf; }
-.capture-panel { align-items: center; background: #1a2130; border: 1px solid #28344a; border-radius: 14px; display: grid; gap: 12px 18px; grid-template-areas: 'source meter timer'; grid-template-columns: minmax(230px, 1fr) minmax(320px, 1.45fr) max-content; padding: 18px; }
+.capture-panel { align-items: center; background: #1a2130; border: 1px solid #28344a; border-radius: 14px; display: grid; gap: 12px 18px; grid-template-areas: 'source meter timer controls'; grid-template-columns: minmax(230px, 1fr) minmax(320px, 1.45fr) max-content max-content; padding: 18px; }
 label { display: grid; gap: 8px; min-width: 0; color: #abb7cc; font-size: .84rem; font-weight: 700; }
 select { background: #101723; color: #eef2fa; border: 1px solid #3a4963; border-radius: 8px; min-width: 0; min-height: 42px; max-width: 100%; padding: 0 10px; width: 100%; }
 .settings-sidebar select { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -46,7 +46,8 @@ select { background: #101723; color: #eef2fa; border: 1px solid #3a4963; border-
 .meter-track::after { background: repeating-linear-gradient(90deg, transparent 0 9.5%, rgba(12, 18, 29, .6) 9.5% 10%); content: ''; inset: 0; pointer-events: none; position: absolute; }
 .meter-value { background: linear-gradient(90deg, #48d597, #d5d556 75%, #ef6c75); border-radius: inherit; box-shadow: 0 0 12px rgba(102, 222, 170, .65); height: 100%; min-width: 0; transition: width .025s linear; will-change: width; }
 .timer { color: #eef2fa; font-size: 1.25rem; font-variant-numeric: tabular-nums; font-weight: 800; grid-area: timer; padding-bottom: 8px; white-space: nowrap; }
-.transcript { min-height: 390px; padding: 24px 0; }
+.capture-controls { display: flex; flex-wrap: wrap; gap: 8px; grid-area: controls; }
+.transcript { max-height: min(52vh, 560px); min-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding: 24px 14px 24px 0; scroll-behavior: smooth; }
 .empty { border: 1px dashed #34415a; border-radius: 14px; color: #9aa7bd; display: grid; min-height: 360px; place-content: center; text-align: center; }
 .empty h2 { color: #e8ecf3; margin-bottom: 4px; }
 .empty.compact { min-height: 240px; }
@@ -129,4 +130,4 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
 .floating-caption { align-items: center; background: rgba(9, 13, 22, .86); border: 1px solid rgba(154, 184, 255, .72); border-radius: 14px; display: flex; justify-content: center; margin: 0; min-height: 100vh; padding: 20px 28px; text-align: center; }
 .floating-caption p { color: #f2f5ff; font-size: clamp(1.1rem, 2.5vw, 2rem); font-weight: 750; line-height: 1.45; margin: 0; text-shadow: 0 2px 7px #000; white-space: pre-line; }
 @media (max-width: 1080px) { header { grid-template-columns: minmax(200px, 1fr) minmax(180px, auto); } header nav { grid-column: 1 / -1; grid-row: 2; overflow-x: auto; } .status { text-align: right; } }
-@media (max-width: 820px) { main { padding: 18px 16px 112px; } .capture-panel { align-items: stretch; grid-template-areas: 'source' 'meter' 'timer'; grid-template-columns: minmax(0, 1fr); } .timer { padding-top: 4px; } .settings-panel, .text-service-settings, .model-settings, .capability-fields { grid-template-columns: minmax(0, 1fr); } .status { text-align: left; } .session-item { align-items: flex-start; flex-direction: column; gap: 12px; } .app-layout { grid-template-columns: 1fr; } .settings-sidebar { position: static; } }
+@media (max-width: 820px) { main { padding: 18px 16px 112px; } .capture-panel { align-items: stretch; grid-template-areas: 'source' 'meter' 'timer' 'controls'; grid-template-columns: minmax(0, 1fr); } .timer { padding-top: 4px; } .settings-panel, .text-service-settings, .model-settings, .capability-fields { grid-template-columns: minmax(0, 1fr); } .status { text-align: left; } .session-item { align-items: flex-start; flex-direction: column; gap: 12px; } .app-layout { grid-template-columns: 1fr; } .settings-sidebar { position: static; } }
