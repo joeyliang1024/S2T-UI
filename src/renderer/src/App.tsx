@@ -6,7 +6,7 @@ import { joinOverlappedText, splitPcmWav } from './wav-batch'
 
 type CaptureState = 'idle' | 'recording' | 'paused' | 'saving'
 type AudioDevice = { deviceId: string; label: string }
-type View = 'live' | 'history' | 'import' | 'settings'
+type View = 'live' | 'history' | 'import' | 'models' | 'settings'
 type SavedSession = {
   id: string
   title: string
@@ -200,6 +200,17 @@ const loadRecording = async (key: string): Promise<Blob | undefined> => {
   })
   database.close()
   return audio
+}
+
+const deleteRecording = async (key: string): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(recordingsStore, 'readwrite')
+    transaction.objectStore(recordingsStore).delete(key)
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
 }
 
 const makeWav = (chunks: Float32Array[], sampleRate: number): Blob => {
@@ -1027,15 +1038,18 @@ export default function App(): ReactElement {
   }
 
   const diarizeSession = async (entry: SavedSession): Promise<void> => {
-    if (!window.s2t || !settings.diarizationEndpoint.trim() || !settings.diarizationModel.trim()) {
-      setStatus('請先在完整設定填入講者分離 API endpoint、model 與 API key。')
+    if (window.s2t && (!settings.diarizationEndpoint.trim() || !settings.diarizationModel.trim())) {
+      setStatus('請先在完整設定填入講者分離 API endpoint 與 model。')
       return
     }
     try {
-      const audio = entry.nativeAudioPath ? await window.s2t.readAudio(entry.nativeAudioPath) : await loadRecording(entry.audioKey).then(async (blob) => blob?.arrayBuffer())
+      const audio = entry.nativeAudioPath && window.s2t ? await window.s2t.readAudio(entry.nativeAudioPath) : await loadRecording(entry.audioKey).then(async (blob) => blob?.arrayBuffer())
       if (!audio) throw new Error('找不到本機 WAV 錄音')
       setStatus('正在自動識別講者…')
-      const turns = parseSpeakerTurns(await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio }))
+      const payload = window.s2t
+        ? await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio })
+        : await readJsonResponse<unknown>(await fetch(settings.diarizationEndpoint.trim() || '/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }), '本機 sherpa-onnx 服務')
+      const turns = parseSpeakerTurns(payload)
       if (!turns.length) throw new Error('講者分離服務沒有回傳有效的 speaker segments')
       setSessions((current) => current.map((currentEntry) => {
         if (currentEntry.id !== entry.id) return currentEntry
@@ -1046,6 +1060,15 @@ export default function App(): ReactElement {
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '自動識別講者失敗')
     }
+  }
+
+  const deleteSession = async (entry: SavedSession): Promise<void> => {
+    try {
+      await deleteRecording(entry.audioKey)
+      setSessions((current) => current.filter((item) => item.id !== entry.id))
+      if (playingSessionId === entry.id) { if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current); setPlayingSessionId(null); setPlaybackUrl(null) }
+      setStatus(entry.savedToDisk ? '已移除 App 本機記錄；另存到磁碟的工作階段不會自動刪除。' : '已刪除本機記錄與錄音。')
+    } catch (error) { setStatus(error instanceof Error ? error.message : '無法刪除記錄') }
   }
 
   const saveSessionToDisk = async (entry: SavedSession): Promise<void> => {
@@ -1163,8 +1186,18 @@ export default function App(): ReactElement {
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{sessions.length} 筆</span></div></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : (
-        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button></div></article>)}</div>
+        <div className="session-list">{sessions.map((entry) => <article key={entry.id} className="session-item"><div><strong>{entry.title}</strong><p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div><div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>保存工作階段</button>}<button className="secondary" onClick={() => void diarizeSession(entry)}>自動識別講者</button><button className="secondary" onClick={() => void playSession(entry)}>播放錄音</button><button className="secondary" onClick={() => void downloadSessionAudio(entry)}>下載 WAV</button><button className="secondary" onClick={() => exportSavedTranscript(entry, 'txt')}>下載逐字稿</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'srt')}>SRT</button><button className="text-button" onClick={() => exportSavedTranscript(entry, 'json')}>JSON</button><button className="danger" onClick={() => void deleteSession(entry)}>刪除記錄</button></div></article>)}</div>
       )}
+    </section>
+  ) : view === 'models' ? (
+    <section className="page-panel">
+      <div className="page-title"><div><p className="eyebrow">MODELS</p><h2>已設定模型</h2></div><span>{settings.modelProfiles.filter((profile) => profile.id !== 'none').length + settings.translationProfiles.length + (settings.diarizationModel ? 1 : 0)} 個</span></div>
+      <div className="model-list">
+        {settings.modelProfiles.filter((profile) => profile.id !== 'none').map((profile) => <article className="model-list-item" key={profile.id}><div><strong>{profile.name}</strong><p>ASR · {profile.kind === 'openai-http' ? 'OpenAI Speech-to-Text / 分段 HTTP' : 'Realtime WebSocket'} · {profile.model}</p><code>{modelEndpoint(profile.endpoint, profile.kind)}</code></div></article>)}
+        {settings.translationProfiles.map((profile) => <article className="model-list-item" key={profile.id}><div><strong>{profile.name}</strong><p>翻譯 · OpenAI Chat Completions · {profile.model}</p><code>{profile.endpoint}</code></div></article>)}
+        {settings.diarizationModel && <article className="model-list-item"><div><strong>{settings.diarizationModel}</strong><p>講者分離 · {settings.diarizationEndpoint.includes('127.0.0.1') || settings.diarizationEndpoint.includes('localhost') ? '本機 sherpa-onnx' : '遠端 API'}</p><code>{settings.diarizationEndpoint}</code></div></article>}
+        {settings.modelProfiles.every((profile) => profile.id === 'none') && !settings.translationProfiles.length && !settings.diarizationModel && <div className="empty compact"><h2>尚未設定模型</h2><p>請到完整設定新增模型與服務。</p></div>}
+      </div>
     </section>
   ) : view === 'import' ? (
     <section className="page-panel">
@@ -1227,7 +1260,7 @@ export default function App(): ReactElement {
         <label>講者分離 endpoint<input type="url" placeholder="https://host.example/v1/audio/diarizations" value={settings.diarizationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, diarizationEndpoint: event.target.value }))} /></label>
         <label>講者分離 model ID<input value={settings.diarizationModel} placeholder="speaker-diarization-model" onChange={(event) => setSettings((current) => ({ ...current, diarizationModel: event.target.value }))} /></label>
         {window.s2t && <div className="api-key-row"><label>講者分離 API key<input type="password" autoComplete="off" value={diarizationKeyDraft} onChange={(event) => setDiarizationKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('diarization', diarizationKeyDraft, () => setDiarizationKeyDraft(''))}>儲存 API key</button></div>}
-        <p className="hint">在「記錄」按「自動識別講者」後，App 會送完整 WAV。服務需回傳 `segments`、`diarization` 或 `exclusive_diarization`，每項含 `start/end/speaker`（秒）或 `start_ms/end_ms/speaker`。</p>
+        <p className="hint">在「記錄」按「自動識別講者」後，App 會送完整 WAV。服務需回傳 `segments`、`diarization` 或 `exclusive_diarization`，每項含 `start/end/speaker`（秒）或 `start_ms/end_ms/speaker`。本機 sherpa-onnx：啟動 `npm run web:serve` 後填入 `http://127.0.0.1:8787/api/diarizations`，model 填 `sherpa-onnx-speaker-diarization`，不需要 API key。</p>
       </div>
       <button className="primary" onClick={saveSettings}>儲存設定</button>{settingsSaved && <span className="saved">已儲存</span>}
     </section>
@@ -1244,7 +1277,7 @@ export default function App(): ReactElement {
           <p className="eyebrow">S2T UI</p>
           <h1>即時語音字幕</h1>
         </div>
-        <nav aria-label="主要功能"><button className={view === 'live' ? 'nav-active' : ''} onClick={() => setView('live')}>即時轉錄</button><button className={view === 'history' ? 'nav-active' : ''} onClick={() => setView('history')}>記錄</button><button className={view === 'import' ? 'nav-active' : ''} onClick={() => setView('import')}>匯入檔案</button><button className={view === 'settings' ? 'nav-active' : ''} onClick={() => setView('settings')}>完整設定</button></nav>
+        <nav aria-label="主要功能"><button className={view === 'live' ? 'nav-active' : ''} onClick={() => setView('live')}>即時轉錄</button><button className={view === 'history' ? 'nav-active' : ''} onClick={() => setView('history')}>記錄</button><button className={view === 'import' ? 'nav-active' : ''} onClick={() => setView('import')}>匯入檔案</button><button className={view === 'models' ? 'nav-active' : ''} onClick={() => setView('models')}>模型列表</button><button className={view === 'settings' ? 'nav-active' : ''} onClick={() => setView('settings')}>完整設定</button></nav>
         <span className={`status ${isActive ? 'active' : ''}`}>{status}</span>
       </header>
       <div className={`app-layout ${sidebarOpen ? '' : 'sidebar-hidden'}`}>

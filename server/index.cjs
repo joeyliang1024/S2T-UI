@@ -4,6 +4,7 @@ const { join, normalize } = require('node:path')
 const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { config } = require('dotenv')
+const { diarizeWav } = require('./sherpa-diarization.cjs')
 
 config({ path: join(process.cwd(), '.env') })
 
@@ -30,7 +31,7 @@ const readBody = (request, maximum = 12 * 1024 * 1024) => new Promise((resolve, 
   const chunks = []
   request.on('data', (chunk) => {
     size += chunk.length
-    if (size > maximum) { request.destroy(); reject(new Error('音訊片段超過 12 MB')) } else chunks.push(chunk)
+    if (size > maximum) { request.destroy(); reject(new Error(`音訊資料超過 ${Math.round(maximum / 1024 / 1024)} MB`)) } else chunks.push(chunk)
   })
   request.on('end', () => resolve(Buffer.concat(chunks)))
   request.on('error', reject)
@@ -83,6 +84,17 @@ createServer(async (request, response) => {
       return send(response, 200, { text: result.text || '' })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
+    }
+  }
+  if (request.method === 'POST' && request.url === '/api/diarizations') {
+    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many diarization requests. Try again in one minute.' })
+    try {
+      const audio = await readBody(request, 500 * 1024 * 1024)
+      if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
+      const segments = diarizeWav(audio)
+      return send(response, 200, { model: 'sherpa-onnx-speaker-diarization', exclusive_diarization: segments })
+    } catch (error) {
+      return send(response, 502, { error: error instanceof Error ? error.message : 'Speaker diarization failed' })
     }
   }
   return staticFile(request, response)

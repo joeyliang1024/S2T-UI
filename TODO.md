@@ -158,6 +158,17 @@
   - 已實作：人工講者標記、術語提示、摘要 Chat Completions，以及完整 WAV 後處理的自動 diarization。設定 endpoint、model、key 後，記錄頁可上傳 WAV 並按最大時間重疊回填講者。契約見 [DIARIZATION_API.zh-TW.md](docs/DIARIZATION_API.zh-TW.md)。
   - 待 API 驗收：確認服務回傳 `exclusive_diarization` / `segments` / `diarization` 的 speaker/timestamp schema；摘要 JSON schema（summary、decisions、action_items）仍可依服務端補強。
 
+- [x] **sherpa-onnx 本機 CPU 講者分離（第一版）**
+  - 檔案：`server/sherpa-diarization.cjs`、`server/index.cjs`、`src/main/index.ts`、`docs/SHERPA_ONNX.zh-TW.md`。
+  - 已實作：採 `sherpa-onnx-node`，使用 pyannote segmentation 與 3D-Speaker embedding ONNX；將 PCM16 WAV 混為 mono、線性重取樣為 16 kHz `Float32Array`，再執行自動分群。`POST /api/diarizations` 回傳既有 UI 可讀的 `exclusive_diarization`。
+  - Electron 設定：endpoint 填 `http://127.0.0.1:8787/api/diarizations`、model 填 `sherpa-onnx-speaker-diarization`，loopback 服務不需要 key。Web 可直接呼叫同源 `/api/diarizations`。
+  - 已驗證：載入原生 Node addon、載入兩個 ONNX 模型、2 秒 PCM16 靜音 WAV 與 HTTP endpoint 都得到 HTTP 200 和有效空 segment 陣列。
+  - 待真人驗收：使用至少兩人中文 WAV，確認 speaker 區段、ASR 回填重疊與 CPU 耗時；模型以自動分群標示而非姓名辨識。
+
+- [x] **模型列表與記錄刪除**
+  - 檔案：`src/renderer/src/App.tsx`、`src/renderer/src/styles.css`。
+  - 已實作：頂端「模型列表」顯示保存的 ASR、翻譯與講者分離模型用途、傳輸方式、model ID、endpoint，不顯示 API key。記錄頁新增「刪除記錄」，同步刪除 IndexedDB 錄音；另存到使用者選定資料夾的 session 不會被 App 自動刪除。
+
 ## P2：發布與品質
 
 - [x] **Web 版可使用的 S2T 模式（本機／同源部署）**

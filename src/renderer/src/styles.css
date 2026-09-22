@@ -82,6 +82,11 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .session-item p { color: #9daac0; font-size: .85rem; margin: 5px 0 0; }
 .session-item audio { display: block; margin-top: 12px; max-width: 100%; }
 .session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.model-list { display: grid; gap: 10px; }
+.model-list-item { align-items: center; background: #111824; border: 1px solid #2b374c; border-radius: 10px; display: block; padding: 16px; }
+.model-list-item strong { color: #edf2fb; }
+.model-list-item p { color: #aab7ca; font-size: .86rem; margin: 6px 0; }
+.model-list-item code { color: #9fc1ff; display: block; font-size: .8rem; overflow-wrap: anywhere; }
 .drop-zone { align-content: center; border: 2px dashed #3d5275; border-radius: 12px; color: #abb7cc; cursor: pointer; display: grid; gap: 8px; justify-items: center; min-height: 240px; padding: 24px; text-align: center; }
 .drop-zone:hover { background: #1b2638; border-color: #83a7ff; }
 .drop-zone input { height: 1px; overflow: hidden; position: absolute; width: 1px; }

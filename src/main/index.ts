@@ -283,16 +283,21 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('model:diarize', async (_event, input: { endpoint: string; model: string; audio: ArrayBuffer }) => {
     if (!(input.audio instanceof ArrayBuffer) || !input.audio.byteLength || input.audio.byteLength > 500 * 1024 * 1024) throw new Error('無效的講者分離音檔')
-    const apiKey = environmentKey('diarization') || (await readSecrets()).diarization
-    if (!apiKey) throw new Error('請先在設定中儲存講者分離 API key')
     let endpoint: URL
     try { endpoint = new URL(input.endpoint) } catch { throw new Error('無效的講者分離 API 位址') }
-    const form = new FormData()
-    form.set('model', input.model)
-    form.set('file', new Blob([input.audio], { type: 'audio/wav' }), 'recording.wav')
+    const isLoopbackSherpa = ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) && endpoint.pathname === '/api/diarizations'
+    const apiKey = environmentKey('diarization') || (await readSecrets()).diarization
+    if (!apiKey && !isLoopbackSherpa) throw new Error('請先在設定中儲存講者分離 API key')
     try {
-      const response = await fetch(endpoint, { method: 'POST', headers: { authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(120_000) })
-      const payload = await response.json() as unknown
+      const form = new FormData()
+      form.set('model', input.model)
+      form.set('file', new Blob([input.audio], { type: 'audio/wav' }), 'recording.wav')
+      const response = await fetch(endpoint, isLoopbackSherpa
+        ? { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: Buffer.from(input.audio), signal: AbortSignal.timeout(120_000) }
+        : { method: 'POST', headers: { ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: form, signal: AbortSignal.timeout(120_000) })
+      const body = await response.text()
+      let payload: unknown
+      try { payload = JSON.parse(body) } catch { throw new Error(body.trim() ? `服務回傳非 JSON（HTTP ${response.status}）` : `服務沒有回傳資料（HTTP ${response.status}）`) }
       if (!response.ok) throw new Error(typeof payload === 'object' && payload && 'error' in payload ? String((payload as { error: unknown }).error) : `HTTP ${response.status}`)
       return payload
     } catch (error) {
