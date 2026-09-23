@@ -447,6 +447,7 @@ export default function App(): ReactElement {
   const activeDeviceIdRef = useRef('default')
   const translatingIdsRef = useRef(new Set<string>())
   const cancelImportRef = useRef(false)
+  const importAbortRef = useRef<AbortController | null>(null)
   const liveDiarizationRunningRef = useRef(false)
   const transcriptContainerRef = useRef<HTMLElement | null>(null)
   const webCaptionPopupRef = useRef<HTMLDivElement | null>(null)
@@ -1245,6 +1246,7 @@ export default function App(): ReactElement {
         let lastError: unknown
         for (const delay of [0, 400, 1_200]) {
           if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
+          if (cancelImportRef.current) throw new Error('已取消批次轉錄')
           try {
             response = window.s2t ? await window.s2t.transcribeAudioChunk({
               profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model,
@@ -1255,11 +1257,12 @@ export default function App(): ReactElement {
               'x-s2t-filename': isWav ? `batch-${index + 1}.wav` : importedFile.name,
               'x-s2t-language': settings.sourceLanguage.split('-')[0],
               ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {})
-            }, body: chunk.audio }).then(async (result) => {
+            }, body: chunk.audio, signal: (importAbortRef.current = new AbortController()).signal }).then(async (result) => {
               const payload = await readJsonResponse<{ text?: string; error?: string }>(result, '批次 ASR gateway')
               if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
               return { text: payload.text || '' }
             })
+            importAbortRef.current = null
             break
           } catch (error) { lastError = error }
         }
@@ -1273,12 +1276,13 @@ export default function App(): ReactElement {
       setTranscripts(segments)
       setImportError('轉錄完成，已切換至即時字幕頁，可下載逐字稿。')
       setView('live')
-    } catch (error) { setImportError(error instanceof Error ? error.message : '匯入轉錄失敗') } finally { setImportProgress(null); cancelImportRef.current = false }
+    } catch (error) { setImportError(cancelImportRef.current ? '已取消批次轉錄。' : error instanceof Error ? error.message : '匯入轉錄失敗') } finally { importAbortRef.current = null; setImportProgress(null); cancelImportRef.current = false }
   }
 
   const cancelImport = (): void => {
     cancelImportRef.current = true
-    setImportError('正在取消；目前上傳的分段完成後不會送出下一段。')
+    importAbortRef.current?.abort()
+    setImportError('正在取消目前的上傳…')
   }
 
   const playSession = async (entry: SavedSession): Promise<void> => {
