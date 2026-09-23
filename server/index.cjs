@@ -9,6 +9,7 @@ const { diarizeWav } = require('./sherpa-diarization.cjs')
 config({ path: join(process.cwd(), '.env') })
 
 const port = Number(process.env.S2T_WEB_PORT || 8787)
+const maxAsrAudioBytes = 100 * 1024 * 1024
 const service = (name) => ({
   endpoint: process.env[`S2T_${name}_ENDPOINT`] || process.env[`S2T_WEB_${name}_ENDPOINT`] || '',
   model: process.env[`S2T_${name}_MODEL`] || process.env[`S2T_WEB_${name}_MODEL`] || '',
@@ -59,6 +60,16 @@ const readBody = (request, maximum = 12 * 1024 * 1024) => new Promise((resolve, 
   request.on('end', () => resolve(Buffer.concat(chunks)))
   request.on('error', reject)
 })
+const safeUploadFilename = (value) => {
+  const name = typeof value === 'string' ? value.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 160) : ''
+  return name || 'audio.wav'
+}
+const safeAudioContentType = (value) => {
+  const type = typeof value === 'string' ? value.toLowerCase().split(';', 1)[0].trim() : ''
+  return /^audio\/(wav|x-wav|mpeg|mp4|aac|ogg|webm|flac)$/.test(type) || /^video\/(mp4|quicktime|webm)$/.test(type)
+    ? type
+    : 'application/octet-stream'
+}
 const staticFile = async (request, response) => {
   const urlPath = new URL(request.url, 'http://localhost').pathname
   const requested = urlPath === '/' ? 'index.html' : urlPath.replace(/^\//, '')
@@ -90,7 +101,7 @@ createServer(async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) response.setHeader('access-control-allow-origin', origin)
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, x-s2t-language, x-s2t-prompt' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, x-s2t-language, x-s2t-prompt, x-s2t-filename' }); return response.end() }
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
     asr: publicService(asr, '/api/transcriptions'),
     translation: publicService(translation, '/api/translations'),
@@ -103,11 +114,11 @@ createServer(async (request, response) => {
     if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many transcription requests. Try again in one minute.' })
     if (!asr.endpoint || !asr.model || !asr.apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
     try {
-      const audio = await readBody(request)
+      const audio = await readBody(request, maxAsrAudioBytes)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
       const client = new OpenAI({ apiKey: asr.apiKey, baseURL: baseUrl(asr.endpoint), timeout: 20_000, maxRetries: 1 })
       const result = await client.audio.transcriptions.create({
-        file: await toFile(audio, 'live-chunk.wav', { type: 'audio/wav' }), model: asr.model,
+        file: await toFile(audio, safeUploadFilename(request.headers['x-s2t-filename']), { type: safeAudioContentType(request.headers['content-type']) }), model: asr.model,
         language: String(request.headers['x-s2t-language'] || 'zh').slice(0, 40),
         ...(request.headers['x-s2t-prompt'] ? { prompt: String(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
       })

@@ -1250,7 +1250,12 @@ export default function App(): ReactElement {
               profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model,
               language: settings.sourceLanguage.split('-')[0], prompt: settings.glossary || undefined,
               filename: isWav ? `batch-${index + 1}.wav` : importedFile.name, contentType: isWav ? 'audio/wav' : importedFile.type || undefined, audio: chunk.audio
-            }) : await fetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-language': settings.sourceLanguage.split('-')[0], ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {}) }, body: chunk.audio }).then(async (result) => {
+            }) : await fetch('/api/transcriptions', { method: 'POST', headers: {
+              'content-type': isWav ? 'audio/wav' : (importedFile.type || 'application/octet-stream'),
+              'x-s2t-filename': isWav ? `batch-${index + 1}.wav` : importedFile.name,
+              'x-s2t-language': settings.sourceLanguage.split('-')[0],
+              ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {})
+            }, body: chunk.audio }).then(async (result) => {
               const payload = await readJsonResponse<{ text?: string; error?: string }>(result, '批次 ASR gateway')
               if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
               return { text: payload.text || '' }
