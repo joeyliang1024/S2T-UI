@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Reac
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from './model-adapter'
 import { defaultVadConfig, type VadConfig } from './vad'
 import { assignSpeakersByOverlap, parseSpeakerTurns } from './diarization'
-import { joinOverlappedText, splitPcmWav } from './wav-batch'
+import { joinOverlappedText, nextPcmWavChunkStart, pcmWavChunkCount, readPcmWavFileChunk, readPcmWavFileLayout } from './wav-batch'
 
 type CaptureState = 'starting' | 'idle' | 'recording' | 'paused' | 'saving'
 type AudioDevice = { deviceId: string; label: string }
@@ -1225,15 +1225,22 @@ export default function App(): ReactElement {
     cancelImportRef.current = false
     setImportError('正在準備批次轉錄…')
     try {
-      const input = await importedFile.arrayBuffer()
-      const chunks = isWav ? splitPcmWav(input) : [{ audio: input, startMs: 0, endMs: 0 }]
+      // Do not read a long WAV into renderer memory. Its header is read once;
+      // each ASR request then owns only one 45-second segment plus overlap.
+      const wavLayout = isWav ? await readPcmWavFileLayout(importedFile) : undefined
+      const nonWavInput = isWav ? undefined : await importedFile.arrayBuffer()
+      const totalChunks = wavLayout ? pcmWavChunkCount(wavLayout) : 1
+      let wavStartByte = 0
       const segments: TranscriptEvent[] = []
       let merged = ''
-      setImportProgress({ current: 0, total: chunks.length })
-      for (let index = 0; index < chunks.length; index += 1) {
+      setImportProgress({ current: 0, total: totalChunks })
+      for (let index = 0; index < totalChunks; index += 1) {
         if (cancelImportRef.current) throw new Error('已取消批次轉錄；已完成的段落不會被覆蓋。')
-        const chunk = chunks[index]
-        setImportProgress({ current: index + 1, total: chunks.length })
+        const chunk = wavLayout
+          ? await readPcmWavFileChunk(importedFile, wavLayout, wavStartByte)
+          : { audio: nonWavInput!, startMs: 0, endMs: 0 }
+        if (wavLayout) wavStartByte = nextPcmWavChunkStart(wavLayout, wavStartByte)
+        setImportProgress({ current: index + 1, total: totalChunks })
         let response: { text: string } | undefined
         let lastError: unknown
         for (const delay of [0, 400, 1_200]) {
