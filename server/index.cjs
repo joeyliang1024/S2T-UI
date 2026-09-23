@@ -9,13 +9,15 @@ const { diarizeWav } = require('./sherpa-diarization.cjs')
 config({ path: join(process.cwd(), '.env') })
 
 const port = Number(process.env.S2T_WEB_PORT || 8787)
-const endpoint = process.env.S2T_WEB_ASR_ENDPOINT || process.env.S2T_ASR_ENDPOINT || ''
-const model = process.env.S2T_WEB_ASR_MODEL || process.env.S2T_ASR_MODEL || ''
-const apiKey = process.env.S2T_WEB_ASR_API_KEY || process.env.S2T_ASR_API_KEY || ''
-const publicName = process.env.S2T_WEB_ASR_NAME || model || '未設定 ASR 模型'
-const translationEndpoint = process.env.S2T_WEB_TRANSLATION_ENDPOINT || ''
-const translationModel = process.env.S2T_WEB_TRANSLATION_MODEL || ''
-const translationApiKey = process.env.S2T_WEB_TRANSLATION_API_KEY || ''
+const service = (name) => ({
+  endpoint: process.env[`S2T_${name}_ENDPOINT`] || process.env[`S2T_WEB_${name}_ENDPOINT`] || '',
+  model: process.env[`S2T_${name}_MODEL`] || process.env[`S2T_WEB_${name}_MODEL`] || '',
+  apiKey: process.env[`S2T_${name}_API_KEY`] || process.env[`S2T_WEB_${name}_API_KEY`] || ''
+})
+const asr = service('ASR')
+const translation = service('TRANSLATION')
+const summary = service('SUMMARY')
+const diarization = service('DIARIZATION')
 const staticRoot = join(process.cwd(), 'out/renderer')
 const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
 const requestsByIp = new Map()
@@ -33,9 +35,19 @@ const baseUrl = (value) => {
   url.pathname = url.pathname.replace(/\/(audio\/transcriptions|chat\/completions)\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
 }
+const publicService = (value, endpoint) => ({
+  endpoint,
+  model: value.model,
+  configured: Boolean(value.endpoint && value.model && value.apiKey)
+})
+const completeText = async (value, messages) => {
+  const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries: 1 })
+  const result = await client.chat.completions.create({ model: value.model, temperature: 0.2, messages })
+  return result.choices[0]?.message.content?.trim() || ''
+}
 const send = (response, status, body, type = 'application/json; charset=utf-8') => {
   response.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' })
-  response.end(typeof body === 'string' ? body : JSON.stringify(body))
+  response.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body))
 }
 const readBody = (request, maximum = 12 * 1024 * 1024) => new Promise((resolve, reject) => {
   let size = 0
@@ -80,18 +92,22 @@ createServer(async (request, response) => {
   response.setHeader('vary', 'Origin')
   if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, x-s2t-language, x-s2t-prompt' }); return response.end() }
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
-    configured: Boolean(endpoint && model && apiKey), model: endpoint && model ? { id: 'web-environment-asr', name: publicName, model, kind: 'openai-http' } : null,
-    translation: translationEndpoint && translationModel && translationApiKey ? { id: 'web-environment-translation', name: `${translationModel}（Web 翻譯）`, model: translationModel } : null
+    asr: publicService(asr, '/api/transcriptions'),
+    translation: publicService(translation, '/api/translations'),
+    summary: publicService(summary, '/api/summaries'),
+    diarization: diarization.endpoint && diarization.model
+      ? publicService(diarization, '/api/diarizations')
+      : { endpoint: '/api/diarizations', model: 'sherpa-onnx-speaker-diarization', configured: true }
   })
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
     if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many transcription requests. Try again in one minute.' })
-    if (!endpoint || !model || !apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
+    if (!asr.endpoint || !asr.model || !asr.apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
     try {
       const audio = await readBody(request)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
-      const client = new OpenAI({ apiKey, baseURL: baseUrl(endpoint), timeout: 20_000, maxRetries: 1 })
+      const client = new OpenAI({ apiKey: asr.apiKey, baseURL: baseUrl(asr.endpoint), timeout: 20_000, maxRetries: 1 })
       const result = await client.audio.transcriptions.create({
-        file: await toFile(audio, 'live-chunk.wav', { type: 'audio/wav' }), model,
+        file: await toFile(audio, 'live-chunk.wav', { type: 'audio/wav' }), model: asr.model,
         language: String(request.headers['x-s2t-language'] || 'zh').slice(0, 40),
         ...(request.headers['x-s2t-prompt'] ? { prompt: String(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
       })
@@ -102,7 +118,7 @@ createServer(async (request, response) => {
   }
   if (request.method === 'POST' && request.url === '/api/translations') {
     if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many translation requests. Try again in one minute.' })
-    if (!translationEndpoint || !translationModel || !translationApiKey) return send(response, 503, { error: 'Web translation gateway has not been configured.' })
+    if (!translation.endpoint || !translation.model || !translation.apiKey) return send(response, 503, { error: 'Web translation gateway has not been configured.' })
     try {
       const raw = await readBody(request, 256 * 1024)
       const input = JSON.parse(raw.toString('utf8'))
@@ -111,16 +127,22 @@ createServer(async (request, response) => {
       const targetLanguage = typeof input.targetLanguage === 'string' ? input.targetLanguage.slice(0, 60) : 'en'
       const glossary = typeof input.glossary === 'string' ? input.glossary.trim().slice(0, 10_000) : ''
       if (!text) return send(response, 400, { error: 'Text is required.' })
-      const client = new OpenAI({ apiKey: translationApiKey, baseURL: baseUrl(translationEndpoint), timeout: 12_000, maxRetries: 0 })
-      const result = await client.chat.completions.create({
-        model: translationModel, temperature: 0.7, top_p: 0.6,
-        messages: [
-          { role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }
-        ]
-      })
-      return send(response, 200, { text: result.choices[0]?.message.content?.trim() || '' })
+      const textResult = await completeText(translation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }])
+      return send(response, 200, { text: textResult })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'Translation request failed' })
+    }
+  }
+  if (request.method === 'POST' && request.url === '/api/summaries') {
+    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many summary requests. Try again in one minute.' })
+    if (!summary.endpoint || !summary.model || !summary.apiKey) return send(response, 503, { error: 'Web summary gateway has not been configured.' })
+    try {
+      const input = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
+      const messages = Array.isArray(input.messages) ? input.messages.filter((item) => item && (item.role === 'system' || item.role === 'user') && typeof item.content === 'string').slice(0, 8) : []
+      if (!messages.length) return send(response, 400, { error: 'Messages are required.' })
+      return send(response, 200, { text: await completeText(summary, messages) })
+    } catch (error) {
+      return send(response, 502, { error: error instanceof Error ? error.message : 'Summary request failed' })
     }
   }
   if (request.method === 'POST' && request.url === '/api/diarizations') {
@@ -128,6 +150,16 @@ createServer(async (request, response) => {
     try {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
+      if (diarization.endpoint && diarization.model) {
+        if (!diarization.apiKey) return send(response, 503, { error: 'Web diarization gateway has not been configured.' })
+        const form = new FormData()
+        form.set('model', diarization.model)
+        form.set('file', new Blob([audio], { type: 'audio/wav' }), 'recording.wav')
+        const remote = await fetch(diarization.endpoint, { method: 'POST', headers: { authorization: `Bearer ${diarization.apiKey}` }, body: form, signal: AbortSignal.timeout(120_000) })
+        const body = await remote.text()
+        if (!remote.ok) return send(response, remote.status, { error: body || `HTTP ${remote.status}` })
+        return send(response, 200, body)
+      }
       const segments = diarizeWav(audio)
       return send(response, 200, { model: 'sherpa-onnx-speaker-diarization', exclusive_diarization: segments })
     } catch (error) {
@@ -135,4 +167,4 @@ createServer(async (request, response) => {
     }
   }
   return staticFile(request, response)
-}).listen(port, () => console.log(`S2T web gateway: http://127.0.0.1:${port}`))
+}).listen(port, '127.0.0.1', () => console.log(`S2T web gateway: http://127.0.0.1:${port}`))

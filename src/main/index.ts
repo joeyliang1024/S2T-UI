@@ -93,7 +93,7 @@ const openAiBaseUrl = (endpoint: string): string => {
 }
 const openAiChatBaseUrl = (endpoint: string): string => {
   const url = new URL(endpoint)
-  url.pathname = url.pathname.replace(/\/(chat\/completions|responses)\/?$/, '').replace(/\/$/, '')
+  url.pathname = url.pathname.replace(/\/(audio\/transcriptions|chat\/completions|responses)\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
 }
 const environmentKey = (profileId: string): string | undefined => {
@@ -160,10 +160,10 @@ const showCaptionWindow = (): void => {
     return
   }
   captionWindow = new BrowserWindow({
-    width: 760,
-    height: 164,
-    minWidth: 360,
-    minHeight: 104,
+    width: 1280,
+    height: 620,
+    minWidth: 500,
+    minHeight: 320,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -235,11 +235,15 @@ app.whenReady().then(() => {
     if (!validSecretId(profileId)) return false
     return Boolean(environmentKey(profileId) || (await readSecrets())[profileId])
   })
-  ipcMain.handle('model:environment-asr', () => ({
-    endpoint: process.env.S2T_ASR_ENDPOINT ?? '',
-    model: process.env.S2T_ASR_MODEL ?? '',
-    configured: Boolean(process.env.S2T_ASR_API_KEY && process.env.S2T_ASR_ENDPOINT && process.env.S2T_ASR_MODEL)
-  }))
+  ipcMain.handle('model:environment-models', () => {
+    const service = (kind: 'ASR' | 'TRANSLATION' | 'SUMMARY' | 'DIARIZATION') => {
+      const endpoint = process.env[`S2T_${kind}_ENDPOINT`] || ''
+      const model = process.env[`S2T_${kind}_MODEL`] || ''
+      const apiKey = process.env[`S2T_${kind}_API_KEY`] || ''
+      return { endpoint, model, configured: Boolean(endpoint && model && (apiKey || kind === 'DIARIZATION')) }
+    }
+    return { asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
+  })
   ipcMain.handle('models:load-config', async () => {
     try { return JSON.parse(await readFile(modelConfigPath(), 'utf8')) } catch { return null }
   })
@@ -365,7 +369,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('session:save', async (_event, input: {
-    name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; segments: unknown[]
+    name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[]
   }) => {
     const result = await dialog.showOpenDialog({
       title: '選擇工作階段保存位置',
@@ -374,15 +378,11 @@ app.whenReady().then(() => {
     const parentDirectory = result.filePaths[0]
     if (result.canceled || !parentDirectory) return { canceled: true }
 
-    const directory = join(parentDirectory, input.name || 'recording')
+    const directory = join(parentDirectory, `s2t-${randomUUID()}`)
     await mkdir(directory, { recursive: true })
     const audioPath = join(directory, 'audio.wav')
-    if (input.recordingPath && completedRecordings.has(input.recordingPath)) {
+    if (input.recordingPath && availableAudioPaths.has(input.recordingPath)) {
       await copyFile(input.recordingPath, audioPath)
-      await rm(input.recordingPath, { force: true })
-      completedRecordings.delete(input.recordingPath)
-      availableAudioPaths.delete(input.recordingPath)
-      await updateRecoveryManifest((entries) => entries.filter((entry) => entry.path !== input.recordingPath))
     } else if (input.audio) {
       await writeFile(audioPath, Buffer.from(input.audio))
     } else {
@@ -393,8 +393,14 @@ app.whenReady().then(() => {
     await writeFile(join(directory, 'events.jsonl'), '', 'utf8')
     await writeFile(join(directory, 'session.json'), JSON.stringify({
       version: 1, name: input.name, createdAt: input.createdAt, durationMs: input.durationMs,
-      source: input.source, audioFile: 'audio.wav', transcriptFile: 'transcript.jsonl'
+      source: input.source, summary: input.summary, audioFile: 'audio.wav', transcriptFile: 'transcript.jsonl'
     }, null, 2), 'utf8')
+    if (input.recordingPath && completedRecordings.has(input.recordingPath)) {
+      await rm(input.recordingPath, { force: true })
+      completedRecordings.delete(input.recordingPath)
+      availableAudioPaths.delete(input.recordingPath)
+      await updateRecoveryManifest((entries) => entries.filter((entry) => entry.path !== input.recordingPath))
+    }
     availableAudioPaths.add(audioPath)
     return { canceled: false, audioPath, directory }
   })
@@ -423,7 +429,7 @@ app.whenReady().then(() => {
       createdAt: typeof metadata.createdAt === 'string' ? metadata.createdAt : new Date().toISOString(),
       durationMs: typeof metadata.durationMs === 'number' ? metadata.durationMs : 0,
       source: typeof metadata.source === 'string' ? metadata.source : '已保存工作階段', transcript: await readFile(join(root, 'transcript.txt'), 'utf8'),
-      audioKey: '', nativeAudioPath: audioPath, savedToDisk: true, segments
+      audioKey: '', nativeAudioPath: audioPath, savedToDisk: true, summary: typeof metadata.summary === 'string' ? metadata.summary : undefined, segments
     } }
   })
   ipcMain.handle('recording:recoverable', async () => {
@@ -452,6 +458,17 @@ app.whenReady().then(() => {
   ipcMain.on('captions:toggle-floating', (_event, visible: boolean) => {
     if (visible) showCaptionWindow()
     else captionWindow?.hide()
+  })
+  ipcMain.handle('captions:toggle-floating-fullscreen', () => {
+    if (!captionWindow || captionWindow.isDestroyed()) return false
+    captionWindow.setFullScreen(!captionWindow.isFullScreen())
+    return captionWindow.isFullScreen()
+  })
+  ipcMain.on('captions:close-floating', () => {
+    captionWindow?.hide()
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window !== captionWindow) window.webContents.send('captions:floating-closed')
+    }
   })
   ipcMain.on('captions:update-floating', (_event, text: string) => {
     captionWindow?.webContents.send('captions:floating-update', text)
