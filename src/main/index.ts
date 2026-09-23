@@ -327,15 +327,18 @@ app.whenReady().then(() => {
     return { id }
   })
 
-  ipcMain.on('recording:append', (_event, input: { id: string; audio: ArrayBuffer }) => {
+  ipcMain.handle('recording:append', async (_event, input: { id: string; audio: ArrayBuffer }) => {
     const recording = pcmRecordings.get(input.id)
-    if (!recording || !(input.audio instanceof ArrayBuffer)) return
+    if (!recording || !(input.audio instanceof ArrayBuffer)) throw new Error('找不到進行中的錄音')
     const chunk = Buffer.from(input.audio)
-    if (chunk.length === 0) return
+    if (chunk.length === 0) return { bytesWritten: recording.bytesWritten }
+    if (chunk.length > 1024 * 1024) throw new Error('錄音寫入分段過大')
     recording.bytesWritten += chunk.length
     recording.writes = recording.writes.then(() => new Promise<void>((resolve, reject) => {
       recording.stream.write(chunk, (error) => error ? reject(error) : resolve())
     }))
+    await recording.writes
+    return { bytesWritten: recording.bytesWritten }
   })
 
   ipcMain.handle('recording:finish', async (_event, id: string) => {

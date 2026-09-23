@@ -13,7 +13,7 @@ declare global {
       completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
       diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => Promise<unknown>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
-      appendPcm: (id: string, audio: ArrayBuffer) => void
+      appendPcm: (id: string, audio: ArrayBuffer) => Promise<{ bytesWritten: number }>
       finishPcmRecording: (id: string) => Promise<{ audioPath: string }>
       abortPcmRecording: (id: string) => Promise<void>
       readAudio: (audioPath: string) => Promise<ArrayBuffer>

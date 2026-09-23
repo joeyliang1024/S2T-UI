@@ -262,6 +262,98 @@ const pcm16 = (samples: Float32Array): ArrayBuffer => {
   return buffer
 }
 
+/**
+ * Keeps disk writing off the audio callback while bounding renderer memory.
+ * Each batch is acknowledged by Electron main after WriteStream has accepted
+ * it, so a slow disk pauses capture instead of building an unbounded IPC queue.
+ */
+class BufferedPcmWriter {
+  private pending: ArrayBuffer[] = []
+  private pendingBytes = 0
+  private writing = false
+  private closed = false
+  private pressured = false
+  private failure: Error | null = null
+  private timer: number | null = null
+  private idleWaiters: Array<() => void> = []
+
+  constructor(
+    private readonly append: (audio: ArrayBuffer) => Promise<unknown>,
+    private readonly onPressure: (active: boolean) => void,
+    private readonly onFailure: (error: Error) => void,
+    private readonly batchBytes = 24_000,
+    private readonly maximumPendingBytes = 192_000
+  ) {}
+
+  push(audio: ArrayBuffer): void {
+    if (this.closed || this.failure) return
+    this.pending.push(audio)
+    this.pendingBytes += audio.byteLength
+    if (this.pendingBytes >= this.maximumPendingBytes && !this.pressured) {
+      this.pressured = true
+      this.onPressure(true)
+    }
+    if (this.pendingBytes >= this.batchBytes) this.pump()
+    else if (this.timer === null) this.timer = window.setTimeout(() => {
+      this.timer = null
+      this.pump()
+    }, 125)
+  }
+
+  async closeAndDrain(): Promise<void> {
+    this.closed = true
+    if (this.timer !== null) window.clearTimeout(this.timer)
+    this.timer = null
+    this.pump()
+    if (this.writing || this.pendingBytes) await new Promise<void>((resolve) => this.idleWaiters.push(resolve))
+    if (this.failure) throw this.failure
+  }
+
+  discard(): void {
+    this.closed = true
+    if (this.timer !== null) window.clearTimeout(this.timer)
+    this.timer = null
+    this.pending = []
+    this.pendingBytes = 0
+    this.resolveIdle()
+  }
+
+  private pump(): void {
+    if (this.writing || this.failure || !this.pendingBytes || (!this.closed && this.pendingBytes < this.batchBytes)) return
+    const pieces: ArrayBuffer[] = []
+    let bytes = 0
+    while (this.pending.length && (bytes < this.batchBytes || !pieces.length)) {
+      const piece = this.pending.shift()!
+      pieces.push(piece)
+      bytes += piece.byteLength
+    }
+    this.pendingBytes -= bytes
+    const merged = new Uint8Array(bytes)
+    let offset = 0
+    for (const piece of pieces) { merged.set(new Uint8Array(piece), offset); offset += piece.byteLength }
+    this.writing = true
+    void this.append(merged.buffer).catch((error: unknown) => {
+      this.failure = error instanceof Error ? error : new Error('錄音暫存檔寫入失敗')
+      this.pending = []
+      this.pendingBytes = 0
+      this.onFailure(this.failure)
+    }).finally(() => {
+      this.writing = false
+      if (!this.closed && this.pressured && this.pendingBytes <= this.batchBytes) {
+        this.pressured = false
+        this.onPressure(false)
+      }
+      if (this.pendingBytes && !this.failure) this.pump()
+      else if (!this.writing && !this.pendingBytes) this.resolveIdle()
+    })
+  }
+
+  private resolveIdle(): void {
+    const waiters = this.idleWaiters.splice(0)
+    waiters.forEach((resolve) => resolve())
+  }
+}
+
 export default function App(): ReactElement {
   const isFloatingCaptionWindow = window.location.hash === '#floating'
   const [devices, setDevices] = useState<AudioDevice[]>([])
@@ -333,6 +425,9 @@ export default function App(): ReactElement {
   const recordingDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const pcmChunksRef = useRef<Float32Array[]>([])
+  const pcmWriterRef = useRef<BufferedPcmWriter | null>(null)
+  const pcmWriterPausedRef = useRef(false)
+  const pcmWriterFailedRef = useRef(false)
   const electronRecordingIdRef = useRef<string | null>(null)
   const sampleRateRef = useRef(48_000)
   const pausedRef = useRef(false)
@@ -799,7 +894,7 @@ export default function App(): ReactElement {
         const samples = new Float32Array(event.data)
         if (pausedRef.current) return
         const recordingId = electronRecordingIdRef.current
-        if (recordingId && window.s2t) window.s2t.appendPcm(recordingId, pcm16(samples))
+        if (recordingId && window.s2t) pcmWriterRef.current?.push(pcm16(samples))
         else pcmChunksRef.current.push(samples)
         modelRef.current.pushAudio(samples, sampleOffsetRef.current)
         sampleOffsetRef.current += samples.length
@@ -817,6 +912,42 @@ export default function App(): ReactElement {
       sampleRateRef.current = context.sampleRate
       await modelRef.current.start({ sampleRate: context.sampleRate, language: settings.sourceLanguage, targetLanguage: settings.targetLanguage })
       electronRecordingIdRef.current = window.s2t ? (await window.s2t.startPcmRecording(context.sampleRate)).id : null
+      if (electronRecordingIdRef.current && window.s2t) {
+        const recordingId = electronRecordingIdRef.current
+        pcmWriterPausedRef.current = false
+        pcmWriterFailedRef.current = false
+        pcmWriterRef.current = new BufferedPcmWriter(
+          (audio) => window.s2t!.appendPcm(recordingId, audio),
+          (active) => {
+            const recorder = recorderRef.current
+            if (active) {
+              if (pcmWriterPausedRef.current) return
+              pcmWriterPausedRef.current = true
+              pausedRef.current = true
+              pauseStartedAtRef.current = Date.now()
+              if (recorder?.state === 'recording') recorder.pause()
+              setCaptureState('paused')
+              setStatus('磁碟寫入速度過慢，已暫停收音並等待暫存檔完成。')
+              return
+            }
+            if (!pcmWriterPausedRef.current) return
+            pcmWriterPausedRef.current = false
+            pausedRef.current = false
+            if (pauseStartedAtRef.current) pausedDurationRef.current += Date.now() - pauseStartedAtRef.current
+            pauseStartedAtRef.current = null
+            if (recorder?.state === 'paused') recorder.resume()
+            setCaptureState('recording')
+            setStatus('暫存檔已跟上，已繼續收音。')
+          },
+          (error) => {
+            pcmWriterFailedRef.current = true
+            pausedRef.current = true
+            if (recorderRef.current?.state === 'recording') recorderRef.current.pause()
+            setCaptureState('paused')
+            setStatus(`錄音暫存檔寫入失敗：${error.message}。請結束收音並重新開始。`)
+          }
+        )
+      }
       if (stream) attachInput(stream, context)
       if (systemStreamRef.current) attachSystemAudio(systemStreamRef.current, context)
       setTranscripts([])
@@ -837,6 +968,8 @@ export default function App(): ReactElement {
       const sourceDescription = includeSystemAudio ? (stream ? '麥克風與電腦音訊混音中' : '電腦音訊收音中') : '麥克風收音中'
       setStatus(selectedModel.endpoint.trim() ? `${sourceDescription}，正在接收「${selectedModel.name}」字幕。` : `${sourceDescription}。模型尚未接入，字幕會在模型適配器完成後顯示。`)
     } catch (error) {
+      pcmWriterRef.current?.discard()
+      pcmWriterRef.current = null
       if (electronRecordingIdRef.current) void window.s2t?.abortPcmRecording(electronRecordingIdRef.current)
       electronRecordingIdRef.current = null
       cleanUpCapture()
@@ -849,6 +982,14 @@ export default function App(): ReactElement {
   const togglePause = async (): Promise<void> => {
     const recorder = recorderRef.current
     if (!recorder) return
+    if (pcmWriterFailedRef.current) {
+      setStatus('錄音暫存檔寫入失敗，請結束收音後重新開始。')
+      return
+    }
+    if (pcmWriterPausedRef.current) {
+      setStatus('正在等待錄音暫存檔寫入；完成後會自動繼續收音。')
+      return
+    }
     if (captureState === 'recording') {
       recorder.pause()
       pausedRef.current = true
@@ -879,6 +1020,7 @@ export default function App(): ReactElement {
     try {
       await modelRef.current.stop()
       const recordingId = electronRecordingIdRef.current
+      if (recordingId && window.s2t) await pcmWriterRef.current?.closeAndDrain()
       const recordingPath = recordingId && window.s2t ? (await window.s2t.finishPcmRecording(recordingId)).audioPath : undefined
       electronRecordingIdRef.current = null
       const blob = recordingPath ? undefined : makeWav(pcmChunksRef.current, sampleRateRef.current)
@@ -911,11 +1053,15 @@ export default function App(): ReactElement {
       setView('history')
       setStatus('收音已結束。請在「記錄」頁選擇保存位置。')
     } catch (error) {
+      if (electronRecordingIdRef.current) await window.s2t?.abortPcmRecording(electronRecordingIdRef.current).catch(() => undefined)
       setStatus(error instanceof Error ? `儲存失敗：${error.message}` : '儲存失敗')
     } finally {
       cleanUpCapture()
       recorderRef.current = null
       pcmChunksRef.current = []
+      pcmWriterRef.current = null
+      pcmWriterPausedRef.current = false
+      pcmWriterFailedRef.current = false
       electronRecordingIdRef.current = null
       setCaptureState('idle')
       setMicrophoneLevel(-60); setSystemLevel(-60)

@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('s2t', {
   completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => ipcRenderer.invoke('model:complete', input),
   diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:diarize', input),
   startPcmRecording: (sampleRate: number) => ipcRenderer.invoke('recording:start', sampleRate),
-  appendPcm: (id: string, audio: ArrayBuffer) => ipcRenderer.send('recording:append', { id, audio }),
+  appendPcm: (id: string, audio: ArrayBuffer) => ipcRenderer.invoke('recording:append', { id, audio }),
   finishPcmRecording: (id: string) => ipcRenderer.invoke('recording:finish', id),
   abortPcmRecording: (id: string) => ipcRenderer.invoke('recording:abort', id),
   readAudio: (audioPath: string) => ipcRenderer.invoke('audio:read', audioPath),
