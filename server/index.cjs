@@ -84,13 +84,14 @@ const staticFile = async (request, response) => {
     try { send(response, 200, await readFile(join(staticRoot, 'index.html')), 'text/html') } catch { send(response, 404, { error: 'Web build not found. Run npm run build first.' }) }
   }
 }
-const acceptsRequest = (request) => {
+const acceptsRequest = (request, bucket) => {
   const ip = request.socket.remoteAddress || 'unknown'
+  const key = `${ip}:${bucket}`
   const now = Date.now()
-  const recent = (requestsByIp.get(ip) || []).filter((time) => now - time < 60_000)
+  const recent = (requestsByIp.get(key) || []).filter((time) => now - time < 60_000)
   if (recent.length >= 60) return false
   recent.push(now)
-  requestsByIp.set(ip, recent)
+  requestsByIp.set(key, recent)
   return true
 }
 
@@ -111,7 +112,7 @@ createServer(async (request, response) => {
       : { endpoint: '/api/diarizations', model: 'sherpa-onnx-speaker-diarization', configured: true }
   })
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
-    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many transcription requests. Try again in one minute.' })
+    if (!acceptsRequest(request, 'transcriptions')) return send(response, 429, { error: 'Too many transcription requests. Try again in one minute.' })
     if (!asr.endpoint || !asr.model || !asr.apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
     try {
       const audio = await readBody(request, maxAsrAudioBytes)
@@ -128,7 +129,7 @@ createServer(async (request, response) => {
     }
   }
   if (request.method === 'POST' && request.url === '/api/translations') {
-    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many translation requests. Try again in one minute.' })
+    if (!acceptsRequest(request, 'translations')) return send(response, 429, { error: 'Too many translation requests. Try again in one minute.' })
     if (!translation.endpoint || !translation.model || !translation.apiKey) return send(response, 503, { error: 'Web translation gateway has not been configured.' })
     try {
       const raw = await readBody(request, 256 * 1024)
@@ -145,7 +146,7 @@ createServer(async (request, response) => {
     }
   }
   if (request.method === 'POST' && request.url === '/api/summaries') {
-    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many summary requests. Try again in one minute.' })
+    if (!acceptsRequest(request, 'summaries')) return send(response, 429, { error: 'Too many summary requests. Try again in one minute.' })
     if (!summary.endpoint || !summary.model || !summary.apiKey) return send(response, 503, { error: 'Web summary gateway has not been configured.' })
     try {
       const input = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
@@ -157,7 +158,7 @@ createServer(async (request, response) => {
     }
   }
   if (request.method === 'POST' && request.url === '/api/diarizations') {
-    if (!acceptsRequest(request)) return send(response, 429, { error: 'Too many diarization requests. Try again in one minute.' })
+    if (!acceptsRequest(request, 'diarizations')) return send(response, 429, { error: 'Too many diarization requests. Try again in one minute.' })
     try {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
