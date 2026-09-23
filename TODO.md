@@ -161,6 +161,39 @@
   - App 位置：若符合 `/v1/audio/transcriptions`，設定模型即可。若 URL 結構不同，調整 `src/main/index.ts` 的 `openAiBaseUrl()`／`model:transcribe`，並補測試。
   - 不採用的假設：`chat.completions.create({ stream: true })` 不能自動變 ASR；是否接受 `input_audio` 必須由該 vLLM 版本與模型文件和實測確認。
 
+## P0：長時間錄音與大檔轉錄可靠性
+
+目前的 Electron 錄音會將 PCM 連續寫入暫存 WAV，因而不會因完整音檔而線性佔用 renderer 記憶體；短分段 ASR 也有最多四段的佇列上限。這還不足以宣稱支援長時間工作階段：字幕、翻譯、IPC 寫入佇列和 Web 路徑仍會累積。以下項目完成並通過壓力驗收前，產品不得把「長時間」描述為無上限。
+
+- [ ] **把 Electron PCM 寫入改為具背壓的批次傳輸**
+  - 問題：`App.tsx` 每個 AudioWorklet frame 都以 `ipcRenderer.send('recording:append')` 發送；`src/main/index.ts` 雖用 `recording.writes` 依序寫檔，Renderer 沒有收到 write 完成或 queue 長度的回饋。磁碟、IPC 或主程序暫停時，兩端的未處理訊息／Promise chain 都可能無上限累積，最後造成記憶體升高或 UI 卡頓。
+  - 實作：在 Renderer 聚合約 100–250 ms PCM 後再傳送，Main 依 `WriteStream.write()` 回傳值與 `drain` 事件發 ACK／暫停訊號；Renderer 設硬上限（例如 2 秒未落盤 PCM），超過時暫停 capture 並顯示可恢復錯誤，**不可**默默遺失 WAV 音訊。可評估以 Electron `MessageChannelMain`／`MessagePortMain` 傳遞 transferable `ArrayBuffer`；官方 API 支援 main-process port 與排隊訊息，但仍必須由本 App 實作流量控制。[Electron MessagePortMain](https://www.electronjs.org/docs/latest/api/message-port-main)；[Node Writable drain](https://nodejs.org/api/stream.html#event-drain)。
+  - 驗收：以節流磁碟或故意延遲 Main 寫入模擬 10 分鐘，Renderer heap、Main RSS、IPC pending bytes 均有上限；WAV 時間長度與 sample count 正確，停錄可完成或明確失敗。
+
+- [ ] **Web 版改為持久化串流錄音，移除完整 PCM 常駐**
+  - 問題：非 Electron 時 `pcmChunksRef` 保留每個 `Float32Array`，48 kHz mono 約 **659 MiB／小時**；停止時 `makeWav()` 再建立 PCM16 WAV，峰值還會額外配置約 330 MiB／小時。`MediaRecorder` 目前沒有消費 `dataavailable`，不能作為持久化策略。每 15 秒的 live diarization 又會從全部 PCM 重建 WAV，CPU、配置與上傳量隨錄音時間平方成長。
+  - 實作：Web 使用 OPFS/IndexedDB 分段寫入（每 5–30 秒一個 blob），只在記憶體保留 ASR/VAD 所需的幾秒環形緩衝。停止、播放與保存時以 cursor/stream 逐段讀取；若瀏覽器沒有持久儲存或配額不足，開始前明確提示並限制工作階段。live diarization 改成可關閉的固定滑動窗口，或僅在停止後跑完整檔，不能重複處理全歷史。
+  - 驗收：Web 收音 2 小時，renderer heap 不隨時長線性上升；停止後可播放、保存與匯出；儲存配額不足時不產生無聲失敗。
+
+- [ ] **將即時字幕、翻譯與 session 改為 append-only 持久化與虛擬列表**
+  - 問題：`transcripts`、`transcriptsRef`、工作階段 `segments` 和 localStorage/IndexedDB 都保留完整陣列；`receiveTranscript` 每次透過 `findIndex` 和 array spread 更新，長會議變成 O(n) 的 React 更新。每段翻譯也可能在 ASR 後新增請求，Web gateway 目前把 ASR、翻譯、摘要共用每 IP 每分鐘 60 次限制，短句時會互相觸發 429 與 gap。
+  - 實作：以 IndexedDB transcript event store（sessionId + timestamp/index）append，React 僅保留最近 200–500 筆與目前可視範圍；歷史／搜尋走分頁 cursor，字幕清除只更新顯示游標。翻譯採獨立有界佇列、批次或節流；gateway 針對 ASR、翻譯、摘要分開設定 rate/concurrency limit，回傳可診斷的 `Retry-After`。
+  - 驗收：4 小時、至少 10,000 段字幕時捲動、搜尋、翻譯回填仍流暢；renderer heap 和單次 commit 時間有量測上限；rate limit 不會讓 ASR 因翻譯流量遺失。
+
+- [ ] **大 WAV 匯入改為逐片讀取，禁止 `arrayBuffer()` 整檔與預先建立全部 chunks**
+  - 問題：匯入 UI 容許 2 GB，卻直接 `importedFile.arrayBuffer()`，`splitPcmWav()` 再建立每個 45 秒 WAV 的 `ArrayBuffer[]`。大檔會同時保有原檔、切片與上傳複本，容易 OOM；取消只會阻止下一段，不能中止正在跑的 fetch。Electron 端上傳限制則是每段 100 MB。
+  - 實作：先以小範圍 `File.slice()` 讀 RIFF header，計算 PCM byte offset；迴圈中只讀一段加 overlap、組 WAV、送出、釋放，再讀下一段。使用 `AbortController` 中止目前請求，並把已完成 transcript checkpoint 寫進 session，重新開始可續跑。將 segment size 同時限制於模型端的最大 payload。
+  - 驗收：以 2 GB PCM16 WAV 或可重現的等比例 fixture 執行，峰值 renderer heap 不超過「單段 + overlap + 固定 UI buffer」；取消在一個 timeout 內停止網路請求；續跑不重複已完成段落。
+
+- [ ] **修正 Web 非 WAV 上傳契約與大小限制**
+  - 問題：UI 對非 WAV 宣稱可單次上傳 100 MB，但 `server/index.cjs` 的 `/api/transcriptions` `readBody()` 預設只接受 12 MB；Web 端也把原始 MP3/M4A/影片固定標成 `audio/wav`，gateway 再以 `live-chunk.wav` 轉送。這會使部分合法選檔被錯誤 MIME／檔名或 12 MB 限制拒絕。
+  - 實作：短期選擇一個一致、安全的上限並在 UI、Renderer、gateway、Main 共用；保留原始 `filename` 與 validated content type。長期非 WAV 支援改由受控的 server-side streaming transcode／非同步 job（磁碟配額、逾時、取消、清理、進度），Renderer 不嵌入 FFmpeg，也不整檔讀入記憶體。
+  - 驗收：20–100 MB MP3/M4A 的成功／超限／取消行為一致，模型端收到正確檔名及 MIME；WAV 分段與非 WAV job 的錯誤可在 UI 具體辨識。
+
+- [ ] **建立長時間壓力驗收與效能預算**
+  - 測試：Electron 與 Web 分別驗證 10 分鐘 smoke、2 小時 soak；匯入 2 小時 WAV、100 MB 壓縮格式；網路慢於即時、ASR 5xx、磁碟慢、背景／睡眠後恢復、切換音源、取消與重啟復原。
+  - 指標：每分鐘記錄 renderer heap、main RSS、未落盤 PCM、ASR/翻譯 queue depth、端到端字幕延遲、gap 數、磁碟使用量與 CPU；定義明確上限及失敗門檻。需自動化 fixture 與 CI 可跑的短版壓測，完整 soak 在 release checklist 執行。
+
 ## P1：Realtime WebSocket（只有明確服務端規格後才開始）
 
 ### 候選架構評估：vLLM + Node.js／npm
