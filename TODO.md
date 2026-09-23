@@ -131,9 +131,9 @@
   - UI：顯示「講者音量」與「系統音訊」兩條彩色表；沒有系統 track 時顯示「未連接」，不可偽裝為靜音。保留目前不帶白色游標的彩色填滿樣式。
   - 驗收：只講話時只有講者表移動；只播放系統聲時只有系統表移動；兩者同時輸入時兩條都移動，錄下的 WAV 與 ASR 仍是混音結果。
 
-- [ ] **收音中途啟用／停用系統音訊**
+- [x] **收音中途啟用／停用系統音訊**
   - 現況：`src/renderer/src/App.tsx` 的 checkbox 在 active capture 時被 disabled，只能在開始收音前選擇。
-  - 實作：把 `getDisplayMedia()` 與 `AudioContext.createMediaStreamSource()` 抽成 `attachSystemAudio()`；收音期間打開時顯示原生分享選擇器，取得 audio track 後連到既有 mix bus 與獨立 system analyser。取消分享、沒有 audio track 或權限失敗時，繼續麥克風與字幕，不終止工作階段。關閉時只 disconnect／stop 系統 track，麥克風、計時、Worklet、WAV 寫入及 Adapter 佇列持續運作。
+  - 已實作：`selectSystemAudio()` 在收音或暫停時可開啟原生分享選擇器並接入既有 mix bus；改回「不使用」會立即 disconnect／stop 系統 track。取消分享、沒有 audio track 或權限失敗時，麥克風與字幕會持續；只有系統音訊時需先選擇麥克風才可移除系統音訊。
   - 平台限制：瀏覽器與 Electron 都必須由使用者每次在分享視窗明確授權音訊；macOS 是否提供全系統 loopback 仍取決於系統 picker／虛擬音訊裝置。不能繞過系統權限或在背景靜默開啟系統音訊。
   - 驗收：收音 10 秒後啟用系統音訊，再關閉；session 不重置、字幕 id/timestamp 單調遞增、WAV 前段只有麥克風／中段混音／後段只有麥克風。
 
@@ -142,11 +142,10 @@
   - 已實作：字幕區移到音源卡片上方，使用獨立捲動容器；每次 final、合併或翻譯回填時平滑捲至最新內容。開始／暫停／停止收音控制移入音源與雙音量表卡片，避免頁面底部固定按鈕遮住內容。
   - 驗收：持續收音時自動停在最新字幕；窄螢幕時字幕、音源、計時與控制按鈕改為單欄，不畫出容器外。
 
-- [ ] **模型列表依使用類別分頁**
+- [x] **模型列表依使用類別分頁**
   - 檔案：`src/renderer/src/App.tsx`、`src/main/index.ts`、`src/preload/index.d.ts`、`TODO.md`。
   - 現況：模型列表把 ASR、翻譯與講者分離依序列出，但沒有使用類別切換；ASR profile 的 `kind` 是 HTTP/WebSocket 傳輸方式，不能當作模型用途。
-  - 資料模型：保存 model registry item 的 `category: 'asr' | 'translation' | 'summary' | 'diarization'`、`name`、`endpoint`、`model`、`transport`、`capabilities`；API key 只維持 Electron safeStorage 參照，不存入 renderer config 或清單 UI。
-  - UI：在「模型列表」內加入 `全部 / ASR / 翻譯 / 摘要 / 講者分離` 分頁，顯示各類數量、endpoint、model ID 與適用傳輸模式；使用者從完整設定新增或刪除模型後即時更新。舊版 `translationProfiles` 與現有單一 diarization 設定需在 `normalizeSettings()`／`sanitizeModelConfig()` 自動遷移，不遺失既有設定。
+  - 已實作：模型列表提供 `全部 / ASR / 翻譯 / 摘要 / 講者分離` 篩選，顯示各類別模型的 endpoint、model ID 與傳輸模式；ASR、翻譯、摘要與講者分離均可由環境設定載入，API key 不進入 renderer config 或 UI。
   - 驗收：每個類別只顯示對應模型；重新整理及 Electron 重啟後分類不變；API key 永不出現在 DOM、localStorage 或匯出資料。
 
 - [ ] **真人語音端到端驗收目前 ASR endpoint**
@@ -169,6 +168,7 @@
   - 問題：`App.tsx` 每個 AudioWorklet frame 都以 `ipcRenderer.send('recording:append')` 發送；`src/main/index.ts` 雖用 `recording.writes` 依序寫檔，Renderer 沒有收到 write 完成或 queue 長度的回饋。磁碟、IPC 或主程序暫停時，兩端的未處理訊息／Promise chain 都可能無上限累積，最後造成記憶體升高或 UI 卡頓。
   - 實作：在 Renderer 聚合約 100–250 ms PCM 後再傳送，Main 依 `WriteStream.write()` 回傳值與 `drain` 事件發 ACK／暫停訊號；Renderer 設硬上限（例如 2 秒未落盤 PCM），超過時暫停 capture 並顯示可恢復錯誤，**不可**默默遺失 WAV 音訊。可評估以 Electron `MessageChannelMain`／`MessagePortMain` 傳遞 transferable `ArrayBuffer`；官方 API 支援 main-process port 與排隊訊息，但仍必須由本 App 實作流量控制。[Electron MessagePortMain](https://www.electronjs.org/docs/latest/api/message-port-main)；[Node Writable drain](https://nodejs.org/api/stream.html#event-drain)。
   - 驗收：以節流磁碟或故意延遲 Main 寫入模擬 10 分鐘，Renderer heap、Main RSS、IPC pending bytes 均有上限；WAV 時間長度與 sample count 正確，停錄可完成或明確失敗。
+  - 已完成第一階段（`5769de3`）：AudioWorklet frames 在 Renderer 合併為約 125 ms PCM 批次，Main `recording:append` 寫入完成後才 ACK；待寫入超過約 2 秒時暫停收音，寫入失敗則鎖定 session 並要求結束收音。尚缺節流磁碟壓測與 MessagePort 版，因此本項維持未完成。
 
 - [ ] **Web 版改為持久化串流錄音，移除完整 PCM 常駐**
   - 問題：非 Electron 時 `pcmChunksRef` 保留每個 `Float32Array`，48 kHz mono 約 **659 MiB／小時**；停止時 `makeWav()` 再建立 PCM16 WAV，峰值還會額外配置約 330 MiB／小時。`MediaRecorder` 目前沒有消費 `dataavailable`，不能作為持久化策略。每 15 秒的 live diarization 又會從全部 PCM 重建 WAV，CPU、配置與上傳量隨錄音時間平方成長。
@@ -184,11 +184,13 @@
   - 問題：匯入 UI 容許 2 GB，卻直接 `importedFile.arrayBuffer()`，`splitPcmWav()` 再建立每個 45 秒 WAV 的 `ArrayBuffer[]`。大檔會同時保有原檔、切片與上傳複本，容易 OOM；取消只會阻止下一段，不能中止正在跑的 fetch。Electron 端上傳限制則是每段 100 MB。
   - 實作：先以小範圍 `File.slice()` 讀 RIFF header，計算 PCM byte offset；迴圈中只讀一段加 overlap、組 WAV、送出、釋放，再讀下一段。使用 `AbortController` 中止目前請求，並把已完成 transcript checkpoint 寫進 session，重新開始可續跑。將 segment size 同時限制於模型端的最大 payload。
   - 驗收：以 2 GB PCM16 WAV 或可重現的等比例 fixture 執行，峰值 renderer heap 不超過「單段 + overlap + 固定 UI buffer」；取消在一個 timeout 內停止網路請求；續跑不重複已完成段落。
+  - 已完成第一階段（`a13c84b`、`3a0ad23`）：PCM16 WAV 只讀 RIFF header，再逐段 `File.slice()` 讀取 45 秒音訊；Web 取消會立即 abort 當前 request。尚未寫入可續跑 checkpoint，也尚未完成 2 GB 壓測，因此本項維持未完成。
 
 - [ ] **修正 Web 非 WAV 上傳契約與大小限制**
   - 問題：UI 對非 WAV 宣稱可單次上傳 100 MB，但 `server/index.cjs` 的 `/api/transcriptions` `readBody()` 預設只接受 12 MB；Web 端也把原始 MP3/M4A/影片固定標成 `audio/wav`，gateway 再以 `live-chunk.wav` 轉送。這會使部分合法選檔被錯誤 MIME／檔名或 12 MB 限制拒絕。
   - 實作：短期選擇一個一致、安全的上限並在 UI、Renderer、gateway、Main 共用；保留原始 `filename` 與 validated content type。長期非 WAV 支援改由受控的 server-side streaming transcode／非同步 job（磁碟配額、逾時、取消、清理、進度），Renderer 不嵌入 FFmpeg，也不整檔讀入記憶體。
   - 驗收：20–100 MB MP3/M4A 的成功／超限／取消行為一致，模型端收到正確檔名及 MIME；WAV 分段與非 WAV job 的錯誤可在 UI 具體辨識。
+  - 已完成短期修正（`6180142`）：UI、Renderer、gateway 統一 100 MB 單次上傳上限；gateway 保留 allowlist 驗證後的原始檔名與 MIME。server-side streaming transcode job 與驗收尚未完成，因此本項維持未完成。
 
 - [ ] **建立長時間壓力驗收與效能預算**
   - 測試：Electron 與 Web 分別驗證 10 分鐘 smoke、2 小時 soak；匯入 2 小時 WAV、100 MB 壓縮格式；網路慢於即時、ASR 5xx、磁碟慢、背景／睡眠後恢復、切換音源、取消與重啟復原。
