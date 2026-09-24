@@ -2,12 +2,13 @@ import { type SavedSession, type ModelCapabilities, type ModelProfile } from '..
 import { dbfsLabel, meterPercent } from '../../../shared/services/audio'
 import { timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, textEndpoint } from '../../../shared/services/settings'
-import { type CSSProperties, type ReactElement } from 'react'
+import { type CSSProperties, type ReactElement, useState } from 'react'
 
 import type { AppController } from '../hooks/useAppController'
 import type { AuthUser } from '../../auth/services/auth-client'
 
 export function AppView({ controller, user, onLogout }: { controller: AppController; user: AuthUser; onLogout: () => Promise<void> }): ReactElement {
+const [menuOpen, setMenuOpen] = useState(false)
 const {
 isFloatingCaptionWindow,
 devices,
@@ -297,14 +298,14 @@ if (isFloatingCaptionWindow) {
 
 return (
     <main>
-      <header>
+      <header className="app-header">
         <div>
           <p className="eyebrow">S2T UI</p>
           <h1>即時語音字幕</h1>
         </div>
-        <nav aria-label="主要功能"><button className={view === 'live' ? 'nav-active' : ''} onClick={() => setView('live')}>即時轉錄</button><button className={view === 'history' ? 'nav-active' : ''} onClick={() => setView('history')}>記錄</button><button className={view === 'import' ? 'nav-active' : ''} onClick={() => setView('import')}>匯入檔案</button><button className={view === 'models' ? 'nav-active' : ''} onClick={() => setView('models')}>模型列表</button><button className={view === 'settings' ? 'nav-active' : ''} onClick={() => setView('settings')}>完整設定</button></nav>
-        <div className="header-account"><span className={`status ${captureState === 'recording' || captureState === 'paused' ? 'active' : ''}`}>{status}</span><button className="text-button" title={`${user.NT} · ${user.Department}`} onClick={() => void onLogout()}>登出</button></div>
+        <div className="header-account"><span className={`status ${captureState === 'recording' || captureState === 'paused' ? 'active' : ''}`}>{status}</span><button className="text-button" title={`${user.NT} · ${user.Department}`} onClick={() => void onLogout()}>登出</button><button className="menu-toggle" aria-label="開啟功能選單" aria-expanded={menuOpen} onClick={() => setMenuOpen((current) => !current)}>☰</button></div>
       </header>
+      {menuOpen && <><button className="menu-backdrop" aria-label="關閉功能選單" onClick={() => setMenuOpen(false)} /><aside className="app-menu" aria-label="功能選單"><div className="app-menu-header"><div><p className="eyebrow">S2T UI</p><h2>功能選單</h2></div><button className="text-button" onClick={() => setMenuOpen(false)}>關閉</button></div><p className="menu-section">工作區</p>{([{ id: 'live', icon: '◉', label: '即時字幕' }, { id: 'history', icon: '▤', label: '記錄' }, { id: 'import', icon: '↥', label: '匯入檔案' }] as const).map((item) => <button key={item.id} className={view === item.id ? 'menu-item active' : 'menu-item'} onClick={() => { setView(item.id); setMenuOpen(false) }}><span>{item.icon}</span>{item.label}</button>)}<p className="menu-section">管理</p>{([{ id: 'models', icon: '◇', label: '模型列表' }, { id: 'settings', icon: '⚙', label: '設定與聲紋' }] as const).map((item) => <button key={item.id} className={view === item.id ? 'menu-item active' : 'menu-item'} onClick={() => { setView(item.id); setMenuOpen(false) }}><span>{item.icon}</span>{item.label}</button>)}{view === 'live' && <><p className="menu-section">即時工具</p><button className="menu-item" onClick={() => { setDrawer('settings'); setMenuOpen(false) }}><span>⚙</span>快速設定</button><button className="menu-item" onClick={() => { setDrawer('export'); setMenuOpen(false) }}><span>↓</span>匯出與摘要</button></>}</aside></>}
       <div className={`app-layout ${view === 'live' ? 'live-layout' : ''}`}>
 
         {drawer === 'settings' && <aside className="settings-sidebar" aria-label="快速設定"><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="auto">自動偵測</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="de-DE">Deutsch</option></select></label><label><input type="checkbox" checked={settings.translationEnabled} onChange={(event) => setSettings((current) => ({ ...current, translationEnabled: event.target.checked }))} />啟用翻譯</label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label><label>翻譯策略<select value={settings.translationStrategy} onChange={(event) => setSettings((current) => ({ ...current, translationStrategy: event.target.value as 'realtime' | 'sentence' }))}><option value="realtime">即時逐段</option><option value="sentence">完整句子</option></select></label><label>停頓斷句：{settings.vadConfig.minSilenceMs} ms<input type="range" min="100" max="5000" step="50" value={settings.vadConfig.minSilenceMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSilenceMs: Number(event.target.value) } }))} /></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><p className="hint">以上設定在下一段音訊與下一次翻譯請求生效。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside>}

@@ -15,6 +15,10 @@ import { authFetch } from '../../auth/services/auth-client'
 
 export function useAppController(userId: string) {
 const isFloatingCaptionWindow = window.location.hash === '#floating'
+const viewFromLocation = (): View => {
+  const candidate = window.location.protocol === 'file:' ? window.location.hash.replace(/^#\/?/, '') : window.location.pathname.replace(/^\//, '')
+  return (['live', 'history', 'import', 'models', 'settings'] as const).includes(candidate as View) ? candidate as View : 'live'
+}
 
 const [devices, setDevices] = useState<AudioDevice[]>([])
 
@@ -54,7 +58,14 @@ const [titleDraft, setTitleDraft] = useState('')
 
 const [status, setStatus] = useState('準備就緒')
 
-const [view, setView] = useState<View>('live')
+const [view, setCurrentView] = useState<View>(viewFromLocation)
+
+const setView = useCallback((next: View): void => {
+    const route = `/${next}`
+    if (window.location.protocol === 'file:') window.location.hash = route
+    else if (window.location.pathname !== route) window.history.pushState({}, '', route)
+    setCurrentView(next)
+  }, [])
 
 const [sessions, setSessions] = useState<SavedSession[]>(() => loadJson<SavedSession[]>(sessionsKey(userId), []))
 
@@ -246,7 +257,14 @@ useEffect(() => {
     void refreshDevices()
     navigator.mediaDevices.addEventListener('devicechange', onDeviceChange)
     return () => navigator.mediaDevices.removeEventListener('devicechange', onDeviceChange)
-  }, [refreshDevices])
+}, [refreshDevices])
+
+useEffect(() => {
+    const update = (): void => setCurrentView(viewFromLocation())
+    window.addEventListener('popstate', update)
+    window.addEventListener('hashchange', update)
+    return () => { window.removeEventListener('popstate', update); window.removeEventListener('hashchange', update) }
+  }, [])
 
 const receiveTranscript = useCallback((event: TranscriptEvent): void => {
     setTranscripts((current) => {

@@ -7,6 +7,10 @@
 :root[data-theme="light"] header, :root[data-theme="light"] article { border-color: #cbd5e1; }
 :root[data-theme="light"] select, :root[data-theme="light"] input, :root[data-theme="light"] textarea, :root[data-theme="light"] .transcript-tools input, :root[data-theme="light"] .transcript-edit textarea, :root[data-theme="light"] .model-actions input, :root[data-theme="light"] .settings-panel input, :root[data-theme="light"] .text-service-settings textarea, :root[data-theme="light"] .session-rename input { background: #ffffff; border-color: #94a3b8; color: #182235; }
 :root[data-theme="light"] .secondary, :root[data-theme="light"] .icon-button { background: #dbe5f2; color: #182235; }
+:root[data-theme="light"] .menu-toggle { background: #dbe5f2; color: #182235; }
+:root[data-theme="light"] .app-menu { background: #fff; border-color: #cbd5e1; }
+:root[data-theme="light"] .menu-item { color: #334155; }
+:root[data-theme="light"] .menu-item:hover, :root[data-theme="light"] .menu-item.active { background: #e2e8f0; color: #0f172a; }
 :root[data-theme="light"] nav button, :root[data-theme="light"] .status, :root[data-theme="light"] .session-item p, :root[data-theme="light"] .history-title-actions > span { color: #475569; }
 :root[data-theme="light"] h1, :root[data-theme="light"] h2, :root[data-theme="light"] .timer, :root[data-theme="light"] .meter-label strong { color: #182235; }
 * { box-sizing: border-box; }
@@ -22,8 +26,19 @@ button { cursor: pointer; border: 0; border-radius: 9px; padding: 11px 16px; fon
 button:disabled { cursor: not-allowed; opacity: .5; }
 main { margin: 0; min-height: 100vh; padding: 22px 28px 28px; width: 100%; }
 header { align-items: center; border-bottom: 1px solid #28344a; display: grid; gap: 24px; grid-template-columns: 250px minmax(0, 1fr) minmax(180px, 300px); margin-bottom: 20px; padding-bottom: 14px; }
+.app-header { grid-template-columns: minmax(0, 1fr) minmax(280px, 520px); }
 header > div { min-width: 0; }
 .header-account { align-items: center; display: flex; gap: 8px; justify-content: flex-end; }
+.menu-toggle { background: #2a3548; color: #dbe5f8; font-size: 1.25rem; line-height: 1; min-height: 42px; padding: 8px 12px; }
+.menu-toggle[aria-expanded="true"] { background: #3c5684; }
+.menu-backdrop { background: rgba(3, 7, 14, .42); border-radius: 0; inset: 0; padding: 0; position: fixed; z-index: 30; }
+.app-menu { background: #171e2b; border-left: 1px solid #425777; box-shadow: -18px 0 48px rgba(0, 0, 0, .34); display: flex; flex-direction: column; gap: 5px; inset: 0 0 0 auto; padding: 22px 14px; position: fixed; width: min(340px, 88vw); z-index: 31; }
+.app-menu-header { align-items: flex-start; display: flex; justify-content: space-between; margin-bottom: 16px; }
+.app-menu-header h2 { font-size: 1.15rem; margin: 0; }
+.menu-section { color: #8795ae; font-size: .72rem; font-weight: 800; letter-spacing: .11em; margin: 17px 10px 7px; }
+.menu-item { align-items: center; background: transparent; color: #cfdaed; display: flex; font-size: .94rem; font-weight: 650; gap: 13px; padding: 12px; text-align: left; width: 100%; }
+.menu-item span { color: #9fc1ff; font-size: 1.1rem; min-width: 20px; text-align: center; }
+.menu-item:hover, .menu-item.active { background: #293852; color: #fff; }
 header nav { align-items: center; border: 0; margin: 0; min-width: 0; }
 nav { display: flex; gap: 4px; min-width: 0; }
 nav button { background: transparent; border-radius: 7px 7px 0 0; color: #9daac0; font-size: .92rem; padding: 11px 15px; }
