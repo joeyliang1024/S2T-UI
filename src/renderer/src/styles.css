@@ -39,6 +39,11 @@ header > div { min-width: 0; }
 .menu-item { align-items: center; background: transparent; color: #cfdaed; display: flex; font-size: .94rem; font-weight: 650; gap: 13px; padding: 12px; text-align: left; width: 100%; }
 .menu-item span { color: #9fc1ff; font-size: 1.1rem; min-width: 20px; text-align: center; }
 .menu-item:hover, .menu-item.active { background: #293852; color: #fff; }
+.menu-account { border-top: 1px solid #33425c; display: grid; gap: 3px; margin-top: auto; padding: 16px 8px 0; }
+.menu-account > span { color: #eef2fa; font-size: .9rem; font-weight: 750; }
+.menu-account small { color: #8795ae; margin-bottom: 10px; }
+.menu-logout { color: #ffb5bb; }
+.menu-logout span { color: inherit; }
 header nav { align-items: center; border: 0; margin: 0; min-width: 0; }
 nav { display: flex; gap: 4px; min-width: 0; }
 nav button { background: transparent; border-radius: 7px 7px 0 0; color: #9daac0; font-size: .92rem; padding: 11px 15px; }
