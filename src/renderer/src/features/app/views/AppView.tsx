@@ -11,6 +11,8 @@ export function AppView({ controller, user, onLogout }: { controller: AppControl
 const [menuOpen, setMenuOpen] = useState(false)
 const [settingsCategory, setSettingsCategory] = useState<'asr' | 'translation' | 'summary' | 'speakers' | 'app'>('asr')
 const [modelDialogOpen, setModelDialogOpen] = useState(false)
+const [modelPurpose, setModelPurpose] = useState<'asr' | 'translation' | 'summary' | 'diarization'>('asr')
+const [editingModelId, setEditingModelId] = useState<string | null>(null)
 const [quickSettingsOffset, setQuickSettingsOffset] = useState({ x: 0, y: 0 })
 const startQuickSettingsDrag = (event: React.PointerEvent<HTMLDivElement>): void => {
   const pointerStart = { x: event.clientX, y: event.clientY }
@@ -66,15 +68,7 @@ newModelApiKey,
 setNewModelApiKey,
 newModelUsesBuiltin,
 setNewModelUsesBuiltin,
-apiKeyDraft,
-setApiKeyDraft,
 apiKeyStatus,
-translationKeyDraft,
-setTranslationKeyDraft,
-summaryKeyDraft,
-setSummaryKeyDraft,
-diarizationKeyDraft,
-setDiarizationKeyDraft,
 voiceprintFile,
 setVoiceprintFile,
 voiceprints,
@@ -122,9 +116,8 @@ saveSettings,
 addModelProfile,
 updateSelectedModel,
 selectTranslationProfile,
-saveTranslationProfile,
 removeSelectedModel,
-saveApiKey,
+saveTextServiceKey,
 openFloatingCaptions,
 closeFloatingCaptions,
 toggleFloatingCaptionFullscreen,
@@ -140,7 +133,6 @@ diarizeSession,
 deleteSession,
 saveSessionToDisk,
 openSavedSession,
-saveTextServiceKey,
 enrollVoiceprint,
 deleteVoiceprint,
 startVoiceprintCapture,
@@ -199,6 +191,26 @@ const liveWorkspace = (
     </div>
   )
 
+const openModelManager = (purpose: 'asr' | 'translation' | 'summary' | 'diarization', id: string | null = null): void => {
+  setModelPurpose(purpose); setEditingModelId(id)
+  if (purpose === 'asr') { const profile = settings.modelProfiles.find((item) => item.id === id); setNewModelName(profile?.name ?? ''); setNewModelEndpoint(profile?.endpoint ?? ''); setNewModelId(profile?.model ?? ''); setNewModelUsesBuiltin(profile?.kind === 'openai-http') }
+  if (purpose === 'translation') { const profile = settings.translationProfiles.find((item) => item.id === id); setNewModelName(profile?.name ?? ''); setNewModelEndpoint(profile?.endpoint ?? ''); setNewModelId(profile?.model ?? '') }
+  if (purpose === 'summary') { setNewModelName('會議摘要'); setNewModelEndpoint(settings.summaryEndpoint); setNewModelId(settings.summaryModel) }
+  if (purpose === 'diarization') { setNewModelName('講者分離'); setNewModelEndpoint(settings.diarizationEndpoint); setNewModelId(settings.diarizationModel) }
+  setNewModelApiKey(''); setModelDialogOpen(true)
+}
+const saveManagedModel = (): void => {
+  const name = newModelName.trim(); const endpoint = newModelEndpoint.trim(); const model = newModelId.trim()
+  if (!name || !endpoint || !model) { setStatus('請填寫模型名稱、endpoint 與 model ID。'); return }
+  if (modelPurpose === 'asr' && !editingModelId) { void addModelProfile(); setModelDialogOpen(false); return }
+  setSettings((current) => {
+    if (modelPurpose === 'asr') return { ...current, modelProfiles: current.modelProfiles.map((profile) => profile.id === editingModelId ? { ...profile, name, endpoint, model, kind: newModelUsesBuiltin ? 'openai-http' : 'websocket' } : profile) }
+    if (modelPurpose === 'translation') { const id = editingModelId ?? crypto.randomUUID(); const profile = { id, name, endpoint, model }; const profiles = current.translationProfiles.some((item) => item.id === id) ? current.translationProfiles.map((item) => item.id === id ? profile : item) : [...current.translationProfiles, profile]; return { ...current, translationProfiles: profiles, selectedTranslationModelId: id, translationEndpoint: endpoint, translationModel: model } }
+    return modelPurpose === 'summary' ? { ...current, summaryEndpoint: endpoint, summaryModel: model } : { ...current, diarizationEndpoint: endpoint, diarizationModel: model }
+  })
+  if (newModelApiKey.trim() && modelPurpose !== 'asr') void saveTextServiceKey(modelPurpose, newModelApiKey, () => setNewModelApiKey(''))
+  setModelDialogOpen(false); setStatus('模型設定已更新。')
+}
 const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     <section className="page-panel">
       <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{filteredSessions.length} 筆</span></div></div>
@@ -213,13 +225,14 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     </section>
   ) : view === 'models' ? (
     <section className="page-panel">
-      <div className="page-title"><div><p className="eyebrow">MODELS</p><h2>已設定模型</h2></div><div className="page-title-actions"><span>{settings.modelProfiles.filter((profile) => profile.id !== 'none').length + settings.translationProfiles.length + (settings.diarizationModel ? 1 : 0) + (settings.summaryModel ? 1 : 0)} 個</span><button className="primary" onClick={() => setModelDialogOpen(true)}>註冊模型</button></div></div>
+      <div className="page-title"><div><p className="eyebrow">MODELS</p><h2>模型管理</h2></div><div className="page-title-actions"><span>{settings.modelProfiles.filter((profile) => profile.id !== 'none').length + settings.translationProfiles.length + (settings.diarizationModel ? 1 : 0) + (settings.summaryModel ? 1 : 0)} 個</span><button className="primary" onClick={() => openModelManager('asr')}>註冊模型</button></div></div>
+      <div className="model-purpose-actions">{([{ id: 'asr', label: '註冊 ASR' }, { id: 'translation', label: '註冊翻譯' }, { id: 'summary', label: '設定摘要' }, { id: 'diarization', label: '設定講者分離' }] as const).map((item) => <button key={item.id} className="secondary" onClick={() => openModelManager(item.id)}>{item.label}</button>)}</div>
       <nav className="model-filter" aria-label="模型類別">{(['all', 'asr', 'translation', 'summary', 'diarization'] as const).map((filter) => <button key={filter} className={modelFilter === filter ? 'nav-active' : ''} onClick={() => setModelFilter(filter)}>{{ all: '全部', asr: 'ASR', translation: '翻譯', summary: '摘要', diarization: '講者分離' }[filter]}</button>)}</nav>
       <div className="model-list">
-        {(modelFilter === 'all' || modelFilter === 'asr') && settings.modelProfiles.filter((profile) => profile.id !== 'none').map((profile) => <article className="model-list-item model-asr" key={profile.id}><div><strong>{profile.name}</strong><p>ASR · {profile.kind === 'openai-http' ? 'OpenAI Speech-to-Text / 分段 HTTP' : 'Realtime WebSocket'} · {profile.model}</p><code>{modelEndpoint(profile.endpoint, profile.kind)}</code></div></article>)}
-        {(modelFilter === 'all' || modelFilter === 'translation') && settings.translationProfiles.map((profile) => <article className="model-list-item model-translation" key={profile.id}><div><strong>{profile.name}</strong><p>翻譯 · OpenAI Chat Completions · {profile.model}</p><code>{textEndpoint(profile.endpoint)}</code></div></article>)}
-        {(modelFilter === 'all' || modelFilter === 'summary') && settings.summaryModel && <article className="model-list-item model-summary"><div><strong>{settings.summaryModel}</strong><p>摘要 · OpenAI Chat Completions</p><code>{textEndpoint(settings.summaryEndpoint)}</code></div></article>}
-        {(modelFilter === 'all' || modelFilter === 'diarization') && settings.diarizationModel && <article className="model-list-item model-diarization"><div><strong>{settings.diarizationModel}</strong><p>講者分離 · {settings.diarizationEndpoint === '/api/diarizations' ? 'Web gateway / sherpa-onnx' : settings.diarizationEndpoint.includes('127.0.0.1') || settings.diarizationEndpoint.includes('localhost') ? '本機 sherpa-onnx' : '遠端 API'}</p><code>{settings.diarizationEndpoint}</code></div></article>}
+        {(modelFilter === 'all' || modelFilter === 'asr') && settings.modelProfiles.filter((profile) => profile.id !== 'none').map((profile) => <button className="model-list-item model-asr" key={profile.id} onClick={() => openModelManager('asr', profile.id)}><div><strong>{profile.name}</strong><p>ASR · {profile.kind === 'openai-http' ? 'OpenAI Speech-to-Text / 分段 HTTP' : 'Realtime WebSocket'} · {profile.model}</p><code>{modelEndpoint(profile.endpoint, profile.kind)}</code></div></button>)}
+        {(modelFilter === 'all' || modelFilter === 'translation') && settings.translationProfiles.map((profile) => <button className="model-list-item model-translation" key={profile.id} onClick={() => openModelManager('translation', profile.id)}><div><strong>{profile.name}</strong><p>翻譯 · OpenAI Chat Completions · {profile.model}</p><code>{textEndpoint(profile.endpoint)}</code></div></button>)}
+        {(modelFilter === 'all' || modelFilter === 'summary') && settings.summaryModel && <button className="model-list-item model-summary" onClick={() => openModelManager('summary')}><div><strong>{settings.summaryModel}</strong><p>摘要 · OpenAI Chat Completions</p><code>{textEndpoint(settings.summaryEndpoint)}</code></div></button>}
+        {(modelFilter === 'all' || modelFilter === 'diarization') && settings.diarizationModel && <button className="model-list-item model-diarization" onClick={() => openModelManager('diarization')}><div><strong>{settings.diarizationModel}</strong><p>講者分離</p><code>{settings.diarizationEndpoint}</code></div></button>}
         {settings.modelProfiles.every((profile) => profile.id === 'none') && !settings.translationProfiles.length && !settings.diarizationModel && !settings.summaryModel && <div className="empty compact"><h2>尚未設定模型</h2><p>請到完整設定新增模型與服務。</p></div>}
       </div>
     </section>
@@ -250,14 +263,11 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
           updateSelectedModel({ kind, endpoint: modelEndpoint(selectedModel.endpoint, kind) })
         }} /><span><strong>使用內建分段轉錄</strong>{selectedModel.kind === 'openai-http' ? '適用 Breeze-ASR-25：WAV 分段送到 /v1/audio/transcriptions。' : '未勾選：使用自建 Realtime gateway，預設 /v1/realtime。'}</span></label>
         <p className="hint model-api-kind">{selectedModel.kind === 'openai-http' ? 'OpenAI Speech-to-Text：multipart/form-data → /v1/audio/transcriptions（0.8–1.5 秒音訊片段）' : 'Realtime WebSocket：本 App 使用 docs/MODEL_ADAPTER.md 的自建 gateway 協定。'}</p>
-        <label>{selectedModel.kind === 'openai-http' ? 'ASR API endpoint' : 'Realtime WebSocket endpoint'}<input type="url" placeholder={selectedModel.kind === 'openai-http' ? 'https://host.example/v1/audio/transcriptions' : 'wss://host.example/v1/realtime'} disabled={selectedModel.id === 'none'} value={selectedModel.endpoint} onChange={(event) => updateSelectedModel({ endpoint: event.target.value })} /></label>
-        <label>ASR model ID<input placeholder="Breeze-ASR-25" disabled={selectedModel.id === 'none'} value={selectedModel.model} onChange={(event) => updateSelectedModel({ model: event.target.value })} /></label>
         <div className="capability-fields">
           <label>ASR 模式<select disabled={selectedModel.id === 'none'} value={selectedModel.capabilities.asrMode} onChange={(event) => updateSelectedModel({ capabilities: { ...selectedModel.capabilities, asrMode: event.target.value as ModelCapabilities['asrMode'] } })}><option value="non-streaming">Non-streaming（分段）</option><option value="streaming">Streaming（原生串流）</option></select></label>
           <label>VAD 來源<select disabled={selectedModel.id === 'none'} value={selectedModel.capabilities.vadSource} onChange={(event) => updateSelectedModel({ capabilities: { ...selectedModel.capabilities, vadSource: event.target.value as ModelCapabilities['vadSource'] } })}><option value="app">App VAD</option><option value="server">模型／Gateway VAD</option></select></label>
           <label>時間戳精度<select disabled={selectedModel.id === 'none'} value={selectedModel.capabilities.timestampPrecision} onChange={(event) => updateSelectedModel({ capabilities: { ...selectedModel.capabilities, timestampPrecision: event.target.value as ModelCapabilities['timestampPrecision'] } })}><option value="chunk">Chunk 邊界</option><option value="segment">Segment</option><option value="word">Word</option></select></label>
         </div>
-        {window.s2t && <div className="api-key-row"><label>ASR API key<input type="password" autoComplete="off" placeholder="貼上後會加密儲存" value={apiKeyDraft} onChange={(event) => setApiKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveApiKey()} disabled={selectedModel.id === 'none'}>儲存 API key</button></div>}
         {apiKeyStatus && <p className="hint">{apiKeyStatus}</p>}<p className="hint">{selectedModel.kind === 'openai-http' ? '收音時將 WAV 分段送到 ASR endpoint，回應文字後立即顯示字幕。' : 'Realtime 模式需要 gateway 實作音訊事件與字幕事件；API key 不會由 Renderer 放進 WebSocket query string。'}</p>
         {selectedModel.id !== 'none' && <button className="danger" onClick={removeSelectedModel}>刪除此模型</button>}
       </div>
@@ -272,9 +282,6 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
       {settingsCategory === 'translation' && <><div className="text-service-settings">
         <p className="eyebrow">翻譯 API</p><label><input type="checkbox" checked={settings.translationEnabled} onChange={(event) => setSettings((current) => ({ ...current, translationEnabled: event.target.checked }))} />啟用翻譯</label><label>翻譯策略<select value={settings.translationStrategy} onChange={(event) => setSettings((current) => ({ ...current, translationStrategy: event.target.value as 'realtime' | 'sentence' }))}><option value="realtime">即時逐段</option><option value="sentence">完整句子</option></select></label>
         <label>目前翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
-        <label>Chat Completions endpoint<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.translationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, translationEndpoint: event.target.value }))} /></label>
-        <label>Translation model ID<input value={settings.translationModel} onChange={(event) => setSettings((current) => ({ ...current, translationModel: event.target.value }))} /></label>
-        {window.s2t && <div className="api-key-row"><label>翻譯 API key<input type="password" autoComplete="off" value={translationKeyDraft} onChange={(event) => setTranslationKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('translation', translationKeyDraft, () => setTranslationKeyDraft(''))}>儲存 API key</button><button className="secondary" onClick={saveTranslationProfile}>儲存為翻譯模型</button></div>}
         <p className="hint">每段 ASR final 字幕會自動送到此 OpenAI 相容 Chat Completions endpoint，並更新同一段的譯文。</p>
       </div>
       <div className="text-service-settings">
@@ -284,19 +291,13 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
       </div></>}
       {settingsCategory === 'summary' && <div className="text-service-settings">
         <p className="eyebrow">會議摘要與整理</p>
-        <label>摘要 Chat Completions 位址<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.summaryEndpoint} onChange={(event) => setSettings((current) => ({ ...current, summaryEndpoint: event.target.value }))} /></label>
-        <label>摘要模型 ID<input value={settings.summaryModel} onChange={(event) => setSettings((current) => ({ ...current, summaryModel: event.target.value }))} /></label>
         <label>整理輸出語言<select value={settings.summaryOutputLanguage} onChange={(event) => setSettings((current) => ({ ...current, summaryOutputLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
         <label><input type="checkbox" checked={settings.summaryIncludeTranslation} onChange={(event) => setSettings((current) => ({ ...current, summaryIncludeTranslation: event.target.checked }))} />每個重點另產出翻譯</label>
         <label>Markdown 整理模板<textarea value={settings.summaryTemplate} onChange={(event) => setSettings((current) => ({ ...current, summaryTemplate: event.target.value }))} /></label>
-        {window.s2t && <div className="api-key-row"><label>摘要 API key<input type="password" autoComplete="off" value={summaryKeyDraft} onChange={(event) => setSummaryKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('summary', summaryKeyDraft, () => setSummaryKeyDraft(''))}>儲存 API key</button></div>}
         <p className="hint">摘要會依此 Markdown 模板從 final 逐字稿生成，可在歷史紀錄按 ☷ 重新整理。</p>
       </div>}
       {settingsCategory === 'speakers' && <div className="text-service-settings">
         <p className="eyebrow">自動講者分離 API</p>
-        <label>講者分離 endpoint<input type="url" placeholder="https://host.example/v1/audio/diarizations" value={settings.diarizationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, diarizationEndpoint: event.target.value }))} /></label>
-        <label>講者分離 model ID<input value={settings.diarizationModel} placeholder="speaker-diarization-model" onChange={(event) => setSettings((current) => ({ ...current, diarizationModel: event.target.value }))} /></label>
-        {window.s2t && <div className="api-key-row"><label>講者分離 API key<input type="password" autoComplete="off" value={diarizationKeyDraft} onChange={(event) => setDiarizationKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('diarization', diarizationKeyDraft, () => setDiarizationKeyDraft(''))}>儲存 API key</button></div>}
         <p className="hint">在「記錄」按「自動識別講者」後，App 會送完整 WAV。服務需回傳 `segments`、`diarization` 或 `exclusive_diarization`，每項含 `start/end/speaker`（秒）或 `start_ms/end_ms/speaker`。本機 sherpa-onnx：啟動 `npm run web:serve` 後填入 `http://127.0.0.1:8787/api/diarizations`，model 填 `sherpa-onnx-speaker-diarization`，不需要 API key。</p>
       </div>}
       {settingsCategory === 'app' && <><div className="text-service-settings"><p className="eyebrow">外觀</p><label>主題<select value={settings.theme} onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label></div>
@@ -319,7 +320,7 @@ return (
         <div className="header-account"><span className={`status ${captureState === 'recording' || captureState === 'paused' ? 'active' : ''}`}>{status}</span><button className="menu-toggle" aria-label="開啟功能選單" aria-expanded={menuOpen} onClick={() => setMenuOpen((current) => !current)}>☰</button></div>
       </header>
       {menuOpen && <><button className="menu-backdrop" aria-label="關閉功能選單" onClick={() => setMenuOpen(false)} /><aside className="app-menu" aria-label="功能選單"><div className="app-menu-header"><div><p className="eyebrow">S2T UI</p><h2>功能選單</h2></div><button className="text-button" onClick={() => setMenuOpen(false)}>關閉</button></div><p className="menu-section">工作區</p>{([{ id: 'live', icon: '◉', label: '即時字幕' }, { id: 'history', icon: '▤', label: '記錄' }, { id: 'import', icon: '↥', label: '匯入檔案' }] as const).map((item) => <button key={item.id} className={view === item.id ? 'menu-item active' : 'menu-item'} onClick={() => { setView(item.id); setMenuOpen(false) }}><span>{item.icon}</span>{item.label}</button>)}<p className="menu-section">管理</p>{([{ id: 'models', icon: '◇', label: '模型列表' }, { id: 'voiceprints', icon: '◉', label: '聲紋管理' }, { id: 'settings', icon: '⚙', label: '設定' }] as const).map((item) => <button key={item.id} className={view === item.id ? 'menu-item active' : 'menu-item'} onClick={() => { setView(item.id); setMenuOpen(false) }}><span>{item.icon}</span>{item.label}</button>)}{view === 'live' && <><p className="menu-section">即時工具</p><button className="menu-item" onClick={() => { setDrawer('settings'); setMenuOpen(false) }}><span>⚙</span>快速設定</button><button className="menu-item" onClick={() => { setDrawer('export'); setMenuOpen(false) }}><span>↓</span>匯出與摘要</button></>}<div className="menu-account"><span>{user.NT}</span><small>{user.Department}</small><button className="menu-item menu-logout" onClick={() => void onLogout()}><span>↪</span>登出</button></div></aside></>}
-      {modelDialogOpen && <div className="transcript-modal-backdrop" role="presentation" onMouseDown={() => setModelDialogOpen(false)}><section className="transcript-modal model-dialog" role="dialog" aria-modal="true" aria-label="註冊模型" onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">MODEL REGISTRATION</p><h2>註冊 ASR 模型</h2></div><button className="text-button" onClick={() => setModelDialogOpen(false)}>關閉</button></header><div className="model-actions"><input value={newModelName} placeholder="模型顯示名稱" onChange={(event) => setNewModelName(event.target.value)} /><input type="url" value={newModelEndpoint} placeholder={newModelUsesBuiltin ? 'https://host.example 或完整 ASR URL' : 'https://host.example（自動轉為 wss://…/v1/realtime）'} onChange={(event) => setNewModelEndpoint(event.target.value)} /><input value={newModelId} placeholder="model name / model ID" onChange={(event) => setNewModelId(event.target.value)} /><input type="password" autoComplete="off" value={newModelApiKey} placeholder="API key（Electron 加密保存）" onChange={(event) => setNewModelApiKey(event.target.value)} /><label className="model-transport-toggle"><input type="checkbox" checked={newModelUsesBuiltin} onChange={(event) => setNewModelUsesBuiltin(event.target.checked)} />用途：ASR／使用內建分段轉錄</label><button className="primary" onClick={() => { void addModelProfile(); setModelDialogOpen(false) }}>註冊模型</button></div></section></div>}
+      {modelDialogOpen && <div className="transcript-modal-backdrop" role="presentation" onMouseDown={() => setModelDialogOpen(false)}><section className="transcript-modal model-dialog" role="dialog" aria-modal="true" aria-label="模型設定" onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">MODEL MANAGEMENT</p><h2>{editingModelId ? '編輯模型' : '註冊模型'}</h2></div><button className="text-button" onClick={() => setModelDialogOpen(false)}>關閉</button></header><div className="model-actions"><label>用途<select value={modelPurpose} disabled={Boolean(editingModelId)} onChange={(event) => { const purpose = event.target.value as typeof modelPurpose; setModelPurpose(purpose); setEditingModelId(null); setNewModelName(''); setNewModelEndpoint(''); setNewModelId('') }}><option value="asr">ASR 語音辨識</option><option value="translation">翻譯</option><option value="summary">會議摘要</option><option value="diarization">講者分離</option></select></label><input value={newModelName} placeholder="模型顯示名稱" onChange={(event) => setNewModelName(event.target.value)} /><input type="url" value={newModelEndpoint} placeholder="endpoint URL" onChange={(event) => setNewModelEndpoint(event.target.value)} /><input value={newModelId} placeholder="model name / model ID" onChange={(event) => setNewModelId(event.target.value)} /><input type="password" autoComplete="off" value={newModelApiKey} placeholder="API key（Electron 加密保存）" onChange={(event) => setNewModelApiKey(event.target.value)} />{modelPurpose === 'asr' && <label className="model-transport-toggle"><input type="checkbox" checked={newModelUsesBuiltin} onChange={(event) => setNewModelUsesBuiltin(event.target.checked)} />使用內建分段轉錄</label>}<button className="primary" onClick={saveManagedModel}>{editingModelId ? '儲存變更' : '註冊模型'}</button></div></section></div>}
       <div className={`app-layout ${view === 'live' ? 'live-layout' : ''}`}>
 
         {view === 'live' && drawer === 'settings' && <aside className="settings-sidebar quick-settings" style={{ transform: `translate(${quickSettingsOffset.x}px, ${quickSettingsOffset.y}px)` }} aria-label="快速設定"><div className="quick-settings-handle" onPointerDown={startQuickSettingsDrag}><div><p className="eyebrow">QUICK SETTINGS</p><h2>快速設定</h2></div><span aria-hidden="true">⠿</span></div><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="auto">自動偵測</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="de-DE">Deutsch</option></select></label><label><input type="checkbox" checked={settings.translationEnabled} onChange={(event) => setSettings((current) => ({ ...current, translationEnabled: event.target.checked }))} />啟用翻譯</label><label>翻譯目標<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label><label>翻譯策略<select value={settings.translationStrategy} onChange={(event) => setSettings((current) => ({ ...current, translationStrategy: event.target.value as 'realtime' | 'sentence' }))}><option value="realtime">即時逐段</option><option value="sentence">完整句子</option></select></label><label>停頓斷句：{settings.vadConfig.minSilenceMs} ms<input type="range" min="100" max="5000" step="50" value={settings.vadConfig.minSilenceMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSilenceMs: Number(event.target.value) } }))} /></label><label>ASR 模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><label>翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label><p className="hint">拖曳標題可調整位置；設定在下一段音訊與下一次翻譯請求生效。</p><button className="secondary" onClick={() => setView('settings')}>開啟完整設定</button></aside>}

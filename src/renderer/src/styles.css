@@ -162,6 +162,9 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .download-action { padding: 8px 12px; white-space: nowrap; }
 .model-list { display: grid; gap: 10px; }
 .model-list-item { align-items: center; background: #111824; border: 1px solid #2b374c; border-radius: 10px; display: block; padding: 16px; }
+.model-list button.model-list-item { cursor: pointer; font-weight: 400; text-align: left; width: 100%; }
+.model-list button.model-list-item:hover { border-color: #83a7ff; transform: translateY(-1px); }
+.model-purpose-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 16px; }
 .model-list-item.model-asr { background: #15233a; border-color: #345b8d; }
 .model-list-item.model-translation { background: #1d283a; border-color: #506a92; }
 .model-list-item.model-summary { background: #252139; border-color: #65588d; }
