@@ -169,6 +169,7 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .model-list-item.model-summary { background: #252139; border-color: #65588d; }
 .model-list-item.model-diarization { background: #1d302b; border-color: #3e7b67; }
 .model-filter { border-bottom: 1px solid #2a3548; margin: -8px 0 18px; overflow-x: auto; padding-bottom: 0; }
+.model-filter-count { background: rgba(131, 167, 255, .18); border-radius: 999px; font-size: .76rem; margin-left: 4px; padding: 1px 6px; }
 .model-list-item strong { color: #edf2fb; }
 .model-list-item p { color: #aab7ca; font-size: .86rem; margin: 6px 0; }
 .model-list-item code { color: #9fc1ff; display: block; font-size: .8rem; overflow-wrap: anywhere; }
