@@ -17,7 +17,7 @@ export function useAppController(userId: string) {
 const isFloatingCaptionWindow = window.location.hash === '#floating'
 const viewFromLocation = (): View => {
   const candidate = window.location.protocol === 'file:' ? window.location.hash.replace(/^#\/?/, '') : window.location.pathname.replace(/^\//, '')
-  return (['live', 'history', 'import', 'models', 'settings'] as const).includes(candidate as View) ? candidate as View : 'live'
+  return (['live', 'history', 'import', 'models', 'voiceprints', 'settings'] as const).includes(candidate as View) ? candidate as View : 'live'
 }
 
 const [devices, setDevices] = useState<AudioDevice[]>([])
@@ -128,6 +128,8 @@ const [transcriptSearch, setTranscriptSearch] = useState('')
 const [editingTranscriptId, setEditingTranscriptId] = useState<string | null>(null)
 
 const [drawer, setDrawer] = useState<'settings' | 'export' | null>('settings')
+
+useEffect(() => { if (view !== 'live') setDrawer(null) }, [view])
 
 const [historyPageSize, setHistoryPageSize] = useState(10)
 

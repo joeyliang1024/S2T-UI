@@ -5,7 +5,7 @@ export type CaptureState = 'starting' | 'idle' | 'recording' | 'paused' | 'savin
 
 export type AudioDevice = { deviceId: string; label: string }
 
-export type View = 'live' | 'history' | 'import' | 'models' | 'settings'
+export type View = 'live' | 'history' | 'import' | 'models' | 'voiceprints' | 'settings'
 
 export type SavedSession = {
   id: string
