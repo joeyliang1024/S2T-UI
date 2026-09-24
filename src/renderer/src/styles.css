@@ -242,6 +242,7 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
   .capture-panel { gap: 12px; padding: 12px; grid-template-columns: minmax(140px, 1fr) minmax(90px, 1fr); }
   .source-field { grid-template-columns: 1fr; }
   .settings-panel, .text-service-settings, .model-settings, .capability-fields { grid-template-columns: minmax(0, 1fr); }
+  .voiceprint-page { grid-template-columns: minmax(0, 1fr); }
   .session-item { flex-direction: column; }
   .caption-actions { gap: 4px; flex-wrap: wrap; }
 }
@@ -253,6 +254,10 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
   .history-pagination { justify-content: flex-start; }
   .history-pagination label { width: 100%; }
   .history-pagination input { flex: 1; min-width: 0; }
+  .voiceprint-enroll, .voiceprint-library { padding: 18px; }
+  .voiceprint-capture { grid-template-columns: 58px minmax(0, 1fr); padding: 14px; }
+  .voiceprint-mic { height: 52px; width: 52px; }
+  .voiceprint-ready { align-items: stretch; flex-direction: column; }
 }
 .session-item { flex-wrap: wrap; }
 .session-details { flex: 1; min-width: 0; }
