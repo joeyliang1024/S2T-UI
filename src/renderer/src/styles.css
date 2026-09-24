@@ -65,6 +65,7 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 .page-title-actions { align-items: center; display: flex; gap: 12px; }
 .model-dialog { max-width: 640px; }
 .model-dialog .model-actions { grid-template-columns: minmax(0, 1fr); margin: 0; }
+.model-dialog-actions { display: flex; gap: 10px; justify-content: space-between; }
 .voiceprint-page { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); }
 .voiceprint-enroll, .voiceprint-library { background: #111a29; border: 1px solid #2d405e; border-radius: 16px; padding: 24px; }
 .voiceprint-enroll h3, .voiceprint-library h3 { font-size: 1.2rem; margin: 5px 0 8px; }
