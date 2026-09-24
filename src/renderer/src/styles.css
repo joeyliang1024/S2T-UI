@@ -1,4 +1,14 @@
 :root { color: #e8ecf3; background: #10141d; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+:root[data-theme="light"] { color: #182235; background: #f2f5fa; color-scheme: light; }
+:root[data-theme="light"] .auth-card, :root[data-theme="light"] .settings-sidebar, :root[data-theme="light"] .export-sidebar, :root[data-theme="light"] .page-panel, :root[data-theme="light"] .summary-panel { background: #ffffff; border-color: #cbd5e1; }
+:root[data-theme="light"] .capture-panel, :root[data-theme="light"] .live-workspace > .capture-panel { background: #f8fafc; border-color: #cbd5e1; }
+:root[data-theme="light"] .session-item { background: #f8fafc; border-color: #cbd5e1; }
+:root[data-theme="light"] .live-caption-heading { background: #f2f5fa; border-color: #cbd5e1; }
+:root[data-theme="light"] header, :root[data-theme="light"] article { border-color: #cbd5e1; }
+:root[data-theme="light"] select, :root[data-theme="light"] input, :root[data-theme="light"] textarea, :root[data-theme="light"] .transcript-tools input, :root[data-theme="light"] .transcript-edit textarea, :root[data-theme="light"] .model-actions input, :root[data-theme="light"] .settings-panel input, :root[data-theme="light"] .text-service-settings textarea, :root[data-theme="light"] .session-rename input { background: #ffffff; border-color: #94a3b8; color: #182235; }
+:root[data-theme="light"] .secondary, :root[data-theme="light"] .icon-button { background: #dbe5f2; color: #182235; }
+:root[data-theme="light"] nav button, :root[data-theme="light"] .status, :root[data-theme="light"] .session-item p, :root[data-theme="light"] .history-title-actions > span { color: #475569; }
+:root[data-theme="light"] h1, :root[data-theme="light"] h2, :root[data-theme="light"] .timer, :root[data-theme="light"] .meter-label strong { color: #182235; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 .auth-screen { align-items: center; display: flex; justify-content: center; }
@@ -87,6 +97,7 @@ article time { color: #8795ae; font-variant-numeric: tabular-nums; font-size: .8
 article > p { font-size: 1.1rem; grid-column: 2; line-height: 1.55; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .speaker-row { grid-column: 2; }
 .speaker-row select { color: #9fc1ff; font-size: .75rem; min-height: 28px; padding: 0 7px; }
+.speaker-row input { background: #101723; border: 1px solid #3a4963; border-radius: 6px; color: #9fc1ff; font: inherit; font-size: .75rem; min-height: 28px; padding: 0 7px; width: min(220px, 100%); }
 article.partial { opacity: .7; }
 .translation-retry { grid-column: 2; justify-self: start; }
 article .translation { color: #9fc1ff; grid-column: 2; }
@@ -177,6 +188,15 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
   .settings-panel, .text-service-settings, .model-settings, .capability-fields { grid-template-columns: minmax(0, 1fr); }
   .session-item { flex-direction: column; }
   .caption-actions { gap: 4px; flex-wrap: wrap; }
+}
+@media (max-width: 680px) {
+  .app-layout { flex-direction: column; }
+  .settings-sidebar, .export-sidebar { flex-basis: auto; order: initial; width: 100%; }
+  .drawer-rail { flex: 0 0 auto; flex-direction: row; order: initial; }
+  .drawer-rail button { writing-mode: initial; }
+  .history-pagination { justify-content: flex-start; }
+  .history-pagination label { width: 100%; }
+  .history-pagination input { flex: 1; min-width: 0; }
 }
 .session-item { flex-wrap: wrap; }
 .session-details { flex: 1; min-width: 0; }

@@ -41,6 +41,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
     : []
   const translationProfiles = value.translationProfiles?.length ? value.translationProfiles : fallbackTranslationProfile
   return {
+  theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : 'system',
   storageLocation: value.storageLocation === 'remote' ? 'remote' : 'local',
   sourceLanguage: supportedSourceLanguages.includes(value.sourceLanguage as typeof supportedSourceLanguages[number]) ? value.sourceLanguage! : 'zh-TW',
   targetLanguage: supportedTargetLanguages.includes(value.targetLanguage as typeof supportedTargetLanguages[number]) ? value.targetLanguage! : 'en',

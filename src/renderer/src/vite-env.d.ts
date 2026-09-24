@@ -32,6 +32,7 @@ declare global {
 }
 
 interface SettingsConfig {
+  theme: 'system' | 'light' | 'dark'
   storageLocation: 'local' | 'remote'
   sourceLanguage: string
   targetLanguage: string

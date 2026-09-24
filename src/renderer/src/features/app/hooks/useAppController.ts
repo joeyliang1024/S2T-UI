@@ -411,6 +411,13 @@ useEffect(() => {
   }, [settings, userId])
 
 useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = (): void => { document.documentElement.dataset.theme = settings.theme === 'system' ? (media.matches ? 'dark' : 'light') : settings.theme }
+    apply(); media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [settings.theme])
+
+useEffect(() => {
     if (!window.s2t) return
     void window.s2t.listRecoverableRecordings().then((recordings) => {
       if (!recordings.length) return
