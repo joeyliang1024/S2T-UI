@@ -259,8 +259,8 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     </section>
   ) : (
     <section className="page-panel settings-panel">
-      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>轉錄與模型設定</h2></div></div>
-      <nav className="settings-category-nav" aria-label="設定分類">{([{ id: 'asr', label: '轉錄與 VAD' }, { id: 'translation', label: '翻譯與術語' }, { id: 'summary', label: '摘要整理' }, { id: 'speakers', label: '講者分離' }, { id: 'app', label: '應用程式' }] as const).map((category) => <button key={category.id} className={settingsCategory === category.id ? 'nav-active' : ''} onClick={() => setSettingsCategory(category.id)}>{category.label}</button>)}</nav>
+      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>功能設定</h2></div></div>
+      <nav className="settings-category-nav" aria-label="設定分類">{([{ id: 'asr', label: '轉錄與 VAD' }, { id: 'translation', label: '翻譯與術語' }, { id: 'summary', label: '摘要整理' }, { id: 'app', label: '應用程式' }] as const).map((category) => <button key={category.id} className={settingsCategory === category.id ? 'nav-active' : ''} onClick={() => setSettingsCategory(category.id)}>{category.label}</button>)}</nav>
       {settingsCategory === 'translation' && <><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="auto">自動偵測</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="de-DE">Deutsch</option></select></label>
       <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label></>}
       {settingsCategory === 'asr' && <><div className="model-settings">
@@ -304,10 +304,6 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
         <label><input type="checkbox" checked={settings.summaryIncludeTranslation} onChange={(event) => setSettings((current) => ({ ...current, summaryIncludeTranslation: event.target.checked }))} />每個重點另產出翻譯</label>
         <label>Markdown 整理模板<textarea value={settings.summaryTemplate} onChange={(event) => setSettings((current) => ({ ...current, summaryTemplate: event.target.value }))} /></label>
         <p className="hint">摘要會依此 Markdown 模板從 final 逐字稿生成，可在歷史紀錄按 ☷ 重新整理。</p>
-      </div>}
-      {settingsCategory === 'speakers' && <div className="text-service-settings">
-        <p className="eyebrow">自動講者分離 API</p>
-        <p className="hint">在「記錄」按「自動識別講者」後，App 會送完整 WAV。服務需回傳 `segments`、`diarization` 或 `exclusive_diarization`，每項含 `start/end/speaker`（秒）或 `start_ms/end_ms/speaker`。本機 sherpa-onnx：啟動 `npm run web:serve` 後填入 `http://127.0.0.1:8787/api/diarizations`，model 填 `sherpa-onnx-speaker-diarization`，不需要 API key。</p>
       </div>}
       {settingsCategory === 'app' && <><div className="text-service-settings"><p className="eyebrow">外觀</p><label>主題<select value={settings.theme} onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label></div>
       {window.s2t && <div className="text-service-settings"><p className="eyebrow">Electron 儲存位置</p><label>預設保存至<select value={settings.storageLocation} onChange={(event) => setSettings((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">本機</option><option value="remote">遠端 Storage</option></select></label><p className="hint">新紀錄依此設定保存；載入時永遠合併本機與遠端紀錄。</p></div>}</>}

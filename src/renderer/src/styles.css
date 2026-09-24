@@ -204,6 +204,7 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .batch-progress progress { accent-color: #83a7ff; flex: 1 1 180px; height: 12px; }
 .import-error { background: #3c2029; border: 1px solid #9d4756; border-radius: 10px; color: #ffc0c6; margin: 18px 0 0; padding: 13px 15px; }
 .settings-panel { align-content: start; display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.settings-panel { background: linear-gradient(145deg, #141d2c, #101723); border-color: #31415b; padding: 28px; }
 .settings-panel .page-title { grid-column: 1 / -1; margin-bottom: 2px; }
 .settings-category-nav { border-bottom: 1px solid #2a3548; display: flex; gap: 4px; grid-column: 1 / -1; margin: -8px 0 2px; overflow-x: auto; padding-bottom: 8px; }
 .settings-category-nav button { background: transparent; border: 0; border-radius: 8px; color: #abb7cc; cursor: pointer; flex: 0 0 auto; font: inherit; padding: 9px 12px; }
@@ -214,6 +215,9 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .settings-panel label:has(> input[type='checkbox']), .settings-sidebar label:has(> input[type='checkbox']) { align-items: center; display: flex; min-height: 28px; }
 .settings-panel .hint { margin: 0; max-width: none; }
 .text-service-settings, .model-settings { border-top: 1px solid #2a3548; display: grid; gap: 14px 20px; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px; max-width: none; padding-top: 20px; }
+.settings-panel .model-settings { display: none; }
+.settings-panel .text-service-settings { background: rgba(10, 17, 29, .46); border: 1px solid #2a3b55; border-radius: 14px; margin-top: 0; padding: 22px; }
+.settings-panel .vad-settings { border-color: #3d5d8b; }
 .model-settings .eyebrow, .text-service-settings .eyebrow, .model-settings .hint, .text-service-settings .hint, .model-settings .system-audio-option, .api-key-row, .model-actions { grid-column: 1 / -1; }
 .capability-fields { display: grid; gap: 14px 20px; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .vad-settings label { max-width: none; }
