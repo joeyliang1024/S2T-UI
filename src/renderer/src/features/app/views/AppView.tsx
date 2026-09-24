@@ -105,6 +105,7 @@ exportTranscript,
 copyTranscript,
 updateTranscript,
 updateSpeaker,
+updateTranscriptTiming,
 saveSettings,
 addModelProfile,
 updateSelectedModel,
@@ -166,7 +167,7 @@ const liveWorkspace = (
         ) : <>{searchedTranscripts.map((entry) => (
           <article key={entry.id} className={entry.status}>
             <time>{timestamp(entry.startMs)}</time>
-            {editingTranscriptId === entry.id ? <div className="transcript-edit"><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><input aria-label="講者名稱" value={entry.speaker ?? ''} placeholder="未標記講者" onChange={(event) => updateSpeaker(entry.id, event.target.value)} /></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: undefined } : currentEntry)); void requestTranslation({ ...entry, translationStatus: undefined }) }}>重新翻譯</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
+            {editingTranscriptId === entry.id ? <div className="transcript-edit"><div className="timing-inputs"><label>開始（ms）<input type="number" min="0" defaultValue={entry.startMs} onBlur={(event) => updateTranscriptTiming(entry.id, Number(event.currentTarget.value), entry.endMs)} /></label><label>結束（ms）<input type="number" min="1" defaultValue={entry.endMs} onBlur={(event) => updateTranscriptTiming(entry.id, entry.startMs, Number(event.currentTarget.value))} /></label></div><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder="翻譯（選填）" onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>完成編輯</button></div> : <><div className="speaker-row"><input aria-label="講者名稱" value={entry.speaker ?? ''} placeholder="未標記講者" onChange={(event) => updateSpeaker(entry.id, event.target.value)} /></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: undefined } : currentEntry)); void requestTranslation({ ...entry, translationStatus: undefined }) }}>重新翻譯</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>編輯</button></>}
           </article>
         ))}</>}
       </section>

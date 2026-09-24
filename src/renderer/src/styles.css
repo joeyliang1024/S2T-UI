@@ -106,6 +106,8 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .transcript-tools input { min-height: 38px; width: min(360px, 78%); }
 .transcript-tools span { color: #9daac0; font-size: .84rem; }
 .transcript-edit { display: grid; gap: 8px; }
+.timing-inputs { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.timing-inputs input { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: inherit; font: inherit; min-height: 36px; padding: 0 8px; width: 100%; }
 .transcript-edit textarea { min-height: 72px; resize: vertical; width: 100%; }
 .edit-button { background: transparent; color: #9fc1ff; font-size: .78rem; grid-column: 2; justify-self: start; padding: 2px 0; }
 .summary-panel { flex: 0 1 140px; min-height: 60px; overflow: auto; background: #171e2b; border: 1px solid #28344a; border-radius: 12px; padding: 16px; }

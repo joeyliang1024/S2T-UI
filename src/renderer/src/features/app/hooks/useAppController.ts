@@ -888,6 +888,11 @@ const updateSpeaker = (id: string, speaker: string): void => {
     setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, speaker: speaker || undefined } : entry))
   }
 
+const updateTranscriptTiming = (id: string, startMs: number, endMs: number): void => {
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs < 0 || endMs <= startMs) { setStatus('時間段需為非負數，且結束時間必須大於開始時間。'); return }
+    setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, startMs: Math.round(startMs), endMs: Math.round(endMs), revision: entry.revision + 1 } : entry))
+  }
+
 const saveSettings = (): void => {
     if (window.s2t) void window.s2t.saveModelConfig(settings).catch(() => setStatus('模型設定保存失敗'))
     setSettingsSaved(true)
@@ -1448,6 +1453,7 @@ exportTranscript,
 copyTranscript,
 updateTranscript,
 updateSpeaker,
+updateTranscriptTiming,
 saveSettings,
 addModelProfile,
 updateSelectedModel,
