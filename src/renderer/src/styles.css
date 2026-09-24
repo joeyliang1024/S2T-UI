@@ -65,6 +65,24 @@ nav button:hover, nav .nav-active { background: #202b3d; color: #eef2fa; }
 .page-title-actions { align-items: center; display: flex; gap: 12px; }
 .model-dialog { max-width: 640px; }
 .model-dialog .model-actions { grid-template-columns: minmax(0, 1fr); margin: 0; }
+.voiceprint-page { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); }
+.voiceprint-enroll, .voiceprint-library { background: #111a29; border: 1px solid #2d405e; border-radius: 16px; padding: 24px; }
+.voiceprint-enroll h3, .voiceprint-library h3 { font-size: 1.2rem; margin: 5px 0 8px; }
+.voiceprint-enroll > div:first-child > p:last-child { color: #9daac0; margin: 0; }
+.voiceprint-capture { align-items: center; background: linear-gradient(135deg, #16253c, #111a29); border: 1px solid #314b72; border-radius: 14px; display: grid; gap: 18px; grid-template-columns: 72px 1fr; margin-top: 22px; padding: 18px; }
+.voiceprint-mic { align-items: center; background: #385486; border: 2px solid #7fa9ff; border-radius: 50%; display: flex; font-size: 1.65rem; height: 62px; justify-content: center; padding: 0; width: 62px; }
+.voiceprint-mic.recording { animation: voiceprint-pulse 1.2s infinite; background: #9f3650; border-color: #ff9eb0; }
+.voiceprint-meter { display: grid; gap: 7px; }
+.voiceprint-meter > div:first-child { display: flex; justify-content: space-between; }
+.voiceprint-meter span { font-weight: 700; }.voiceprint-meter strong { color: #9fc1ff; font-size: .88rem; }
+.voiceprint-meter small, .voiceprint-upload small { color: #9daac0; }
+.voiceprint-divider { align-items: center; color: #9daac0; display: flex; gap: 10px; margin: 18px 0; }.voiceprint-divider::before, .voiceprint-divider::after { background: #2a3850; content: ''; flex: 1; height: 1px; }
+.voiceprint-upload { background: #182336; border: 1px dashed #56739e; border-radius: 12px; cursor: pointer; display: grid; gap: 4px; padding: 16px; text-align: center; }.voiceprint-upload input { height: 1px; opacity: 0; position: absolute; width: 1px; }.voiceprint-upload span { color: #b8d0ff; font-weight: 700; }
+.voiceprint-ready { align-items: center; display: flex; gap: 12px; justify-content: space-between; margin-top: 16px; }.voiceprint-ready > span { color: #b8c5d9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.voiceprint-library h3 span { background: #293b5b; border-radius: 999px; color: #a9c4ff; font-size: .78rem; padding: 2px 8px; vertical-align: middle; }
+.voiceprint-list { display: grid; gap: 10px; margin-top: 18px; }.voiceprint-list article { align-items: center; background: #182336; border: 1px solid #2d405e; border-radius: 12px; display: flex; gap: 10px; padding: 12px; }.voiceprint-list article p { color: #9daac0; font-size: .82rem; margin: 3px 0 0; }.voiceprint-list article .danger { margin-left: auto; }
+.voiceprint-avatar { align-items: center; background: #345584; border-radius: 50%; color: #e5efff; display: flex; font-weight: 800; height: 34px; justify-content: center; width: 34px; }.voiceprint-empty { border: 1px dashed #405272; border-radius: 12px; color: #9daac0; margin-top: 18px; padding: 24px; text-align: center; }
+@keyframes voiceprint-pulse { 50% { box-shadow: 0 0 0 10px rgba(242, 92, 122, .14); } }
 .workspace-content { order: 1; flex: 1; min-width: 0; min-height: 0; }
 main:has(.live-layout) { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 main:has(.live-layout) > header { flex-shrink: 0; }

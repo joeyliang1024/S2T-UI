@@ -122,6 +122,7 @@ const [voiceprintFile, setVoiceprintFile] = useState<File | null>(null)
 const [voiceprints, setVoiceprints] = useState<Voiceprint[]>([])
 
 const [voiceprintCaptureState, setVoiceprintCaptureState] = useState<'idle' | 'recording'>('idle')
+const [voiceprintLevel, setVoiceprintLevel] = useState(-60)
 
 const [transcriptSearch, setTranscriptSearch] = useState('')
 
@@ -1284,7 +1285,7 @@ const startVoiceprintCapture = async (): Promise<void> => {
       const processor = context.createScriptProcessor(4096, 1, 1)
       const sink = context.createGain(); sink.gain.value = 0
       voiceprintChunksRef.current = []
-      processor.onaudioprocess = (event) => voiceprintChunksRef.current.push(event.inputBuffer.getChannelData(0).slice())
+      processor.onaudioprocess = (event) => { const samples = event.inputBuffer.getChannelData(0); voiceprintChunksRef.current.push(samples.slice()); const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length); setVoiceprintLevel(dbfs(rms)) }
       source.connect(processor); processor.connect(sink); sink.connect(context.destination)
       voiceprintStreamRef.current = stream; voiceprintContextRef.current = context; voiceprintSourceRef.current = source; voiceprintProcessorRef.current = processor; voiceprintSinkRef.current = sink
       setVoiceprintCaptureState('recording')
@@ -1300,6 +1301,7 @@ const stopVoiceprintCapture = async (): Promise<void> => {
     await cleanUpVoiceprintCapture(); voiceprintChunksRef.current = []
     setVoiceprintFile(new File([wav], `voiceprint-${new Date().toISOString().replace(/[:.]/g, '-')}.wav`, { type: 'audio/wav' }))
     setVoiceprintCaptureState('idle')
+    setVoiceprintLevel(-60)
     setStatus('聲紋樣本已錄製完成，請按「註冊我的聲紋」。')
   }
 
@@ -1444,6 +1446,7 @@ voiceprintFile,
 setVoiceprintFile,
 voiceprints,
 voiceprintCaptureState,
+voiceprintLevel,
 transcriptSearch,
 setTranscriptSearch,
 editingTranscriptId,
