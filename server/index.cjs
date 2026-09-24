@@ -146,6 +146,17 @@ createServer(async (request, response) => {
       return send(response, 200, { saved: true })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存紀錄' }) }
   }
+  if (storagePath === '/api/data/glossary' && (request.method === 'GET' || request.method === 'POST')) {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    try {
+      if (request.method === 'GET') return send(response, 200, { glossary: await storage.config.get(user.id, 'glossary') ?? '' })
+      const body = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
+      if (typeof body.glossary !== 'string') return send(response, 400, { error: 'glossary 必須是文字' })
+      await storage.config.put(user.id, 'glossary', body.glossary.trim().slice(0, 20_000))
+      return send(response, 200, { saved: true })
+    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存術語' }) }
+  }
   const audioMatch = storagePath.match(/^\/api\/data\/audio\/([A-Za-z0-9._-]{1,160})$/)
   if (audioMatch && ['GET', 'POST', 'DELETE'].includes(request.method || '')) {
     const user = await auth.requireUser(request)

@@ -400,6 +400,14 @@ useEffect(() => {
   }, [userId])
 
 useEffect(() => {
+    void authFetch('/api/data/glossary').then(async (response) => {
+      if (!response.ok) return
+      const payload = await response.json() as { glossary?: string }
+      if (typeof payload.glossary === 'string') { const glossary = payload.glossary; setSettings((current) => ({ ...current, glossary })) }
+    }).catch(() => undefined)
+  }, [userId])
+
+useEffect(() => {
     if (!sessionsHydrated) return
     try { window.localStorage.setItem(sessionsKey(userId), JSON.stringify(sessions)) } catch { /* IndexedDB remains the durable store. */ }
     void saveSessions(userId, sessions).catch(() => setStatus('無法保存本機記錄；請確認瀏覽器儲存空間。'))
@@ -895,6 +903,7 @@ const updateTranscriptTiming = (id: string, startMs: number, endMs: number): voi
 
 const saveSettings = (): void => {
     if (window.s2t) void window.s2t.saveModelConfig(settings).catch(() => setStatus('模型設定保存失敗'))
+    void authFetch('/api/data/glossary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ glossary: settings.glossary }) }).catch(() => setStatus('術語保存失敗；仍保留目前設定。'))
     setSettingsSaved(true)
     window.setTimeout(() => setSettingsSaved(false), 2400)
   }
