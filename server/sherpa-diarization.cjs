@@ -43,6 +43,7 @@ const modelPaths = () => {
 }
 
 let diarizer
+let embeddingExtractor
 const getDiarizer = () => {
   if (diarizer) return diarizer
   const paths = modelPaths()
@@ -58,6 +59,59 @@ const getDiarizer = () => {
   return diarizer
 }
 
+/**
+ * Create a normalized 3D-Speaker embedding for a PCM16 WAV recording. The
+ * embedding model is shared with diarization but uses sherpa-onnx's dedicated
+ * speaker-identification API, so it can be persisted and searched in Milvus.
+ */
+const getEmbeddingExtractor = () => {
+  if (embeddingExtractor) return embeddingExtractor
+  const { embedding } = modelPaths()
+  if (!existsSync(embedding)) throw new Error('找不到 sherpa-onnx 聲紋模型。請依 docs/SHERPA_ONNX.zh-TW.md 下載 embedding 模型檔。')
+  const sherpa = require('sherpa-onnx-node')
+  embeddingExtractor = new sherpa.SpeakerEmbeddingExtractor({ model: embedding, numThreads: 2, provider: 'cpu' })
+  return embeddingExtractor
+}
+
+const extractEmbeddingFromWave = (wave) => {
+  const extractor = getEmbeddingExtractor()
+  const samples = resampleMono(wave.samples, wave.sampleRate, 16_000)
+  // Very short enrollment recordings are unstable regardless of the model.
+  if (samples.length < 16_000) throw new Error('聲紋錄音至少需要 1 秒的清楚人聲')
+  const stream = extractor.createStream()
+  stream.acceptWaveform({ samples, sampleRate: 16_000 })
+  stream.inputFinished()
+  if (!extractor.isReady(stream)) throw new Error('聲紋模型尚未取得足夠的有效人聲')
+  return Array.from(extractor.compute(stream))
+}
+
+const extractSpeakerEmbedding = (audio) => extractEmbeddingFromWave(readWavSamples(audio))
+
+/** Build one embedding per diarized speaker by joining that speaker's turns. */
+const extractDiarizedSpeakerEmbeddings = (audio, segments) => {
+  const wave = readWavSamples(audio)
+  const samplesBySpeaker = new Map()
+  for (const segment of segments) {
+    const start = Math.max(0, Math.floor(segment.start * wave.sampleRate))
+    const end = Math.min(wave.samples.length, Math.ceil(segment.end * wave.sampleRate))
+    if (end <= start) continue
+    const parts = samplesBySpeaker.get(segment.speaker) || []
+    parts.push(wave.samples.slice(start, end))
+    samplesBySpeaker.set(segment.speaker, parts)
+  }
+  return [...samplesBySpeaker.entries()].flatMap(([speaker, parts]) => {
+    const length = parts.reduce((total, part) => total + part.length, 0)
+    if (length < wave.sampleRate) return []
+    const joined = new Float32Array(length); let offset = 0
+    for (const part of parts) { joined.set(part, offset); offset += part.length }
+    try { return [{ speaker, embedding: extractEmbeddingFromWave({ samples: joined, sampleRate: wave.sampleRate }) }] } catch (error) {
+      // A short/noisy anonymous speaker should stay anonymous; it must not
+      // prevent diarization results for the rest of the meeting.
+      return []
+    }
+  })
+}
+
 const diarizeWav = (audio) => {
   const wave = readWavSamples(audio)
   const instance = getDiarizer()
@@ -65,4 +119,4 @@ const diarizeWav = (audio) => {
   return instance.process(samples).map((segment) => ({ start: segment.start, end: segment.end, speaker: `SPEAKER_${String(segment.speaker).padStart(2, '0')}` }))
 }
 
-module.exports = { diarizeWav, modelPaths, readWavSamples, resampleMono }
+module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerEmbeddings, modelPaths, readWavSamples, resampleMono }

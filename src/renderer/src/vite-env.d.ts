@@ -32,8 +32,11 @@ declare global {
 }
 
 interface SettingsConfig {
+  storageLocation: 'local' | 'remote'
   sourceLanguage: string
   targetLanguage: string
+  translationEnabled: boolean
+  translationStrategy: 'realtime' | 'sentence'
   modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' } }>
   selectedModelId: string
   translationEndpoint: string

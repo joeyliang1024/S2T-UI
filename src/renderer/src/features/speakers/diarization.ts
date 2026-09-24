@@ -1,4 +1,4 @@
-import type { TranscriptEvent } from './model-adapter'
+import type { TranscriptEvent } from '../models/model-adapter'
 
 export type SpeakerTurn = { startMs: number; endMs: number; speaker: string }
 
