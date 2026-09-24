@@ -8,7 +8,7 @@ export type SpeakerTurn = { startMs: number; endMs: number; speaker: string }
  * the ASR segment's timestamp remains authoritative for subtitle rendering.
  */
 export const assignSpeakersByOverlap = (entries: TranscriptEvent[], turns: SpeakerTurn[]): TranscriptEvent[] => entries.map((entry) => {
-  if (entry.status !== 'final') return entry
+  if (entry.status !== 'final' || entry.speakerManuallyEdited) return entry
   let assigned: SpeakerTurn | undefined
   let greatestOverlap = 0
   for (const turn of turns) {

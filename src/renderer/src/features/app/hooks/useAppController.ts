@@ -914,7 +914,7 @@ const updateTranscript = (id: string, sourceText: string, translatedText: string
   }
 
 const updateSpeaker = (id: string, speaker: string): void => {
-    setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, speaker: speaker || undefined } : entry))
+    setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, speaker: speaker || undefined, speakerManuallyEdited: true } : entry))
   }
 
 const updateTranscriptTiming = (id: string, startMs: number, endMs: number): void => {
