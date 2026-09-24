@@ -188,6 +188,8 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .settings-category-nav button:hover, .settings-category-nav button.nav-active { background: #1e2a3d; color: #f8fafc; }
 .settings-panel > label { color: #abb7cc; max-width: none; }
 .settings-panel input { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; min-height: 42px; padding: 0 10px; }
+.settings-panel input[type='checkbox'], .settings-sidebar input[type='checkbox'] { accent-color: #83a7ff; block-size: 17px; inline-size: 17px; margin: 0 8px 0 0; min-height: 0; padding: 0; vertical-align: middle; }
+.settings-panel label:has(> input[type='checkbox']), .settings-sidebar label:has(> input[type='checkbox']) { align-items: center; display: flex; min-height: 28px; }
 .settings-panel .hint { margin: 0; max-width: none; }
 .text-service-settings, .model-settings { border-top: 1px solid #2a3548; display: grid; gap: 14px 20px; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 8px; max-width: none; padding-top: 20px; }
 .model-settings .eyebrow, .text-service-settings .eyebrow, .model-settings .hint, .text-service-settings .hint, .model-settings .system-audio-option, .api-key-row, .model-actions { grid-column: 1 / -1; }
