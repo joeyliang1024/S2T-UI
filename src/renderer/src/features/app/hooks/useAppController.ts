@@ -122,6 +122,14 @@ const [historyPageSize, setHistoryPageSize] = useState(10)
 
 const [historyPage, setHistoryPage] = useState(1)
 
+const [historySort, setHistorySort] = useState<'title' | 'createdAt' | 'durationMs'>('createdAt')
+
+const [historySortDirection, setHistorySortDirection] = useState<'asc' | 'desc'>('desc')
+
+const [historySearch, setHistorySearch] = useState('')
+
+const [sessionTranscriptSearch, setSessionTranscriptSearch] = useState('')
+
 const [summaryText, setSummaryText] = useState('')
 
 const [summaryStatus, setSummaryStatus] = useState('')
@@ -1291,11 +1299,21 @@ const createSummary = async (): Promise<void> => {
 
 const canRecord = captureState === 'idle'
 
-const historyPageCount = Math.max(1, Math.ceil(sessions.length / historyPageSize))
+const filteredSessions = sessions.filter((entry) => {
+    const query = historySearch.trim().toLocaleLowerCase()
+    return !query || `${entry.title} ${entry.source} ${entry.transcript} ${entry.segments.map((segment) => `${segment.speaker ?? ''} ${segment.sourceText} ${segment.translatedText ?? ''}`).join(' ')}`.toLocaleLowerCase().includes(query)
+  })
+
+const sortedSessions = [...filteredSessions].sort((left, right) => {
+    const comparison = historySort === 'title' ? left.title.localeCompare(right.title, 'zh-Hant') : historySort === 'durationMs' ? left.durationMs - right.durationMs : left.createdAt.localeCompare(right.createdAt)
+    return historySortDirection === 'asc' ? comparison : -comparison
+  })
+
+const historyPageCount = Math.max(1, Math.ceil(sortedSessions.length / historyPageSize))
 
 const currentHistoryPage = Math.min(historyPage, historyPageCount)
 
-const pagedSessions = sessions.slice((currentHistoryPage - 1) * historyPageSize, currentHistoryPage * historyPageSize)
+const pagedSessions = sortedSessions.slice((currentHistoryPage - 1) * historyPageSize, currentHistoryPage * historyPageSize)
 
 const viewingSession = sessions.find((entry) => entry.id === viewingSessionId) ?? null
 
@@ -1385,6 +1403,14 @@ setDrawer,
 historyPageSize,
 setHistoryPageSize,
 setHistoryPage,
+historySort,
+setHistorySort,
+historySortDirection,
+setHistorySortDirection,
+historySearch,
+setHistorySearch,
+sessionTranscriptSearch,
+setSessionTranscriptSearch,
 summaryText,
 summaryStatus,
 modelFilter,
@@ -1438,6 +1464,7 @@ canRecord,
 historyPageCount,
 currentHistoryPage,
 pagedSessions,
+filteredSessions,
 viewingSession,
 visibleTranscripts,
 searchedTranscripts,

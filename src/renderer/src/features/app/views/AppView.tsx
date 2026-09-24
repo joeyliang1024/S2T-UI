@@ -77,6 +77,14 @@ setDrawer,
 historyPageSize,
 setHistoryPageSize,
 setHistoryPage,
+historySort,
+setHistorySort,
+historySortDirection,
+setHistorySortDirection,
+historySearch,
+setHistorySearch,
+sessionTranscriptSearch,
+setSessionTranscriptSearch,
 summaryText,
 summaryStatus,
 modelFilter,
@@ -130,6 +138,7 @@ canRecord,
 historyPageCount,
 currentHistoryPage,
 pagedSessions,
+filteredSessions,
 viewingSession,
 visibleTranscripts,
 searchedTranscripts,
@@ -137,8 +146,8 @@ clearCaptions,
 renameSession
 } = controller
 
-const sessionTranscript = (entry: SavedSession): ReactElement => entry.segments?.length ? <>
-    {entry.segments.filter((segment) => segment.status !== 'gap').map((segment) => <article key={segment.id}>
+const sessionTranscript = (entry: SavedSession, query: string): ReactElement => entry.segments?.length ? <>
+    {entry.segments.filter((segment) => segment.status !== 'gap' && `${segment.speaker ?? ''} ${segment.sourceText} ${segment.translatedText ?? ''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((segment) => <article key={segment.id}>
       <time>{timestamp(segment.startMs)}</time>
       {segment.speaker && <span className="speaker-row">{segment.speaker}</span>}
       <p>{segment.sourceText}</p>
@@ -179,15 +188,15 @@ const liveWorkspace = (
 
 const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     <section className="page-panel">
-      <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{sessions.length} 筆</span></div></div>
+      <div className="page-title"><div><p className="eyebrow">HISTORY</p><h2>錄音與逐字稿記錄</h2></div><div className="history-title-actions">{window.s2t && <button className="secondary" onClick={() => void openSavedSession()}>開啟已保存工作階段</button>}<span>{filteredSessions.length} 筆</span></div></div>
       {sessions.length === 0 ? <div className="empty compact"><h2>還沒有記錄</h2><p>完成一次錄音後，會議資料會出現在這裡。</p></div> : <>
-        <div className="history-pagination"><label>每頁筆數<select value={historyPageSize} onChange={(event) => { setHistoryPageSize(Number(event.target.value)); setHistoryPage(1) }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label><span>第 {currentHistoryPage}／{historyPageCount} 頁</span><button className="text-button" disabled={currentHistoryPage === 1} onClick={() => setHistoryPage((current) => Math.max(1, current - 1))}>上一頁</button><button className="text-button" disabled={currentHistoryPage === historyPageCount} onClick={() => setHistoryPage((current) => Math.min(historyPageCount, current + 1))}>下一頁</button></div>
+        <div className="history-pagination"><label>搜尋紀錄<input value={historySearch} placeholder="名稱、內容、講者" onChange={(event) => { setHistorySearch(event.target.value); setHistoryPage(1) }} /></label><label>排序<select value={historySort} onChange={(event) => { setHistorySort(event.target.value as 'title' | 'createdAt' | 'durationMs'); setHistoryPage(1) }}><option value="createdAt">時間</option><option value="title">名稱</option><option value="durationMs">時長</option></select></label><button className="text-button" onClick={() => setHistorySortDirection((current) => current === 'asc' ? 'desc' : 'asc')}>{historySortDirection === 'asc' ? '升冪' : '降冪'}</button><label>每頁筆數<select value={historyPageSize} onChange={(event) => { setHistoryPageSize(Number(event.target.value)); setHistoryPage(1) }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select></label><span>第 {currentHistoryPage}／{historyPageCount} 頁</span><button className="text-button" disabled={currentHistoryPage === 1} onClick={() => setHistoryPage((current) => Math.max(1, current - 1))}>上一頁</button><button className="text-button" disabled={currentHistoryPage === historyPageCount} onClick={() => setHistoryPage((current) => Math.min(historyPageCount, current + 1))}>下一頁</button></div>
         <div className="session-list">{pagedSessions.map((entry) => <article key={entry.id} className="session-item">
           <div className="session-details">{renamingSessionId === entry.id ? <form className="session-rename" onSubmit={(event) => { event.preventDefault(); renameSession(entry.id) }}><input autoFocus aria-label="紀錄標題" maxLength={200} value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} onBlur={() => renameSession(entry.id)} onKeyDown={(event) => { if (event.key === 'Escape') { setTitleDraft(entry.title); setRenamingSessionId(null) } }} /></form> : <button className="session-title" title="點擊修改標題" onClick={() => { setRenamingSessionId(entry.id); setTitleDraft(entry.title) }}>{entry.title}</button>}<p>{new Date(entry.createdAt).toLocaleString('zh-TW')} · {timestamp(entry.durationMs)} · {entry.source}{entry.savedToDisk ? ' · 已保存' : ' · 尚未保存'}</p>{entry.summary && <p className="session-summary">摘要：{entry.summary}</p>}{playingSessionId === entry.id && playbackUrl && <audio controls autoPlay src={playbackUrl}>此瀏覽器不支援音訊播放。</audio>}</div>
           <div className="session-actions">{!entry.savedToDisk && <button className="primary" onClick={() => void saveSessionToDisk(entry)}>儲存</button>}<button className="icon-action" aria-label="查看字幕" title="查看字幕" onClick={() => setViewingSessionId(entry.id)}>▤</button><button className="icon-action" aria-label="自動識別講者" title="自動識別講者" onClick={() => void diarizeSession(entry)}>◉</button><button className="icon-action" aria-label="播放錄音" title="播放錄音" onClick={() => void playSession(entry)}>▶</button><button className="secondary download-action" onClick={() => void downloadSessionAudio(entry)}>WAV ↓</button><button className="secondary download-action" onClick={() => exportSavedTranscript(entry, 'vtt')}>VTT ↓</button><button className="icon-action" aria-label="複製逐字稿" title="複製逐字稿" onClick={() => void copyTranscript(entry.segments)}>▣</button><button className="icon-action danger" aria-label="刪除記錄" title="刪除記錄" onClick={() => void deleteSession(entry)}>⌫</button></div>
         </article>)}</div>
       </>}
-      {viewingSession && <div className="transcript-modal-backdrop" role="presentation" onMouseDown={() => setViewingSessionId(null)}><section className="transcript-modal" role="dialog" aria-modal="true" aria-label={`${viewingSession.title} 逐字稿`} onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">TRANSCRIPT</p><h2>{viewingSession.title}</h2></div><button className="text-button" onClick={() => setViewingSessionId(null)}>關閉</button></header><div className="session-transcript">{sessionTranscript(viewingSession)}</div></section></div>}
+      {viewingSession && <div className="transcript-modal-backdrop" role="presentation" onMouseDown={() => setViewingSessionId(null)}><section className="transcript-modal" role="dialog" aria-modal="true" aria-label={`${viewingSession.title} 逐字稿`} onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">TRANSCRIPT</p><h2>{viewingSession.title}</h2></div><button className="text-button" onClick={() => { setViewingSessionId(null); setSessionTranscriptSearch('') }}>關閉</button></header><div className="transcript-tools"><input aria-label="搜尋此紀錄" value={sessionTranscriptSearch} placeholder="搜尋原文、翻譯或講者" onChange={(event) => setSessionTranscriptSearch(event.target.value)} /></div><div className="session-transcript">{sessionTranscript(viewingSession, sessionTranscriptSearch)}</div></section></div>}
     </section>
   ) : view === 'models' ? (
     <section className="page-panel">
