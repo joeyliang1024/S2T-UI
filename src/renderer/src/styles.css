@@ -176,6 +176,9 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .import-error { background: #3c2029; border: 1px solid #9d4756; border-radius: 10px; color: #ffc0c6; margin: 18px 0 0; padding: 13px 15px; }
 .settings-panel { align-content: start; display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .settings-panel .page-title { grid-column: 1 / -1; margin-bottom: 2px; }
+.settings-category-nav { border-bottom: 1px solid #2a3548; display: flex; gap: 4px; grid-column: 1 / -1; margin: -8px 0 2px; overflow-x: auto; padding-bottom: 8px; }
+.settings-category-nav button { background: transparent; border: 0; border-radius: 8px; color: #abb7cc; cursor: pointer; flex: 0 0 auto; font: inherit; padding: 9px 12px; }
+.settings-category-nav button:hover, .settings-category-nav button.nav-active { background: #1e2a3d; color: #f8fafc; }
 .settings-panel > label { color: #abb7cc; max-width: none; }
 .settings-panel input { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; min-height: 42px; padding: 0 10px; }
 .settings-panel .hint { margin: 0; max-width: none; }

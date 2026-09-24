@@ -9,6 +9,7 @@ import type { AuthUser } from '../../auth/services/auth-client'
 
 export function AppView({ controller, user, onLogout }: { controller: AppController; user: AuthUser; onLogout: () => Promise<void> }): ReactElement {
 const [menuOpen, setMenuOpen] = useState(false)
+const [settingsCategory, setSettingsCategory] = useState<'asr' | 'translation' | 'summary' | 'speakers' | 'app'>('asr')
 const {
 isFloatingCaptionWindow,
 devices,
@@ -222,9 +223,10 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
   ) : (
     <section className="page-panel settings-panel">
       <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>轉錄與模型設定</h2></div></div>
-      <label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="auto">自動偵測</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="de-DE">Deutsch</option></select></label>
-      <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
-      <div className="model-settings">
+      <nav className="settings-category-nav" aria-label="設定分類">{([{ id: 'asr', label: '轉錄與 VAD' }, { id: 'translation', label: '翻譯與術語' }, { id: 'summary', label: '摘要整理' }, { id: 'speakers', label: '講者與聲紋' }, { id: 'app', label: '應用程式' }] as const).map((category) => <button key={category.id} className={settingsCategory === category.id ? 'nav-active' : ''} onClick={() => setSettingsCategory(category.id)}>{category.label}</button>)}</nav>
+      {settingsCategory === 'translation' && <><label>來源語言<select value={settings.sourceLanguage} onChange={(event) => setSettings((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="auto">自動偵測</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="de-DE">Deutsch</option></select></label>
+      <label>目標語言<select value={settings.targetLanguage} onChange={(event) => setSettings((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label></>}
+      {settingsCategory === 'asr' && <><div className="model-settings">
         <p className="eyebrow">ASR 語音模型</p>
         <label>目前模型<select value={settings.selectedModelId} onChange={(event) => setSettings((current) => ({ ...current, selectedModelId: event.target.value }))}>{settings.modelProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
         <label>模型名稱<input value={selectedModel.name} disabled={selectedModel.id === 'none'} onChange={(event) => updateSelectedModel({ name: event.target.value })} /></label>
@@ -251,8 +253,8 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
         <label>停頓斷句：{settings.vadConfig.minSilenceMs} ms<input type="range" min="100" max="5000" step="50" value={settings.vadConfig.minSilenceMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSilenceMs: Number(event.target.value) } }))} /></label>
         <label>噪音底線偏移：{settings.vadConfig.noiseFloorOffsetDb} dB<input type="range" min="3" max="30" step="1" value={settings.vadConfig.noiseFloorOffsetDb} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, noiseFloorOffsetDb: Number(event.target.value) } }))} /></label>
         <p className="hint">預設值採 faster-whisper 常用的 500 ms 靜音起點；Breeze HTTP 的時間戳是 App 音訊 chunk 邊界，不是模型 word timestamps。</p>
-      </div>
-      <div className="text-service-settings">
+      </div></>}
+      {settingsCategory === 'translation' && <><div className="text-service-settings">
         <p className="eyebrow">翻譯 API</p><label><input type="checkbox" checked={settings.translationEnabled} onChange={(event) => setSettings((current) => ({ ...current, translationEnabled: event.target.checked }))} />啟用翻譯</label><label>翻譯策略<select value={settings.translationStrategy} onChange={(event) => setSettings((current) => ({ ...current, translationStrategy: event.target.value as 'realtime' | 'sentence' }))}><option value="realtime">即時逐段</option><option value="sentence">完整句子</option></select></label>
         <label>目前翻譯模型<select value={settings.selectedTranslationModelId} onChange={(event) => selectTranslationProfile(event.target.value)}><option value="none">未選擇翻譯模型</option>{settings.translationProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
         <label>Chat Completions endpoint<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.translationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, translationEndpoint: event.target.value }))} /></label>
@@ -261,17 +263,21 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
         <p className="hint">每段 ASR final 字幕會自動送到此 OpenAI 相容 Chat Completions endpoint，並更新同一段的譯文。</p>
       </div>
       <div className="text-service-settings">
-        <p className="eyebrow">術語與摘要</p>
+        <p className="eyebrow">術語表</p>
         <label>熱詞／術語表<textarea value={settings.glossary} placeholder="例如：Codex、Breeze、公司名稱、專有名詞" onChange={(event) => setSettings((current) => ({ ...current, glossary: event.target.value }))} /></label>
+        <p className="hint">術語會送給 HTTP ASR 的 prompt 與翻譯提示。</p>
+      </div></>}
+      {settingsCategory === 'summary' && <div className="text-service-settings">
+        <p className="eyebrow">會議摘要與整理</p>
         <label>摘要 Chat Completions 位址<input type="url" placeholder="https://host.example/v1/chat/completions" value={settings.summaryEndpoint} onChange={(event) => setSettings((current) => ({ ...current, summaryEndpoint: event.target.value }))} /></label>
         <label>摘要模型 ID<input value={settings.summaryModel} onChange={(event) => setSettings((current) => ({ ...current, summaryModel: event.target.value }))} /></label>
         <label>整理輸出語言<select value={settings.summaryOutputLanguage} onChange={(event) => setSettings((current) => ({ ...current, summaryOutputLanguage: event.target.value }))}><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
         <label><input type="checkbox" checked={settings.summaryIncludeTranslation} onChange={(event) => setSettings((current) => ({ ...current, summaryIncludeTranslation: event.target.checked }))} />每個重點另產出翻譯</label>
         <label>Markdown 整理模板<textarea value={settings.summaryTemplate} onChange={(event) => setSettings((current) => ({ ...current, summaryTemplate: event.target.value }))} /></label>
         {window.s2t && <div className="api-key-row"><label>摘要 API key<input type="password" autoComplete="off" value={summaryKeyDraft} onChange={(event) => setSummaryKeyDraft(event.target.value)} /></label><button className="secondary" onClick={() => void saveTextServiceKey('summary', summaryKeyDraft, () => setSummaryKeyDraft(''))}>儲存 API key</button></div>}
-        <p className="hint">術語會送給 HTTP ASR 的 prompt 與翻譯提示；摘要會依此 Markdown 模板從 final 逐字稿生成，可在歷史紀錄按 ☷ 重新整理。</p>
-      </div>
-      <div className="text-service-settings">
+        <p className="hint">摘要會依此 Markdown 模板從 final 逐字稿生成，可在歷史紀錄按 ☷ 重新整理。</p>
+      </div>}
+      {settingsCategory === 'speakers' && <><div className="text-service-settings">
         <p className="eyebrow">自動講者分離 API</p>
         <label>講者分離 endpoint<input type="url" placeholder="https://host.example/v1/audio/diarizations" value={settings.diarizationEndpoint} onChange={(event) => setSettings((current) => ({ ...current, diarizationEndpoint: event.target.value }))} /></label>
         <label>講者分離 model ID<input value={settings.diarizationModel} placeholder="speaker-diarization-model" onChange={(event) => setSettings((current) => ({ ...current, diarizationModel: event.target.value }))} /></label>
@@ -285,9 +291,9 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
         <button className="secondary" disabled={!voiceprintFile} onClick={() => void enrollVoiceprint()}>註冊我的聲紋</button>
         <p className="hint">可直接收音或上傳至少 1 秒、安靜環境下的單一講者 PCM16 WAV。註冊名稱取自目前登入帳號的 NT；自動分群命中後會顯示此名稱，使用者仍可直接在字幕修改。</p>
         {voiceprints.length > 0 && <div className="voiceprint-list">{voiceprints.map((voiceprint) => <div key={voiceprint.id}><span>{voiceprint.NT} · {voiceprint.Department} · {new Date(voiceprint.createdAt).toLocaleString('zh-TW')}</span><button className="text-button danger" onClick={() => void deleteVoiceprint(voiceprint.id)}>刪除</button></div>)}</div>}
-      </div>
-      <div className="text-service-settings"><p className="eyebrow">外觀</p><label>主題<select value={settings.theme} onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label></div>
-      {window.s2t && <div className="text-service-settings"><p className="eyebrow">Electron 儲存位置</p><label>預設保存至<select value={settings.storageLocation} onChange={(event) => setSettings((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">本機</option><option value="remote">遠端 Storage</option></select></label><p className="hint">新紀錄依此設定保存；載入時永遠合併本機與遠端紀錄。</p></div>}
+      </div></>}
+      {settingsCategory === 'app' && <><div className="text-service-settings"><p className="eyebrow">外觀</p><label>主題<select value={settings.theme} onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label></div>
+      {window.s2t && <div className="text-service-settings"><p className="eyebrow">Electron 儲存位置</p><label>預設保存至<select value={settings.storageLocation} onChange={(event) => setSettings((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">本機</option><option value="remote">遠端 Storage</option></select></label><p className="hint">新紀錄依此設定保存；載入時永遠合併本機與遠端紀錄。</p></div>}</>}
       <button className="primary" onClick={saveSettings}>儲存設定</button>{settingsSaved && <span className="saved">已儲存</span>}
     </section>
   )
