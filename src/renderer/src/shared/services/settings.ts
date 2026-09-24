@@ -25,6 +25,8 @@ export const defaultHttpCapabilities: ModelCapabilities = { asrMode: 'non-stream
 
 export const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', model: '', kind: 'websocket', capabilities: defaultWebSocketCapabilities }
 
+export const defaultSummaryTemplate = '# 會議摘要\n\n## 重點\n\n## 決策\n\n## 待辦事項\n'
+
 export const supportedSourceLanguages = ['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-DE'] as const
 export const supportedTargetLanguages = ['zh-TW', 'en', 'ja', 'de'] as const
 
@@ -52,6 +54,9 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   selectedTranslationModelId: value.selectedTranslationModelId ?? translationProfiles[0]?.id ?? 'none',
   summaryEndpoint: value.summaryEndpoint ?? '',
   summaryModel: value.summaryModel ?? '',
+  summaryTemplate: value.summaryTemplate?.trim() || defaultSummaryTemplate,
+  summaryOutputLanguage: supportedTargetLanguages.includes(value.summaryOutputLanguage as typeof supportedTargetLanguages[number]) ? value.summaryOutputLanguage! : 'zh-TW',
+  summaryIncludeTranslation: value.summaryIncludeTranslation === true,
   diarizationEndpoint: value.diarizationEndpoint ?? '',
   diarizationModel: value.diarizationModel ?? '',
   glossary: value.glossary ?? '',

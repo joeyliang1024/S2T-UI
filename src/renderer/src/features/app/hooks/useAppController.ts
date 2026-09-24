@@ -1270,11 +1270,13 @@ const completeSummary = async (messages: Array<{ role: 'system' | 'user'; conten
     return result
   }
 
+const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(settings.summaryOutputLanguage)}輸出，保留標題結構並填入內容。${settings.summaryIncludeTranslation ? `每個重點後另以${languageName(settings.targetLanguage)}提供翻譯。` : ''}\n\n模板：\n${settings.summaryTemplate}`
+
 const createSessionSummary = async (sessionId: string, transcript: string): Promise<void> => {
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
     setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: '正在產生摘要…' } : entry))
     try {
-      const result = await completeSummary( [{ role: 'system', content: '請用繁體中文為這段逐字稿寫一句不超過 60 字的摘要。只輸出摘要句子，不加標題、說明或條列。' }, { role: 'user', content: transcript.slice(0, 30_000) }]
+      const result = await completeSummary( [{ role: 'system', content: summaryInstruction() }, { role: 'user', content: transcript.slice(0, 30_000) }]
       )
       setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: result.text || '未產生摘要。' } : entry))
     } catch {
@@ -1290,11 +1292,18 @@ const createSummary = async (): Promise<void> => {
     }
     setSummaryStatus('正在產生會議紀錄…')
     try {
-      const result = await completeSummary( [{ role: 'system', content: '請以繁體中文整理會議紀錄，包含：摘要、重點、決策、待辦事項。請使用清楚的 Markdown 標題與項目。' }, { role: 'user', content: transcript }]
+      const result = await completeSummary( [{ role: 'system', content: summaryInstruction() }, { role: 'user', content: transcript }]
       )
       setSummaryText(result.text)
       setSummaryStatus(result.text ? '會議紀錄已產生。' : '摘要服務沒有回傳內容。')
     } catch (error) { setSummaryStatus(error instanceof Error ? error.message : '產生摘要失敗') }
+  }
+
+const summarizeSession = async (entry: SavedSession): Promise<void> => {
+    if (!entry.transcript.trim()) { setStatus('這筆紀錄沒有可整理的逐字稿。'); return }
+    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim()) { setStatus('請先設定摘要 API 與模型。'); return }
+    await createSessionSummary(entry.id, entry.transcript)
+    setStatus('已更新會議整理。')
   }
 
 const canRecord = captureState === 'idle'
@@ -1460,6 +1469,7 @@ deleteVoiceprint,
 startVoiceprintCapture,
 stopVoiceprintCapture,
 createSummary,
+summarizeSession,
 canRecord,
 historyPageCount,
 currentHistoryPage,

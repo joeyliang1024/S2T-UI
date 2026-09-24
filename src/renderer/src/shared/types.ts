@@ -36,6 +36,9 @@ export type Settings = {
   selectedTranslationModelId: string
   summaryEndpoint: string
   summaryModel: string
+  summaryTemplate: string
+  summaryOutputLanguage: string
+  summaryIncludeTranslation: boolean
   diarizationEndpoint: string
   diarizationModel: string
   glossary: string
