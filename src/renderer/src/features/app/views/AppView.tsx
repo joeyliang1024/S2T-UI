@@ -2,7 +2,8 @@ import { type SavedSession, type ModelCapabilities, type ModelProfile } from '..
 import { dbfsLabel, meterPercent } from '../../../shared/services/audio'
 import { timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, textEndpoint } from '../../../shared/services/settings'
-import { type CSSProperties, type ReactElement, useState } from 'react'
+import { translate } from '../../../shared/i18n'
+import { type CSSProperties, type ReactElement, useEffect, useState } from 'react'
 
 import type { AppController } from '../hooks/useAppController'
 import type { AuthUser } from '../../auth/services/auth-client'
@@ -163,6 +164,9 @@ searchedTranscripts,
 clearCaptions,
 renameSession
 } = controller
+
+useEffect(() => { document.documentElement.lang = settings.uiLanguage }, [settings.uiLanguage])
+const t = (key: Parameters<typeof translate>[1]): string => translate(settings.uiLanguage, key)
 
 const sessionTranscript = (entry: SavedSession, query: string): ReactElement => entry.segments?.length ? <>
     {entry.segments.filter((segment) => segment.status !== 'gap' && `${segment.speaker ?? ''} ${segment.sourceText} ${segment.translatedText ?? ''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((segment) => <article key={segment.id}>
@@ -333,7 +337,7 @@ return (
       <header className="app-header">
         <div>
           <p className="eyebrow">S2T UI</p>
-          <h1>即時語音字幕</h1>
+          <h1>{t('appName')}</h1>
         </div>
         <div className="header-account"><span className={`status ${captureState === 'recording' || captureState === 'paused' ? 'active' : ''}`}>{status}</span><button className="menu-toggle" aria-label="開啟功能選單" aria-expanded={menuOpen} onClick={() => setMenuOpen((current) => !current)}>☰</button></div>
       </header>

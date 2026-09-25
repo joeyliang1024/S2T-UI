@@ -23,6 +23,7 @@ export type SavedSession = {
 
 export type Settings = {
   theme: 'system' | 'light' | 'dark'
+  uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'
   /** Electron writes the selected destination by default; reads always merge both. */
   storageLocation: 'local' | 'remote'
   sourceLanguage: string

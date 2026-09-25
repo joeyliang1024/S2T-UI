@@ -1,4 +1,5 @@
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile } from '../types'
+import { supportedUiLanguages } from '../i18n'
 import { settingsKey, loadJson } from './browser-storage'
 import { defaultVadConfig } from '../../features/capture/vad'
 
@@ -42,6 +43,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   const translationProfiles = value.translationProfiles?.length ? value.translationProfiles : fallbackTranslationProfile
   return {
   theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : 'system',
+  uiLanguage: supportedUiLanguages.includes(value.uiLanguage as typeof supportedUiLanguages[number]) ? value.uiLanguage! : 'zh-TW',
   storageLocation: value.storageLocation === 'remote' ? 'remote' : 'local',
   sourceLanguage: supportedSourceLanguages.includes(value.sourceLanguage as typeof supportedSourceLanguages[number]) ? value.sourceLanguage! : 'zh-TW',
   targetLanguage: supportedTargetLanguages.includes(value.targetLanguage as typeof supportedTargetLanguages[number]) ? value.targetLanguage! : 'en',
