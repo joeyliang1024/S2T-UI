@@ -325,7 +325,7 @@ const requestTranslation = useCallback(async (entry: TranscriptEvent): Promise<v
                 { role: 'user', content: entry.sourceText }
               ]
             })
-            : await readJsonResponse<{ text: string }>(await fetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: entry.sourceText, sourceLanguage: settings.sourceLanguage, targetLanguage: settings.targetLanguage, glossary: settings.glossary }) }), 'Web 翻譯 gateway')
+            : await (async () => { const controller = new AbortController(); const timeout = window.setTimeout(() => controller.abort(), 15_000); try { return await readJsonResponse<{ text: string }>(await fetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: entry.sourceText, sourceLanguage: settings.sourceLanguage, targetLanguage: settings.targetLanguage, glossary: settings.glossary }), signal: controller.signal }), 'Web 翻譯 gateway') } finally { window.clearTimeout(timeout) } })()
           break
         } catch (error) { lastError = error }
       }
@@ -334,7 +334,7 @@ const requestTranslation = useCallback(async (entry: TranscriptEvent): Promise<v
         ? { ...currentEntry, translatedText: result.text, translationStatus: undefined, revision: Math.max(currentEntry.revision, entry.revision) + 1 }
         : currentEntry))
     } catch (error) {
-      setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? { ...currentEntry, translationStatus: 'failed' } : currentEntry))
+      setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id && currentEntry.sourceText === entry.sourceText ? { ...currentEntry, translationStatus: 'failed' } : currentEntry))
       setStatus(error instanceof Error ? error.message : '翻譯失敗，可手動重新翻譯')
     } finally {
       translatingIdsRef.current.delete(entry.id)
