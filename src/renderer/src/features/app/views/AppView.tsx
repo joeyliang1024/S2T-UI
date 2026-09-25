@@ -22,6 +22,16 @@ const startQuickSettingsDrag = (event: React.PointerEvent<HTMLDivElement>): void
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', stop)
 }
+const renderMarkdown = (text: string): ReactElement => <div className="markdown-summary">{text.split(/\r?\n/).map((line, index) => {
+  const value = line.trim()
+  if (!value) return <div className="markdown-space" key={index} />
+  if (value.startsWith('### ')) return <h4 key={index}>{value.slice(4)}</h4>
+  if (value.startsWith('## ')) return <h3 key={index}>{value.slice(3)}</h3>
+  if (value.startsWith('# ')) return <h2 key={index}>{value.slice(2)}</h2>
+  if (/^[-*]\s+/.test(value)) return <p className="markdown-item" key={index}>{value.replace(/^[-*]\s+/, '')}</p>
+  return <p key={index}>{value}</p>
+})}</div>
+const downloadSummary = (text: string): void => { const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `s2t-summary-${new Date().toISOString().slice(0, 10)}.md`; anchor.click(); URL.revokeObjectURL(url) }
 const {
 isFloatingCaptionWindow,
 devices,
@@ -187,7 +197,7 @@ const liveWorkspace = (
         <div className="meter" aria-label={`電腦音訊音量 ${dbfsLabel(systemLevel)}`}><div className="meter-label"><span>電腦音訊音量</span><strong>{systemStreamRef.current ? dbfsLabel(systemLevel) : '未連接'}</strong></div><div className="meter-track"><div ref={systemMeterValueRef} className="meter-value" style={{ width: `${meterPercent(systemLevel)}%` }} /></div></div>
         <div className="source-capture-row"><div className="capture-controls"><button className="secondary" onClick={() => void refreshDevices().catch(() => setStatus('無法重新整理音源裝置'))} disabled={captureState === 'starting' || captureState === 'saving'}>刷新</button>{canRecord ? <button className="primary" disabled={selectedDeviceId === 'none' && !includeSystemAudio} onClick={() => void startCapture()}>開始收音</button> : captureState === 'starting' || captureState === 'saving' ? <button className="secondary" disabled>{captureState === 'starting' ? '正在連接…' : '正在保存…'}</button> : <><button className="secondary" onClick={() => void togglePause()}>{captureState === 'paused' ? '繼續' : '暫停'}</button><button className="danger" onClick={() => void stopCapture()}>結束收音</button></>}</div><div className="timer">{timestamp(elapsedMs)}</div></div>
       </section>
-      {(summaryStatus || summaryText) && <section className="summary-panel"><div className="meter-label"><span>會議紀錄</span><strong>{summaryStatus}</strong></div>{summaryText && <pre>{summaryText}</pre>}</section>}
+      {(summaryStatus || summaryText) && <section className="summary-panel"><div className="meter-label"><span>會議紀錄</span><strong>{summaryStatus}</strong></div>{summaryText && <><div className="summary-actions"><button className="text-button" onClick={() => void navigator.clipboard.writeText(summaryText)}>複製</button><button className="text-button" onClick={() => downloadSummary(summaryText)}>下載 .md</button></div>{renderMarkdown(summaryText)}</>}</section>}
 
     </div>
   )

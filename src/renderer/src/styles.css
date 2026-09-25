@@ -157,7 +157,8 @@ article .translation { color: #9fc1ff; grid-column: 2; }
 .transcript-edit textarea { min-height: 72px; resize: vertical; width: 100%; }
 .edit-button { background: transparent; color: #9fc1ff; font-size: .78rem; grid-column: 2; justify-self: start; padding: 2px 0; }
 .summary-panel { flex: 0 1 140px; min-height: 60px; overflow: auto; background: #171e2b; border: 1px solid #28344a; border-radius: 12px; padding: 16px; }
-.summary-panel pre { color: #dbe5f8; font: inherit; line-height: 1.6; margin: 12px 0 0; white-space: pre-wrap; }
+.summary-actions { display: flex; gap: 8px; margin-top: 10px; }.summary-actions .text-button { padding: 5px 8px; }
+.markdown-summary { color: #dbe5f8; line-height: 1.6; margin-top: 10px; }.markdown-summary h2, .markdown-summary h3, .markdown-summary h4 { color: #edf2fb; margin: 14px 0 5px; }.markdown-summary h2 { font-size: 1.08rem; }.markdown-summary h3 { font-size: 1rem; }.markdown-summary h4 { font-size: .92rem; }.markdown-summary p { margin: 4px 0; }.markdown-summary .markdown-item { padding-left: 16px; position: relative; }.markdown-summary .markdown-item::before { color: #83a7ff; content: '•'; left: 2px; position: absolute; }.markdown-space { height: 7px; }
 .text-button { background: #202b3d; color: #cfdaed; font-size: .78rem; padding: 7px 10px; }
 .page-panel { background: #171e2b; border: 1px solid #28344a; border-radius: 14px; min-height: 480px; padding: 26px; }
 .page-title { align-items: flex-start; border-bottom: 1px solid #2a3548; display: flex; justify-content: space-between; margin-bottom: 22px; padding-bottom: 18px; }
