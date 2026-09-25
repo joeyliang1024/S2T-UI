@@ -268,6 +268,7 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
 .session-item { flex-wrap: wrap; }
 .session-details { flex: 1; min-width: 0; }
 .session-title { background: transparent; color: #e8ecf3; padding: 0; text-align: left; overflow-wrap: anywhere; }
+.session-summary-actions { display: flex; gap: 8px; margin-top: 6px; }.session-summary-actions .text-button { padding: 4px 0; }
 .session-transcript { flex: 0 0 100%; max-height: 380px; overflow-y: auto; width: 100%; border-top: 1px solid #34415a; }
 .session-transcript pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .session-rename { display: flex; flex-wrap: wrap; gap: 8px; }
