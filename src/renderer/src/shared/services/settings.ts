@@ -61,6 +61,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   diarizationEndpoint: value.diarizationEndpoint ?? '',
   diarizationModel: value.diarizationModel ?? '',
   glossary: value.glossary ?? '',
+  denoiseEnabled: value.denoiseEnabled !== false,
   vadConfig: { ...defaultVadConfig, ...value.vadConfig }
   }
 }

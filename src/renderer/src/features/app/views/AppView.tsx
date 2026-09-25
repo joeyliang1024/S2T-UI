@@ -298,6 +298,7 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
         <label>起音持續：{settings.vadConfig.minSpeechMs} ms<input type="range" min="20" max="1000" step="20" value={settings.vadConfig.minSpeechMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSpeechMs: Number(event.target.value) } }))} /></label>
         <label>停頓斷句：{settings.vadConfig.minSilenceMs} ms<input type="range" min="100" max="5000" step="50" value={settings.vadConfig.minSilenceMs} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSilenceMs: Number(event.target.value) } }))} /></label>
         <label>噪音底線偏移：{settings.vadConfig.noiseFloorOffsetDb} dB<input type="range" min="3" max="30" step="1" value={settings.vadConfig.noiseFloorOffsetDb} onChange={(event) => setSettings((current) => ({ ...current, vadConfig: { ...current.vadConfig, noiseFloorOffsetDb: Number(event.target.value) } }))} /></label>
+        <label><input type="checkbox" checked={settings.denoiseEnabled} onChange={(event) => setSettings((current) => ({ ...current, denoiseEnabled: event.target.checked }))} />啟用麥克風降噪</label>
         <p className="hint">預設值採 faster-whisper 常用的 500 ms 靜音起點；Breeze HTTP 的時間戳是 App 音訊 chunk 邊界，不是模型 word timestamps。</p>
       </div></>}
       {settingsCategory === 'translation' && <><div className="text-service-settings">

@@ -43,6 +43,7 @@ export type Settings = {
   diarizationEndpoint: string
   diarizationModel: string
   glossary: string
+  denoiseEnabled: boolean
   vadConfig: VadConfig
 }
 

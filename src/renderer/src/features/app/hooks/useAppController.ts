@@ -607,7 +607,7 @@ const switchInput = useCallback(async (nextDeviceId: string): Promise<void> => {
       }
       const deviceId = nextDeviceId === 'default' ? undefined : { exact: nextDeviceId }
       const nextStream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: { deviceId, echoCancellation: true, noiseSuppression: settings.denoiseEnabled, autoGainControl: true },
         video: false
       })
       attachInput(nextStream, context)
@@ -678,7 +678,7 @@ const startCapture = async (): Promise<void> => {
       }
       const deviceId = selectedDeviceId === 'default' ? undefined : { exact: selectedDeviceId }
       const stream = selectedDeviceId === 'none' ? null : await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: { deviceId, echoCancellation: true, noiseSuppression: settings.denoiseEnabled, autoGainControl: true },
         video: false
       })
       streamRef.current = stream
