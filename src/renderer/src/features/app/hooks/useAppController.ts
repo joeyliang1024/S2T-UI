@@ -1,4 +1,4 @@
-import { type CaptureState, type AudioDevice, type View, type SavedSession, type Settings, type ModelProfile, type TextModelProfile } from '../../../shared/types'
+import { type CaptureState, type AudioDevice, type View, type SavedSession, type Settings, type ModelProfile, type ModelCapabilities, type TextModelProfile } from '../../../shared/types'
 import { sessionsKey, settingsKey, loadJson, saveSessions, loadSessions, saveRecording, loadRecording, deleteRecording } from '../../../shared/services/browser-storage'
 import { dbfs, meterPercent, makeWav, pcm16, BufferedPcmWriter } from '../../../shared/services/audio'
 import { joinCaptionText, makeVtt, makeTranscriptText, makeTranscriptCsv } from '../../../shared/services/transcript'
@@ -929,7 +929,7 @@ const saveSettings = (): void => {
     window.setTimeout(() => setSettingsSaved(false), 2400)
   }
 
-const addModelProfile = async (): Promise<void> => {
+const addModelProfile = async (capabilities?: ModelCapabilities): Promise<void> => {
     const name = newModelName.trim()
     const rawEndpoint = newModelEndpoint.trim()
     const model = newModelId.trim()
@@ -938,7 +938,7 @@ const addModelProfile = async (): Promise<void> => {
       return
     }
     const kind: ModelProfile['kind'] = newModelUsesBuiltin ? 'openai-http' : 'websocket'
-    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: modelEndpoint(rawEndpoint, kind), model, kind, capabilities: kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities }
+    const profile: ModelProfile = { id: crypto.randomUUID(), name, endpoint: modelEndpoint(rawEndpoint, kind), model, kind, capabilities: capabilities ?? (kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities) }
     try {
       if (window.s2t && newModelApiKey.trim()) await window.s2t.saveModelApiKey(profile.id, newModelApiKey.trim())
       setSettings((current) => {
