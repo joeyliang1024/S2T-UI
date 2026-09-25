@@ -1323,13 +1323,27 @@ const completeSummary = async (messages: Array<{ role: 'system' | 'user'; conten
 
 const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(settings.summaryOutputLanguage)}輸出，保留標題結構並填入內容。${settings.summaryIncludeTranslation ? `每個重點後另以${languageName(settings.targetLanguage)}提供翻譯。` : ''}\n\n模板：\n${settings.summaryTemplate}`
 
+const summaryChunks = (transcript: string, size = 24_000): string[] => {
+  const chunks: string[] = []; let remaining = transcript.trim()
+  while (remaining.length > size) { const boundary = Math.max(remaining.lastIndexOf('\n', size), remaining.lastIndexOf('。', size), remaining.lastIndexOf('.', size)); const end = boundary > size / 2 ? boundary + 1 : size; chunks.push(remaining.slice(0, end)); remaining = remaining.slice(end) }
+  if (remaining) chunks.push(remaining)
+  return chunks
+}
+
+const summarizeTranscript = async (transcript: string): Promise<string> => {
+  const chunks = summaryChunks(transcript)
+  if (chunks.length === 1) return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: chunks[0] }])).text
+  const partials: string[] = []
+  for (const [index, chunk] of chunks.entries()) partials.push((await completeSummary([{ role: 'system', content: `請只整理第 ${index + 1}/${chunks.length} 段會議逐字稿的事實、決策與待辦，使用簡潔 Markdown。` }, { role: 'user', content: chunk }])).text)
+  return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: `以下是分段整理結果，請合併、去除重複並套用模板：\n\n${partials.join('\n\n---\n\n')}` }])).text
+}
+
 const createSessionSummary = async (sessionId: string, transcript: string): Promise<void> => {
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
     setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: '正在產生摘要…' } : entry))
     try {
-      const result = await completeSummary( [{ role: 'system', content: summaryInstruction() }, { role: 'user', content: transcript.slice(0, 30_000) }]
-      )
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: result.text || '未產生摘要。' } : entry))
+      const text = await summarizeTranscript(transcript)
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || '未產生摘要。' } : entry))
     } catch {
       setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: '摘要產生失敗。' } : entry))
     }
@@ -1343,10 +1357,9 @@ const createSummary = async (): Promise<void> => {
     }
     setSummaryStatus('正在產生會議紀錄…')
     try {
-      const result = await completeSummary( [{ role: 'system', content: summaryInstruction() }, { role: 'user', content: transcript }]
-      )
-      setSummaryText(result.text)
-      setSummaryStatus(result.text ? '會議紀錄已產生。' : '摘要服務沒有回傳內容。')
+      const text = await summarizeTranscript(transcript)
+      setSummaryText(text)
+      setSummaryStatus(text ? '會議紀錄已產生。' : '摘要服務沒有回傳內容。')
     } catch (error) { setSummaryStatus(error instanceof Error ? error.message : '產生摘要失敗') }
   }
 
