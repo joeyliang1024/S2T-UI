@@ -9,6 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "web:serve": "node server/index.cjs",
+    "storage:smoke": "node scripts/storage-smoke-test.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
