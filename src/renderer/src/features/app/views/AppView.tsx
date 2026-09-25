@@ -123,6 +123,7 @@ exportTranscript,
 copyTranscript,
 updateTranscript,
 updateSpeaker,
+updateSessionSpeaker,
 updateTranscriptTiming,
 saveSettings,
 addModelProfile,
@@ -166,7 +167,7 @@ renameSession
 const sessionTranscript = (entry: SavedSession, query: string): ReactElement => entry.segments?.length ? <>
     {entry.segments.filter((segment) => segment.status !== 'gap' && `${segment.speaker ?? ''} ${segment.sourceText} ${segment.translatedText ?? ''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((segment) => <article key={segment.id}>
       <time>{timestamp(segment.startMs)}</time>
-      {segment.speaker && <span className="speaker-row">{segment.speaker}</span>}
+      <label className="speaker-row"><span>講者</span><input aria-label="講者名稱" value={segment.speaker ?? ''} placeholder="未標記講者" onChange={(event) => updateSessionSpeaker(entry.id, segment.id, event.target.value)} /></label>
       <p>{segment.sourceText}</p>
       {segment.translatedText && <p className="translation">{segment.translatedText}</p>}
     </article>)}

@@ -917,6 +917,14 @@ const updateSpeaker = (id: string, speaker: string): void => {
     setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, speaker: speaker || undefined, speakerManuallyEdited: true } : entry))
   }
 
+const updateSessionSpeaker = (sessionId: string, segmentId: string, speaker: string): void => {
+    setSessions((current) => current.map((session) => {
+      if (session.id !== sessionId) return session
+      const segments = session.segments.map((segment) => segment.id === segmentId ? { ...segment, speaker: speaker || undefined, speakerManuallyEdited: true } : segment)
+      return { ...session, segments, transcript: makeTranscriptText(segments) }
+    }))
+  }
+
 const updateTranscriptTiming = (id: string, startMs: number, endMs: number): void => {
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs < 0 || endMs <= startMs) { setStatus('時間段需為非負數，且結束時間必須大於開始時間。'); return }
     setTranscripts((current) => current.map((entry) => entry.id === id ? { ...entry, startMs: Math.round(startMs), endMs: Math.round(endMs), revision: entry.revision + 1 } : entry))
@@ -1485,6 +1493,7 @@ exportTranscript,
 copyTranscript,
 updateTranscript,
 updateSpeaker,
+updateSessionSpeaker,
 updateTranscriptTiming,
 saveSettings,
 addModelProfile,
