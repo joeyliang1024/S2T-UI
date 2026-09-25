@@ -324,6 +324,7 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
       </div>}
       {settingsCategory === 'app' && <><div className="text-service-settings"><p className="eyebrow">外觀</p><label>主題<select value={settings.theme} onChange={(event) => setSettings((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label></div>
       {window.s2t && <div className="text-service-settings"><p className="eyebrow">Electron 儲存位置</p><label>預設保存至<select value={settings.storageLocation} onChange={(event) => setSettings((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">本機</option><option value="remote">遠端 Storage</option></select></label><p className="hint">新紀錄依此設定保存；載入時永遠合併本機與遠端紀錄。</p></div>}</>}
+      {settingsCategory === 'app' && <div className="text-service-settings"><p className="eyebrow">介面語言</p><label>顯示語言<select value={settings.uiLanguage} onChange={(event) => setSettings((current) => ({ ...current, uiLanguage: event.target.value as typeof current.uiLanguage }))}><option value="zh-TW">繁體中文</option><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label></div>}
       <button className="primary" onClick={saveSettings}>儲存設定</button>{settingsSaved && <span className="saved">已儲存</span>}
     </section>
   )
