@@ -1148,18 +1148,6 @@ const saveSettings = (): void => {
     })().catch((error: unknown) => setStatus(error instanceof Error ? `術語保存失敗：${error.message}` : '術語保存失敗；仍保留目前設定。'))
   }
 
-const reloadGlossary = async (): Promise<void> => {
-    try {
-      const response = await authFetch('/api/data/glossary')
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const payload = await response.json() as { glossary?: string; version?: number }
-      if (typeof payload.glossary !== 'string') throw new Error('伺服器沒有回傳術語內容')
-      glossaryVersionRef.current = Number.isSafeInteger(payload.version) && payload.version! >= 0 ? payload.version! : 0
-      setSettings((current) => ({ ...current, glossary: payload.glossary! }))
-      setStatus('已重新載入伺服器術語版本。')
-    } catch (error) { setStatus(error instanceof Error ? `無法重新載入術語：${error.message}` : '無法重新載入術語。') }
-  }
-
 const addModelProfile = async (capabilities?: ModelCapabilities): Promise<void> => {
     const name = newModelName.trim()
     const rawEndpoint = newModelEndpoint.trim()
@@ -1918,7 +1906,6 @@ updateSavedTranscript,
 updateSavedTranscriptTiming,
 updateTranscriptTiming,
 saveSettings,
-reloadGlossary,
 addModelProfile,
 updateSelectedModel,
 selectTranslationProfile,
