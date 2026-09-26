@@ -500,4 +500,9 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
 :root[data-theme="light"] .settings-panel .text-service-settings { background: #ffffff; border-color: #cbd5e1; }
 :root[data-theme="light"] .floating-caption p, :root[data-theme="light"] .transcript-modal header, :root[data-theme="light"] .voiceprint-enroll h3, :root[data-theme="light"] .voiceprint-library h3 { color: #182235; }
 :root[data-theme="light"] .floating-caption > header { border-color: #cbd5e1; }
+:root[data-theme="light"] .glossary-json-import { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+:root[data-theme="light"] .summary-stale { color: #b45309; }
+:root[data-theme="light"] .saved { color: #15803d; }
+:root[data-theme="light"] .model-filter-count { background: #dbeafe; color: #1d4ed8; }
+:root[data-theme="light"] .meter-track::after { background: repeating-linear-gradient(90deg, transparent 0 9.5%, rgba(255, 255, 255, .72) 9.5% 10%); }
 :root[data-theme="light"] footer { background: linear-gradient(transparent, #f2f5fa 30%); }
