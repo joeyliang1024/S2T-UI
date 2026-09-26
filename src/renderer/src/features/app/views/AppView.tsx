@@ -5,6 +5,7 @@ import { modelEndpoint, textEndpoint } from '../../../shared/services/settings'
 import { interfaceTranslate, translate } from '../../../shared/i18n'
 import { parseGlossaryJson } from '../services/glossary-json'
 import { transcriptSignature } from '../services/summary-plan'
+import { addSummaryTemplate as createSummaryTemplate, removeSelectedSummaryTemplate, selectSummaryTemplate as resolveSummaryTemplate } from '../services/summary-templates'
 import { type CSSProperties, type ReactElement, useEffect, useRef, useState } from 'react'
 
 import type { AppController } from '../hooks/useAppController'
@@ -295,20 +296,18 @@ const deleteManagedModel = (): void => {
   setModelDialogOpen(false); setStatus('模型已刪除。')
 }
 const selectSummaryTemplate = (id: string): void => setSettings((current) => {
-  const template = current.summaryTemplates.find((item) => item.id === id)
-  return template ? { ...current, selectedSummaryTemplateId: id, summaryTemplate: template.content } : current
+  const selected = resolveSummaryTemplate(current.summaryTemplates, id)
+  return selected ? { ...current, ...selected } : current
 })
 const addSummaryTemplate = (): void => {
-  const name = newSummaryTemplateName.trim().slice(0, 100)
-  if (!name) { setStatus('請輸入模板名稱。'); return }
-  const template = { id: crypto.randomUUID(), name, content: newSummaryTemplateContent.trim() || '# 會議摘要\n' }
-  setSettings((current) => ({ ...current, summaryTemplates: [...current.summaryTemplates, template], selectedSummaryTemplateId: template.id, summaryTemplate: template.content }))
+  try {
+    setSettings((current) => ({ ...current, ...createSummaryTemplate(current.summaryTemplates, crypto.randomUUID(), newSummaryTemplateName, newSummaryTemplateContent) }))
+  } catch { setStatus('請輸入模板名稱。'); return }
   setNewSummaryTemplateName(''); setNewSummaryTemplateContent(''); setIsCreatingSummaryTemplate(false)
 }
 const deleteSummaryTemplate = (): void => setSettings((current) => {
-  if (current.summaryTemplates.length <= 1) { setStatus('請至少保留一個摘要模板。'); return current }
-  const templates = current.summaryTemplates.filter((template) => template.id !== current.selectedSummaryTemplateId)
-  return { ...current, summaryTemplates: templates, selectedSummaryTemplateId: templates[0].id, summaryTemplate: templates[0].content }
+  try { return { ...current, ...removeSelectedSummaryTemplate(current.summaryTemplates, current.selectedSummaryTemplateId) } }
+  catch { setStatus('請至少保留一個摘要模板。'); return current }
 })
 const setDenoiseEnabled = (enabled: boolean): void => {
   setSettings((current) => ({ ...current, denoiseEnabled: enabled }))
