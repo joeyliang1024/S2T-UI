@@ -1128,14 +1128,23 @@ const updateTranscriptTiming = (id: string, startMs: number, endMs: number): voi
   }
 
 const saveSettings = (): void => {
-    if (window.s2t) void window.s2t.saveModelConfig(settings).catch(() => setStatus('模型設定保存失敗'))
+    const markSaved = (): void => {
+      setSettingsSaved(true)
+      window.setTimeout(() => setSettingsSaved(false), 2400)
+    }
+    // Electron keeps the complete settings payload (including the glossary) in
+    // its account-scoped local config.  Do not make a local-only workflow fail
+    // merely because an external gateway has not been provisioned yet.
+    if (window.s2t) {
+      void window.s2t.saveModelConfig(settings).then(markSaved).catch(() => setStatus('本機設定保存失敗'))
+      return
+    }
     void (async () => {
       const response = await authFetch('/api/data/glossary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ glossary: settings.glossary, version: glossaryVersionRef.current ?? 0 }) })
       if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
       const saved = await response.json() as { version?: number }
       glossaryVersionRef.current = Number.isSafeInteger(saved.version) && saved.version! >= 0 ? saved.version! : glossaryVersionRef.current
-      setSettingsSaved(true)
-      window.setTimeout(() => setSettingsSaved(false), 2400)
+      markSaved()
     })().catch((error: unknown) => setStatus(error instanceof Error ? `術語保存失敗：${error.message}` : '術語保存失敗；仍保留目前設定。'))
   }
 
