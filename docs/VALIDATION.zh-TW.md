@@ -9,6 +9,8 @@
 | TypeScript 型別 | 通過 | `npm run typecheck` |
 | Production bundle | 通過 | `npm run build` |
 | Diff 格式 | 通過 | `git diff --check` |
+| 本機儲存與帳號隔離 | 通過 | `npm run storage:smoke` |
+| 音訊重取樣 | 通過 | `npm run resample:smoke`（48k→16k、44.1k→16k、原率直通與分塊一致性） |
 | Breeze HTTP ASR | 通過 | 本機中文 WAV → `/v1/audio/transcriptions` → 非空白文字 |
 | Web 模型載入 | 通過 | `GET /api/config` 回傳 `Breeze-ASR-25`；Web 下拉選單已選取該模型 |
 | Web BFF 轉錄 | 通過 | Web → Vite `/api` proxy → BFF → ASR → 非空白文字 |
@@ -56,6 +58,9 @@ npm run dev
 | 500 ms 以上停頓 | VAD 可完成一段；後續語句應保留約 300 ms pre-roll。 |
 | 鍵盤聲／背景噪音 | 不應單靠短雜訊不斷送出空白片段。 |
 | 切換音源 | 音量條、WAV 與字幕都應跟隨新裝置；失敗時保留舊裝置或顯示錯誤。 |
+| 48 kHz → 16 kHz ASR | 保存的 WAV 仍為 48 kHz；送至 ASR 的 `start.sampleRate` 為 16 kHz，字幕時間、清除字幕邊界與實際錄音時長一致。 |
+| 44.1 kHz → 16 kHz ASR | 以不同裝置或測試音訊重複上列檢查；長時間收音不可在區塊交界出現累積時間漂移。 |
+| Electron 即時講者預覽 | 開啟講者分離後，桌面版每次只送最近 45 秒的 PCM WAV；回傳講者時間需對應整段錄音的絕對時間，且不增加無界 PCM 記憶體。 |
 
 ## Electron 專屬驗收
 
@@ -93,4 +98,4 @@ npm run dev
 - 60 分鐘穩定性、睡眠喚醒、低磁碟。
 - 自動說話者分離、批次大檔、MP3/M4A、打包簽署與 Windows 實機。
 
-詳細開發工作請見 [TODO](../TODO.md)，模型傳輸協定見 [MODEL_ADAPTER.md](MODEL_ADAPTER.md)。
+未完成事項與驗收優先順序請見 [新版需求單](../新版需求單.md)；早期工程筆記見 [TODO](../TODO.md)，模型傳輸協定見 [MODEL_ADAPTER.md](MODEL_ADAPTER.md)。

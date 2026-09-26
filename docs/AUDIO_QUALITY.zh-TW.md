@@ -2,13 +2,13 @@
 
 ## 目前策略
 
-- 瀏覽器取得麥克風後，以 `AudioContext.sampleRate` 作為實際錄音取樣率，WAV header 與 PCM 資料使用相同數值，不修改 header 偽裝重採樣。
+- 瀏覽器取得麥克風後，以 `AudioContext.sampleRate` 作為實際錄音取樣率，WAV header 與 PCM 資料使用相同數值，不修改 header 偽裝重採樣。若 ASR 模型宣告不同支援取樣率，僅送模型的分支會使用串流 windowed-sinc 低通與重採樣；保存 WAV 仍維持裝置原生取樣率。
 - sherpa-onnx 的 3Dspeaker 聲紋範例使用 **16 kHz**。因此送往聲紋 embedding 的音檔應在服務端或 renderer 做真正的重採樣至 16 kHz；目前本機 sherpa gateway 會依模型輸入處理 WAV，正式部署前仍須以目標模型確認。
 - ASR 取樣率由所選模型的 endpoint／文件決定。不能把 48 kHz 錄音只改寫成 16 kHz header；那會破壞音高、時長與時間戳。
 
 ## 降噪
 
-App 提供「啟用麥克風降噪」設定，使用 `getUserMedia` 的 `noiseSuppression` 約束。瀏覽器若不支援會忽略此偏好，因此 UI 的設定是請求而非硬性保證。它只影響新建立或切換的麥克風 stream，不會改寫已保存音檔。
+App 提供「啟用麥克風降噪」設定，使用 `getUserMedia` 的 `noiseSuppression` 約束。瀏覽器若不支援會忽略此偏好，因此 UI 的設定是請求而非硬性保證。它只影響新建立或切換的麥克風 stream，不會改寫已保存音檔；目前錄音保存與送往 ASR 的音訊均使用同一個處理後 stream。
 
 ## 建議實測
 

@@ -1,4 +1,5 @@
 const { mkdir, readFile, rename, rm, writeFile } = require('node:fs/promises')
+const { randomUUID } = require('node:crypto')
 const { createReadStream } = require('node:fs')
 const { join, resolve, relative, sep } = require('node:path')
 
@@ -12,25 +13,80 @@ const inside = (root, target) => {
 }
 const atomicJson = async (file, value) => {
   await mkdir(join(file, '..'), { recursive: true })
-  const temporary = `${file}.${process.pid}.tmp`
-  await writeFile(temporary, JSON.stringify(value, null, 2), { mode: 0o600 })
-  await rename(temporary, file)
+  const temporary = `${file}.${randomUUID()}.tmp`
+  try {
+    await writeFile(temporary, JSON.stringify(value, null, 2), { mode: 0o600 })
+    await rename(temporary, file)
+  } finally {
+    await rm(temporary, { force: true })
+  }
+}
+
+// A local store can be constructed more than once in one process. Keep every
+// read-modify-write operation for a backing file serialized so updates are not
+// silently lost when requests arrive together.
+const mutations = new Map()
+const mutateFile = (file, operation) => {
+  const queued = (mutations.get(file) || Promise.resolve()).catch(() => undefined).then(operation)
+  mutations.set(file, queued)
+  return queued.finally(() => { if (mutations.get(file) === queued) mutations.delete(file) })
+}
+const readJsonFile = async (file, fallback, label) => {
+  try { return JSON.parse(await readFile(file, 'utf8')) }
+  catch (error) {
+    if (error && error.code === 'ENOENT') return fallback
+    if (error instanceof SyntaxError) throw new Error(`${label} 格式損毀，請先還原備份`)
+    throw error
+  }
 }
 
 class LocalConfigStore {
   constructor(root) { this.file = join(root, 'config.json') }
   async records() {
-    try { const parsed = JSON.parse(await readFile(this.file, 'utf8')); return parsed && typeof parsed === 'object' ? parsed : {} } catch { return {} }
+    const parsed = await readJsonFile(this.file, {}, '設定檔')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('設定檔格式損毀，請先還原備份')
+    return parsed
   }
   key(scope, recordKey) { return `${safePart(scope, 'scope')}:${safePart(recordKey, 'record key')}` }
   async get(scope, recordKey) { return (await this.records())[this.key(scope, recordKey)]?.value ?? null }
   async put(scope, recordKey, value) {
-    const records = await this.records(); records[this.key(scope, recordKey)] = { value, updatedAt: new Date().toISOString() }; await atomicJson(this.file, records)
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); records[this.key(scope, recordKey)] = { value, updatedAt: new Date().toISOString() }; await atomicJson(this.file, records)
+    })
   }
-  async remove(scope, recordKey) { const records = await this.records(); delete records[this.key(scope, recordKey)]; await atomicJson(this.file, records) }
+  async putIfAbsent(scope, recordKey, value) {
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); const key = this.key(scope, recordKey)
+      if (Object.hasOwn(records, key)) return false
+      records[key] = { value, updatedAt: new Date().toISOString() }; await atomicJson(this.file, records)
+      return true
+    })
+  }
+  async compareAndSwap(scope, recordKey, expectedVersion, value) {
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 0) throw new Error('無效的資料版本')
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); const key = this.key(scope, recordKey)
+      const current = records[key]?.value
+      const version = current && !Array.isArray(current) && Number.isSafeInteger(current.version) ? current.version : 0
+      if (version !== expectedVersion) return false
+      records[key] = { value, updatedAt: new Date().toISOString() }; await atomicJson(this.file, records)
+      return true
+    })
+  }
+  async remove(scope, recordKey) {
+    return mutateFile(this.file, async () => { const records = await this.records(); delete records[this.key(scope, recordKey)]; await atomicJson(this.file, records) })
+  }
   async list(scope, prefix = '') {
     const records = await this.records(); const start = `${safePart(scope, 'scope')}:`; const cleanPrefix = prefix ? safePart(prefix, 'prefix') : ''
     return Object.entries(records).flatMap(([key, entry]) => key.startsWith(start) && key.slice(start.length).startsWith(cleanPrefix) ? [{ key: key.slice(start.length), value: entry.value, updatedAt: entry.updatedAt }] : [])
+  }
+  async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
+    const records = await this.records()
+    return Object.entries(records).flatMap(([key, entry]) => {
+      if (!key.endsWith(':voiceprints') || !Array.isArray(entry?.value)) return []
+      const ownerId = key.slice(0, -':voiceprints'.length)
+      return entry.value.filter((item) => item && typeof item.id === 'string' && item.embeddingModel === embeddingModel && item.embeddingVersion === embeddingVersion && (ownerId === userId || item.sharingScope === 'organization' || (item.sharingScope === 'department' && item.Department === department))).map((item) => item.id)
+    })
   }
 }
 
@@ -49,14 +105,25 @@ class LocalBlobStore {
 
 class LocalVectorStore {
   constructor(root) { this.file = join(root, 'vectors.json') }
-  async records() { try { const value = JSON.parse(await readFile(this.file, 'utf8')); return Array.isArray(value) ? value : [] } catch { return [] } }
-  async upsert(record) {
-    validateVectorRecord(record); const records = await this.records(); const index = records.findIndex((item) => item.id === record.id)
-    if (index === -1) records.push(record); else records[index] = record; await atomicJson(this.file, records)
+  async records() {
+    const value = await readJsonFile(this.file, [], '聲紋檔')
+    if (!Array.isArray(value)) throw new Error('聲紋檔格式損毀，請先還原備份')
+    return value
   }
-  async remove(id) { const records = await this.records(); await atomicJson(this.file, records.filter((item) => item.id !== safePart(id, 'vector id'))) }
-  async nearest(embedding, limit = 5) {
-    validateEmbedding(embedding); return (await this.records()).filter((item) => item.embedding.length === embedding.length).map((item) => ({ id: item.id, NT: item.NT, Department: item.Department, score: cosine(embedding, item.embedding) })).sort((a, b) => b.score - a.score).slice(0, limit)
+  async upsert(record) {
+    return mutateFile(this.file, async () => {
+      validateVectorRecord(record); const records = await this.records(); const index = records.findIndex((item) => item.id === record.id)
+      if (index === -1) records.push(record); else records[index] = record; await atomicJson(this.file, records)
+    })
+  }
+  async remove(id) {
+    return mutateFile(this.file, async () => { const records = await this.records(); await atomicJson(this.file, records.filter((item) => item.id !== safePart(id, 'vector id'))) })
+  }
+  async nearest(embedding, limit = 5, allowedIds = []) {
+    validateEmbedding(embedding)
+    const permitted = new Set(allowedIds.map((id) => safePart(id, 'vector id')))
+    if (!permitted.size) return []
+    return (await this.records()).filter((item) => permitted.has(item.id) && item.embedding.length === embedding.length).map((item) => ({ id: item.id, NT: item.NT, Department: item.Department, score: cosine(embedding, item.embedding) })).sort((a, b) => b.score - a.score).slice(0, limit)
   }
 }
 

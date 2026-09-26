@@ -3,12 +3,15 @@ export {}
 declare global {
   interface Window {
     s2t?: {
+      getGatewayUrl: () => Promise<string>
+      authenticateGatewaySession: (accessToken: string) => Promise<{ userId: string }>
+      clearGatewaySession: () => Promise<void>
       saveModelApiKey: (profileId: string, apiKey: string) => Promise<void>
       hasModelApiKey: (profileId: string) => Promise<boolean>
       getEnvironmentModels: () => Promise<Partial<Record<'asr' | 'translation' | 'summary' | 'diarization', { endpoint: string; model: string; configured: boolean }>>>
       loadModelConfig: () => Promise<Partial<SettingsConfig> | null>
       saveModelConfig: (config: SettingsConfig) => Promise<{ saved: boolean }>
-      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string }>
+      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string }>
       completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
       diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => Promise<unknown>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
@@ -37,7 +40,8 @@ interface SettingsConfig {
   targetLanguage: string
   translationEnabled: boolean
   translationStrategy: 'realtime' | 'sentence'
-  modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word' } }>
+  translationLoadStrategy: 'automatic' | 'manual'
+  modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages?: string[]; supportedSampleRates?: number[] } }>
   selectedModelId: string
   translationEndpoint: string
   translationModel: string
@@ -46,6 +50,8 @@ interface SettingsConfig {
   summaryEndpoint: string
   summaryModel: string
   summaryTemplate: string
+  summaryTemplates: Array<{ id: string; name: string; content: string }>
+  selectedSummaryTemplateId: string
   summaryOutputLanguage: string
   summaryIncludeTranslation: boolean
   diarizationEndpoint: string

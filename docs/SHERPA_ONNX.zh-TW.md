@@ -42,7 +42,9 @@ Web 版若透過 Vite 執行，未填 endpoint 時會直接呼叫同源 `/api/di
 
 ## 聲紋註冊與比對 API
 
-三個 API 都需要登入後的 `Authorization: Bearer <token>`，並接受 PCM16 WAV。註冊時 NT 與 Department 一律取自登入身分，不能由瀏覽器指定；Milvus 的業務欄位只有 NT、Department 與 embedding。
+三個 API 都需要登入後的 `Authorization: Bearer <token>`，並接受 PCM16 WAV。註冊時 NT 與 Department 一律取自登入身分，不能由瀏覽器指定；Milvus 的業務欄位只有 NT、Department 與 embedding。啟用 PostgreSQL 時，`s2t_voiceprint_records` 另保存 vector ID、擁有者、embedding 模型與版本；可用 `S2T_VOICEPRINT_EMBEDDING_MODEL_NAME`、`S2T_VOICEPRINT_EMBEDDING_VERSION` 覆寫其識別值。
+
+比對只會使用目前 embedding 模型與版本完全相同的註冊資料。沒有模型／版本 metadata 的舊聲紋不會被比對，需由使用者重新註冊；這避免不同模型即使碰巧維度相同仍產生錯誤匹配。
 
 | 方法 | 路徑 | 功能 |
 | --- | --- | --- |

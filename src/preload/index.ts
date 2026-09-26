@@ -1,12 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('s2t', {
+  getGatewayUrl: () => ipcRenderer.invoke('gateway:url'),
+  authenticateGatewaySession: (accessToken: string) => ipcRenderer.invoke('gateway:authenticate', accessToken),
+  clearGatewaySession: () => ipcRenderer.invoke('gateway:clear-session'),
   saveModelApiKey: (profileId: string, apiKey: string) => ipcRenderer.invoke('model:save-api-key', { profileId, apiKey }),
   hasModelApiKey: (profileId: string) => ipcRenderer.invoke('model:has-api-key', profileId),
   getEnvironmentModels: () => ipcRenderer.invoke('model:environment-models'),
   loadModelConfig: () => ipcRenderer.invoke('models:load-config'),
   saveModelConfig: (config: unknown) => ipcRenderer.invoke('models:save-config', config),
-  transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:transcribe', input),
+  transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:transcribe', input),
   completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => ipcRenderer.invoke('model:complete', input),
   diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:diarize', input),
   startPcmRecording: (sampleRate: number) => ipcRenderer.invoke('recording:start', sampleRate),

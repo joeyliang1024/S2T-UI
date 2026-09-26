@@ -21,8 +21,8 @@ class LocalUserStore {
   constructor(configStore) { this.config = configStore }
   async create(input) {
     const user = userInput(input); const key = `account-${user.username}`
-    if (await this.config.get('auth', key)) throw new Error('帳號已存在')
-    await this.config.put('auth', key, user); return publicUser(user)
+    if (!await this.config.putIfAbsent('auth', key, user)) throw new Error('帳號已存在')
+    return publicUser(user)
   }
   async findByUsername(username) { const user = await this.config.get('auth', `account-${normalizeUsername(username)}`); return user && typeof user === 'object' ? user : null }
   async findById(id) {

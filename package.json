@@ -10,6 +10,8 @@
     "preview": "electron-vite preview",
     "web:serve": "node server/index.cjs",
     "storage:smoke": "node scripts/storage-smoke-test.cjs",
+    "resample:smoke": "node scripts/resample-smoke-test.cjs",
+    "gateway:auth-smoke": "node scripts/gateway-auth-smoke-test.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

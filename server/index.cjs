@@ -1,11 +1,11 @@
 const { createServer } = require('node:http')
 const { readFile, stat } = require('node:fs/promises')
-const { join, normalize } = require('node:path')
+const { join, normalize, basename } = require('node:path')
 const { randomUUID } = require('node:crypto')
 const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { config } = require('dotenv')
-const { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerEmbeddings } = require('./sherpa-diarization.cjs')
+const { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerEmbeddings, modelPaths } = require('./sherpa-diarization.cjs')
 const { createStorage } = require('./storage/index.cjs')
 const { createAuth } = require('./auth/index.cjs')
 
@@ -83,9 +83,21 @@ const safeAudioContentType = (value) => {
 }
 const voiceprintRecordKey = 'voiceprints'
 const voiceprintThreshold = Math.max(0, Math.min(1, Number(process.env.S2T_VOICEPRINT_THRESHOLD || 0.65)))
+const voiceprintEmbeddingMetadata = () => ({ model: process.env.S2T_VOICEPRINT_EMBEDDING_MODEL_NAME || basename(modelPaths().embedding), version: process.env.S2T_VOICEPRINT_EMBEDDING_VERSION || 'sherpa-onnx-v1' })
 const ownVoiceprints = async (user) => {
   const value = await storage.config.get(user.id, voiceprintRecordKey)
   return Array.isArray(value) ? value.filter((item) => item && typeof item.id === 'string' && typeof item.createdAt === 'string') : []
+}
+const ownVoiceprintIds = async (user) => {
+  const metadata = voiceprintEmbeddingMetadata()
+  // Vector dimensions alone do not establish compatibility. Records created
+  // before model/version metadata are deliberately excluded until re-enrolled.
+  return (await ownVoiceprints(user)).filter((item) => item.embeddingModel === metadata.model && item.embeddingVersion === metadata.version).map((item) => item.id)
+}
+const visibleVoiceprintIds = async (user) => {
+  const metadata = voiceprintEmbeddingMetadata()
+  if (typeof storage.config.findVisibleVoiceprintIds === 'function') return storage.config.findVisibleVoiceprintIds({ userId: user.id, department: user.Department, embeddingModel: metadata.model, embeddingVersion: metadata.version })
+  return ownVoiceprintIds(user)
 }
 const staticFile = async (request, response) => {
   const urlPath = new URL(request.url, 'http://localhost').pathname
@@ -119,7 +131,7 @@ createServer(async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) response.setHeader('access-control-allow-origin', origin)
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-s2t-language, x-s2t-prompt, x-s2t-filename' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-s2t-language, x-s2t-prompt, x-s2t-filename, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent' }); return response.end() }
   const auth = await authReady
   if (await auth.handle(request, response, send)) return
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
@@ -139,22 +151,36 @@ createServer(async (request, response) => {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
-      if (request.method === 'GET') return send(response, 200, { sessions: await storage.config.get(user.id, 'sessions') ?? [] })
+      if (request.method === 'GET') {
+        const stored = await storage.config.get(user.id, 'sessions')
+        const value = Array.isArray(stored) ? { sessions: stored, version: 0 } : stored
+        return send(response, 200, value && Array.isArray(value.sessions) && Number.isSafeInteger(value.version) ? value : { sessions: [], version: 0 })
+      }
       const body = JSON.parse((await readBody(request, 5 * 1024 * 1024)).toString('utf8'))
-      if (!Array.isArray(body.sessions)) return send(response, 400, { error: 'sessions 必須是陣列' })
-      await storage.config.put(user.id, 'sessions', body.sessions)
-      return send(response, 200, { saved: true })
+      if (!Array.isArray(body.sessions) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'sessions 與 version 必須有效' })
+      const version = body.version + 1
+      if (!await storage.config.compareAndSwap(user.id, 'sessions', body.version, { sessions: body.sessions, version })) {
+        return send(response, 409, { error: '遠端記錄已有更新；請重新載入後再同步。' })
+      }
+      return send(response, 200, { saved: true, version })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存紀錄' }) }
   }
   if (storagePath === '/api/data/glossary' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
-      if (request.method === 'GET') return send(response, 200, { glossary: await storage.config.get(user.id, 'glossary') ?? '' })
+      if (request.method === 'GET') {
+        const stored = typeof storage.config.getGlossary === 'function' ? await storage.config.getGlossary(user.id) : { content: await storage.config.get(user.id, 'glossary') ?? '', version: 0 }
+        return send(response, 200, { glossary: stored.content, version: stored.version, updatedAt: stored.updatedAt ?? null })
+      }
       const body = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
       if (typeof body.glossary !== 'string') return send(response, 400, { error: 'glossary 必須是文字' })
-      await storage.config.put(user.id, 'glossary', body.glossary.trim().slice(0, 20_000))
-      return send(response, 200, { saved: true })
+      const content = body.glossary.trim().slice(0, 20_000)
+      const expectedVersion = Number.isSafeInteger(body.version) && body.version >= 0 ? body.version : null
+      if (typeof storage.config.putGlossary === 'function' && expectedVersion === null) return send(response, 400, { error: 'version 必須有效' })
+      const saved = typeof storage.config.putGlossary === 'function' ? await storage.config.putGlossary(user.id, content, expectedVersion) : (await storage.config.put(user.id, 'glossary', content), { version: 0 })
+      if (!saved) return send(response, 409, { error: '術語已被其他視窗更新；請重新載入後再儲存。' })
+      return send(response, 200, { saved: true, version: saved.version, updatedAt: saved.updatedAt ?? null })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存術語' }) }
   }
   const audioMatch = storagePath.match(/^\/api\/data\/audio\/([A-Za-z0-9._-]{1,160})$/)
@@ -175,12 +201,25 @@ createServer(async (request, response) => {
       if (request.method === 'GET') return send(response, 200, { voiceprints: await ownVoiceprints(user) })
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: '聲紋註冊需要 WAV 音檔' })
+      const sharingScope = String(request.headers['x-s2t-voiceprint-sharing'] || 'private')
+      if (!['private', 'department', 'organization'].includes(sharingScope)) return send(response, 400, { error: '無效的聲紋共享範圍' })
+      if (sharingScope !== 'private' && request.headers['x-s2t-voiceprint-consent'] !== 'true') return send(response, 400, { error: '分享聲紋前必須明確同意比對用途' })
       const embedding = extractSpeakerEmbedding(audio)
       const id = `vp-${randomUUID()}`
-      await storage.vector.upsert({ id, NT: user.NT, Department: user.Department, embedding })
-      const existing = await ownVoiceprints(user)
-      const entry = { id, createdAt: new Date().toISOString(), NT: user.NT, Department: user.Department, dimensions: embedding.length }
-      await storage.config.put(user.id, voiceprintRecordKey, [...existing, entry])
+      const metadata = voiceprintEmbeddingMetadata()
+      let vectorSaved = false; let metadataSaved = false
+      try {
+        await storage.vector.upsert({ id, NT: user.NT, Department: user.Department, embedding }); vectorSaved = true
+        if (typeof storage.config.createVoiceprint === 'function') { await storage.config.createVoiceprint({ vectorId: id, userId: user.id, embeddingModel: metadata.model, embeddingVersion: metadata.version, sharingScope }); metadataSaved = true }
+        const existing = await ownVoiceprints(user)
+        const entry = { id, createdAt: new Date().toISOString(), NT: user.NT, Department: user.Department, dimensions: embedding.length, embeddingModel: metadata.model, embeddingVersion: metadata.version, sharingScope }
+        await storage.config.put(user.id, voiceprintRecordKey, [...existing, entry])
+      } catch (error) {
+        if (metadataSaved) await storage.config.removeVoiceprint(id, user.id).catch(() => undefined)
+        if (vectorSaved) await storage.vector.remove(id).catch(() => undefined)
+        throw error
+      }
+      const entry = (await ownVoiceprints(user)).find((item) => item.id === id)
       return send(response, 201, { voiceprint: entry })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '聲紋註冊失敗' }) }
   }
@@ -191,6 +230,7 @@ createServer(async (request, response) => {
     try {
       const voiceprints = await ownVoiceprints(user)
       if (!voiceprints.some((item) => item.id === voiceprintMatch[1])) return send(response, 404, { error: '找不到此聲紋註冊資料' })
+      if (typeof storage.config.removeVoiceprint === 'function' && !await storage.config.removeVoiceprint(voiceprintMatch[1], user.id)) return send(response, 404, { error: '找不到此聲紋註冊資料' })
       await storage.vector.remove(voiceprintMatch[1])
       await storage.config.put(user.id, voiceprintRecordKey, voiceprints.filter((item) => item.id !== voiceprintMatch[1]))
       return send(response, 204, '')
@@ -202,7 +242,7 @@ createServer(async (request, response) => {
     try {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: '聲紋比對需要 WAV 音檔' })
-      const matches = await storage.vector.nearest(extractSpeakerEmbedding(audio), 1)
+      const matches = await storage.vector.nearest(extractSpeakerEmbedding(audio), 1, await visibleVoiceprintIds(user))
       const candidate = matches[0]
       return send(response, 200, { threshold: voiceprintThreshold, match: candidate && candidate.score >= voiceprintThreshold ? candidate : null })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '聲紋比對失敗' }) }
@@ -257,6 +297,8 @@ createServer(async (request, response) => {
   }
   if (request.method === 'POST' && request.url === '/api/diarizations') {
     if (!acceptsRequest(request, 'diarizations')) return send(response, 429, { error: 'Too many diarization requests. Try again in one minute.' })
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
     try {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
@@ -272,8 +314,9 @@ createServer(async (request, response) => {
       }
       const segments = diarizeWav(audio)
       const recognized = new Map()
+      const allowedVoiceprintIds = await visibleVoiceprintIds(user)
       for (const item of extractDiarizedSpeakerEmbeddings(audio, segments)) {
-        const candidate = (await storage.vector.nearest(item.embedding, 1))[0]
+        const candidate = (await storage.vector.nearest(item.embedding, 1, allowedVoiceprintIds))[0]
         if (candidate?.score >= voiceprintThreshold) recognized.set(item.speaker, candidate)
       }
       const labeledSegments = segments.map((segment) => {

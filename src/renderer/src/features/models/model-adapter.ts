@@ -16,6 +16,8 @@ export type TranscriptEvent = {
    * chunks sent while speech continues deliberately keep this false so the UI
    * can extend one readable caption instead of making a new row. */
   isSentenceBoundary?: boolean
+  /** Best-effort app-side source language when ASR runs in automatic mode. */
+  detectedLanguage?: 'zh-TW' | 'en-US' | 'ja-JP' | 'de-DE'
   /** Present only when audio could not be transcribed. Export this event so a
    * reviewer can distinguish an ASR failure from a genuine silent interval. */
   gapReason?: 'queue-overflow' | 'request-failed'
@@ -27,6 +29,8 @@ export interface ModelAdapter {
   stop(): Promise<void>
   onTranscript(listener: (event: TranscriptEvent) => void): () => void
   onError(listener: (message: string) => void): () => void
+  /** Applies settings to audio received after this call; it never restarts capture. */
+  updateLiveSettings?(input: { language?: string; prompt?: string; vadConfig?: VadConfig }): void
 }
 
 /**
@@ -59,6 +63,8 @@ type WireTranscript = {
   endMs: number
   sourceText: string
   translatedText?: string
+  /** Optional ISO-like source language returned by the ASR service. */
+  detectedLanguage?: string
 }
 
 /**
@@ -166,7 +172,10 @@ export class WebSocketModelAdapter implements ModelAdapter {
       const transcript: TranscriptEvent = {
         id: event.id, revision: event.revision, status: event.status,
         startMs: event.startMs, endMs: event.endMs, sourceText: event.sourceText,
-        translatedText: typeof event.translatedText === 'string' ? event.translatedText : undefined
+        translatedText: typeof event.translatedText === 'string' ? event.translatedText : undefined,
+        detectedLanguage: event.detectedLanguage === 'zh-TW' || event.detectedLanguage === 'en-US' || event.detectedLanguage === 'ja-JP' || event.detectedLanguage === 'de-DE'
+          ? event.detectedLanguage
+          : undefined
       }
       this.listeners.forEach((listener) => listener(transcript))
     } catch {
@@ -218,8 +227,13 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private readonly maximumQueuedChunks = 4
   private vad: EnergyVad | null = null
   private pendingContainsSpeech = false
+  private prompt?: string
+  private vadConfig?: VadConfig
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; prompt?: string; vadConfig?: VadConfig }) {}
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; prompt?: string; vadConfig?: VadConfig }) {
+    this.prompt = profile.prompt
+    this.vadConfig = profile.vadConfig
+  }
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
     if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
@@ -236,7 +250,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.sequence = 0
     this.stopped = false
     this.queuedChunks = 0
-    this.vad = new EnergyVad(this.sampleRate, this.profile.vadConfig)
+    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
     this.pendingContainsSpeech = false
   }
 
@@ -255,7 +269,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     // Keep 300 ms of room tone before a voice onset, but avoid sending empty
     // requests while nobody is speaking.
     if (!this.pendingContainsSpeech && this.pendingSamples > maximumChunkSamples) {
-      const preRollSamples = Math.floor(this.sampleRate * (this.profile.vadConfig?.preRollMs ?? 300) / 1000)
+      const preRollSamples = Math.floor(this.sampleRate * (this.vadConfig?.preRollMs ?? 300) / 1000)
       this.discardPending(this.pendingSamples - preRollSamples)
       return
     }
@@ -289,6 +303,14 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   onError(listener: (message: string) => void): () => void {
     this.errorListeners.add(listener)
     return () => this.errorListeners.delete(listener)
+  }
+  updateLiveSettings(input: { language?: string; prompt?: string; vadConfig?: VadConfig }): void {
+    if (input.language !== undefined) this.language = input.language === 'auto' ? '' : input.language.split('-')[0]
+    if (input.prompt !== undefined) this.prompt = input.prompt || undefined
+    if (input.vadConfig) {
+      this.vadConfig = input.vadConfig
+      this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    }
   }
 
   private enqueue(audio: Float32Array, startSample: number, isSentenceBoundary = false): void {
@@ -327,7 +349,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       try {
         return window.s2t ? await window.s2t.transcribeAudioChunk({
           profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
-          language: this.language, prompt: this.profile.prompt, audio
+          language: this.language, requiresApiKey: this.profile.requiresApiKey !== false, prompt: this.prompt, audio
         }) : await this.transcribeThroughWebGateway(audio)
       } catch (error) {
         lastError = error

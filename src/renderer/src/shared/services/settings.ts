@@ -1,4 +1,4 @@
-import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile } from '../types'
+import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
 import { supportedUiLanguages } from '../i18n'
 import { settingsKey, loadJson } from './browser-storage'
 import { defaultVadConfig } from '../../features/capture/vad'
@@ -20,6 +20,8 @@ export const modelEndpoint = (endpoint: string, kind: ModelProfile['kind']): str
   }
 }
 
+// Transport defaults are known by the app; language and sampling support are
+// provider-specific and must be declared by the selected model or gateway.
 export const defaultWebSocketCapabilities: ModelCapabilities = { asrMode: 'streaming', vadSource: 'server', timestampPrecision: 'segment' }
 
 export const defaultHttpCapabilities: ModelCapabilities = { asrMode: 'non-streaming', vadSource: 'app', timestampPrecision: 'chunk' }
@@ -41,6 +43,10 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
     ? [{ id: 'translation-default', name: `${value.translationModel}（翻譯）`, endpoint: value.translationEndpoint, model: value.translationModel }]
     : []
   const translationProfiles = value.translationProfiles?.length ? value.translationProfiles : fallbackTranslationProfile
+  const summaryTemplates: SummaryTemplate[] = value.summaryTemplates?.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.name.trim() && template.content.trim() ? [{ id: template.id.slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000) }] : []) ?? []
+  const templates = summaryTemplates.length ? summaryTemplates : [{ id: 'default-summary', name: '會議摘要', content: value.summaryTemplate?.trim() || defaultSummaryTemplate }]
+  const selectedSummaryTemplateId = templates.some((template) => template.id === value.selectedSummaryTemplateId) ? value.selectedSummaryTemplateId! : templates[0].id
+  const selectedSummaryTemplate = templates.find((template) => template.id === selectedSummaryTemplateId)!
   return {
   theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : 'system',
   uiLanguage: supportedUiLanguages.includes(value.uiLanguage as typeof supportedUiLanguages[number]) ? value.uiLanguage! : 'zh-TW',
@@ -49,7 +55,8 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   targetLanguage: supportedTargetLanguages.includes(value.targetLanguage as typeof supportedTargetLanguages[number]) ? value.targetLanguage! : 'en',
   translationEnabled: value.translationEnabled ?? true,
   translationStrategy: value.translationStrategy === 'sentence' ? 'sentence' : 'realtime',
-  modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => ({ ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', capabilities: profile.capabilities ?? (profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities) })) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
+  translationLoadStrategy: value.translationLoadStrategy === 'manual' ? 'manual' : 'automatic',
+  modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => { const fallback = profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities; return { ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', requiresApiKey: profile.requiresApiKey !== false, capabilities: { ...fallback, ...profile.capabilities } } }) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
   translationEndpoint: value.translationEndpoint ?? '',
   translationModel: value.translationModel ?? '',
@@ -57,7 +64,9 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   selectedTranslationModelId: value.selectedTranslationModelId ?? translationProfiles[0]?.id ?? 'none',
   summaryEndpoint: value.summaryEndpoint ?? '',
   summaryModel: value.summaryModel ?? '',
-  summaryTemplate: value.summaryTemplate?.trim() || defaultSummaryTemplate,
+  summaryTemplate: selectedSummaryTemplate.content,
+  summaryTemplates: templates,
+  selectedSummaryTemplateId,
   summaryOutputLanguage: supportedTargetLanguages.includes(value.summaryOutputLanguage as typeof supportedTargetLanguages[number]) ? value.summaryOutputLanguage! : 'zh-TW',
   summaryIncludeTranslation: value.summaryIncludeTranslation === true,
   diarizationEndpoint: value.diarizationEndpoint ?? '',

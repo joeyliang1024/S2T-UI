@@ -22,12 +22,12 @@
 {"type":"audio","streamId":"uuid","sequence":0,"startSample":0,"frameCount":4096}
 ```
 
-`sequence` 用來偵測遺失／重複 frame，`startSample` 讓後端將結果映射回原始錄音時間軸；不得只憑接收時間猜測字幕時間。遇到 WebSocket 在途資料超過 2 MB 時，應用會暫停送入新 frame，以避免無限累積記憶體；後端應記錄 sequence 缺口並將其反映為可辨識的錯誤或時間缺口。
+`sequence` 用來偵測遺失／重複 frame。`startSample` 以 `start` 訊息中的 `sampleRate` 為時間基準；應用若重採樣，這是送給 ASR 的樣本位移，而非原始 WAV 的樣本位移。後端不得只憑接收時間猜測字幕時間。遇到 WebSocket 在途資料超過 2 MB 時，應用會暫停送入新 frame，以避免無限累積記憶體；後端應記錄 sequence 缺口並將其反映為可辨識的錯誤或時間缺口。
 
 停止時會傳送 `{"type":"stop"}`。伺服器可持續回傳以下 JSON；`id` 相同且 `revision` 較高的事件會取代先前字幕：
 
 ```json
-{"type":"transcript","id":"seg-1","revision":1,"status":"final","startMs":0,"endMs":1320,"sourceText":"你好","translatedText":"Hello"}
+{"type":"transcript","id":"seg-1","revision":1,"status":"final","startMs":0,"endMs":1320,"sourceText":"你好","detectedLanguage":"zh-TW","translatedText":"Hello"}
 ```
 
 這是應用端的暫定 S2T 整合協定。你的 ASR gateway 應將 ASR 與翻譯模型的回應統一成 `transcript` 事件；若翻譯稍後完成，使用相同 `id` 與更高 `revision` 重送事件，並填入 `translatedText`。如此應用不需要知道兩種模型各自的 API。
@@ -49,6 +49,7 @@ Electron 應用已透過 `src/renderer/src/model-adapter.ts` 將收音與字幕 
 | `status` | `partial` 或 `final` |
 | `startMs`、`endMs` | 相對於此次錄音的時間範圍 |
 | `sourceText` | 辨識原文 |
+| `detectedLanguage` | 可選；ASR 實際偵測出的 `zh-TW`、`en-US`、`ja-JP` 或 `de-DE`。自動語言模式會優先使用它；未提供時才由客戶端做後備判斷。 |
 | `translatedText` | 可選譯文；如由獨立端點產生，仍須與原文 revision 對應 |
 
 串流模型應持續更新相同 `id` 的 partial，完成時發出 final。只支援片段請求的模型可在 adapter 外側加入切段器；切段前後的緩衝時間與原始樣本 offset 必須保留，才能維持 SRT 時間正確。
