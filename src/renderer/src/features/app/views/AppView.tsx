@@ -3,6 +3,7 @@ import { dbfsLabel, meterPercent } from '../../../shared/services/audio'
 import { timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, textEndpoint } from '../../../shared/services/settings'
 import { interfaceTranslate, translate } from '../../../shared/i18n'
+import { parseGlossaryJson } from '../services/glossary-json'
 import { type CSSProperties, type ReactElement, useEffect, useRef, useState } from 'react'
 
 import type { AppController } from '../hooks/useAppController'
@@ -214,27 +215,17 @@ const importGlossaryJson = async (file: File | null): Promise<void> => {
   if (!file) return
   try {
     if (file.size > 1024 * 1024) throw new Error('術語 JSON 檔不可超過 1 MB。')
-    const value: unknown = JSON.parse(await file.text())
-    const rawPairs: Array<{ term: string; translation: string }> = []
-    let invalid = 0
-    const add = (term: unknown, translation: unknown): void => {
-      if (typeof term !== 'string' || typeof translation !== 'string' || !term.trim() || !translation.trim()) { invalid += 1; return }
-      rawPairs.push({ term: term.trim(), translation: translation.trim() })
-    }
-    if (Array.isArray(value)) value.forEach((entry) => {
-      if (typeof entry === 'string') {
-        const [term, ...translation] = entry.split('=>')
-        add(term, translation.join('=>'))
-      } else if (entry && typeof entry === 'object') add((entry as { term?: unknown }).term, (entry as { translation?: unknown }).translation)
-      else invalid += 1
-    })
-    else if (value && typeof value === 'object') Object.entries(value as Record<string, unknown>).forEach(([term, translation]) => add(term, translation))
-    else throw new Error('JSON 根節點必須是物件或陣列。')
-    const glossary = [...new Set(rawPairs.map(({ term, translation }) => `${term} => ${translation}`))].slice(0, 2_000)
-    if (!glossary.length) throw new Error('找不到可用術語；請使用 {「術語」:「指定譯法」} 或 [{"term":"術語","translation":"指定譯法"}] 格式。')
+    const glossaryImport = parseGlossaryJson(await file.text())
+    const glossary = glossaryImport.entries
     setSettings((current) => ({ ...current, glossary: [...current.glossary.split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean), ...glossary].filter((entry, index, all) => all.indexOf(entry) === index).join('\n') }))
-    setStatus(`已載入 ${glossary.length} 筆 JSON 術語${invalid ? `；略過 ${invalid} 筆無效資料` : ''}；請儲存設定。`)
-  } catch (error) { setStatus(error instanceof Error ? error.message : 'JSON 術語檔無法讀取。') }
+    setStatus(`已載入 ${glossary.length} 筆 JSON 術語${glossaryImport.invalidEntries ? `；略過 ${glossaryImport.invalidEntries} 筆無效資料` : ''}${glossaryImport.ignoredDuplicates ? `；略過 ${glossaryImport.ignoredDuplicates} 筆重複或超出上限資料` : ''}；請儲存設定。`)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (message === 'invalid-json') setStatus('JSON 格式無法讀取。')
+    else if (message === 'invalid-root') setStatus('JSON 根節點必須是物件或陣列。')
+    else if (message === 'empty-glossary') setStatus('找不到可用術語；請使用 {「術語」:「指定譯法」} 或 [{"term":"術語","translation":"指定譯法"}] 格式。')
+    else setStatus(message || 'JSON 術語檔無法讀取。')
+  }
 }
 
 const sessionTranscript = (entry: SavedSession, query: string): ReactElement => entry.segments?.length ? <>
