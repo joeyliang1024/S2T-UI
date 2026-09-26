@@ -6,6 +6,8 @@
 export class StreamingResampler {
   private cursor = 0
   private tail = new Float32Array(0)
+  private inputSamples = 0
+  private emittedSamples = 0
   private readonly antiAliasKernel: Float32Array
   private filterHistory = new Float32Array(0)
 
@@ -52,6 +54,7 @@ export class StreamingResampler {
 
   process(input: Float32Array): Float32Array {
     if (this.sourceRate === this.targetRate || input.length === 0) return input
+    this.inputSamples += input.length
     const filtered = this.filter(input)
     const samples = new Float32Array(this.tail.length + filtered.length)
     samples.set(this.tail); samples.set(filtered, this.tail.length)
@@ -66,6 +69,29 @@ export class StreamingResampler {
     const retainedStart = Math.max(0, Math.floor(this.cursor) - 1)
     this.tail = samples.slice(retainedStart)
     this.cursor -= retainedStart
+    this.emittedSamples += output.length
+    return Float32Array.from(output)
+  }
+
+  /**
+   * Emits the final interpolated samples retained between worklet frames.
+   * At the end of a recording there is no following frame to interpolate
+   * against, so the final source value is held for the remaining fraction.
+   */
+  flush(): Float32Array {
+    if (this.sourceRate === this.targetRate || this.tail.length === 0) return new Float32Array(0)
+    const output: number[] = []
+    const remaining = Math.max(0, Math.round(this.inputSamples * this.targetRate / this.sourceRate) - this.emittedSamples)
+    while (output.length < remaining && this.cursor < this.tail.length) {
+      const lower = Math.floor(this.cursor)
+      const fraction = this.cursor - lower
+      const upper = Math.min(lower + 1, this.tail.length - 1)
+      output.push(this.tail[lower] + (this.tail[upper] - this.tail[lower]) * fraction)
+      this.cursor += this.sourceRate / this.targetRate
+    }
+    this.cursor = 0
+    this.tail = new Float32Array(0)
+    this.emittedSamples += output.length
     return Float32Array.from(output)
   }
 }

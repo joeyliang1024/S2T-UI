@@ -249,6 +249,8 @@ const sampleOffsetRef = useRef(0)
 // from the native recording rate when the capture branch resamples audio.
 const modelSampleRateRef = useRef(48_000)
 
+const resamplerRef = useRef<StreamingResampler | null>(null)
+
 const activeDeviceIdRef = useRef('default')
 
 const translatingIdsRef = useRef(new Set<string>())
@@ -811,6 +813,7 @@ const startCapture = async (): Promise<void> => {
       const supportedSampleRates = selectedModel.capabilities.supportedSampleRates ?? []
       const modelSampleRate = chooseModelSampleRate(context.sampleRate, supportedSampleRates)
       const resampler = new StreamingResampler(context.sampleRate, modelSampleRate)
+      resamplerRef.current = resampler
       const microphoneAnalyser = context.createAnalyser(); microphoneAnalyser.fftSize = 1024
       const systemAnalyser = context.createAnalyser(); systemAnalyser.fftSize = 1024
       await context.audioWorklet.addModule(new URL('../../capture/audio-capture.worklet.js', import.meta.url))
@@ -977,6 +980,12 @@ const stopCapture = async (): Promise<void> => {
       recorder.stop()
     })
     try {
+      const finalModelSamples = resamplerRef.current?.flush() ?? new Float32Array(0)
+      if (finalModelSamples.length) {
+        modelRef.current.pushAudio(finalModelSamples, sampleOffsetRef.current)
+        sampleOffsetRef.current += finalModelSamples.length
+      }
+      resamplerRef.current = null
       await modelRef.current.stop()
       // Sentence mode can leave a final fragment without terminal punctuation.
       // Finish those entries before taking the immutable session snapshot so a
