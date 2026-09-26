@@ -313,8 +313,25 @@ app.whenReady().then(() => {
     if (!apiKey && input.requiresApiKey !== false) throw new Error('請先在設定中儲存此模型的 API key')
     let baseURL: string
     try { baseURL = openAiBaseUrl(input.endpoint) } catch { throw new Error('無效的轉錄 API 位址') }
-    const client = new OpenAI({ apiKey: apiKey || 'not-required', baseURL, timeout: 20_000, maxRetries: 1 })
     try {
+      if (!apiKey) {
+        // The OpenAI SDK always emits an Authorization header.  Some self-hosted
+        // ASR endpoints explicitly reject that header, so use native multipart
+        // fetch for profiles that declare authentication is not required.
+        const form = new FormData()
+        form.set('file', new Blob([input.audio], { type: input.contentType || 'audio/wav' }), input.filename || 'live-chunk.wav')
+        form.set('model', input.model)
+        if (input.language) form.set('language', input.language)
+        if (input.prompt?.trim()) form.set('prompt', input.prompt.trim())
+        const response = await fetch(new URL('audio/transcriptions', `${baseURL}/`), { method: 'POST', body: form, signal: AbortSignal.timeout(20_000) })
+        const payload = await response.json().catch(() => ({})) as { text?: unknown; error?: { message?: unknown } | unknown }
+        if (!response.ok) {
+          const message = typeof payload.error === 'object' && payload.error && 'message' in payload.error && typeof payload.error.message === 'string' ? payload.error.message : `HTTP ${response.status}`
+          throw new Error(message)
+        }
+        return { text: typeof payload.text === 'string' ? payload.text : '' }
+      }
+      const client = new OpenAI({ apiKey, baseURL, timeout: 20_000, maxRetries: 1 })
       const result = await client.audio.transcriptions.create({
         file: await toFile(Buffer.from(input.audio), input.filename || 'live-chunk.wav', { type: input.contentType || 'audio/wav' }),
         model: input.model,
