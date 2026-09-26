@@ -13,6 +13,7 @@ import { joinOverlappedText, nextPcmWavChunkStart, pcmWavChunkCount, readPcmWavF
 import { StreamingResampler, chooseModelSampleRate } from '../../capture/resample'
 import { remoteSessionStorage } from '../services/remote-session-storage'
 import { mergeSessions } from '../services/session-merge'
+import { canMergeHttpCaption, shouldAutoTranslate, translationAggregationDelayMs } from '../services/translation-policy'
 import { authFetch } from '../../auth/services/auth-client'
 
 export function useAppController(userId: string) {
@@ -333,10 +334,7 @@ const receiveTranscript = useCallback((event: TranscriptEvent): void => {
         // live caption until a real pause or a practical paragraph limit.
         const previousIndex = current.length - 1
         const previous = current[previousIndex]
-        const canJoin = event.id.startsWith('http-') && previous?.id.startsWith('http-') &&
-          previous.status === 'final' && event.status === 'final' &&
-          previous.endMs > clearBoundaryRef.current && !previous.isSentenceBoundary &&
-          event.startMs - previous.endMs < 900 && event.endMs - previous.startMs < 12_000
+        const canJoin = canMergeHttpCaption(previous, event, clearBoundaryRef.current)
         if (canJoin) {
           const next = [...current]
           next[previousIndex] = {
@@ -424,11 +422,8 @@ useEffect(() => {
       // Sentence mode normally waits for punctuation or a VAD boundary. A hard
       // cap prevents an unpunctuated speaker from leaving text untranslated
       // forever while a recording remains open.
-      const maximumSentenceWaitMs = 5_000
-      transcriptsRef.current.filter((entry) => entry.status === 'final' && !entry.translatedText && !entry.translationStatus && (
-        settings.translationStrategy === 'realtime' || entry.isSentenceBoundary || /[。！？.!?]$/.test(entry.sourceText.trim()) || elapsedMs - entry.endMs >= maximumSentenceWaitMs
-      )).forEach((entry) => { void requestTranslation(entry) })
-    }, 220)
+      transcriptsRef.current.filter((entry) => shouldAutoTranslate(entry, settings.translationStrategy, elapsedMs)).forEach((entry) => { void requestTranslation(entry) })
+    }, translationAggregationDelayMs)
     return () => window.clearTimeout(timer)
   }, [elapsedMs, requestTranslation, settings.translationLoadStrategy, settings.translationStrategy, transcripts])
 

@@ -12,6 +12,7 @@
     "storage:smoke": "node scripts/storage-smoke-test.cjs",
     "glossary:smoke": "node scripts/glossary-json-smoke-test.cjs",
     "model-adapter:smoke": "node scripts/model-adapter-smoke-test.cjs",
+    "translation-policy:smoke": "node scripts/translation-policy-smoke-test.cjs",
     "resample:smoke": "node scripts/resample-smoke-test.cjs",
     "gateway:auth-smoke": "node scripts/gateway-auth-smoke-test.cjs",
     "typecheck": "tsc --noEmit"
