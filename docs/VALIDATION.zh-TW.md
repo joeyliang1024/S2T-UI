@@ -10,7 +10,14 @@
 | Production bundle | 通過 | `npm run build` |
 | Diff 格式 | 通過 | `git diff --check` |
 | 本機儲存與帳號隔離 | 通過 | `npm run storage:smoke` |
-| 音訊重取樣 | 通過 | `npm run resample:smoke`（48k→16k、44.1k→16k、原率直通與分塊一致性） |
+| 音訊重取樣 | 通過 | `npm run resample:smoke`（48k→16k、44.1k→16k、原率直通、分塊一致性與停止時尾段 flush） |
+| 術語 JSON 解析 | 通過 | `npm run glossary:smoke`（物件／陣列、無效內容、重複與空資料） |
+| 免 key ASR adapter | 通過 | `npm run model-adapter:smoke`（免 key 模型不查 key；需 key 模型會被阻擋） |
+| 翻譯排程策略 | 通過 | `npm run translation-policy:smoke`（HTTP final 合併、逐句上限與失敗不自動重送） |
+| 摘要分段規劃 | 通過 | `npm run summary-plan:smoke`（完整重組、分層批次與內容簽章） |
+| 摘要模板規則 | 通過 | `npm run summary-templates:smoke`（即時選取、預設格式與至少保留一個模板） |
+| 五語系字典完整性 | 通過 | `npm run i18n:smoke`（所有已登錄 key 均有繁中、簡中、英文、日文、德文） |
+| Gateway 授權與聲紋同意 | 通過 | `npm run gateway:auth-smoke`（本機 loopback，拒絕未授權與未同意的共享聲紋請求） |
 | Breeze HTTP ASR | 通過 | 本機中文 WAV → `/v1/audio/transcriptions` → 非空白文字 |
 | Web 模型載入 | 通過 | `GET /api/config` 回傳 `Breeze-ASR-25`；Web 下拉選單已選取該模型 |
 | Web BFF 轉錄 | 通過 | Web → Vite `/api` proxy → BFF → ASR → 非空白文字 |
