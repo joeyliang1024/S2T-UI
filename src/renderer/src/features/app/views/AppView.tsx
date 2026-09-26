@@ -215,17 +215,17 @@ const addGlossaryEntry = (): void => {
 const importGlossaryJson = async (file: File | null): Promise<void> => {
   if (!file) return
   try {
-    if (file.size > 1024 * 1024) throw new Error('術語 JSON 檔不可超過 1 MB。')
+    if (file.size > 1024 * 1024) throw new Error(ui('glossaryFileTooLarge'))
     const glossaryImport = parseGlossaryJson(await file.text())
     const glossary = glossaryImport.entries
     setSettings((current) => ({ ...current, glossary: [...current.glossary.split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean), ...glossary].filter((entry, index, all) => all.indexOf(entry) === index).join('\n') }))
     setStatus(`已載入 ${glossary.length} 筆 JSON 術語${glossaryImport.invalidEntries ? `；略過 ${glossaryImport.invalidEntries} 筆無效資料` : ''}${glossaryImport.ignoredDuplicates ? `；略過 ${glossaryImport.ignoredDuplicates} 筆重複或超出上限資料` : ''}；請儲存設定。`)
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
-    if (message === 'invalid-json') setStatus('JSON 格式無法讀取。')
-    else if (message === 'invalid-root') setStatus('JSON 根節點必須是物件或陣列。')
+    if (message === 'invalid-json') setStatus(ui('glossaryJsonUnreadable'))
+    else if (message === 'invalid-root') setStatus(ui('glossaryJsonRootInvalid'))
     else if (message === 'empty-glossary') setStatus('找不到可用術語；請使用 {「術語」:「指定譯法」} 或 [{"term":"術語","translation":"指定譯法"}] 格式。')
-    else setStatus(message || 'JSON 術語檔無法讀取。')
+    else setStatus(message || ui('glossaryJsonLoadFailed'))
   }
 }
 
@@ -273,7 +273,7 @@ const openModelManager = (purpose: 'asr' | 'translation' | 'summary' | 'diarizat
 }
 const saveManagedModel = (): void => {
   const name = newModelName.trim(); const endpoint = newModelEndpoint.trim(); const model = newModelId.trim()
-  if (!name || !endpoint || !model) { setStatus('請填寫模型名稱、endpoint 與 model ID。'); return }
+  if (!name || !endpoint || !model) { setStatus(ui('modelFieldsRequired')); return }
   if (modelPurpose === 'asr' && !editingModelId) { void addModelProfile(modelCapabilities); setModelDialogOpen(false); return }
   setSettings((current) => {
     if (modelPurpose === 'asr') return { ...current, modelProfiles: current.modelProfiles.map((profile) => profile.id === editingModelId ? { ...profile, name, endpoint, model, kind: newModelUsesBuiltin ? 'openai-http' : 'websocket', requiresApiKey: newModelRequiresApiKey, capabilities: modelCapabilities } : profile) }
@@ -284,7 +284,7 @@ const saveManagedModel = (): void => {
   if (newModelApiKey.trim() && modelPurpose === 'asr' && editingModelId && window.s2t) {
     void window.s2t.saveModelApiKey(editingModelId, newModelApiKey.trim()).then(() => setNewModelApiKey('')).catch(() => setStatus('模型設定已更新，但 API key 保存失敗。'))
   }
-  setModelDialogOpen(false); setStatus('模型設定已更新。')
+  setModelDialogOpen(false); setStatus(ui('modelUpdated'))
 }
 const deleteManagedModel = (): void => {
   if (!editingModelId && !(modelPurpose === 'summary' && settings.summaryModel) && !(modelPurpose === 'diarization' && settings.diarizationModel)) return
@@ -293,7 +293,7 @@ const deleteManagedModel = (): void => {
     if (modelPurpose === 'translation') { const profiles = current.translationProfiles.filter((profile) => profile.id !== editingModelId); return { ...current, translationProfiles: profiles, selectedTranslationModelId: current.selectedTranslationModelId === editingModelId ? 'none' : current.selectedTranslationModelId, translationEndpoint: current.selectedTranslationModelId === editingModelId ? '' : current.translationEndpoint, translationModel: current.selectedTranslationModelId === editingModelId ? '' : current.translationModel } }
     return modelPurpose === 'summary' ? { ...current, summaryEndpoint: '', summaryModel: '' } : { ...current, diarizationEndpoint: '', diarizationModel: '' }
   })
-  setModelDialogOpen(false); setStatus('模型已刪除。')
+  setModelDialogOpen(false); setStatus(ui('modelDeleted'))
 }
 const selectSummaryTemplate = (id: string): void => setSettings((current) => {
   const selected = resolveSummaryTemplate(current.summaryTemplates, id)
@@ -302,12 +302,12 @@ const selectSummaryTemplate = (id: string): void => setSettings((current) => {
 const addSummaryTemplate = (): void => {
   try {
     setSettings((current) => ({ ...current, ...createSummaryTemplate(current.summaryTemplates, crypto.randomUUID(), newSummaryTemplateName, newSummaryTemplateContent) }))
-  } catch { setStatus('請輸入模板名稱。'); return }
+  } catch { setStatus(ui('templateNameRequired')); return }
   setNewSummaryTemplateName(''); setNewSummaryTemplateContent(''); setIsCreatingSummaryTemplate(false)
 }
 const deleteSummaryTemplate = (): void => setSettings((current) => {
   try { return { ...current, ...removeSelectedSummaryTemplate(current.summaryTemplates, current.selectedSummaryTemplateId) } }
-  catch { setStatus('請至少保留一個摘要模板。'); return current }
+  catch { setStatus(ui('keepOneTemplate')); return current }
 })
 const setDenoiseEnabled = (enabled: boolean): void => {
   setSettings((current) => ({ ...current, denoiseEnabled: enabled }))
