@@ -237,7 +237,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
     if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
-    if (window.s2t && !(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
+    if (window.s2t && this.profile.requiresApiKey !== false && !(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
     if (!window.s2t && this.profile.id !== 'web-environment-asr') throw new Error('Web 版只能使用網站管理者設定的 ASR 模型')
     this.sampleRate = input.sampleRate
     // An empty value deliberately omits OpenAI's optional `language` field and
