@@ -16,6 +16,7 @@ import { mergeSessions } from '../services/session-merge'
 import { canMergeHttpCaption, shouldAutoTranslate, translationAggregationDelayMs } from '../services/translation-policy'
 import { summaryBatches, summaryChunks, transcriptSignature } from '../services/summary-plan'
 import { authFetch } from '../../auth/services/auth-client'
+import { interfaceTranslate } from '../../../shared/i18n'
 
 export function useAppController(userId: string) {
 const isFloatingCaptionWindow = window.location.hash === '#floating'
@@ -780,6 +781,10 @@ const selectSystemAudio = async (enabled: boolean): Promise<void> => {
 
 const startCapture = async (): Promise<void> => {
     if (captureState !== 'idle' || (selectedDeviceId === 'none' && !includeSystemAudio)) return
+    if (!window.s2t && selectedModel.id !== 'web-environment-asr') {
+      setStatus(interfaceTranslate(settings.uiLanguage, 'webGatewayModelRequired'))
+      return
+    }
     const supportedLanguages = selectedModel.capabilities.supportedLanguages ?? []
     if (settings.sourceLanguage !== 'auto' && supportedLanguages.length && !supportedLanguages.includes(settings.sourceLanguage)) { setStatus(`「${selectedModel.name}」未宣告支援 ${languageName(settings.sourceLanguage)}。請改選語言或模型。`); return }
     setCaptureState('starting')
@@ -1291,6 +1296,10 @@ const selectImportFile = (file: File | null): void => {
 const transcribeImportedFile = async (): Promise<void> => {
     if (!importedFile || selectedModel.kind !== 'openai-http') {
       setImportError('請先選擇檔案，並在設定中選擇 OpenAI 相容 ASR 模型。')
+      return
+    }
+    if (!window.s2t && selectedModel.id !== 'web-environment-asr') {
+      setImportError(interfaceTranslate(settings.uiLanguage, 'webGatewayModelRequired'))
       return
     }
     const isWav = importedFile.name.toLowerCase().endsWith('.wav')

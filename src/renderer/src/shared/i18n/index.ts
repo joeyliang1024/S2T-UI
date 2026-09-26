@@ -267,7 +267,8 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   registerVoiceprint: { 'zh-TW': '註冊聲紋', 'zh-CN': '注册声纹', en: 'Register voiceprint', ja: '声紋を登録', de: 'Stimmabdruck registrieren' },
   registeredVoiceprints: { 'zh-TW': '已註冊聲紋', 'zh-CN': '已注册声纹', en: 'Registered voiceprints', ja: '登録済みの声紋', de: 'Registrierte Stimmabdrücke' },
   remove: { 'zh-TW': '刪除', 'zh-CN': '删除', en: 'Delete', ja: '削除', de: 'Löschen' },
-  noVoiceprints: { 'zh-TW': '尚未註冊聲紋。錄製或上傳樣本後即可建立。', 'zh-CN': '尚未注册声纹。录制或上传样本后即可建立。', en: 'No voiceprints are registered yet. Record or upload a sample to create one.', ja: '声紋はまだ登録されていません。録音またはサンプルのアップロードで作成できます。', de: 'Noch keine Stimmabdrücke registriert. Nehmen Sie ein Muster auf oder laden Sie eines hoch.' }
+  noVoiceprints: { 'zh-TW': '尚未註冊聲紋。錄製或上傳樣本後即可建立。', 'zh-CN': '尚未注册声纹。录制或上传样本后即可建立。', en: 'No voiceprints are registered yet. Record or upload a sample to create one.', ja: '声紋はまだ登録されていません。録音またはサンプルのアップロードで作成できます。', de: 'Noch keine Stimmabdrücke registriert. Nehmen Sie ein Muster auf oder laden Sie eines hoch.' },
+  webGatewayModelRequired: { 'zh-TW': 'Web 版只能使用 gateway 受控的 ASR 模型；請由伺服器設定模型後重新載入。', 'zh-CN': 'Web 版只能使用 gateway 受控的 ASR 模型；请由服务器设置模型后重新加载。', en: 'The web app can only use the gateway-managed ASR model. Configure it on the server, then reload.', ja: 'Web 版では gateway 管理の ASR モデルのみ使用できます。サーバーで設定してから再読み込みしてください。', de: 'Die Web-App kann nur das vom Gateway verwaltete ASR-Modell verwenden. Konfigurieren Sie es auf dem Server und laden Sie dann neu.' }
 }
 
 export const interfaceTranslate = (language: UiLanguage, key: keyof typeof interfaceMessages): string => interfaceMessages[key][language]
