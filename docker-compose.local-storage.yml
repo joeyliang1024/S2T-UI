@@ -1,0 +1,74 @@
+name: s2t-local-storage
+
+# Local-only integration environment for the Web gateway.  The gateway itself
+# stays on the host so it can use .env.local-storage without exposing secrets
+# to the browser.  Start the Milvus profile only for voiceprint verification.
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${S2T_MINIO_ACCESS_KEY:-s2t-local-minio}
+      MINIO_ROOT_PASSWORD: ${S2T_MINIO_SECRET_KEY:-s2t-local-minio-secret}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+    mem_limit: 512m
+    cpus: 0.50
+    pids_limit: 128
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${S2T_POSTGRES_DB_NAME:-s2t}
+      POSTGRES_USER: ${S2T_POSTGRES_USER:-s2t}
+      POSTGRES_PASSWORD: ${S2T_POSTGRES_PASSWORD:-s2t-local-postgres-secret}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "shared_buffers=96MB", "-c", "work_mem=4MB", "-c", "maintenance_work_mem=64MB", "-c", "max_connections=24"]
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 128
+    restart: unless-stopped
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.18
+    profiles: ["milvus"]
+    command: etcd --name s2t-etcd --data-dir /etcd --advertise-client-urls http://0.0.0.0:2379 --listen-client-urls http://0.0.0.0:2379
+    volumes:
+      - etcd-data:/etcd
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 128
+    restart: unless-stopped
+
+  milvus:
+    image: milvusdb/milvus:v2.5.3
+    profiles: ["milvus"]
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    depends_on:
+      - minio
+      - etcd
+    ports:
+      - "127.0.0.1:19530:19530"
+      - "127.0.0.1:9091:9091"
+    volumes:
+      - milvus-data:/var/lib/milvus
+    mem_limit: 1200m
+    cpus: 1.00
+    pids_limit: 256
+    restart: unless-stopped
+
+volumes:
+  minio-data:
+  postgres-data:
+  etcd-data:
+  milvus-data:

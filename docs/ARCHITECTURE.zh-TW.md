@@ -24,4 +24,4 @@
 | `server/storage/remote.cjs` | MinIO、PostgreSQL、Milvus adapter 與 PostgreSQL 基礎 schema。 |
 | `server/storage/index.cjs` | 建立並公開 `blob`、`config`、`vector` 三個 storage 介面。 |
 
-遠端服務只要任一組環境變數已開始設定，就必須全部設定完整；完全未設定時才使用本機 adapter。憑證不能經 renderer 傳送或回傳。
+每種遠端服務獨立配置；某服務任一必要環境變數已設定時，該組必須完整；該組完全未設定時才使用對應本機 adapter。憑證不能經 renderer 傳送或回傳。

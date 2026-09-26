@@ -230,7 +230,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private prompt?: string
   private vadConfig?: VadConfig
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; prompt?: string; vadConfig?: VadConfig }) {
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig }) {
     this.prompt = profile.prompt
     this.vadConfig = profile.vadConfig
   }
@@ -238,7 +238,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
     if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
     if (window.s2t && this.profile.requiresApiKey !== false && !(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
-    if (!window.s2t && this.profile.id !== 'web-environment-asr') throw new Error('Web 版只能使用網站管理者設定的 ASR 模型')
+    if (!window.s2t && !this.profile.gatewayProfileId) throw new Error('Web 版只能使用網站管理者設定的 ASR 模型')
     this.sampleRate = input.sampleRate
     // An empty value deliberately omits OpenAI's optional `language` field and
     // lets the ASR model identify Chinese, English, Japanese, or German.
@@ -401,6 +401,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       headers: {
         'content-type': 'audio/wav',
         'x-s2t-language': this.language,
+        ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
         ...(this.profile.prompt ? { 'x-s2t-prompt': this.profile.prompt } : {})
       },
       body: audio

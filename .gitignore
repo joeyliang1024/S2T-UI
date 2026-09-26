@@ -3,6 +3,8 @@ out/
 dist/
 .DS_Store
 .env
+.env.local-storage
+!.env.local-storage.example
 .env.*
 !.env.example
 models/

@@ -4,7 +4,7 @@
 
 後端研究詳見 [語音處理技術參考與自有模型整合方案](OPEN_SOURCE_BACKENDS.zh-TW.md)。
 
-目前已完成：Electron 主程序與安全 Preload、麥克風列舉與選擇、錄音中切換輸入、獨立音量分析支線、PCM16 WAV 持續寫入、TXT／SRT／JSON 匯出、記錄／匯入／設定工作區、浮動字幕窗、OpenAI 相容 HTTP 分段 ASR、Breeze-ASR-25 實際 API 驗證，以及 Web BFF。未完成項目與驗收狀態以 [新版需求單](../新版需求單.md) 和 [驗收手冊](VALIDATION.zh-TW.md) 為準；早期工程設計請參考 [TODO](../TODO.md)，不要以本文件較早的規劃文字判斷實作狀態。
+目前待辦、需求狀態與優先順序統一見 [Enhancement.md](../Enhancement.md)，驗收步驟與證據見 [驗收手冊](VALIDATION.zh-TW.md)。本文件保留 2026-09-20 的研究背景，以下階段、SRT、模型依賴與介面安排可能已被後續需求取代，不作為現況或另一份開發清單。
 
 ## 1. 目標與範圍
 

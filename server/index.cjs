@@ -19,6 +19,26 @@ const service = (name) => ({
   apiKey: process.env[`S2T_${name}_API_KEY`] || process.env[`S2T_WEB_${name}_API_KEY`] || ''
 })
 const asr = service('ASR')
+const configuredAsrProfiles = (() => {
+  const fallback = { id: 'default', name: asr.model || 'Environment ASR', ...asr }
+  const raw = process.env.S2T_WEB_ASR_MODELS_JSON || ''
+  if (!raw.trim()) return [fallback]
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return [fallback]
+    const profiles = parsed.flatMap((item) => {
+      if (!item || typeof item !== 'object') return []
+      const id = typeof item.id === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(item.id) ? item.id : ''
+      const endpoint = typeof item.endpoint === 'string' ? item.endpoint.trim() : ''
+      const model = typeof item.model === 'string' ? item.model.trim() : ''
+      const apiKey = typeof item.apiKey === 'string' ? item.apiKey.trim() : ''
+      if (!id || !endpoint || !model || !apiKey) return []
+      return [{ id, name: typeof item.name === 'string' && item.name.trim() ? item.name.trim().slice(0, 120) : model, endpoint, model, apiKey }]
+    })
+    return profiles.length ? profiles : [fallback]
+  } catch { return [fallback] }
+})()
+const asrProfileById = new Map(configuredAsrProfiles.map((profile) => [profile.id, profile]))
 const translation = service('TRANSLATION')
 const summary = service('SUMMARY')
 const diarization = service('DIARIZATION')
@@ -52,6 +72,7 @@ const publicService = (value, endpoint) => ({
   model: value.model,
   configured: Boolean(value.endpoint && value.model && value.apiKey)
 })
+const publicAsrProfile = (value) => ({ id: value.id, name: value.name, endpoint: '/api/transcriptions', model: value.model, configured: Boolean(value.endpoint && value.model && value.apiKey) })
 const completeText = async (value, messages) => {
   const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries: 1 })
   const result = await client.chat.completions.create({ model: value.model, temperature: 0.2, messages })
@@ -131,11 +152,12 @@ createServer(async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) response.setHeader('access-control-allow-origin', origin)
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-s2t-language, x-s2t-prompt, x-s2t-filename, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-s2t-language, x-s2t-model-id, x-s2t-prompt, x-s2t-filename, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent' }); return response.end() }
   const auth = await authReady
   if (await auth.handle(request, response, send)) return
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
     asr: publicService(asr, '/api/transcriptions'),
+    asrProfiles: configuredAsrProfiles.map(publicAsrProfile),
     translation: publicService(translation, '/api/translations'),
     summary: publicService(summary, '/api/summaries'),
     diarization: diarization.endpoint && diarization.model
@@ -249,13 +271,16 @@ createServer(async (request, response) => {
   }
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
     if (!acceptsRequest(request, 'transcriptions')) return send(response, 429, { error: 'Too many transcription requests. Try again in one minute.' })
-    if (!asr.endpoint || !asr.model || !asr.apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
+    const profileId = String(request.headers['x-s2t-model-id'] || 'default')
+    const selectedAsr = asrProfileById.get(profileId)
+    if (!selectedAsr) return send(response, 400, { error: 'The requested ASR model is not registered on this gateway.' })
+    if (!selectedAsr.endpoint || !selectedAsr.model || !selectedAsr.apiKey) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
     try {
       const audio = await readBody(request, maxAsrAudioBytes)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
-      const client = new OpenAI({ apiKey: asr.apiKey, baseURL: baseUrl(asr.endpoint), timeout: 20_000, maxRetries: 1 })
+      const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 1 })
       const result = await client.audio.transcriptions.create({
-        file: await toFile(audio, safeUploadFilename(request.headers['x-s2t-filename']), { type: safeAudioContentType(request.headers['content-type']) }), model: asr.model,
+        file: await toFile(audio, safeUploadFilename(request.headers['x-s2t-filename']), { type: safeAudioContentType(request.headers['content-type']) }), model: selectedAsr.model,
         ...(['zh', 'en', 'ja', 'de'].includes(String(request.headers['x-s2t-language'] || '')) ? { language: String(request.headers['x-s2t-language']) } : {}),
         ...(request.headers['x-s2t-prompt'] ? { prompt: String(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
       })

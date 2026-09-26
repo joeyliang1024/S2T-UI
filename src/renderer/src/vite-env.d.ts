@@ -1,7 +1,9 @@
 /// <reference types="vite/client" />
 
 declare global {
-  type EnvironmentModels = Partial<Record<'asr' | 'translation' | 'summary' | 'diarization', { endpoint: string; model: string; configured: boolean }>>
+  type EnvironmentModels = Partial<Record<'asr' | 'translation' | 'summary' | 'diarization', { endpoint: string; model: string; configured: boolean }>> & {
+    asrProfiles?: Array<{ id: string; name: string; endpoint: string; model: string; configured: boolean }>
+  }
   interface Window {
     s2t?: {
       getGatewayUrl: () => Promise<string>

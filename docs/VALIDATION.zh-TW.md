@@ -38,7 +38,7 @@ npm run dev
 - Electron：由 `npm run dev` 開啟的 S2T UI 視窗測試原生保存、safeStorage、浮動字幕與系統音訊。
 - Production Web：先執行 `npm run build`，再以 `npm run web:serve` 開啟 `http://127.0.0.1:8787/`。
 
-## P0：近即時字幕驗收
+## 近即時字幕驗收
 
 ### Web 與 Electron 共用步驟
 
@@ -60,7 +60,7 @@ npm run dev
 | 場景 | 預期結果 |
 | --- | --- |
 | 靜音 10 秒 | 音量條接近 -60 dBFS；不應持續產生空白 ASR 請求或字幕。 |
-| 一般說話 | 音量條立即反映；約 0.8–1.5 秒分段送 ASR，連續結果合併為最長約 10 秒字幕段。 |
+| 一般說話 | 音量條立即反映；目前約 1.0–2.4 秒分段送 ASR，連續結果可合併至約 12 秒字幕段；實測以當次設定與版本為準。 |
 | 500 ms 內短停頓 | 不應過度切碎字幕。 |
 | 500 ms 以上停頓 | VAD 可完成一段；後續語句應保留約 300 ms pre-roll。 |
 | 鍵盤聲／背景噪音 | 不應單靠短雜訊不斷送出空白片段。 |
@@ -73,7 +73,7 @@ npm run dev
 
 | 項目 | 現況 | 驗收條件 |
 | --- | --- | --- |
-| PCM16 WAV 持續寫入 | 已實作 | 錄製、停止、保存後可播放 WAV；TXT/SRT/JSON 可下載。 |
+| PCM16 WAV 持續寫入 | 已實作 | 錄製、停止、保存後可播放 WAV；TXT/VTT/JSON 可下載。 |
 | API key safeStorage | 已實作 | 在完整設定保存 key 後可收音；key 不顯示於設定檔。 |
 | 浮動字幕 | 已實作 | 開啟後顯示最新字幕；關閉可回到主視窗。 |
 | 系統音訊混入 | 已實作平台分流 | Windows 使用 Electron loopback；macOS 15+ 使用 system picker。若取消或無 audio track，麥克風 session 必須持續；實際 audio track 仍需逐平台驗收。 |
@@ -86,8 +86,8 @@ npm run dev
 | --- | --- |
 | 模型載入 | `Breeze-ASR-25` 自動出現在並選取於快速設定 ASR 下拉選單。 |
 | 模型 key | 瀏覽器 DevTools、localStorage、Vite bundle 與 `/api/config` 均不能看到 key。 |
-| BFF 限制 | `/api/transcriptions` 僅接受受允許 origin、每個分段最大 12 MB、每 IP 每分鐘最多 60 次。 |
-| 保存 | Web 使用瀏覽器下載與 IndexedDB 後備，沒有 Electron 原生資料夾保存功能。 |
+| BFF 限制 | `/api/transcriptions` 僅接受受允許 origin、單次上傳最大 100 MB、每 IP 每分鐘最多 60 次。 |
+| 保存 | Web 經登入保護的 gateway 保存工作階段與音檔，IndexedDB 作本機後備，另可下載；沒有 Electron 原生資料夾保存功能。 |
 | 系統音訊 | 依瀏覽器的 tab/screen share 支援情況；不等同 Electron loopback。 |
 
 ## 批次 WAV 轉錄驗收
@@ -95,14 +95,14 @@ npm run dev
 1. 在「匯入檔案」選擇超過 100 MB 的 PCM16 WAV。
 2. 按「開始批次轉錄」，確認顯示 `第 N / M 段` 進度；每段為 45 秒，與下一段保留 1.5 秒重疊。
 3. 完成後確認字幕時間軸連續、交界處沒有文字重複。
-4. 重新測試並按「取消批次轉錄」；目前請求可完成，但不得繼續送出下一段，已完成內容不得被覆蓋。
+4. 重新測試並按「取消批次轉錄」；Web 應中止當前請求；Electron 的當前請求取消另行驗證，兩端都不得繼續送出下一段，已完成內容不得被覆蓋。
 5. MP3、M4A、影片等非 WAV 檔仍應在 100 MB 以下走單次請求；大檔需先轉為 PCM16 WAV。
 
 ## 尚不可簽核的項目
 
 - Realtime WebSocket partial 字幕：等待自建 gateway 協定、認證與重連語義。
-- 翻譯可靠性：今天 ASR 驗收不設定翻譯 endpoint；翻譯錯誤不得阻擋原文字幕。
+- 翻譯可靠性：ASR 獨立驗收可不設定翻譯 endpoint；翻譯仍須另做真實服務驗收，翻譯錯誤不得阻擋原文字幕。
 - 60 分鐘穩定性、睡眠喚醒、低磁碟。
 - 自動說話者分離、批次大檔、MP3/M4A、打包簽署與 Windows 實機。
 
-未完成事項與驗收優先順序請見 [新版需求單](../新版需求單.md)；早期工程筆記見 [TODO](../TODO.md)，模型傳輸協定見 [MODEL_ADAPTER.md](MODEL_ADAPTER.md)。
+全部待辦、原始需求對照與唯一優先順序請見 [Enhancement.md](../Enhancement.md)；本文件只維護驗收操作與證據，模型傳輸協定見 [MODEL_ADAPTER.md](MODEL_ADAPTER.md)。

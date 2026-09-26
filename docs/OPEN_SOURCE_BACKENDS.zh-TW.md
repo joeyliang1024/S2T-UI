@@ -1,5 +1,7 @@
 # 語音處理技術參考與自有模型整合方案
 
+> 歷史設計參考：需求、候選方案與待驗收狀態已統一到 [Enhancement.md](../Enhancement.md)。下列不指定 sherpa／ONNX 的早期範圍，不代表目前可選 sherpa gateway 尚未實作。
+
 本文件取代先前的引擎採用方案。**使用者提供自己的模型；本 repo 參考 faster-whisper 與 sherpa-onnx 的語音處理思路，實作可對接自有模型的應用層。** 文件沿用原路徑，以維持既有連結有效。
 
 不指定這兩個套件、預訓練模型、Python、ONNX、CTranslate2、GPU 或部署位置。應用端已實作 WebSocket 傳輸、frame 序號、樣本位移、2 MB 背壓及字幕 revision；引擎特有功能不視為自有模型已支援的能力。

@@ -292,6 +292,15 @@ const voiceprintChunksRef = useRef<Float32Array[]>([])
 const segmentRerecordRef = useRef<{ entry: SavedSession; segment: TranscriptEvent; stream: MediaStream; context: AudioContext; source: MediaStreamAudioSourceNode; processor: ScriptProcessorNode; sink: GainNode; chunks: Float32Array[] } | null>(null)
 
 const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
+// Browser clients may select only an ID published by the gateway. Endpoint and
+// credentials remain server-side; this ID is the sole model-routing input.
+const webGatewayAsrProfileId = !window.s2t
+  ? selectedModel.id === 'web-environment-asr'
+    ? 'default'
+    : selectedModel.id.startsWith('web-gateway-asr-')
+      ? selectedModel.id.slice('web-gateway-asr-'.length)
+      : null
+  : null
 
 const refreshDevices = useCallback(async () => {
     const found = await navigator.mediaDevices.enumerateDevices()
@@ -592,16 +601,18 @@ useEffect(() => {
       if (canceled) return
       setSettings((previous) => {
         const current = normalizeSettings({ ...previous, ...saved })
-        const asrId = window.s2t ? 'environment-asr' : 'web-environment-asr'
         const translationId = window.s2t ? 'environment-translation' : 'web-environment-translation'
         const asr = config.asr
         const translation = config.translation
-        const profiles = current.modelProfiles.filter((profile) => !['environment-asr', 'web-environment-asr'].includes(profile.id))
-        if (asr?.endpoint && asr.model) profiles.unshift({ id: asrId, name: `${asr.model}（環境設定）`, endpoint: asr.endpoint, model: asr.model, kind: 'openai-http', capabilities: defaultHttpCapabilities })
+        const profiles = current.modelProfiles.filter((profile) => profile.id !== 'environment-asr' && profile.id !== 'web-environment-asr' && !profile.id.startsWith('web-gateway-asr-'))
+        const gatewayProfiles = window.s2t
+          ? asr?.endpoint && asr.model ? [{ id: 'environment-asr', name: `${asr.model}（環境設定）`, endpoint: asr.endpoint, model: asr.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }] : []
+          : (config.asrProfiles?.filter((profile) => profile.configured) ?? (asr?.endpoint && asr.model ? [{ id: 'default', name: asr.model, endpoint: asr.endpoint, model: asr.model, configured: true }] : [])).map((profile) => ({ id: profile.id === 'default' ? 'web-environment-asr' : `web-gateway-asr-${profile.id}`, name: profile.name, endpoint: profile.endpoint, model: profile.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }))
+        profiles.unshift(...gatewayProfiles)
         const translations = current.translationProfiles.filter((profile) => !['environment-translation', 'web-environment-translation'].includes(profile.id)).map((profile) => ({ ...profile, endpoint: textEndpoint(profile.endpoint) }))
         if (translation?.endpoint && translation.model) translations.push({ id: translationId, name: `${translation.model}（環境設定）`, endpoint: translation.endpoint, model: translation.model })
         // Load disk settings first, then apply explicit runtime environment values.
-        return { ...current, modelProfiles: profiles, selectedModelId: asr?.model ? asrId : profiles.some((profile) => profile.id === current.selectedModelId) ? current.selectedModelId : 'none',
+        return { ...current, modelProfiles: profiles, selectedModelId: gatewayProfiles.some((profile) => profile.id === current.selectedModelId) ? current.selectedModelId : gatewayProfiles[0]?.id ?? (profiles.some((profile) => profile.id === current.selectedModelId) ? current.selectedModelId : 'none'),
           translationProfiles: translations, selectedTranslationModelId: translation?.model ? translationId : current.selectedTranslationModelId,
           translationEndpoint: translation?.endpoint || textEndpoint(current.translationEndpoint), translationModel: translation?.model || current.translationModel,
           summaryEndpoint: config.summary?.endpoint || textEndpoint(current.summaryEndpoint), summaryModel: config.summary?.model || current.summaryModel,
@@ -781,7 +792,7 @@ const selectSystemAudio = async (enabled: boolean): Promise<void> => {
 
 const startCapture = async (): Promise<void> => {
     if (captureState !== 'idle' || (selectedDeviceId === 'none' && !includeSystemAudio)) return
-    if (!window.s2t && selectedModel.id !== 'web-environment-asr') {
+    if (!window.s2t && !webGatewayAsrProfileId) {
       setStatus(interfaceTranslate(settings.uiLanguage, 'webGatewayModelRequired'))
       return
     }
@@ -807,7 +818,7 @@ const startCapture = async (): Promise<void> => {
       unsubscribeModelRef.current?.()
       unsubscribeModelErrorRef.current?.()
       modelRef.current = selectedModel.kind === 'openai-http'
-        ? new OpenAiChunkedModelAdapter({ ...selectedModel, prompt: settings.glossary.trim() || undefined, vadConfig: settings.vadConfig })
+        ? new OpenAiChunkedModelAdapter({ ...selectedModel, gatewayProfileId: webGatewayAsrProfileId ?? undefined, prompt: settings.glossary.trim() || undefined, vadConfig: settings.vadConfig })
         : selectedModel.endpoint.trim()
           ? new WebSocketModelAdapter(selectedModel.endpoint.trim())
           : new NoopModelAdapter()
@@ -1298,7 +1309,7 @@ const transcribeImportedFile = async (): Promise<void> => {
       setImportError('請先選擇檔案，並在設定中選擇 OpenAI 相容 ASR 模型。')
       return
     }
-    if (!window.s2t && selectedModel.id !== 'web-environment-asr') {
+    if (!window.s2t && !webGatewayAsrProfileId) {
       setImportError(interfaceTranslate(settings.uiLanguage, 'webGatewayModelRequired'))
       return
     }
@@ -1339,6 +1350,7 @@ const transcribeImportedFile = async (): Promise<void> => {
             }) : await authFetch('/api/transcriptions', { method: 'POST', headers: {
               'content-type': isWav ? 'audio/wav' : (importedFile.type || 'application/octet-stream'),
               'x-s2t-filename': isWav ? `batch-${index + 1}.wav` : importedFile.name,
+              ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}),
               ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}),
               ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {})
             }, body: chunk.audio, signal: (importAbortRef.current = new AbortController()).signal }).then(async (result) => {
@@ -1436,7 +1448,7 @@ const replaceSessionSegmentAudio = async (entry: SavedSession, segment: Transcri
         try {
           const result = window.s2t
             ? await window.s2t.transcribeAudioChunk({ profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model, language: asrLanguage(settings.sourceLanguage), requiresApiKey: selectedModel.requiresApiKey !== false, prompt: settings.glossary || undefined, filename: 'segment-rerecord.wav', contentType: 'audio/wav', audio: await replacement.arrayBuffer() })
-            : await readJsonResponse<{ text?: string }>(await authFetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {}) }, body: replacement }), '重講 ASR')
+            : await readJsonResponse<{ text?: string }>(await authFetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}), ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {}) }, body: replacement }), '重講 ASR')
           const sourceText = result.text?.trim()
           if (sourceText) {
             updateSavedTranscript(entry.id, segment.id, { sourceText })
