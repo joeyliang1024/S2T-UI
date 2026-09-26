@@ -268,7 +268,15 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   registeredVoiceprints: { 'zh-TW': '已註冊聲紋', 'zh-CN': '已注册声纹', en: 'Registered voiceprints', ja: '登録済みの声紋', de: 'Registrierte Stimmabdrücke' },
   remove: { 'zh-TW': '刪除', 'zh-CN': '删除', en: 'Delete', ja: '削除', de: 'Löschen' },
   noVoiceprints: { 'zh-TW': '尚未註冊聲紋。錄製或上傳樣本後即可建立。', 'zh-CN': '尚未注册声纹。录制或上传样本后即可建立。', en: 'No voiceprints are registered yet. Record or upload a sample to create one.', ja: '声紋はまだ登録されていません。録音またはサンプルのアップロードで作成できます。', de: 'Noch keine Stimmabdrücke registriert. Nehmen Sie ein Muster auf oder laden Sie eines hoch.' },
-  webGatewayModelRequired: { 'zh-TW': 'Web 版只能使用 gateway 受控的 ASR 模型；請由伺服器設定模型後重新載入。', 'zh-CN': 'Web 版只能使用 gateway 受控的 ASR 模型；请由服务器设置模型后重新加载。', en: 'The web app can only use the gateway-managed ASR model. Configure it on the server, then reload.', ja: 'Web 版では gateway 管理の ASR モデルのみ使用できます。サーバーで設定してから再読み込みしてください。', de: 'Die Web-App kann nur das vom Gateway verwaltete ASR-Modell verwenden. Konfigurieren Sie es auf dem Server und laden Sie dann neu.' }
+  webGatewayModelRequired: { 'zh-TW': 'Web 版只能使用 gateway 受控的 ASR 模型；請由伺服器設定模型後重新載入。', 'zh-CN': 'Web 版只能使用 gateway 受控的 ASR 模型；请由服务器设置模型后重新加载。', en: 'The web app can only use the gateway-managed ASR model. Configure it on the server, then reload.', ja: 'Web 版では gateway 管理の ASR モデルのみ使用できます。サーバーで設定してから再読み込みしてください。', de: 'Die Web-App kann nur das vom Gateway verwaltete ASR-Modell verwenden. Konfigurieren Sie es auf dem Server und laden Sie dann neu.' },
+  nonStreaming: { 'zh-TW': '非串流（分段）', 'zh-CN': '非流式（分段）', en: 'Non-streaming (chunked)', ja: '非ストリーミング（分割）', de: 'Nicht streamend (Abschnitte)' },
+  streaming: { 'zh-TW': '原生串流', 'zh-CN': '原生流式', en: 'Native streaming', ja: 'ネイティブストリーミング', de: 'Natives Streaming' },
+  appVad: { 'zh-TW': 'App VAD', 'zh-CN': 'App VAD', en: 'App VAD', ja: 'App VAD', de: 'App-VAD' },
+  serverVad: { 'zh-TW': '模型／Gateway VAD', 'zh-CN': '模型／Gateway VAD', en: 'Model / gateway VAD', ja: 'モデル／Gateway VAD', de: 'Modell-/Gateway-VAD' },
+  chunkBoundary: { 'zh-TW': 'Chunk 邊界', 'zh-CN': 'Chunk 边界', en: 'Chunk boundary', ja: 'チャンク境界', de: 'Abschnittsgrenze' },
+  segmentTimestamp: { 'zh-TW': 'Segment', 'zh-CN': 'Segment', en: 'Segment', ja: 'セグメント', de: 'Segment' },
+  wordTimestamp: { 'zh-TW': 'Word', 'zh-CN': 'Word', en: 'Word', ja: '単語', de: 'Wort' },
+  sampleRateCapabilityHint: { 'zh-TW': '未填寫能力時，App 會使用裝置原生取樣率，不會假定服務支援特定格式。', 'zh-CN': '未填写能力时，App 会使用设备原生采样率，不会假定服务支持特定格式。', en: 'When capabilities are not specified, the app keeps the device-native sample rate and does not assume the service supports a particular format.', ja: '機能が未指定の場合、アプリはデバイス本来のサンプルレートを使用し、サービスが特定形式をサポートすると仮定しません。', de: 'Ohne deklarierte Fähigkeiten verwendet die App die native Abtastrate des Geräts und nimmt keine Unterstützung bestimmter Formate an.' }
 }
 
 export const interfaceTranslate = (language: UiLanguage, key: keyof typeof interfaceMessages): string => interfaceMessages[key][language]
