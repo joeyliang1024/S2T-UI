@@ -5,7 +5,7 @@ name: s2t-local-storage
 # to the browser.  Start the Milvus profile only for voiceprint verification.
 services:
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: ${S2T_MINIO_ACCESS_KEY:-s2t-local-minio}
@@ -54,6 +54,8 @@ services:
     environment:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: ${S2T_MINIO_ACCESS_KEY:-s2t-local-minio}
+      MINIO_SECRET_ACCESS_KEY: ${S2T_MINIO_SECRET_KEY:-s2t-local-minio-secret}
     depends_on:
       - minio
       - etcd
