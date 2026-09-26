@@ -118,6 +118,16 @@ const openAiBaseUrl = (endpoint: string): string => {
   url.pathname = url.pathname.replace(/\/audio\/transcriptions\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
 }
+
+const normalizeDetectedLanguage = (value: unknown): 'zh-TW' | 'en-US' | 'ja-JP' | 'de-DE' | undefined => {
+  if (typeof value !== 'string') return undefined
+  const language = value.toLowerCase()
+  if (language.startsWith('zh')) return 'zh-TW'
+  if (language.startsWith('en')) return 'en-US'
+  if (language.startsWith('ja')) return 'ja-JP'
+  if (language.startsWith('de')) return 'de-DE'
+  return undefined
+}
 const openAiChatBaseUrl = (endpoint: string): string => {
   const url = new URL(endpoint)
   url.pathname = url.pathname.replace(/\/(audio\/transcriptions|chat\/completions|responses)\/?$/, '').replace(/\/$/, '')
@@ -133,8 +143,8 @@ const environmentKey = (profileId: string): string | undefined => {
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; requiresApiKey?: boolean; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages: string[]; supportedSampleRates: number[] } }
 type StoredModelConfig = {
   theme: 'system' | 'light' | 'dark'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
-  translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; glossary: string
-  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
+  translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; glossary: string
+  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number; chunkMinMs: number; chunkMaxMs: number }
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
 const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
@@ -176,10 +186,10 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
   const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum: number): number => typeof value === 'number' && Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback
   return {
     theme: input.theme === 'light' || input.theme === 'dark' ? input.theme : 'system', storageLocation: input.storageLocation === 'remote' ? 'remote' : 'local', sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
-    selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' ? 'manual' : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),
+    selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' || input.translationLoadStrategy === 'throttled' ? input.translationLoadStrategy : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), translationProfiles, selectedTranslationModelId: shortText(input.selectedTranslationModelId, 100), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
     summaryModel: shortText(input.summaryModel, 200), summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), glossary: shortText(input.glossary, 20_000),
-    vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30) }
+    vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30), chunkMinMs: boundedNumber(vadInput.chunkMinMs, 1_000, 300, 3_000), chunkMaxMs: boundedNumber(vadInput.chunkMaxMs, 2_400, 800, 6_000) }
   }
 }
 
@@ -324,12 +334,12 @@ app.whenReady().then(() => {
         if (input.language) form.set('language', input.language)
         if (input.prompt?.trim()) form.set('prompt', input.prompt.trim())
         const response = await fetch(new URL('audio/transcriptions', `${baseURL}/`), { method: 'POST', body: form, signal: AbortSignal.timeout(20_000) })
-        const payload = await response.json().catch(() => ({})) as { text?: unknown; error?: { message?: unknown } | unknown }
+        const payload = await response.json().catch(() => ({})) as { text?: unknown; language?: unknown; error?: { message?: unknown } | unknown }
         if (!response.ok) {
           const message = typeof payload.error === 'object' && payload.error && 'message' in payload.error && typeof payload.error.message === 'string' ? payload.error.message : `HTTP ${response.status}`
           throw new Error(message)
         }
-        return { text: typeof payload.text === 'string' ? payload.text : '' }
+        return { text: typeof payload.text === 'string' ? payload.text : '', detectedLanguage: normalizeDetectedLanguage(payload.language) }
       }
       const client = new OpenAI({ apiKey, baseURL, timeout: 20_000, maxRetries: 1 })
       const result = await client.audio.transcriptions.create({
@@ -338,7 +348,7 @@ app.whenReady().then(() => {
         ...(input.language ? { language: input.language } : {}),
         ...(input.prompt?.trim() ? { prompt: input.prompt.trim() } : {})
       })
-      return { text: result.text ?? '' }
+      return { text: result.text ?? '', detectedLanguage: normalizeDetectedLanguage((result as { language?: unknown }).language) }
     } catch (error) {
       throw new Error(error instanceof Error ? `模型轉錄失敗：${error.message}` : '模型轉錄失敗')
     }

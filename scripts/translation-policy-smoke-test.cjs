@@ -7,7 +7,7 @@ const loaded = new LoadedModule('translation-policy-smoke-module')
 loaded.filename = 'translation-policy-smoke-module.cjs'
 loaded.paths = module.paths
 loaded._compile(result.outputFiles[0].text, loaded.filename)
-const { canMergeHttpCaption, shouldAutoTranslate, maximumSentenceWaitMs } = loaded.exports
+const { canMergeHttpCaption, shouldAutoTranslate, maximumSentenceWaitMs, resolveTranslationTarget, shouldSkipTranslation } = loaded.exports
 
 const caption = (update = {}) => ({ id: 'http-one', revision: 0, status: 'final', startMs: 0, endMs: 600, sourceText: 'hello', ...update })
 assert.equal(canMergeHttpCaption(caption(), caption({ id: 'http-two', startMs: 650, endMs: 1200 }), -1), true)
@@ -18,4 +18,8 @@ assert.equal(shouldAutoTranslate(caption(), 'sentence', 700), false)
 assert.equal(shouldAutoTranslate(caption({ sourceText: 'hello.' }), 'sentence', 700), true)
 assert.equal(shouldAutoTranslate(caption(), 'sentence', 600 + maximumSentenceWaitMs), true)
 assert.equal(shouldAutoTranslate(caption({ translationStatus: 'failed' }), 'realtime', 700), false)
+assert.equal(resolveTranslationTarget('zh-TW', 'auto'), 'en')
+assert.equal(resolveTranslationTarget('de-DE', 'auto'), 'zh-TW')
+assert.equal(shouldSkipTranslation('en-US', 'en'), true)
+assert.equal(shouldSkipTranslation('ja-JP', 'zh-TW'), false)
 console.log('Translation policy smoke test passed.')

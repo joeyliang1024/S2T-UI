@@ -2,6 +2,35 @@ import type { TranscriptEvent } from '../models/model-adapter'
 
 export type SpeakerTurn = { startMs: number; endMs: number; speaker: string }
 
+const overlap = (left: SpeakerTurn, right: SpeakerTurn): number => Math.max(0, Math.min(left.endMs, right.endMs) - Math.max(left.startMs, right.startMs))
+
+/**
+ * Offline diarizers often restart anonymous numbering for every sliding
+ * window. Carry the label from the prior window only where the same raw label
+ * has a real temporal overlap. Recognized NT labels are already stable.
+ */
+export const stabilizeSpeakerTurns = (previous: SpeakerTurn[], incoming: SpeakerTurn[]): SpeakerTurn[] => {
+  const stableByIncoming = new Map<string, { speaker: string; amount: number }>()
+  for (const next of incoming) {
+    for (const prior of previous) {
+      const amount = overlap(next, prior)
+      if (!amount) continue
+      const known = stableByIncoming.get(next.speaker)
+      if (!known || amount > known.amount) stableByIncoming.set(next.speaker, { speaker: prior.speaker, amount })
+    }
+  }
+  const allocated = new Map<string, string>()
+  let nextAnonymous = previous.reduce((maximum, turn) => Math.max(maximum, Number(/^SPEAKER_(\d+)$/.exec(turn.speaker)?.[1]) || -1), -1) + 1
+  return incoming.map((turn) => {
+    if (!/^SPEAKER_\d+$/.test(turn.speaker)) return turn
+    const stable = stableByIncoming.get(turn.speaker)?.speaker
+    if (stable) return { ...turn, speaker: stable }
+    const allocatedName = allocated.get(turn.speaker) ?? `SPEAKER_${String(nextAnonymous++).padStart(2, '0')}`
+    allocated.set(turn.speaker, allocatedName)
+    return { ...turn, speaker: allocatedName }
+  })
+}
+
 /**
  * Assign each ASR segment the diarization speaker with the greatest temporal
  * overlap. This mirrors the reconciliation step used by diarization pipelines:

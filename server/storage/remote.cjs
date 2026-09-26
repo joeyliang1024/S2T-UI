@@ -52,6 +52,7 @@ class PostgresConfigStore {
       );
       CREATE INDEX IF NOT EXISTS s2t_config_records_scope_index ON s2t_config_records(scope);
       CREATE INDEX IF NOT EXISTS s2t_voiceprint_records_user_index ON s2t_voiceprint_records(user_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS s2t_users_nt_unique_index ON s2t_users (lower(nt));
       ALTER TABLE s2t_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
       ALTER TABLE s2t_voiceprint_records ADD COLUMN IF NOT EXISTS sharing_scope TEXT NOT NULL DEFAULT 'private';
     `)

@@ -10,7 +10,8 @@ export type View = 'live' | 'history' | 'summary' | 'import' | 'models' | 'voice
 export type SummaryTemplate = { id: string; name: string; content: string }
 
 /** An immutable audio asset retained for a session. The active version is used for playback and export. */
-export type AudioVersion = { id: string; audioKey: string; createdAt: string; label: string; parentId?: string; replacedSegmentId?: string }
+/** Audio and its matching caption snapshot are selected as one version. */
+export type AudioVersion = { id: string; audioKey: string; createdAt: string; label: string; parentId?: string; replacedSegmentId?: string; segments?: TranscriptEvent[]; transcript?: string }
 
 export type SavedSession = {
   id: string
@@ -31,6 +32,8 @@ export type SavedSession = {
   summary?: string
   /** Deterministic signature of the transcript used when this summary was generated. */
   summarySourceSignature?: string
+  /** Audio/caption version whose transcript was used to create the summary. */
+  summarySourceVersionId?: string
 }
 
 export type Settings = {
@@ -39,10 +42,11 @@ export type Settings = {
   /** Electron writes the selected destination by default; reads always merge both. */
   storageLocation: 'local' | 'remote'
   sourceLanguage: string
+  /** auto chooses English for Chinese and Traditional Chinese for other supported inputs. */
   targetLanguage: string
   translationEnabled: boolean
   translationStrategy: 'realtime' | 'sentence'
-  translationLoadStrategy: 'automatic' | 'manual'
+  translationLoadStrategy: 'automatic' | 'throttled' | 'manual'
   modelProfiles: ModelProfile[]
   selectedModelId: string
   translationEndpoint: string
@@ -58,6 +62,7 @@ export type Settings = {
   summaryIncludeTranslation: boolean
   diarizationEndpoint: string
   diarizationModel: string
+  diarizationPreviewEnabled: boolean
   glossary: string
   denoiseEnabled: boolean
   vadConfig: VadConfig

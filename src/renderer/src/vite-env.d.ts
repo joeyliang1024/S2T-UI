@@ -14,7 +14,7 @@ declare global {
       getEnvironmentModels: () => Promise<EnvironmentModels>
       loadModelConfig: () => Promise<Partial<SettingsConfig> | null>
       saveModelConfig: (config: SettingsConfig) => Promise<{ saved: boolean }>
-      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string }>
+      transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string; detectedLanguage?: 'zh-TW' | 'en-US' | 'ja-JP' | 'de-DE' }>
       completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
       diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => Promise<unknown>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
@@ -43,7 +43,7 @@ interface SettingsConfig {
   targetLanguage: string
   translationEnabled: boolean
   translationStrategy: 'realtime' | 'sentence'
-  translationLoadStrategy: 'automatic' | 'manual'
+  translationLoadStrategy: 'automatic' | 'throttled' | 'manual'
   modelProfiles: Array<{ id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages?: string[]; supportedSampleRates?: number[] } }>
   selectedModelId: string
   translationEndpoint: string
@@ -60,7 +60,7 @@ interface SettingsConfig {
   diarizationEndpoint: string
   diarizationModel: string
   glossary: string
-  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number }
+  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number; chunkMinMs: number; chunkMaxMs: number }
 }
 
 export {}

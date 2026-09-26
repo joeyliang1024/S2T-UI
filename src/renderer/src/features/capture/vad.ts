@@ -10,13 +10,18 @@ export type VadConfig = {
   minSilenceMs: number
   preRollMs: number
   noiseFloorOffsetDb: number
+  /** Lower and upper limits for each HTTP ASR request. */
+  chunkMinMs: number
+  chunkMaxMs: number
 }
 
 export const defaultVadConfig: VadConfig = {
   minSpeechMs: 120,
   minSilenceMs: 500,
   preRollMs: 300,
-  noiseFloorOffsetDb: 12
+  noiseFloorOffsetDb: 12,
+  chunkMinMs: 1_000,
+  chunkMaxMs: 2_400
 }
 
 /**

@@ -32,6 +32,7 @@ export const defaultSummaryTemplate = '# 會議摘要\n\n## 重點\n\n## 決策\
 
 export const supportedSourceLanguages = ['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-DE'] as const
 export const supportedTargetLanguages = ['zh-TW', 'en', 'ja', 'de'] as const
+export const supportedTranslationTargetLanguages = ['auto', ...supportedTargetLanguages] as const
 
 export const languageName = (value: string): string => ({ auto: '自動偵測', 'zh-TW': '繁體中文', 'en-US': '英文', en: '英文', 'ja-JP': '日文', ja: '日文', 'de-DE': '德文', de: '德文' }[value] ?? value)
 
@@ -52,10 +53,10 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   uiLanguage: supportedUiLanguages.includes(value.uiLanguage as typeof supportedUiLanguages[number]) ? value.uiLanguage! : 'zh-TW',
   storageLocation: value.storageLocation === 'remote' ? 'remote' : 'local',
   sourceLanguage: supportedSourceLanguages.includes(value.sourceLanguage as typeof supportedSourceLanguages[number]) ? value.sourceLanguage! : 'zh-TW',
-  targetLanguage: supportedTargetLanguages.includes(value.targetLanguage as typeof supportedTargetLanguages[number]) ? value.targetLanguage! : 'en',
+  targetLanguage: supportedTranslationTargetLanguages.includes(value.targetLanguage as typeof supportedTranslationTargetLanguages[number]) ? value.targetLanguage! : 'en',
   translationEnabled: value.translationEnabled ?? true,
   translationStrategy: value.translationStrategy === 'sentence' ? 'sentence' : 'realtime',
-  translationLoadStrategy: value.translationLoadStrategy === 'manual' ? 'manual' : 'automatic',
+  translationLoadStrategy: value.translationLoadStrategy === 'manual' || value.translationLoadStrategy === 'throttled' ? value.translationLoadStrategy : 'automatic',
   modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => { const fallback = profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities; return { ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', requiresApiKey: profile.requiresApiKey !== false, capabilities: { ...fallback, ...profile.capabilities } } }) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
   selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
   translationEndpoint: value.translationEndpoint ?? '',
@@ -71,6 +72,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   summaryIncludeTranslation: value.summaryIncludeTranslation === true,
   diarizationEndpoint: value.diarizationEndpoint ?? '',
   diarizationModel: value.diarizationModel ?? '',
+  diarizationPreviewEnabled: value.diarizationPreviewEnabled !== false,
   glossary: value.glossary ?? '',
   denoiseEnabled: value.denoiseEnabled !== false,
   vadConfig: { ...defaultVadConfig, ...value.vadConfig }

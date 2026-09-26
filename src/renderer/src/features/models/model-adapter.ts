@@ -201,7 +201,7 @@ const wavFromFloat32 = (samples: Float32Array, sampleRate: number): ArrayBuffer 
   return buffer
 }
 
-const readGatewayPayload = async (response: Response): Promise<{ text?: string; error?: string }> => {
+const readGatewayPayload = async (response: Response): Promise<{ text?: string; error?: string; detectedLanguage?: string }> => {
   const body = await response.text()
   if (!body.trim()) throw new Error(`Web ASR gateway 沒有回傳資料（HTTP ${response.status}）。請確認本機 gateway 是否已啟動。`)
   try { return JSON.parse(body) as { text?: string; error?: string } } catch { throw new Error(`Web ASR gateway 回傳非 JSON 資料（HTTP ${response.status}）。`) }
@@ -262,8 +262,10 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingSamples += chunk.length
     // Request/response Whisper-like models are less stable on sub-second clips.
     // Keep ASR latency bounded while preferring natural VAD sentence boundaries.
-    const maximumChunkSamples = Math.floor(this.sampleRate * 2.4)
-    const minimumChunkSamples = Math.floor(this.sampleRate * 1.0)
+    const configuredMinimum = this.vadConfig?.chunkMinMs ?? 1_000
+    const configuredMaximum = this.vadConfig?.chunkMaxMs ?? 2_400
+    const minimumChunkSamples = Math.floor(this.sampleRate * Math.min(configuredMinimum, configuredMaximum) / 1000)
+    const maximumChunkSamples = Math.floor(this.sampleRate * Math.max(configuredMinimum, configuredMaximum, 200) / 1000)
     this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || vadFrame?.speaking)
     const reachedNaturalBoundary = this.pendingSamples >= minimumChunkSamples && Boolean(vadFrame?.speechEnded)
     // Keep 300 ms of room tone before a voice onset, but avoid sending empty
@@ -328,7 +330,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const response = await this.transcribeWithRetry(wav)
       const sourceText = response.text.trim()
       if (!sourceText) return
-      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, isSentenceBoundary }
+      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary }
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
       this.emitError(error instanceof Error ? error.message : '模型轉錄失敗')
@@ -341,7 +343,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.listeners.forEach((listener) => listener(event))
   }
 
-  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string }> {
+  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
     const delays = [0, 250, 750, 1750]
     let lastError: unknown
     for (const delay of delays) {
@@ -395,7 +397,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingStart += discarded
   }
 
-  private async transcribeThroughWebGateway(audio: ArrayBuffer): Promise<{ text: string }> {
+  private async transcribeThroughWebGateway(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
     const response = await fetch('/api/transcriptions', {
       method: 'POST',
       headers: {
@@ -408,6 +410,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     })
     const payload = await readGatewayPayload(response)
     if (!response.ok) throw new Error(payload.error || `Web ASR gateway failed (${response.status})`)
-    return { text: payload.text || '' }
+    const detectedLanguage = payload.detectedLanguage === 'zh-TW' || payload.detectedLanguage === 'en-US' || payload.detectedLanguage === 'ja-JP' || payload.detectedLanguage === 'de-DE' ? payload.detectedLanguage : undefined
+    return { text: payload.text || '', detectedLanguage }
   }
 }

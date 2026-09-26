@@ -73,6 +73,15 @@ const publicService = (value, endpoint) => ({
   configured: Boolean(value.endpoint && value.model && value.apiKey)
 })
 const publicAsrProfile = (value) => ({ id: value.id, name: value.name, endpoint: '/api/transcriptions', model: value.model, configured: Boolean(value.endpoint && value.model && value.apiKey) })
+const normalizeDetectedLanguage = (value) => {
+  if (typeof value !== 'string') return undefined
+  const language = value.toLowerCase()
+  if (language.startsWith('zh')) return 'zh-TW'
+  if (language.startsWith('en')) return 'en-US'
+  if (language.startsWith('ja')) return 'ja-JP'
+  if (language.startsWith('de')) return 'de-DE'
+  return undefined
+}
 const completeText = async (value, messages) => {
   const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries: 1 })
   const result = await client.chat.completions.create({ model: value.model, temperature: 0.2, messages })
@@ -119,6 +128,29 @@ const visibleVoiceprintIds = async (user) => {
   const metadata = voiceprintEmbeddingMetadata()
   if (typeof storage.config.findVisibleVoiceprintIds === 'function') return storage.config.findVisibleVoiceprintIds({ userId: user.id, department: user.Department, embeddingModel: metadata.model, embeddingVersion: metadata.version })
   return ownVoiceprintIds(user)
+}
+const diarizationTurns = (payload) => {
+  if (!payload || typeof payload !== 'object') return []
+  const values = payload.exclusive_diarization ?? payload.segments ?? payload.diarization ?? []
+  if (!Array.isArray(values)) return []
+  return values.flatMap((item) => {
+    if (!item || typeof item !== 'object' || typeof item.speaker !== 'string') return []
+    const start = typeof item.start === 'number' ? item.start : typeof item.start_ms === 'number' ? item.start_ms / 1000 : NaN
+    const end = typeof item.end === 'number' ? item.end : typeof item.end_ms === 'number' ? item.end_ms / 1000 : NaN
+    return Number.isFinite(start) && Number.isFinite(end) && end > start ? [{ start, end, speaker: item.speaker.trim() }] : []
+  })
+}
+const labelDiarizationTurns = async (user, audio, turns) => {
+  const recognized = new Map()
+  const allowedVoiceprintIds = await visibleVoiceprintIds(user)
+  for (const item of extractDiarizedSpeakerEmbeddings(audio, turns)) {
+    const candidate = (await storage.vector.nearest(item.embedding, 1, allowedVoiceprintIds))[0]
+    if (candidate?.score >= voiceprintThreshold) recognized.set(item.speaker, candidate)
+  }
+  return turns.map((turn) => {
+    const match = recognized.get(turn.speaker)
+    return match ? { ...turn, speaker: match.NT, Department: match.Department, matchScore: match.score } : turn
+  })
 }
 const staticFile = async (request, response) => {
   const urlPath = new URL(request.url, 'http://localhost').pathname
@@ -205,6 +237,25 @@ createServer(async (request, response) => {
       return send(response, 200, { saved: true, version: saved.version, updatedAt: saved.updatedAt ?? null })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存術語' }) }
   }
+  if (storagePath === '/api/data/summary-templates' && (request.method === 'GET' || request.method === 'POST')) {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    try {
+      if (request.method === 'GET') {
+        const stored = await storage.config.get(user.id, 'summary-templates')
+        return send(response, 200, stored && Array.isArray(stored.templates) && Number.isSafeInteger(stored.version) ? stored : { templates: [], selectedTemplateId: null, version: 0 })
+      }
+      const body = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
+      if (!Array.isArray(body.templates) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'templates 與 version 必須有效' })
+      const templates = body.templates.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.id.trim() && template.name.trim() && template.content.trim()
+        ? [{ id: template.id.trim().slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000) }] : [])
+      if (!templates.length || templates.length > 100) return send(response, 400, { error: '至少需保留一個有效模板，且最多 100 個' })
+      const selectedTemplateId = templates.some((template) => template.id === body.selectedTemplateId) ? body.selectedTemplateId : templates[0].id
+      const value = { templates, selectedTemplateId, version: body.version + 1 }
+      if (!await storage.config.compareAndSwap(user.id, 'summary-templates', body.version, value)) return send(response, 409, { error: '摘要模板已被其他視窗更新；請重新載入後再儲存。' })
+      return send(response, 200, { saved: true, version: value.version })
+    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存摘要模板' }) }
+  }
   const audioMatch = storagePath.match(/^\/api\/data\/audio\/([A-Za-z0-9._-]{1,160})$/)
   if (audioMatch && ['GET', 'POST', 'DELETE'].includes(request.method || '')) {
     const user = await auth.requireUser(request)
@@ -284,7 +335,7 @@ createServer(async (request, response) => {
         ...(['zh', 'en', 'ja', 'de'].includes(String(request.headers['x-s2t-language'] || '')) ? { language: String(request.headers['x-s2t-language']) } : {}),
         ...(request.headers['x-s2t-prompt'] ? { prompt: String(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
       })
-      return send(response, 200, { text: result.text || '' })
+      return send(response, 200, { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
     }
@@ -335,19 +386,15 @@ createServer(async (request, response) => {
         const remote = await fetch(diarization.endpoint, { method: 'POST', headers: { authorization: `Bearer ${diarization.apiKey}` }, body: form, signal: AbortSignal.timeout(120_000) })
         const body = await remote.text()
         if (!remote.ok) return send(response, remote.status, { error: body || `HTTP ${remote.status}` })
-        return send(response, 200, body)
+        let payload
+        try { payload = JSON.parse(body) } catch { return send(response, 502, { error: '講者分離服務回傳的格式不是 JSON' }) }
+        const turns = diarizationTurns(payload)
+        if (!turns.length) return send(response, 200, payload)
+        const labeledTurns = await labelDiarizationTurns(user, audio, turns)
+        return send(response, 200, { ...payload, exclusive_diarization: labeledTurns })
       }
       const segments = diarizeWav(audio)
-      const recognized = new Map()
-      const allowedVoiceprintIds = await visibleVoiceprintIds(user)
-      for (const item of extractDiarizedSpeakerEmbeddings(audio, segments)) {
-        const candidate = (await storage.vector.nearest(item.embedding, 1, allowedVoiceprintIds))[0]
-        if (candidate?.score >= voiceprintThreshold) recognized.set(item.speaker, candidate)
-      }
-      const labeledSegments = segments.map((segment) => {
-        const match = recognized.get(segment.speaker)
-        return match ? { ...segment, speaker: match.NT, Department: match.Department, matchScore: match.score } : segment
-      })
+      const labeledSegments = await labelDiarizationTurns(user, audio, segments)
       return send(response, 200, { model: 'sherpa-onnx-speaker-diarization', threshold: voiceprintThreshold, exclusive_diarization: labeledSegments })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'Speaker diarization failed' })

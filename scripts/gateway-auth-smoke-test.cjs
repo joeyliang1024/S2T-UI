@@ -16,7 +16,10 @@ const main = async () => {
   const base = `http://127.0.0.1:${port}`
   const child = spawn(process.execPath, ['server/index.cjs'], {
     cwd: join(__dirname, '..'),
-    env: { ...process.env, S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '' },
+    // Keep this test independent from a developer's remote-storage .env.
+    // dotenv does not override already-defined empty values, so the gateway
+    // reliably selects the local adapters used by this isolated smoke test.
+    env: { ...process.env, S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let output = ''
@@ -30,8 +33,8 @@ const main = async () => {
       })
       child.once('exit', (code) => { clearTimeout(timer); reject(new Error(`gateway exited (${code}): ${output}`)) })
     })
-    for (const path of ['/api/data/sessions', '/api/voiceprints', '/api/voiceprints/identify', '/api/diarizations']) {
-      const { response } = await request(base, path, path === '/api/data/sessions' || path === '/api/voiceprints' ? {} : { method: 'POST', body: Buffer.from('x') })
+    for (const path of ['/api/data/sessions', '/api/data/summary-templates', '/api/voiceprints', '/api/voiceprints/identify', '/api/diarizations']) {
+      const { response } = await request(base, path, path === '/api/data/sessions' || path === '/api/data/summary-templates' || path === '/api/voiceprints' ? {} : { method: 'POST', body: Buffer.from('x') })
       assert.equal(response.status, 401, `${path} must require authentication`)
     }
     for (const origin of ['http://127.0.0.1:5173', 'null']) {
@@ -48,11 +51,21 @@ const main = async () => {
     }
     const alice = await register('alice', 'Alice', 'Engineering')
     const bob = await register('bob', 'Bob', 'Sales')
+    let result = await request(base, '/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'duplicate-nt', password: 'smoke-password', NT: 'alice', Department: 'Other' }) })
+    assert.equal(result.response.status, 409)
+    assert.equal(result.body.error, 'NT 已存在')
     const bearer = (token) => ({ authorization: `Bearer ${token}` })
-    let result = await request(base, '/api/data/sessions', { method: 'POST', headers: { ...bearer(alice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, sessions: [{ id: 'alice-session', title: 'Alice only' }] }) })
+    result = await request(base, '/api/data/sessions', { method: 'POST', headers: { ...bearer(alice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, sessions: [{ id: 'alice-session', title: 'Alice only' }] }) })
     assert.equal(result.response.status, 200)
     result = await request(base, '/api/data/sessions', { headers: bearer(bob) })
     assert.deepEqual(result.body, { sessions: [], version: 0 })
+    const templates = [{ id: 'meeting', name: 'Meeting', content: '# Summary' }]
+    result = await request(base, '/api/data/summary-templates', { method: 'POST', headers: { ...bearer(alice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, templates, selectedTemplateId: 'meeting' }) })
+    assert.deepEqual(result.body, { saved: true, version: 1 })
+    result = await request(base, '/api/data/summary-templates', { headers: bearer(bob) })
+    assert.deepEqual(result.body, { templates: [], selectedTemplateId: null, version: 0 })
+    result = await request(base, '/api/data/summary-templates', { method: 'POST', headers: { ...bearer(alice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, templates, selectedTemplateId: 'meeting' }) })
+    assert.equal(result.response.status, 409)
     result = await request(base, '/api/data/audio/alice-session', { method: 'POST', headers: { ...bearer(alice), 'content-type': 'audio/wav' }, body: Buffer.from('alice-audio') })
     assert.equal(result.response.status, 201)
     result = await request(base, '/api/data/audio/alice-session', { headers: bearer(bob) })

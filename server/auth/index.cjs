@@ -50,7 +50,7 @@ const createAuth = async (storage, environment = process.env) => {
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
       if (request.method === 'POST' && url === '/api/auth/register') {
-        try { send(response, 201, await this.register(await readJson(request))) } catch (error) { send(response, error instanceof Error && error.message === '帳號已存在' ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
+        try { send(response, 201, await this.register(await readJson(request))) } catch (error) { send(response, error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在') ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
       }
       if (request.method === 'POST' && url === '/api/auth/login') {
         try { send(response, 200, await this.login(await readJson(request))) } catch (error) { send(response, 401, { error: error instanceof Error ? error.message : '登入失敗' }) }; return true

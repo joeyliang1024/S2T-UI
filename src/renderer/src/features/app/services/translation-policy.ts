@@ -1,7 +1,24 @@
 import type { TranscriptEvent } from '../../models/model-adapter'
 
 export const translationAggregationDelayMs = 220
+export const throttledTranslationDelayMs = 900
+export const maximumAutomaticTranslationQueue = 6
 export const maximumSentenceWaitMs = 5_000
+
+export type TranslationSourceLanguage = NonNullable<TranscriptEvent['detectedLanguage']>
+
+/**
+ * "Auto" keeps the bilingual live-caption flow useful without guessing a
+ * third language: Chinese is translated to English, all other supported
+ * inputs are translated to Traditional Chinese.
+ */
+export const resolveTranslationTarget = (source: TranslationSourceLanguage | undefined, configuredTarget: string): string => {
+  if (configuredTarget !== 'auto') return configuredTarget
+  return source === 'zh-TW' ? 'en' : 'zh-TW'
+}
+
+export const shouldSkipTranslation = (source: TranslationSourceLanguage | undefined, target: string): boolean =>
+  Boolean(source && (source === target || (source === 'en-US' && target === 'en') || (source === 'ja-JP' && target === 'ja') || (source === 'de-DE' && target === 'de')))
 
 export const canMergeHttpCaption = (previous: TranscriptEvent | undefined, next: TranscriptEvent, clearedThroughMs: number): boolean =>
   Boolean(next.id.startsWith('http-') && previous?.id.startsWith('http-') &&
