@@ -4,6 +4,7 @@ import { timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, textEndpoint } from '../../../shared/services/settings'
 import { interfaceTranslate, translate } from '../../../shared/i18n'
 import { parseGlossaryJson } from '../services/glossary-json'
+import { transcriptSignature } from '../services/summary-plan'
 import { type CSSProperties, type ReactElement, useEffect, useRef, useState } from 'react'
 
 import type { AppController } from '../hooks/useAppController'
@@ -43,7 +44,6 @@ const renderMarkdown = (text: string): ReactElement => <div className="markdown-
 })}</div>
 const downloadSummary = (text: string): void => { const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `s2t-summary-${new Date().toISOString().slice(0, 10)}.md`; anchor.click(); URL.revokeObjectURL(url) }
 const matchesModelSearch = (...values: string[]): boolean => { const query = modelSearch.trim().toLocaleLowerCase(); return !query || values.join(' ').toLocaleLowerCase().includes(query) }
-const transcriptSignature = (transcript: string): string => { let hash = 2_166_136_261; for (let index = 0; index < transcript.length; index += 1) hash = Math.imul(hash ^ transcript.charCodeAt(index), 16_777_619); return `${transcript.length}:${(hash >>> 0).toString(36)}` }
 const {
 isFloatingCaptionWindow,
 devices,

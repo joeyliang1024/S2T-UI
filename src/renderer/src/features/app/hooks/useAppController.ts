@@ -14,6 +14,7 @@ import { StreamingResampler, chooseModelSampleRate } from '../../capture/resampl
 import { remoteSessionStorage } from '../services/remote-session-storage'
 import { mergeSessions } from '../services/session-merge'
 import { canMergeHttpCaption, shouldAutoTranslate, translationAggregationDelayMs } from '../services/translation-policy'
+import { summaryBatches, summaryChunks, transcriptSignature } from '../services/summary-plan'
 import { authFetch } from '../../auth/services/auth-client'
 
 export function useAppController(userId: string) {
@@ -1654,30 +1655,6 @@ const completeSummary = async (messages: Array<{ role: 'system' | 'user'; conten
   }
 
 const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(settings.summaryOutputLanguage)}輸出，保留標題結構並填入內容。${settings.summaryIncludeTranslation ? `每個重點後另以${languageName(settings.targetLanguage)}提供翻譯。` : ''}\n\n模板：\n${settings.summaryTemplate}`
-
-const summaryChunks = (transcript: string, size = 24_000): string[] => {
-  const chunks: string[] = []; let remaining = transcript.trim()
-  while (remaining.length > size) { const boundary = Math.max(remaining.lastIndexOf('\n', size), remaining.lastIndexOf('。', size), remaining.lastIndexOf('.', size)); const end = boundary > size / 2 ? boundary + 1 : size; chunks.push(remaining.slice(0, end)); remaining = remaining.slice(end) }
-  if (remaining) chunks.push(remaining)
-  return chunks
-}
-
-const summaryBatches = (partials: string[], size = 24_000): string[][] => {
-  const batches: string[][] = []; let batch: string[] = []; let length = 0
-  for (const partial of partials) {
-    const addition = partial.length + (batch.length ? 7 : 0)
-    if (batch.length && length + addition > size) { batches.push(batch); batch = []; length = 0 }
-    batch.push(partial); length += addition
-  }
-  if (batch.length) batches.push(batch)
-  return batches
-}
-
-const transcriptSignature = (transcript: string): string => {
-  let hash = 2_166_136_261
-  for (let index = 0; index < transcript.length; index += 1) hash = Math.imul(hash ^ transcript.charCodeAt(index), 16_777_619)
-  return `${transcript.length}:${(hash >>> 0).toString(36)}`
-}
 
 const summarizeTranscript = async (transcript: string): Promise<string> => {
   const chunks = summaryChunks(transcript)
