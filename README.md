@@ -8,6 +8,7 @@
 - [語音處理技術參考與自有模型整合方案](docs/OPEN_SOURCE_BACKENDS.zh-TW.md)
 - [自有模型接入契約](docs/MODEL_ADAPTER.md)
 - [Web ASR Gateway](docs/WEB_GATEWAY.zh-TW.md)
+- [部署與本機 Docker Compose 測試](docs/DEPLOYMENT.zh-TW.md)
 - [驗收手冊](docs/VALIDATION.zh-TW.md)
 
 目前已有麥克風與系統音訊收音、PCM16 WAV、HTTP ASR、翻譯、登入、歷史紀錄、摘要、模型及聲紋管理等功能路徑；逐字稿支援 TXT／VTT／JSON／CSV。實作不等於上線驗收，具體缺口與三項急迫需求以 [Enhancement.md](Enhancement.md) 為準。

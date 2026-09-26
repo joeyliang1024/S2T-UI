@@ -7,5 +7,6 @@ dist/
 !.env.local-storage.example
 .env.*
 !.env.example
+!.env.local-storage.example
 models/
 .s2t-data/
