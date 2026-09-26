@@ -15,6 +15,7 @@
     "translation-policy:smoke": "node scripts/translation-policy-smoke-test.cjs",
     "summary-plan:smoke": "node scripts/summary-plan-smoke-test.cjs",
     "summary-templates:smoke": "node scripts/summary-templates-smoke-test.cjs",
+    "i18n:smoke": "node scripts/i18n-smoke-test.cjs",
     "resample:smoke": "node scripts/resample-smoke-test.cjs",
     "gateway:auth-smoke": "node scripts/gateway-auth-smoke-test.cjs",
     "typecheck": "tsc --noEmit"

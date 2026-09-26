@@ -175,6 +175,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
 }
 
 export const interfaceTranslate = (language: UiLanguage, key: keyof typeof interfaceMessages): string => interfaceMessages[key][language]
+export const interfaceMessageKeys = Object.freeze(Object.keys(interfaceMessages)) as readonly (keyof typeof interfaceMessages)[]
 
 const authMessages: Record<UiLanguage, Record<'login' | 'register' | 'username' | 'password' | 'nt' | 'department' | 'loginFailed' | 'checking' | 'processing' | 'isolation' | 'noAccount' | 'hasAccount' | 'registerAndLogin', string>> = {
   'zh-TW': { login: '登入', register: '建立帳號', username: '帳號', password: '密碼', nt: 'NT', department: '部門', loginFailed: '登入失敗', checking: '正在確認登入狀態…', processing: '處理中…', isolation: '登入後，你的紀錄、設定與術語將依帳號分開保存。', noAccount: '還沒有帳號？建立帳號', hasAccount: '已有帳號？返回登入', registerAndLogin: '註冊並登入' },
@@ -184,3 +185,5 @@ const authMessages: Record<UiLanguage, Record<'login' | 'register' | 'username' 
   de: { login: 'Anmelden', register: 'Konto erstellen', username: 'Benutzername', password: 'Passwort', nt: 'NT', department: 'Abteilung', loginFailed: 'Anmeldung fehlgeschlagen', checking: 'Anmeldestatus wird geprüft…', processing: 'Wird verarbeitet…', isolation: 'Nach der Anmeldung werden Aufnahmen, Einstellungen und Glossar getrennt für Ihr Konto gespeichert.', noAccount: 'Noch kein Konto? Konto erstellen', hasAccount: 'Bereits ein Konto? Anmelden', registerAndLogin: 'Konto erstellen und anmelden' }
 }
 export const authTranslate = (language: UiLanguage, key: keyof typeof authMessages['zh-TW']): string => authMessages[language][key]
+export const authMessageKeys = Object.freeze(Object.keys(authMessages['zh-TW'])) as readonly (keyof typeof authMessages['zh-TW'])[]
+export const messageKeys = Object.freeze(Object.keys(messages['zh-TW'])) as readonly MessageKey[]
