@@ -103,6 +103,8 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   notConnected: { 'zh-TW': '未連接', 'zh-CN': '未连接', en: 'Not connected', ja: '未接続', de: 'Nicht verbunden' },
   enableTranslation: { 'zh-TW': '啟用翻譯', 'zh-CN': '启用翻译', en: 'Enable translation', ja: '翻訳を有効にする', de: 'Übersetzung aktivieren' },
   asrModel: { 'zh-TW': 'ASR 模型', 'zh-CN': 'ASR 模型', en: 'ASR model', ja: 'ASR モデル', de: 'ASR-Modell' },
+  asrModelReadyHint: { 'zh-TW': '開始收音時會套用目前選取的 ASR 模型。', 'zh-CN': '开始录音时会套用当前选择的 ASR 模型。', en: 'The selected ASR model is applied when recording starts.', ja: '録音開始時に選択中の ASR モデルが適用されます。', de: 'Das ausgewählte ASR-Modell wird beim Start der Aufnahme verwendet.' },
+  asrModelLockedHint: { 'zh-TW': '收音中會固定使用開始時的 ASR 模型；請結束收音後再變更。', 'zh-CN': '录音期间会固定使用开始时的 ASR 模型；请结束录音后再更改。', en: 'The ASR model is fixed for the current recording. Stop recording before changing it.', ja: '録音中は開始時の ASR モデルに固定されます。録音を終了してから変更してください。', de: 'Das ASR-Modell ist während der Aufnahme festgelegt. Beenden Sie die Aufnahme, bevor Sie es ändern.' },
   refreshAudioSources: { 'zh-TW': '重新整理音源', 'zh-CN': '刷新音源', en: 'Refresh audio sources', ja: '音源を更新', de: 'Audioquellen aktualisieren' },
   fullSettings: { 'zh-TW': '完整設定', 'zh-CN': '完整设置', en: 'Full settings', ja: '詳細設定', de: 'Vollständige Einstellungen' },
   summaryOutdated: { 'zh-TW': '逐字稿已更新，請重新產生摘要。', 'zh-CN': '逐字稿已更新，请重新生成摘要。', en: 'The transcript has changed. Regenerate this summary.', ja: '文字起こしが更新されました。要約を再生成してください。', de: 'Das Transkript wurde geändert. Erstellen Sie die Zusammenfassung neu.' },

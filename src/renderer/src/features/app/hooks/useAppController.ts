@@ -1180,6 +1180,10 @@ const addModelProfile = async (capabilities?: ModelCapabilities): Promise<void> 
   }
 
 const updateSelectedModel = (update: Partial<ModelProfile>): void => {
+    if (captureState !== 'idle') {
+      setStatus('收音中會固定使用開始時的 ASR 模型；請結束收音後再變更。')
+      return
+    }
     setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.map((profile) => profile.id === current.selectedModelId ? { ...profile, ...update } : profile) }))
   }
 
@@ -1208,6 +1212,10 @@ const saveTranslationProfile = (): void => {
 
 const removeSelectedModel = (): void => {
     if (selectedModel.id === 'none') return
+    if (captureState !== 'idle') {
+      setStatus('收音中不能刪除 ASR 模型；請結束收音後再變更。')
+      return
+    }
     setSettings((current) => ({ ...current, modelProfiles: current.modelProfiles.filter((profile) => profile.id !== current.selectedModelId), selectedModelId: 'none' }))
   }
 
