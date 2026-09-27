@@ -134,16 +134,17 @@ const openAiChatBaseUrl = (endpoint: string): string => {
   return url.toString().replace(/\/$/, '')
 }
 const environmentKey = (profileId: string): string | undefined => {
-  if (profileId === 'translation') return process.env.S2T_TRANSLATION_API_KEY
-  if (profileId === 'summary') return process.env.S2T_SUMMARY_API_KEY
-  if (profileId === 'diarization') return process.env.S2T_DIARIZATION_API_KEY
-  return process.env.S2T_ASR_API_KEY
+  if (profileId === 'translation' || profileId === 'environment-translation') return process.env.S2T_TRANSLATION_API_KEY
+  if (profileId === 'summary' || profileId === 'environment-summary') return process.env.S2T_SUMMARY_API_KEY
+  if (profileId === 'diarization' || profileId === 'environment-diarization') return process.env.S2T_DIARIZATION_API_KEY
+  if (profileId === 'asr' || profileId === 'environment-asr') return process.env.S2T_ASR_API_KEY
+  return undefined
 }
 
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; requiresApiKey?: boolean; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages: string[]; supportedSampleRates: number[] } }
 type StoredModelConfig = {
-  theme: 'system' | 'light' | 'dark'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
-  translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; glossary: string
+  theme: 'system' | 'light' | 'dark'; uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
+  translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryRequiresApiKey: boolean; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; diarizationRequiresApiKey: boolean; embeddingEndpoint: string; embeddingModel: string; embeddingRequiresApiKey: boolean; diarizationPreviewEnabled: boolean; denoiseEnabled: boolean; glossary: string
   vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number; chunkMinMs: number; chunkMaxMs: number }
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
@@ -170,11 +171,11 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     }
     return id && name ? [{ id, name, endpoint, model, kind, requiresApiKey: profile.requiresApiKey !== false, capabilities }] : []
   }).slice(0, 30) : []
-  const translationProfiles = Array.isArray(input.translationProfiles) ? input.translationProfiles.flatMap((item): Array<{ id: string; name: string; endpoint: string; model: string }> => {
+  const translationProfiles = Array.isArray(input.translationProfiles) ? input.translationProfiles.flatMap((item): Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }> => {
     if (!item || typeof item !== 'object') return []
     const profile = item as Record<string, unknown>
     const id = shortText(profile.id, 100); const name = shortText(profile.name, 100); const endpoint = shortText(profile.endpoint, 2_000); const model = shortText(profile.model, 200)
-    return id && name && endpoint && model ? [{ id, name, endpoint, model }] : []
+    return id && name && endpoint && model ? [{ id, name, endpoint, model, requiresApiKey: profile.requiresApiKey !== false }] : []
   }).slice(0, 30) : []
   const summaryTemplates = Array.isArray(input.summaryTemplates) ? input.summaryTemplates.flatMap((item): Array<{ id: string; name: string; content: string }> => {
     if (!item || typeof item !== 'object') return []
@@ -185,10 +186,10 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
   const vadInput = input.vadConfig && typeof input.vadConfig === 'object' ? input.vadConfig as Record<string, unknown> : {}
   const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum: number): number => typeof value === 'number' && Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback
   return {
-    theme: input.theme === 'light' || input.theme === 'dark' ? input.theme : 'system', storageLocation: input.storageLocation === 'remote' ? 'remote' : 'local', sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
+    theme: input.theme === 'light' || input.theme === 'dark' ? input.theme : 'system', uiLanguage: input.uiLanguage === 'zh-CN' || input.uiLanguage === 'en' || input.uiLanguage === 'ja' || input.uiLanguage === 'de' ? input.uiLanguage : 'zh-TW', storageLocation: input.storageLocation === 'remote' ? 'remote' : 'local', sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' || input.translationLoadStrategy === 'throttled' ? input.translationLoadStrategy : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), translationProfiles, selectedTranslationModelId: shortText(input.selectedTranslationModelId, 100), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
-    summaryModel: shortText(input.summaryModel, 200), summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), glossary: shortText(input.glossary, 20_000),
+    summaryModel: shortText(input.summaryModel, 200), summaryRequiresApiKey: input.summaryRequiresApiKey !== false, summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), diarizationRequiresApiKey: input.diarizationRequiresApiKey !== false, embeddingEndpoint: shortText(input.embeddingEndpoint, 2_000), embeddingModel: shortText(input.embeddingModel, 200), embeddingRequiresApiKey: input.embeddingRequiresApiKey !== false, diarizationPreviewEnabled: input.diarizationPreviewEnabled !== false, denoiseEnabled: input.denoiseEnabled !== false, glossary: shortText(input.glossary, 20_000),
     vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30), chunkMinMs: boundedNumber(vadInput.chunkMinMs, 1_000, 300, 3_000), chunkMaxMs: boundedNumber(vadInput.chunkMaxMs, 2_400, 800, 6_000) }
   }
 }
@@ -250,6 +251,7 @@ const createWindow = (): void => {
 }
 
 app.whenReady().then(() => {
+  const textRequestControllers = new Map<string, AbortController>()
   // `media` alone does not grant getDisplayMedia in Electron. Display capture
   // must be permitted separately or the Renderer never receives the audio
   // track it requested.
@@ -353,19 +355,28 @@ app.whenReady().then(() => {
       throw new Error(error instanceof Error ? `模型轉錄失敗：${error.message}` : '模型轉錄失敗')
     }
   })
-  ipcMain.handle('model:complete', async (event, input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
+  ipcMain.handle('model:complete', async (event, input: { requestId?: string; profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
     if (!validSecretId(input.profileId) || !Array.isArray(input.messages) || !input.model.trim()) throw new Error('無效的文字模型請求')
     const apiKey = environmentKey(input.profileId) || (await readSecrets(requireDesktopUser(event)))[input.profileId]
     if (!apiKey) throw new Error('請先在設定中儲存此服務的 API key')
     let baseURL: string
     try { baseURL = openAiChatBaseUrl(input.endpoint) } catch { throw new Error('無效的文字 API 位址') }
     const client = new OpenAI({ apiKey, baseURL, timeout: 30_000, maxRetries: 1 })
+    const requestKey = typeof input.requestId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(input.requestId) ? `${event.sender.id}:${input.requestId}` : ''
+    const controller = requestKey ? new AbortController() : undefined
+    if (requestKey && controller) textRequestControllers.set(requestKey, controller)
     try {
-      const result = await client.chat.completions.create({ model: input.model, messages: input.messages, temperature: 0.2 })
+      const result = await client.chat.completions.create({ model: input.model, messages: input.messages, temperature: 0.2 }, controller ? { signal: controller.signal } : undefined)
       return { text: result.choices[0]?.message.content?.trim() ?? '' }
     } catch (error) {
       throw new Error(error instanceof Error ? `文字模型請求失敗：${error.message}` : '文字模型請求失敗')
+    } finally {
+      if (requestKey && textRequestControllers.get(requestKey) === controller) textRequestControllers.delete(requestKey)
     }
+  })
+  ipcMain.handle('model:cancel-complete', (event, requestId: unknown) => {
+    if (typeof requestId !== 'string') return
+    textRequestControllers.get(`${event.sender.id}:${requestId}`)?.abort()
   })
   ipcMain.handle('model:diarize', async (event, input: { endpoint: string; model: string; audio: ArrayBuffer }) => {
     if (!(input.audio instanceof ArrayBuffer) || !input.audio.byteLength || input.audio.byteLength > 500 * 1024 * 1024) throw new Error('無效的講者分離音檔')

@@ -1,5 +1,13 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
+const { assessVoiceprintSample } = require('../server/sherpa-diarization.cjs')
+
+const wav = (seconds, amplitude) => {
+  const rate = 16_000; const samples = Math.round(seconds * rate); const output = Buffer.alloc(44 + samples * 2)
+  output.write('RIFF'); output.writeUInt32LE(output.length - 8, 4); output.write('WAVE', 8); output.write('fmt ', 12); output.writeUInt32LE(16, 16); output.writeUInt16LE(1, 20); output.writeUInt16LE(1, 22); output.writeUInt32LE(rate, 24); output.writeUInt32LE(rate * 2, 28); output.writeUInt16LE(2, 32); output.writeUInt16LE(16, 34); output.write('data', 36); output.writeUInt32LE(samples * 2, 40)
+  for (let index = 0; index < samples; index += 1) output.writeInt16LE(Math.round(amplitude * 32767 * Math.sin(index / 9)), 44 + index * 2)
+  return output
+}
 
 const result = buildSync({ entryPoints: ['src/renderer/src/features/speakers/diarization.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
@@ -26,4 +34,8 @@ const captions = [
 const assigned = assignSpeakersByOverlap(captions, next)
 assert.equal(assigned[0].speaker, 'SPEAKER_04')
 assert.equal(assigned[1].speaker, 'manual', 'manual labels are authoritative')
+assert.deepEqual(assessVoiceprintSample(wav(3.2, 0.2)).durationMs, 3200)
+assert.throws(() => assessVoiceprintSample(wav(2.9, 0.2)), /至少需要 3 秒/)
+assert.throws(() => assessVoiceprintSample(wav(3.2, 0.001)), /音量過低/)
+assert.throws(() => assessVoiceprintSample(wav(3.2, 1)), /削波過多/)
 console.log('Diarization smoke test passed.')

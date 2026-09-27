@@ -1,4 +1,4 @@
-import { type SavedSession } from '../types'
+import { type ImportCheckpoint, type LiveTranscriptDraft, type SavedSession } from '../types'
 
 const userKey = (userId: string, name: string): string => {
   if (!/^[a-zA-Z0-9-]{1,100}$/.test(userId)) throw new Error('無效的使用者 ID')
@@ -54,6 +54,72 @@ export const loadSessions = async (userId: string): Promise<SavedSession[] | und
   })
   database.close()
   return sessions
+}
+
+const liveDraftKey = (userId: string): string => userKey(userId, 'live-draft')
+const importCheckpointKey = (userId: string): string => userKey(userId, 'import-checkpoint')
+export const saveLiveDraft = async (userId: string, draft: LiveTranscriptDraft): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(sessionsStore, 'readwrite')
+    transaction.objectStore(sessionsStore).put(draft, liveDraftKey(userId))
+    transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
+}
+export const loadLiveDraft = async (userId: string): Promise<LiveTranscriptDraft | undefined> => {
+  const database = await openRecordingsDatabase()
+  const draft = await new Promise<LiveTranscriptDraft | undefined>((resolve, reject) => {
+    const request = database.transaction(sessionsStore, 'readonly').objectStore(sessionsStore).get(liveDraftKey(userId))
+    request.onsuccess = () => {
+      const value = request.result
+      resolve(value && typeof value === 'object' && typeof value.id === 'string' && Array.isArray(value.segments) ? value as LiveTranscriptDraft : undefined)
+    }
+    request.onerror = () => reject(request.error)
+  })
+  database.close()
+  return draft
+}
+export const deleteLiveDraft = async (userId: string): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(sessionsStore, 'readwrite')
+    transaction.objectStore(sessionsStore).delete(liveDraftKey(userId))
+    transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
+}
+
+export const saveImportCheckpoint = async (userId: string, checkpoint: ImportCheckpoint): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(sessionsStore, 'readwrite')
+    transaction.objectStore(sessionsStore).put(checkpoint, importCheckpointKey(userId))
+    transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
+}
+export const loadImportCheckpoint = async (userId: string): Promise<ImportCheckpoint | undefined> => {
+  const database = await openRecordingsDatabase()
+  const checkpoint = await new Promise<ImportCheckpoint | undefined>((resolve, reject) => {
+    const request = database.transaction(sessionsStore, 'readonly').objectStore(sessionsStore).get(importCheckpointKey(userId))
+    request.onsuccess = () => {
+      const value = request.result
+      resolve(value && typeof value === 'object' && typeof value.fingerprint === 'string' && Number.isInteger(value.nextChunkIndex) && Array.isArray(value.segments) ? value as ImportCheckpoint : undefined)
+    }
+    request.onerror = () => reject(request.error)
+  })
+  database.close()
+  return checkpoint
+}
+export const deleteImportCheckpoint = async (userId: string): Promise<void> => {
+  const database = await openRecordingsDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(sessionsStore, 'readwrite')
+    transaction.objectStore(sessionsStore).delete(importCheckpointKey(userId))
+    transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error)
+  })
+  database.close()
 }
 
 export const saveRecording = async (userId: string, key: string, audio: Blob): Promise<void> => {

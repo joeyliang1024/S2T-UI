@@ -34,6 +34,22 @@ const resampleMono = (samples, sourceRate, targetRate = 16_000) => {
   return output
 }
 
+// Enrollment quality checks happen before loading the embedding model so an
+// unusable sample never creates a vector or a compensation record. They are
+// intentionally conservative: users can re-record a quiet sample rather than
+// silently training an unreliable identity.
+const assessVoiceprintSample = (audio) => {
+  const wave = readWavSamples(audio)
+  const durationMs = Math.round(wave.samples.length / wave.sampleRate * 1000)
+  if (durationMs < 3_000) throw new Error('聲紋錄音至少需要 3 秒的清楚人聲')
+  let energy = 0; let clipped = 0
+  for (const sample of wave.samples) { energy += sample * sample; if (Math.abs(sample) >= 0.995) clipped += 1 }
+  const rmsDbfs = 20 * Math.log10(Math.max(Math.sqrt(energy / Math.max(1, wave.samples.length)), 1e-8))
+  if (rmsDbfs < -45) throw new Error('聲紋錄音音量過低，請靠近麥克風後重新錄製')
+  if (clipped / wave.samples.length > 0.02) throw new Error('聲紋錄音削波過多，請降低麥克風音量後重新錄製')
+  return { durationMs, rmsDbfs: Math.round(rmsDbfs * 10) / 10 }
+}
+
 const modelPaths = () => {
   const root = process.env.S2T_SHERPA_MODELS_DIR || join(process.cwd(), 'models', 'sherpa-onnx')
   return {
@@ -119,4 +135,4 @@ const diarizeWav = (audio) => {
   return instance.process(samples).map((segment) => ({ start: segment.start, end: segment.end, speaker: `SPEAKER_${String(segment.speaker).padStart(2, '0')}` }))
 }
 
-module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerEmbeddings, modelPaths, readWavSamples, resampleMono }
+module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerEmbeddings, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono }

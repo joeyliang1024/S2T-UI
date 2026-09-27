@@ -29,6 +29,21 @@ export class OpfsPcmRecording {
     return new OpfsPcmRecording(directory, `${id}.wav`, file, writable, sampleRate)
   }
 
+  static async recover(id: string, sampleRate: number): Promise<Blob | null> {
+    const storage = navigator.storage as unknown as { getDirectory?: () => Promise<OpfsDirectory> }
+    if (!storage.getDirectory) return null
+    try {
+      const root = await storage.getDirectory()
+      const directory = await root.getDirectoryHandle('s2t-ui-recordings')
+      const file = await directory.getFileHandle(`${id}.wav`)
+      const bytes = new Uint8Array(await (await file.getFile()).arrayBuffer())
+      if (bytes.byteLength <= 44) return null
+      const wav = new Blob([header(sampleRate, bytes.byteLength - 44).buffer as ArrayBuffer, bytes.slice(44).buffer as ArrayBuffer], { type: 'audio/wav' })
+      await directory.removeEntry?.(`${id}.wav`).catch(() => undefined)
+      return wav
+    } catch { return null }
+  }
+
   append(audio: ArrayBuffer): Promise<void> {
     if (this.closed) return Promise.reject(new Error('OPFS 錄音已關閉'))
     this.pending = this.pending.then(async () => { await this.writable.write(audio); this.dataBytes += audio.byteLength })

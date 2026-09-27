@@ -1,4 +1,4 @@
-const { mkdir, readFile, rename, rm, writeFile } = require('node:fs/promises')
+const { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } = require('node:fs/promises')
 const { randomUUID } = require('node:crypto')
 const { createReadStream } = require('node:fs')
 const { join, resolve, relative, sep } = require('node:path')
@@ -22,12 +22,42 @@ const atomicJson = async (file, value) => {
   }
 }
 
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
+const lockTimeoutMs = 15_000
+const staleLockMs = 60_000
+
+// Coordinate mutations both inside this Node process and between separate
+// gateway/Electron processes using the same local data directory. The lock is
+// deliberately beside the data file, so atomic rename never replaces it.
+const withFileLock = async (file, operation) => {
+  const lock = `${file}.lock`
+  const deadline = Date.now() + lockTimeoutMs
+  let handle
+  while (!handle) {
+    try {
+      await mkdir(join(file, '..'), { recursive: true })
+      handle = await open(lock, 'wx', 0o600)
+      await handle.writeFile(`${process.pid}\n${new Date().toISOString()}\n`)
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error
+      const age = await stat(lock).then((info) => Date.now() - info.mtimeMs).catch(() => 0)
+      if (age > staleLockMs) { await rm(lock, { force: true }); continue }
+      if (Date.now() >= deadline) throw new Error('本機 storage 正由另一個程序寫入，請稍後重試')
+      await delay(20 + Math.floor(Math.random() * 30))
+    }
+  }
+  try { return await operation() } finally {
+    await handle.close().catch(() => undefined)
+    await rm(lock, { force: true }).catch(() => undefined)
+  }
+}
+
 // A local store can be constructed more than once in one process. Keep every
 // read-modify-write operation for a backing file serialized so updates are not
 // silently lost when requests arrive together.
 const mutations = new Map()
 const mutateFile = (file, operation) => {
-  const queued = (mutations.get(file) || Promise.resolve()).catch(() => undefined).then(operation)
+  const queued = (mutations.get(file) || Promise.resolve()).catch(() => undefined).then(() => withFileLock(file, operation))
   mutations.set(file, queued)
   return queued.finally(() => { if (mutations.get(file) === queued) mutations.delete(file) })
 }
@@ -41,7 +71,7 @@ const readJsonFile = async (file, fallback, label) => {
 }
 
 class LocalConfigStore {
-  constructor(root) { this.file = join(root, 'config.json') }
+  constructor(root) { this.file = join(root, 'config.json'); this.schemaVersion = 'local-v1' }
   async records() {
     const parsed = await readJsonFile(this.file, {}, '設定檔')
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('設定檔格式損毀，請先還原備份')
@@ -101,6 +131,16 @@ class LocalBlobStore {
   async get(scope, key) { try { return await readFile(this.path(scope, key)) } catch (error) { if (error && error.code === 'ENOENT') return null; throw error } }
   stream(scope, key) { return createReadStream(this.path(scope, key)) }
   async remove(scope, key) { await rm(this.path(scope, key), { force: true }) }
+  async list(scope, prefix = '') {
+    const root = prefix ? this.path(scope, prefix) : this.path(scope, 'placeholder').replace(/placeholder$/, '')
+    const walk = async (directory) => {
+      const entries = await readdir(directory, { withFileTypes: true }).catch((error) => error?.code === 'ENOENT' ? [] : Promise.reject(error))
+      const files = []
+      for (const entry of entries) { const target = join(directory, entry.name); if (entry.isDirectory()) files.push(...await walk(target)); else if (entry.isFile()) files.push(relative(this.root, target).split(sep).slice(1).join('/')) }
+      return files
+    }
+    return walk(root)
+  }
 }
 
 class LocalVectorStore {
@@ -124,6 +164,10 @@ class LocalVectorStore {
     const permitted = new Set(allowedIds.map((id) => safePart(id, 'vector id')))
     if (!permitted.size) return []
     return (await this.records()).filter((item) => permitted.has(item.id) && item.embedding.length === embedding.length).map((item) => ({ id: item.id, NT: item.NT, Department: item.Department, score: cosine(embedding, item.embedding) })).sort((a, b) => b.score - a.score).slice(0, limit)
+  }
+  async getMany(ids) {
+    const permitted = new Set(ids.map((id) => safePart(id, 'vector id')))
+    return (await this.records()).filter((item) => permitted.has(item.id)).map((item) => ({ ...item, embedding: [...item.embedding] }))
   }
 }
 

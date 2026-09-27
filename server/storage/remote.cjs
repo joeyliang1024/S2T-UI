@@ -14,11 +14,28 @@ class MinioBlobStore {
   async put(scope, key, bytes) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), bytes) }
   async get(scope, key) { await this.ready; try { const stream = await this.client.getObject(this.bucket, this.key(scope, key)); const chunks = []; for await (const chunk of stream) chunks.push(chunk); return Buffer.concat(chunks) } catch (error) { if (error && error.code === 'NoSuchKey') return null; throw error } }
   async remove(scope, key) { await this.ready; await this.client.removeObject(this.bucket, this.key(scope, key)) }
+  async list(scope, prefix = '') {
+    await this.ready
+    const root = `${safePart(scope, 'scope')}/`
+    const searchPrefix = prefix ? this.key(scope, prefix) : root
+    return new Promise((resolve, reject) => {
+      const keys = []; const stream = this.client.listObjects(this.bucket, searchPrefix, true)
+      stream.on('data', (item) => { if (typeof item.name === 'string' && item.name.startsWith(root)) keys.push(item.name.slice(root.length)) })
+      stream.on('error', reject); stream.on('end', () => resolve(keys))
+    })
+  }
 }
 class PostgresConfigStore {
-  constructor(config) { this.pool = new Pool({ host: config.S2T_POSTGRES_HOST, port: Number(config.S2T_POSTGRES_PORT), database: config.S2T_POSTGRES_DB_NAME, user: config.S2T_POSTGRES_USER, password: config.S2T_POSTGRES_PASSWORD }); this.ready = this.migrate() }
+  constructor(config) { this.pool = new Pool({ host: config.S2T_POSTGRES_HOST, port: Number(config.S2T_POSTGRES_PORT), database: config.S2T_POSTGRES_DB_NAME, user: config.S2T_POSTGRES_USER, password: config.S2T_POSTGRES_PASSWORD }); this.schemaVersion = '001-core-storage'; this.ready = this.migrate() }
   async migrate() {
-    await this.pool.query(`
+    // Multiple gateway processes can start at the same time during a deploy.
+    // DDL such as ALTER TABLE / CREATE INDEX otherwise takes locks in a
+    // different order and can deadlock. Hold the advisory lock on one pooled
+    // connection for the complete migration sequence.
+    const client = await this.pool.connect()
+    try {
+      await client.query("SELECT pg_advisory_lock(hashtext('s2t_schema_migrations'))")
+      await client.query(`
       CREATE TABLE IF NOT EXISTS s2t_users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
@@ -50,12 +67,21 @@ class PostgresConfigStore {
         version INTEGER NOT NULL DEFAULT 1,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS s2t_schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
       CREATE INDEX IF NOT EXISTS s2t_config_records_scope_index ON s2t_config_records(scope);
       CREATE INDEX IF NOT EXISTS s2t_voiceprint_records_user_index ON s2t_voiceprint_records(user_id);
       CREATE UNIQUE INDEX IF NOT EXISTS s2t_users_nt_unique_index ON s2t_users (lower(nt));
       ALTER TABLE s2t_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
       ALTER TABLE s2t_voiceprint_records ADD COLUMN IF NOT EXISTS sharing_scope TEXT NOT NULL DEFAULT 'private';
+      INSERT INTO s2t_schema_migrations(version) VALUES ('001-core-storage') ON CONFLICT(version) DO NOTHING;
     `)
+    } finally {
+      await client.query("SELECT pg_advisory_unlock(hashtext('s2t_schema_migrations'))").catch(() => undefined)
+      client.release()
+    }
   }
   async get(scope, key) { await this.ready; const result = await this.pool.query('SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = $2', [safePart(scope, 'scope'), safePart(key, 'record key')]); return result.rows[0]?.value ?? null }
   async put(scope, key, value) { await this.ready; await this.pool.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb) ON CONFLICT(scope, record_key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()', [safePart(scope, 'scope'), safePart(key, 'record key'), JSON.stringify(value)]) }
@@ -85,6 +111,36 @@ class PostgresConfigStore {
     await this.ready
     if (!['private', 'department', 'organization'].includes(sharingScope)) throw new Error('無效的聲紋共享範圍')
     await this.pool.query('INSERT INTO s2t_voiceprint_records(vector_id, user_id, embedding_model, embedding_version, sharing_scope) VALUES($1, $2, $3, $4, $5)', [safePart(vectorId, 'vector id'), safePart(userId, 'user id'), String(embeddingModel).slice(0, 512), String(embeddingVersion).slice(0, 128), sharingScope])
+  }
+  async upsertVoiceprint({ vectorId, userId, embeddingModel, embeddingVersion, sharingScope = 'private' }) {
+    await this.ready
+    if (!['private', 'department', 'organization'].includes(sharingScope)) throw new Error('無效的聲紋共享範圍')
+    await this.pool.query(`INSERT INTO s2t_voiceprint_records(vector_id, user_id, embedding_model, embedding_version, sharing_scope)
+      VALUES($1, $2, $3, $4, $5)
+      ON CONFLICT(vector_id) DO UPDATE SET user_id = EXCLUDED.user_id, embedding_model = EXCLUDED.embedding_model, embedding_version = EXCLUDED.embedding_version, sharing_scope = EXCLUDED.sharing_scope`, [safePart(vectorId, 'vector id'), safePart(userId, 'user id'), String(embeddingModel).slice(0, 512), String(embeddingVersion).slice(0, 128), sharingScope])
+  }
+  async listVoiceprints(userId) {
+    await this.ready
+    const result = await this.pool.query('SELECT vector_id AS "vectorId", user_id AS "userId", embedding_model AS "embeddingModel", embedding_version AS "embeddingVersion", sharing_scope AS "sharingScope", created_at AS "createdAt" FROM s2t_voiceprint_records WHERE user_id = $1 ORDER BY vector_id', [safePart(userId, 'user id')])
+    return result.rows
+  }
+  async replaceVoiceprints(userId, records) {
+    await this.ready
+    const ownerId = safePart(userId, 'user id')
+    const client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+      // A backup restore replaces the complete metadata set for one account.
+      // Serialize that destructive set replacement across gateway processes.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('s2t_voiceprint_restore:' || $1))", [ownerId])
+      await client.query('DELETE FROM s2t_voiceprint_records WHERE user_id = $1', [ownerId])
+      for (const record of records) {
+        const sharingScope = record?.sharingScope || 'private'
+        if (!['private', 'department', 'organization'].includes(sharingScope)) throw new Error('無效的聲紋共享範圍')
+        await client.query('INSERT INTO s2t_voiceprint_records(vector_id, user_id, embedding_model, embedding_version, sharing_scope) VALUES($1, $2, $3, $4, $5)', [safePart(record.vectorId, 'vector id'), ownerId, String(record.embeddingModel).slice(0, 512), String(record.embeddingVersion).slice(0, 128), sharingScope])
+      }
+      await client.query('COMMIT')
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
   }
   async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
     await this.ready
@@ -159,8 +215,17 @@ class MilvusVectorStore {
     const ids = allowedIds.map((id) => safePart(id, 'vector id'))
     if (!ids.length) return []
     await this.ensureCollection(embedding.length)
-    const output = await this.client.search({ collection_name: this.collection, db_name: this.database, data: [embedding], filter: `id in ${JSON.stringify(ids)}`, limit: Math.max(1, Math.min(50, limit)), output_fields: ['NT', 'Department'], metric_type: 'COSINE', consistency_level: 'Strong' })
+    const output = await this.client.search({ collection_name: this.collection, db_name: this.database, data: [embedding], filter: `id in ${JSON.stringify(ids)}`, limit: Math.max(1, Math.min(50, limit)), output_fields: ['id', 'NT', 'Department'], metric_type: 'COSINE', consistency_level: 'Strong' })
     return (output.results || []).map((item) => ({ id: String(item.id), NT: item.NT, Department: item.Department, score: Number(item.score ?? item.distance ?? 0) }))
+  }
+  async getMany(ids) {
+    const permitted = [...new Set(ids.map((id) => safePart(id, 'vector id')))]
+    if (!permitted.length) return []
+    await this.ready
+    const exists = await this.client.hasCollection({ collection_name: this.collection, db_name: this.database })
+    if (!exists.value) return []
+    const output = await this.client.query({ collection_name: this.collection, db_name: this.database, filter: `id in ${JSON.stringify(permitted)}`, output_fields: ['id', 'NT', 'Department', 'embedding'] })
+    return (output.data || output.results || []).map((item) => ({ id: String(item.id), NT: String(item.NT), Department: String(item.Department), embedding: Array.from(item.embedding || [], Number) }))
   }
 }
 

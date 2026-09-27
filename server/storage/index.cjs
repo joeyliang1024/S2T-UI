@@ -12,6 +12,7 @@ const createStorage = (environment = process.env) => {
     config: configStore,
     vector,
     mode: { blob: config.minio ? 'minio' : 'local', config: config.postgres ? 'postgres' : 'local', vector: config.milvus ? 'milvus' : 'local' },
+    schemaVersion: config.postgres ? configStore.schemaVersion : 'local-v1',
     ready: Promise.all([blob.ready, configStore.ready, vector.ready].filter(Boolean)).then(() => undefined)
   }
 }

@@ -15,7 +15,8 @@ declare global {
       loadModelConfig: () => Promise<Partial<SettingsConfig> | null>
       saveModelConfig: (config: SettingsConfig) => Promise<{ saved: boolean }>
       transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string; detectedLanguage?: 'zh-TW' | 'en-US' | 'ja-JP' | 'de-DE' }>
-      completeText: (input: { profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
+      completeText: (input: { requestId?: string; profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
+      cancelCompleteText: (requestId: string) => Promise<void>
       diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => Promise<unknown>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
       appendPcm: (id: string, audio: ArrayBuffer) => Promise<{ bytesWritten: number }>

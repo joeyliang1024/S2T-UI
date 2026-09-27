@@ -43,7 +43,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   const fallbackTranslationProfile: TextModelProfile[] = value.translationEndpoint && value.translationModel
     ? [{ id: 'translation-default', name: `${value.translationModel}（翻譯）`, endpoint: value.translationEndpoint, model: value.translationModel }]
     : []
-  const translationProfiles = value.translationProfiles?.length ? value.translationProfiles : fallbackTranslationProfile
+  const translationProfiles = value.translationProfiles?.length ? value.translationProfiles.map((profile) => ({ ...profile, requiresApiKey: profile.requiresApiKey !== false })) : fallbackTranslationProfile
   const summaryTemplates: SummaryTemplate[] = value.summaryTemplates?.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.name.trim() && template.content.trim() ? [{ id: template.id.slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000) }] : []) ?? []
   const templates = summaryTemplates.length ? summaryTemplates : [{ id: 'default-summary', name: '會議摘要', content: value.summaryTemplate?.trim() || defaultSummaryTemplate }]
   const selectedSummaryTemplateId = templates.some((template) => template.id === value.selectedSummaryTemplateId) ? value.selectedSummaryTemplateId! : templates[0].id
@@ -65,6 +65,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   selectedTranslationModelId: value.selectedTranslationModelId ?? translationProfiles[0]?.id ?? 'none',
   summaryEndpoint: value.summaryEndpoint ?? '',
   summaryModel: value.summaryModel ?? '',
+  summaryRequiresApiKey: value.summaryRequiresApiKey !== false,
   summaryTemplate: selectedSummaryTemplate.content,
   summaryTemplates: templates,
   selectedSummaryTemplateId,
@@ -72,6 +73,10 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   summaryIncludeTranslation: value.summaryIncludeTranslation === true,
   diarizationEndpoint: value.diarizationEndpoint ?? '',
   diarizationModel: value.diarizationModel ?? '',
+  diarizationRequiresApiKey: value.diarizationRequiresApiKey !== false,
+  embeddingEndpoint: value.embeddingEndpoint ?? '',
+  embeddingModel: value.embeddingModel ?? '',
+  embeddingRequiresApiKey: value.embeddingRequiresApiKey !== false,
   diarizationPreviewEnabled: value.diarizationPreviewEnabled !== false,
   glossary: value.glossary ?? '',
   denoiseEnabled: value.denoiseEnabled !== false,
