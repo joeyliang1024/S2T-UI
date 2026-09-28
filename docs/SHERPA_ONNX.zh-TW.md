@@ -11,6 +11,23 @@ npm install
 npm run web:serve
 ```
 
+### 從 Docker Hub 取得模型
+
+若部署環境不能直接下載模型，可拉取資料專用 image，再將模型複製到 gateway 主機。image 只包含 pyannote segmentation、3D-Speaker embedding 與 segmentation 授權檔，沒有 gateway、Node.js 或其他應用程式內容。
+
+```bash
+docker pull joeyliang1024/s2t-sherpa-models:1.13.8
+docker create --name s2t-sherpa-models joeyliang1024/s2t-sherpa-models:1.13.8 /bin/sh
+mkdir -p ./models
+docker cp s2t-sherpa-models:/models/sherpa-onnx ./models/sherpa-onnx
+docker rm s2t-sherpa-models
+export S2T_SHERPA_MODELS_DIR="$(pwd)/models/sherpa-onnx"
+```
+
+此映像專為 Linux x64（`linux/amd64`）公司環境製作。若模型放在其他位置，設定
+`S2T_SHERPA_MODELS_DIR` 指向含有 `sherpa-onnx-pyannote-segmentation-3-0/` 和
+`3dspeaker_*.onnx` 的目錄，再啟動 gateway。
+
 在 Electron 的「完整設定」填入：
 
 | 欄位 | 值 |

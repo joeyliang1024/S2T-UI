@@ -1,0 +1,12 @@
+# Offline delivery image for the sherpa-onnx speaker models on company Linux
+# x86_64 hosts. BusyBox keeps a real Linux/amd64 image configuration while
+# adding only a small shell runtime; extract /models into a gateway host.
+FROM --platform=linux/amd64 busybox:1.36.1-musl
+
+LABEL org.opencontainers.image.title="S2T sherpa-onnx speaker models" \
+  org.opencontainers.image.description="Pyannote segmentation and 3D-Speaker embedding models for S2T-UI" \
+  org.opencontainers.image.source="https://github.com/joeyliang1024/S2T-UI"
+
+COPY models/sherpa-onnx/sherpa-onnx-pyannote-segmentation-3-0/model.int8.onnx /models/sherpa-onnx/sherpa-onnx-pyannote-segmentation-3-0/model.int8.onnx
+COPY models/sherpa-onnx/sherpa-onnx-pyannote-segmentation-3-0/LICENSE /models/sherpa-onnx/sherpa-onnx-pyannote-segmentation-3-0/LICENSE
+COPY models/sherpa-onnx/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx /models/sherpa-onnx/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx

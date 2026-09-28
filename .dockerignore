@@ -1,0 +1,10 @@
+.git
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.local-storage.example
+node_modules
+out
+dist
+.s2t-data
