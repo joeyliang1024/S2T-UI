@@ -106,6 +106,9 @@ const liveAsrSettingsSignatureRef = useRef('')
 
 const continuationTargetRef = useRef<{ entry: SavedSession; audio: Blob; baseDurationMs: number } | null>(null)
 const continuationEventIdsRef = useRef(new Map<string, string>())
+// The history record currently being edited in the live workspace. It lets a
+// history switch persist edits back to that record instead of making a copy.
+const liveSessionIdRef = useRef<string | null>(null)
 const liveDraftRef = useRef<{ id: string; startedAt: string } | null>(null)
 // Capture-time configuration must not be inferred from mutable settings when
 // the session is finally saved.
@@ -1358,6 +1361,7 @@ const startCapture = async (): Promise<void> => {
       const continuation = continuationTargetRef.current
       continuationEventIdsRef.current.clear()
       setTranscripts(continuation ? continuation.entry.segments : [])
+      liveSessionIdRef.current = continuation?.entry.id ?? null
       setClearedThroughMs(-1); clearBoundaryRef.current = -1
       setTranscriptSearch(''); setSummaryText(''); setSummaryStatus(''); setFollowingCaptions(true)
       meterFrameRef.current = requestAnimationFrame(updateMeter)
@@ -1516,6 +1520,7 @@ const stopCapture = async (): Promise<void> => {
         audioUnavailable: !audioAvailable,
         segments: finalSegments, summary: summaryText || undefined
       }, ...current])
+      liveSessionIdRef.current = sessionId
       continuationTargetRef.current = null
       activeModelSnapshotRef.current = null
       if (liveDraftRef.current) void deleteLiveDraft(userId)
@@ -1873,6 +1878,7 @@ const transcribeImportedFile = async (): Promise<void> => {
       if (!segments.length) { if (wavLayout) await deleteImportCheckpoint(userId); throw new Error('模型沒有回傳逐字稿') }
       if (wavLayout) await deleteImportCheckpoint(userId)
       setTranscripts(segments)
+      liveSessionIdRef.current = null
       setImportError('轉錄完成，已切換至即時字幕頁，可下載逐字稿。')
       setView('live')
     } catch (error) { setImportError(cancelImportRef.current ? '已取消批次轉錄。' : error instanceof Error ? error.message : '匯入轉錄失敗') } finally { importAbortRef.current = null; setImportProgress(null); cancelImportRef.current = false }
@@ -2344,13 +2350,53 @@ const clearCaptions = (): void => {
     setEditingTranscriptId(null); setTranscriptSearch('')
   }
 
-const loadSessionIntoLive = (entry: SavedSession): void => {
+const saveLiveCaptionsBeforeSwitch = async (): Promise<void> => {
+    const segments = transcriptsRef.current.filter((item) => item.status !== 'partial')
+    if (!segments.length) return
+    const transcript = makeTranscriptText(segments)
+    const currentId = liveSessionIdRef.current
+    const existing = currentId ? sessions.find((item) => item.id === currentId) : undefined
+    const hasChanged = existing && JSON.stringify(existing.segments) !== JSON.stringify(segments)
+    const sessionId = existing?.id ?? crypto.randomUUID()
+    const transcriptChanged = existing ? transcriptSignature(existing.transcript) !== transcriptSignature(transcript) : true
+    const nextEntry: SavedSession = existing
+      ? {
+          ...existing,
+          transcript,
+          segments,
+          audioVersions: existing.audioVersions?.map((version) => version.id === existing.activeAudioVersionId
+            ? { ...version, segments, transcript }
+            : version),
+          ...(transcriptChanged ? { summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined } : {})
+        }
+      : {
+          id: sessionId,
+          title: `即時字幕 ${new Date().toLocaleString('zh-TW')}`,
+          createdAt: new Date().toISOString(),
+          durationMs: Math.max(0, ...segments.map((item) => item.endMs)),
+          source: '即時字幕',
+          transcript,
+          audioKey: `transcript-${sessionId}`,
+          audioUnavailable: true,
+          segments
+        }
+    if (existing && !hasChanged) return
+    const nextSessions = existing
+      ? sessions.map((item) => item.id === existing.id ? nextEntry : item)
+      : [nextEntry, ...sessions]
+    // Persist first. A storage failure leaves the live captions intact rather
+    // than replacing them with a history record that the user cannot recover.
+    await saveSessions(userId, nextSessions)
+    setSessions(nextSessions)
+    liveSessionIdRef.current = nextEntry.id
+  }
+
+const loadSessionIntoLive = async (entry: SavedSession): Promise<void> => {
     if (captureState !== 'idle') { setStatus('請先結束目前收音，再載入歷史紀錄。'); return }
-    if (transcriptsRef.current.length && !window.confirm(interfaceTranslate(settings.uiLanguage, 'replaceLiveCaptionsConfirm'))) {
-      setStatus(interfaceTranslate(settings.uiLanguage, 'keptLiveCaptions'))
-      return
-    }
+    try { await saveLiveCaptionsBeforeSwitch() }
+    catch (error) { setStatus(error instanceof Error ? `無法自動保存目前即時字幕：${error.message}` : '無法自動保存目前即時字幕。'); return }
     setTranscripts(entry.segments)
+    liveSessionIdRef.current = entry.id
     setClearedThroughMs(0); clearBoundaryRef.current = 0
     setEditingTranscriptId(null); setTranscriptSearch(''); setFollowingCaptions(true)
     setViewingSessionId(null); setStatus(`已載入「${entry.title}」到即時字幕。`)
