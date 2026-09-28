@@ -1930,6 +1930,9 @@ const continueSession = async (entry: SavedSession): Promise<void> => {
       const audio = await loadSessionAudio(entry)
       if (!audio) throw new Error('找不到目前選定的音檔版本')
       continuationTargetRef.current = { entry, audio, baseDurationMs: await audioDurationMs(audio, entry.durationMs) }
+      // Continuation uses the live capture workspace. Move there before asking
+      // for audio permission so the recording state and any prompt are visible.
+      setView('live')
       await startCapture()
     } catch (error) { continuationTargetRef.current = null; setStatus(error instanceof Error ? `無法接續收音：${error.message}` : '無法接續收音') }
   }
