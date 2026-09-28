@@ -1,4 +1,5 @@
 import { EnergyVad, type VadConfig } from '../capture/vad'
+import { authFetch } from '../auth/services/auth-client'
 
 export type TranscriptEvent = {
   id: string
@@ -398,7 +399,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   }
 
   private async transcribeThroughWebGateway(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
-    const response = await fetch('/api/transcriptions', {
+    const response = await authFetch('/api/transcriptions', {
       method: 'POST',
       headers: {
         'content-type': 'audio/wav',

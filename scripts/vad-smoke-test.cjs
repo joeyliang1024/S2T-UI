@@ -20,4 +20,18 @@ assert.equal(vad.process(frame(.2)).speaking, true, 'speech resumes after a shor
 vad.process(frame(0)); vad.process(frame(0)); vad.process(frame(0)); vad.process(frame(0))
 assert.equal(vad.process(frame(0)).speechEnded, true, 'a pause at the configured silence threshold ends the sentence')
 
+for (const sampleRate of [16_000, 44_100, 48_000]) {
+  const detector = new EnergyVad(sampleRate)
+  let started = false
+  for (let offset = 0; offset < sampleRate; offset += 128) {
+    const audio = Float32Array.from({ length: 128 }, (_, index) => .02 * Math.sin(2 * Math.PI * 180 * (offset + index) / sampleRate))
+    started ||= detector.process(audio).speechStarted
+  }
+  assert.ok(started, `normal speech in 128-sample frames must start at ${sampleRate} Hz`)
+  const silent = new EnergyVad(sampleRate)
+  for (let offset = 0; offset < sampleRate; offset += 128) {
+    assert.equal(silent.process(new Float32Array(128)).speaking, false)
+  }
+}
+
 console.log('VAD smoke test passed.')

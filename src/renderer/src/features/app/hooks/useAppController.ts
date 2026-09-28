@@ -49,6 +49,8 @@ const [microphoneLevel, setMicrophoneLevel] = useState(-60)
 const [systemLevel, setSystemLevel] = useState(-60)
 
 const [elapsedMs, setElapsedMs] = useState(0)
+const translationElapsedMsRef = useRef(elapsedMs)
+translationElapsedMsRef.current = elapsedMs
 
 const detectTranscriptLanguage = (text: string): TranscriptEvent['detectedLanguage'] => {
   if (/[ぁ-んァ-ヶ]/.test(text)) return 'ja-JP'
@@ -505,17 +507,17 @@ useEffect(() => {
     // Let consecutive HTTP final chunks settle for a moment. receiveTranscript
     // can then merge them into one readable caption, reducing model requests
     // without delaying a sentence by more than this small aggregation window.
-    const timer = window.setTimeout(() => {
+    const timer = window.setInterval(() => {
       // Sentence mode normally waits for punctuation or a VAD boundary. A hard
       // cap prevents an unpunctuated speaker from leaving text untranslated
       // forever while a recording remains open.
       const available = Math.max(0, maximumAutomaticTranslationQueue - translatingIdsRef.current.size)
-      const entries = transcriptsRef.current.filter((entry) => shouldAutoTranslate(entry, settings.translationStrategy, elapsedMs))
+      const entries = transcriptsRef.current.filter((entry) => shouldAutoTranslate(entry, settings.translationStrategy, translationElapsedMsRef.current))
       const limit = settings.translationLoadStrategy === 'throttled' ? 1 : available
       entries.slice(0, limit).forEach((entry) => { void requestTranslation(entry) })
     }, settings.translationLoadStrategy === 'throttled' ? throttledTranslationDelayMs : translationAggregationDelayMs)
-    return () => window.clearTimeout(timer)
-  }, [elapsedMs, requestTranslation, settings.translationLoadStrategy, settings.translationStrategy, transcripts])
+    return () => window.clearInterval(timer)
+  }, [requestTranslation, settings.translationLoadStrategy, settings.translationStrategy])
 
 useEffect(() => {
     const signature = JSON.stringify({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), vadConfig: settings.vadConfig })

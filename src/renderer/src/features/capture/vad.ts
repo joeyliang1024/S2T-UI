@@ -41,8 +41,14 @@ export class EnergyVad {
     for (const sample of samples) sum += sample * sample
     const rms = Math.sqrt(sum / Math.max(samples.length, 1))
     const levelDbfs = rms > 0 ? Math.max(-80, 20 * Math.log10(rms)) : -80
-    if (!this.speaking && levelDbfs < -20) this.noiseFloorDbfs = this.noiseFloorDbfs * 0.98 + levelDbfs * 0.02
     const startThreshold = Math.max(-42, Math.min(-24, this.noiseFloorDbfs + this.config.noiseFloorOffsetDb))
+    // Do not learn a potential voice onset as noise while waiting for
+    // minSpeechMs. AudioWorklet frames are only 128 samples: a per-call
+    // adaptation rate otherwise raises the threshold before speech starts.
+    if (!this.speaking && levelDbfs < startThreshold && this.onsetSamples === 0) {
+      const weight = 1 - Math.pow(0.98, samples.length / (this.sampleRate * 0.01))
+      this.noiseFloorDbfs += weight * (levelDbfs - this.noiseFloorDbfs)
+    }
     const stopThreshold = startThreshold - 5
     const minimumOnset = Math.floor(this.sampleRate * this.config.minSpeechMs / 1000)
     const minimumSilence = Math.floor(this.sampleRate * this.config.minSilenceMs / 1000)
