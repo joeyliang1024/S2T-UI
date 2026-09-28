@@ -16,6 +16,21 @@ Docker 服務已連線。
 
 本機 fallback 使用 `S2T_LOCAL_DATA_DIR`，預設為專案下的 `.s2t-data`。它包含設定、文字紀錄、音檔 blob、向量資料與本機登入資料；請以作業系統帳號權限保護此目錄。
 
+## Linux x64 離線 sherpa 模型
+
+若公司環境無法讓 gateway 下載 sherpa-onnx 講者分離模型，可使用已發布的 Linux x64 模型 image。它是模型傳遞媒介，不會啟動 gateway：
+
+```bash
+docker pull joeyliang1024/s2t-sherpa-models:1.13.8
+docker create --name s2t-sherpa-models joeyliang1024/s2t-sherpa-models:1.13.8 /bin/sh
+mkdir -p ./models
+docker cp s2t-sherpa-models:/models/sherpa-onnx ./models/sherpa-onnx
+docker rm s2t-sherpa-models
+export S2T_SHERPA_MODELS_DIR="$(pwd)/models/sherpa-onnx"
+```
+
+標籤 `1.13.8` 與 `latest` 都是 `linux/amd64`。先以固定版本部署；驗收或升級完成後才更新標籤。模型路徑與講者分離 API 設定請見 [sherpa-onnx 操作文件](SHERPA_ONNX.zh-TW.md)。
+
 ## 本機 Docker Compose 整合測試
 
 Web 版驗證可使用本機 Docker Compose 的 MinIO、PostgreSQL 與 Milvus，不需要等待外

@@ -13,7 +13,7 @@ npm run web:serve
 
 ### 從 Docker Hub 取得模型
 
-若部署環境不能直接下載模型，可拉取資料專用 image，再將模型複製到 gateway 主機。image 只包含 pyannote segmentation、3D-Speaker embedding 與 segmentation 授權檔，沒有 gateway、Node.js 或其他應用程式內容。
+若部署環境不能直接下載模型，可拉取資料專用 image，再將模型複製到 gateway 主機。image 包含 pyannote segmentation、3D-Speaker embedding、segmentation 授權檔及最小 BusyBox 執行層；不包含 gateway、Node.js 或應用程式內容。
 
 ```bash
 docker pull joeyliang1024/s2t-sherpa-models:1.13.8

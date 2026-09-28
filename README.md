@@ -1,6 +1,6 @@
 # S2T-UI
 
-以 Electron + TypeScript 規劃的即時語音轉文字、翻譯字幕與錄音桌面應用。
+以 Electron、TypeScript 與 Web gateway 建立的即時語音轉文字、雙語字幕、會議整理與錄音應用。支援 Web 與 Electron；Web 版透過 gateway 保護模型憑證與帳號隔離的 Storage。
 
 - [統一需求與改善清單（唯一待辦來源）](Enhancement.md)
 - [早期功能研究（歷史參考）](docs/PLAN.zh-TW.md)
@@ -10,10 +10,22 @@
 - [Web ASR Gateway](docs/WEB_GATEWAY.zh-TW.md)
 - [部署與本機 Docker Compose 測試](docs/DEPLOYMENT.zh-TW.md)
 - [驗收手冊](docs/VALIDATION.zh-TW.md)
+- [sherpa-onnx 離線講者分離與模型安裝](docs/SHERPA_ONNX.zh-TW.md)
 
 目前已有麥克風與系統音訊收音、PCM16 WAV、HTTP ASR、翻譯、登入、歷史紀錄、摘要、模型及聲紋管理等功能路徑；逐字稿支援 TXT／VTT／JSON／CSV。實作不等於上線驗收，具體缺口與三項急迫需求以 [Enhancement.md](Enhancement.md) 為準。
 
-ASR／翻譯等模型由使用者提供；gateway 另有可選的 sherpa-onnx 本機聲紋與分離路徑，需自行配置模型檔。
+ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定。講者分離可選用本機 sherpa-onnx；Linux x64 環境可直接從 Docker Hub 取得離線模型包。
+
+## 功能狀態
+
+| 範圍 | 可用功能 | 尚待真人／正式環境驗收 |
+| --- | --- | --- |
+| 即時收音 | 麥克風／系統音訊、VAD 與字幕切段滑桿、即時與整句翻譯策略 | 斷句延遲、不同裝置與長時間收音品質 |
+| 講者 | sherpa 分群、聲紋註冊／NT 比對、字幕講者手動編輯與 VTT 匯出 | 多人重疊、長會議與誤配率 |
+| 資料 | 登入隔離、歷史、搜尋、排序、複製、摘要模板、術語與 MinIO／PostgreSQL／Milvus | 正式外部 HTTPS 部署與故障情境 |
+| 介面 | 繁中、簡中、英文、日文、德文與深／淺／系統主題 | 全頁窄視窗、無障礙與視覺回歸 |
+
+完整範圍、未完成項目與驗收條件以 [Enhancement.md](Enhancement.md) 為準。
 
 ## Web 版啟動
 
@@ -72,6 +84,21 @@ npm run import-checkpoint:smoke
 ```
 
 `gateway:auth-smoke` 會啟動暫時的 localhost gateway，驗證登入隔離、撤銷、模型 registry 與加密 key 不會由讀取 API 洩漏。`import-checkpoint:smoke` 驗證大檔 WAV checkpoint 只在檔案、模型、語言與術語設定完全相同時接續。
+
+### Linux x64 離線 sherpa 模型
+
+公司網路無法由 gateway 下載聲紋模型時，可先在能存取 Docker Hub 的 Linux x64 主機取出模型，再放到 gateway 工作目錄。模型 image 僅用作離線交付，不包含 gateway 或應用程式：
+
+```bash
+docker pull joeyliang1024/s2t-sherpa-models:1.13.8
+docker create --name s2t-sherpa-models joeyliang1024/s2t-sherpa-models:1.13.8 /bin/sh
+mkdir -p ./models
+docker cp s2t-sherpa-models:/models/sherpa-onnx ./models/sherpa-onnx
+docker rm s2t-sherpa-models
+export S2T_SHERPA_MODELS_DIR="$(pwd)/models/sherpa-onnx"
+```
+
+此 image 的目標平台為 `linux/amd64`。完整講者分離設定、模型檔結構與 API 請見 [sherpa-onnx 文件](docs/SHERPA_ONNX.zh-TW.md)。
 
 ### Web 常見問題
 
