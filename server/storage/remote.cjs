@@ -1,6 +1,5 @@
 const { Client: MinioClient } = require('minio')
 const { Pool } = require('pg')
-const { MilvusClient, DataType } = require('@zilliz/milvus2-sdk-node')
 const { safePart, validateEmbedding, validateVectorRecord } = require('./local.cjs')
 
 const minioOptions = (config) => {
@@ -178,7 +177,33 @@ class PostgresConfigStore {
   }
 }
 class MilvusVectorStore {
-  constructor(config) { this.collection = config.S2T_MILVUS_COLLECTION; this.database = config.S2T_MILVUS_DB_NAME; this.client = new MilvusClient({ address: config.S2T_MILVUS_ENDPOINT, token: config.S2T_MILVUS_TOKEN, database: this.database }); this.dimension = null; this.initializing = null; this.ready = this.client.connectPromise }
+  // Milvus' REST v2 API is used deliberately: the gateway must not require
+  // the Milvus Node SDK (which uses a gRPC transport).
+  constructor(config) {
+    this.collection = config.S2T_MILVUS_COLLECTION
+    this.database = config.S2T_MILVUS_DB_NAME
+    const endpoint = config.S2T_MILVUS_ENDPOINT.includes('://') ? config.S2T_MILVUS_ENDPOINT : `http://${config.S2T_MILVUS_ENDPOINT}`
+    this.endpoint = endpoint.replace(/\/+$/, '')
+    this.token = config.S2T_MILVUS_TOKEN
+    this.dimension = null
+    this.initializing = null
+    this.ready = Promise.resolve()
+  }
+  async request(path, body) {
+    const response = await fetch(`${this.endpoint}/v2/vectordb/${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${this.token}` },
+      body: JSON.stringify({ dbName: this.database, ...body }),
+      signal: AbortSignal.timeout(30_000)
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || (typeof payload.code === 'number' && payload.code !== 0)) throw new Error(payload.message || payload.error || `Milvus REST ${response.status}`)
+    return payload.data ?? payload
+  }
+  async hasCollection() {
+    const data = await this.request('collections/has', { collectionName: this.collection })
+    return data === true || data?.value === true || data?.has === true
+  }
   async ensureCollection(dimension) {
     await this.ready
     if (this.dimension && this.dimension !== dimension) throw new Error(`聲紋維度不一致：collection 為 ${this.dimension}，輸入為 ${dimension}`)
@@ -187,45 +212,42 @@ class MilvusVectorStore {
     if (this.dimension !== dimension) throw new Error(`聲紋維度不一致：collection 為 ${this.dimension}，輸入為 ${dimension}`)
   }
   async initializeCollection(dimension) {
-    const exists = await this.client.hasCollection({ collection_name: this.collection, db_name: this.database })
-    if (!exists.value) {
+    const exists = await this.hasCollection()
+    if (!exists) {
       try {
-        await this.client.createCollection({ collection_name: this.collection, db_name: this.database, fields: [{ name: 'id', data_type: DataType.VarChar, max_length: 160, is_primary_key: true }, { name: 'NT', data_type: DataType.VarChar, max_length: 256 }, { name: 'Department', data_type: DataType.VarChar, max_length: 256 }, { name: 'embedding', data_type: DataType.FloatVector, dim: dimension }], index_params: [{ field_name: 'embedding', index_type: 'AUTOINDEX', metric_type: 'COSINE' }] })
+        await this.request('collections/create', { collectionName: this.collection, dimension, primaryFieldName: 'id', idType: 'VarChar', vectorFieldName: 'embedding', metricType: 'COSINE', autoId: false, enableDynamicField: true, params: { max_length: '256' } })
       } catch (error) {
-        const createdByAnotherProcess = await this.client.hasCollection({ collection_name: this.collection, db_name: this.database })
-        if (!createdByAnotherProcess.value) throw error
+        if (!await this.hasCollection()) throw error
       }
     }
-    const description = await this.client.describeCollection({ collection_name: this.collection, db_name: this.database })
-    const fields = description?.schema?.fields || []
+    const description = await this.request('collections/describe', { collectionName: this.collection })
+    const schema = description?.schema ?? description
+    const fields = schema?.fields || []
     const id = fields.find((field) => field.name === 'id')
-    const nt = fields.find((field) => field.name === 'NT')
-    const department = fields.find((field) => field.name === 'Department')
     const embedding = fields.find((field) => field.name === 'embedding')
-    const storedDimension = Number(embedding?.type_params?.find((parameter) => String(parameter.key).toLowerCase() === 'dim')?.value)
-    if (!id?.is_primary_key || id.dataType !== DataType.VarChar || nt?.dataType !== DataType.VarChar || department?.dataType !== DataType.VarChar || embedding?.dataType !== DataType.FloatVector || !Number.isSafeInteger(storedDimension) || storedDimension <= 0) throw new Error('Milvus collection schema 與聲紋資料契約不相容')
+    const storedDimension = Number(description?.dimension ?? embedding?.params?.dim ?? embedding?.typeParams?.dim ?? embedding?.type_params?.find((parameter) => String(parameter.key).toLowerCase() === 'dim')?.value)
+    if ((fields.length && (!id || !embedding)) || !Number.isSafeInteger(storedDimension) || storedDimension <= 0) throw new Error('Milvus collection schema 與聲紋資料契約不相容')
     if (storedDimension !== dimension) throw new Error(`聲紋維度不一致：collection 為 ${storedDimension}，輸入為 ${dimension}`)
     this.dimension = storedDimension
-    await this.client.loadCollectionSync({ collection_name: this.collection, db_name: this.database })
+    await this.request('collections/load', { collectionName: this.collection })
   }
-  async upsert(record) { validateVectorRecord(record); await this.ensureCollection(record.embedding.length); await this.client.upsert({ collection_name: this.collection, db_name: this.database, data: [record] }) }
-  async remove(id) { await this.ready; const exists = await this.client.hasCollection({ collection_name: this.collection, db_name: this.database }); if (!exists.value) return; await this.client.delete({ collection_name: this.collection, db_name: this.database, ids: [safePart(id, 'vector id')] }) }
+  async upsert(record) { validateVectorRecord(record); await this.ensureCollection(record.embedding.length); await this.request('entities/upsert', { collectionName: this.collection, data: [record] }) }
+  async remove(id) { await this.ready; if (!await this.hasCollection()) return; await this.request('entities/delete', { collectionName: this.collection, filter: `id in ${JSON.stringify([safePart(id, 'vector id')])}` }) }
   async nearest(embedding, limit = 5, allowedIds = []) {
     validateEmbedding(embedding)
     const ids = allowedIds.map((id) => safePart(id, 'vector id'))
     if (!ids.length) return []
     await this.ensureCollection(embedding.length)
-    const output = await this.client.search({ collection_name: this.collection, db_name: this.database, data: [embedding], filter: `id in ${JSON.stringify(ids)}`, limit: Math.max(1, Math.min(50, limit)), output_fields: ['id', 'NT', 'Department'], metric_type: 'COSINE', consistency_level: 'Strong' })
-    return (output.results || []).map((item) => ({ id: String(item.id), NT: item.NT, Department: item.Department, score: Number(item.score ?? item.distance ?? 0) }))
+    const output = await this.request('entities/search', { collectionName: this.collection, annsField: 'embedding', data: [embedding], filter: `id in ${JSON.stringify(ids)}`, limit: Math.max(1, Math.min(50, limit)), outputFields: ['id', 'NT', 'Department'], searchParams: { metricType: 'COSINE' }, consistencyLevel: 'Strong' })
+    return (output.results || output || []).map((item) => ({ id: String(item.id), NT: item.NT, Department: item.Department, score: Number(item.score ?? item.distance ?? 0) }))
   }
   async getMany(ids) {
     const permitted = [...new Set(ids.map((id) => safePart(id, 'vector id')))]
     if (!permitted.length) return []
     await this.ready
-    const exists = await this.client.hasCollection({ collection_name: this.collection, db_name: this.database })
-    if (!exists.value) return []
-    const output = await this.client.query({ collection_name: this.collection, db_name: this.database, filter: `id in ${JSON.stringify(permitted)}`, output_fields: ['id', 'NT', 'Department', 'embedding'] })
-    return (output.data || output.results || []).map((item) => ({ id: String(item.id), NT: String(item.NT), Department: String(item.Department), embedding: Array.from(item.embedding || [], Number) }))
+    if (!await this.hasCollection()) return []
+    const output = await this.request('entities/query', { collectionName: this.collection, filter: `id in ${JSON.stringify(permitted)}`, outputFields: ['id', 'NT', 'Department', 'embedding'] })
+    return (output.data || output.results || output || []).map((item) => ({ id: String(item.id), NT: String(item.NT), Department: String(item.Department), embedding: Array.from(item.embedding || [], Number) }))
   }
 }
 

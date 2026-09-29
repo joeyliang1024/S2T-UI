@@ -44,7 +44,10 @@ export const assignSpeakersByOverlap = (entries: TranscriptEvent[], turns: Speak
     const overlap = Math.max(0, Math.min(entry.endMs, turn.endMs) - Math.max(entry.startMs, turn.startMs))
     if (overlap > greatestOverlap) { greatestOverlap = overlap; assigned = turn }
   }
-  return assigned ? { ...entry, speaker: assigned.speaker, revision: entry.revision + 1 } : entry
+  // A diarization turn that merely touches a subtitle boundary is unreliable.
+  // Require it to explain a meaningful portion of the caption before labeling.
+  const coverage = greatestOverlap / Math.max(1, entry.endMs - entry.startMs)
+  return assigned && coverage >= 0.35 ? { ...entry, speaker: assigned.speaker, revision: entry.revision + 1 } : entry
 })
 
 export const parseSpeakerTurns = (payload: unknown): SpeakerTurn[] => {

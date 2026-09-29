@@ -2,7 +2,7 @@ import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, sess
 import { basename, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { createWriteStream, type WriteStream } from 'node:fs'
-import { copyFile, mkdir, open, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
 import OpenAI, { toFile } from 'openai'
 import { config as loadDotenv } from 'dotenv'
@@ -527,6 +527,26 @@ app.whenReady().then(() => {
       source: typeof metadata.source === 'string' ? metadata.source : '已保存工作階段', transcript: await readFile(join(root, 'transcript.txt'), 'utf8'),
       audioKey: '', nativeAudioPath: audioPath, savedToDisk: true, summary: typeof metadata.summary === 'string' ? metadata.summary : undefined, segments
     } }
+  })
+  ipcMain.handle('session:list', async (event) => {
+    const userId = requireDesktopUser(event)
+    const root = accountSessionsDirectory(userId)
+    await mkdir(root, { recursive: true })
+    const entries = await readdir(root, { withFileTypes: true })
+    const sessions = []
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      try {
+        const directory = join(root, entry.name)
+        const metadata = JSON.parse(await readFile(join(directory, 'session.json'), 'utf8')) as Record<string, unknown>
+        const audioPath = join(directory, 'audio.wav')
+        const lines = (await readFile(join(directory, typeof metadata.transcriptFile === 'string' ? metadata.transcriptFile : 'transcript.jsonl'), 'utf8')).split('\n').filter(Boolean)
+        const segments = lines.flatMap((line) => { try { return [JSON.parse(line)] } catch { return [] } })
+        availableAudioPaths.set(audioPath, userId)
+        sessions.push({ id: `disk-${entry.name}`, title: typeof metadata.name === 'string' ? metadata.name : '已保存工作階段', createdAt: typeof metadata.createdAt === 'string' ? metadata.createdAt : new Date().toISOString(), durationMs: typeof metadata.durationMs === 'number' ? metadata.durationMs : 0, source: typeof metadata.source === 'string' ? metadata.source : '已保存工作階段', transcript: await readFile(join(directory, 'transcript.txt'), 'utf8'), audioKey: '', nativeAudioPath: audioPath, savedToDisk: true, segments })
+      } catch { /* Ignore incomplete session directories. */ }
+    }
+    return sessions
   })
   ipcMain.handle('recording:recoverable', async (event) => {
     const userId = requireDesktopUser(event)

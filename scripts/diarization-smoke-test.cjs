@@ -34,6 +34,7 @@ const captions = [
 const assigned = assignSpeakersByOverlap(captions, next)
 assert.equal(assigned[0].speaker, 'SPEAKER_04')
 assert.equal(assigned[1].speaker, 'manual', 'manual labels are authoritative')
+assert.equal(assignSpeakersByOverlap([{ id: 'edge', revision: 0, status: 'final', startMs: 18_000, endMs: 28_000, sourceText: 'edge' }], [{ startMs: 18_000, endMs: 19_000, speaker: 'SPEAKER_04' }])[0].speaker, undefined, 'a tiny boundary overlap must not mislabel a caption')
 assert.deepEqual(assessVoiceprintSample(wav(3.2, 0.2)).durationMs, 3200)
 assert.throws(() => assessVoiceprintSample(wav(2.9, 0.2)), /至少需要 3 秒/)
 assert.throws(() => assessVoiceprintSample(wav(3.2, 0.001)), /音量過低/)

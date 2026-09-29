@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('s2t', {
   readAudio: (audioPath: string) => ipcRenderer.invoke('audio:read', audioPath),
   saveSession: (input: { name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[] }) => ipcRenderer.invoke('session:save', input),
   openSession: () => ipcRenderer.invoke('session:open'),
+  listSessions: () => ipcRenderer.invoke('session:list'),
   listRecoverableRecordings: () => ipcRenderer.invoke('recording:recoverable'),
   discardRecoverableRecording: (id: string) => ipcRenderer.invoke('recording:discard-recoverable', id),
   toggleFloatingCaptions: (visible: boolean) => ipcRenderer.send('captions:toggle-floating', visible),
