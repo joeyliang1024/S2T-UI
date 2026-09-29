@@ -1534,6 +1534,7 @@ const stopCapture = async (): Promise<void> => {
       activeModelSnapshotRef.current = null
       if (liveDraftRef.current) void deleteLiveDraft(userId)
       liveDraftRef.current = null
+      void generateSessionTitle(sessionId, transcript)
       setView('history')
       setStatus(audioFailures.length ? `收音已結束；${audioFailures.join('與')}音檔保存失敗，已下載復原 WAV，逐字稿仍可在「記錄」查看。` : '收音已結束。請在「記錄」頁選擇保存位置。')
     } catch (error) {
@@ -1930,6 +1931,7 @@ const finalizeSession = async (entry: SavedSession): Promise<void> => {
       segments = assignSpeakersByOverlap(segments, parseSpeakerTurns(diarized))
       const transcript = makeTranscriptText(segments)
       setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, title: automaticSessionTitle(transcript, item.createdAt), transcript, segments, audioVersions: [...audioVersionsFor(item), { id: crypto.randomUUID(), audioKey: activeAudioVersionFor(item).audioKey, createdAt: new Date().toISOString(), label: '品質校正', parentId: activeAudioVersionFor(item).id, segments, transcript }], activeAudioVersionId: item.activeAudioVersionId } : item))
+      void generateSessionTitle(entry.id, transcript)
       setStatus('完整錄音校正完成。')
     } catch (error) { setStatus(error instanceof Error ? `高品質校正失敗：${error.message}` : '高品質校正失敗') }
   }
@@ -2309,6 +2311,21 @@ const summarizeTranscript = async (transcript: string): Promise<string> => {
   }
   return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: `以下是已分層合併的會議整理，請套用模板：\n\n${merged[0] || ''}` }])).text
 }
+
+const generateSessionTitle = async (sessionId: string, transcript: string): Promise<void> => {
+    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
+    const language = ({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: 'English', ja: '日本語', de: 'Deutsch' } as const)[settings.uiLanguage]
+    try {
+      const result = await completeSummary([
+        { role: 'system', content: `請以${language}為下列逐字稿生成一個精準標題。只輸出標題本身，不要引號、Markdown 或說明；標題不得超過 10 個字。` },
+        { role: 'user', content: transcript.slice(0, 24_000) }
+      ])
+      const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()
+      if (!title) return
+      const visible = title.slice(0, 10) + (title.length > 10 ? '…' : '')
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, title: visible } : entry))
+    } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
+  }
 
 const createSessionSummary = async (sessionId: string, transcript: string): Promise<void> => {
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
