@@ -141,6 +141,9 @@ const voiceprintRecordKey = 'voiceprints'
 const voiceprintCompensationKey = 'voiceprint-compensations'
 const audioCompensationKey = 'audio-compensations'
 const voiceprintThreshold = Math.max(0, Math.min(1, Number(process.env.S2T_VOICEPRINT_THRESHOLD || 0.65)))
+// A high best score alone is insufficient when two enrolled voices are close.
+// Keep ambiguous turns anonymous instead of confidently assigning the wrong NT.
+const voiceprintMargin = Math.max(0, Math.min(1, Number(process.env.S2T_VOICEPRINT_MARGIN || 0.05)))
 const voiceprintEmbeddingMetadata = () => ({ model: process.env.S2T_VOICEPRINT_EMBEDDING_MODEL_NAME || basename(modelPaths().embedding), version: process.env.S2T_VOICEPRINT_EMBEDDING_VERSION || 'sherpa-onnx-v1' })
 const ownVoiceprints = async (user) => {
   const value = await storage.config.get(user.id, voiceprintRecordKey)
@@ -223,8 +226,10 @@ const labelDiarizationTurns = async (user, audio, turns) => {
   const recognized = new Map()
   const allowedVoiceprintIds = await visibleVoiceprintIds(user)
   for (const item of extractDiarizedSpeakerEmbeddings(audio, turns)) {
-    const candidate = (await storage.vector.nearest(item.embedding, 1, allowedVoiceprintIds))[0]
-    if (candidate?.score >= voiceprintThreshold) recognized.set(item.speaker, candidate)
+    const candidates = await storage.vector.nearest(item.embedding, 2, allowedVoiceprintIds)
+    const candidate = candidates[0]
+    const runnerUp = candidates[1]
+    if (candidate?.score >= voiceprintThreshold && (!runnerUp || candidate.score - runnerUp.score >= voiceprintMargin)) recognized.set(item.speaker, candidate)
   }
   return turns.map((turn) => {
     const match = recognized.get(turn.speaker)
@@ -509,9 +514,10 @@ createServer(async (request, response) => {
     try {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: '聲紋比對需要 WAV 音檔' })
-      const matches = await storage.vector.nearest(extractSpeakerEmbedding(audio), 1, await visibleVoiceprintIds(user))
+      const matches = await storage.vector.nearest(extractSpeakerEmbedding(audio), 2, await visibleVoiceprintIds(user))
       const candidate = matches[0]
-      return send(response, 200, { threshold: voiceprintThreshold, match: candidate && candidate.score >= voiceprintThreshold ? candidate : null })
+      const runnerUp = matches[1]
+      return send(response, 200, { threshold: voiceprintThreshold, margin: voiceprintMargin, match: candidate && candidate.score >= voiceprintThreshold && (!runnerUp || candidate.score - runnerUp.score >= voiceprintMargin) ? candidate : null })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '聲紋比對失敗' }) }
   }
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
@@ -617,4 +623,4 @@ createServer(async (request, response) => {
     }
   }
   return staticFile(request, response)
-}).listen(port, '127.0.0.1', () => console.log(`S2T web gateway: http://127.0.0.1:${port}`))
+}).listen(port, () => console.log(`S2T web gateway: http://0.0.0.0:${port}`))
