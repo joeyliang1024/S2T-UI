@@ -617,10 +617,10 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
 .live-workspace .caption-actions .text-button { min-height: 35px; padding: 7px 10px; font-size: .76rem; }
 .live-workspace .caption-search { min-width: 120px; max-width: 100%; background: var(--surface-raised); color: inherit; border-color: var(--border); }
 .live-workspace .caption-window > .transcript { padding: 16px 24px 24px; }
-.live-workspace .transcript > article { grid-template-columns: 68px minmax(0, 1fr) auto; padding: 10px 0; gap: 4px 12px; border-color: var(--border); }
+.live-workspace .transcript > article { grid-template-columns: 112px minmax(0, 1fr) auto; padding: 10px 0; gap: 4px 12px; border-color: var(--border); }
 .live-workspace .transcript > article > time { grid-column: 1; grid-row: 1; padding-top: 2px; }
 .live-workspace .transcript > article > .speaker-row { align-self: start; grid-column: 1; grid-row: 2; min-width: 0; }
-.live-workspace .transcript > article > .speaker-row input { box-sizing: border-box; max-width: 68px; min-height: 23px; padding: 0 5px; width: 68px; }
+.live-workspace .transcript > article > .speaker-row input { box-sizing: border-box; max-width: 112px; min-height: 23px; padding: 0 5px; width: 112px; }
 .live-workspace .transcript > article > p { grid-column: 2; line-height: 1.4; }
 .live-workspace .transcript > article > .translation { grid-column: 2; padding: 4px 9px; border-left: 2px solid #739cff; border-radius: 0 6px 6px 0; background: rgba(115,156,255,.06); }
 .live-workspace .transcript > article > .edit-button { align-self: center; grid-column: 3; grid-row: 1 / span 2; padding: 4px 6px; }
