@@ -29,6 +29,22 @@ const staleLockMs = 60_000
 // Coordinate mutations both inside this Node process and between separate
 // gateway/Electron processes using the same local data directory. The lock is
 // deliberately beside the data file, so atomic rename never replaces it.
+const processAlive = (pid) => {
+  if (!Number.isInteger(pid) || pid <= 0) return false
+  try { process.kill(pid, 0); return true } catch (error) { return error?.code === 'EPERM' }
+}
+// Reaping a stale lock by path is racy: between judging the file stale and
+// deleting it, another process may have reaped it and created a fresh lock at
+// the same path. Renaming to a private quarantine name first means only one
+// reaper can win a given file, and the inode check afterwards guarantees we
+// never discard a lock we did not inspect.
+const reclaimLock = async (lock, stale) => {
+  const quarantine = `${lock}.stale-${randomUUID()}`
+  try { await rename(lock, quarantine) } catch (error) { if (error?.code === 'ENOENT') return; throw error }
+  const info = await stat(quarantine).catch(() => null)
+  if (info && info.ino === stale.ino) { await rm(quarantine, { force: true }).catch(() => undefined); return }
+  await rename(quarantine, lock).catch(() => undefined)
+}
 const withFileLock = async (file, operation) => {
   const lock = `${file}.lock`
   const deadline = Date.now() + lockTimeoutMs
@@ -40,8 +56,17 @@ const withFileLock = async (file, operation) => {
       await handle.writeFile(`${process.pid}\n${new Date().toISOString()}\n`)
     } catch (error) {
       if (error?.code !== 'EEXIST') throw error
-      const age = await stat(lock).then((info) => Date.now() - info.mtimeMs).catch(() => 0)
-      if (age > staleLockMs) { await rm(lock, { force: true }); continue }
+      const info = await stat(lock).catch(() => null)
+      if (info) {
+        const age = Date.now() - info.mtimeMs
+        const holder = await readFile(lock, 'utf8').then((text) => Number.parseInt(String(text).split('\n')[0], 10)).catch(() => NaN)
+        // Reap only locks whose owning process is gone, so a live holder that
+        // runs long fails the wait below instead of having its lock stolen.
+        // The multiplied age is a safety valve for pid namespaces where the
+        // original owner is not observable (for example a stale lock copied
+        // between containers sharing this directory).
+        if ((age > staleLockMs && !processAlive(holder)) || age > staleLockMs * 10) { await reclaimLock(lock, info); continue }
+      }
       if (Date.now() >= deadline) throw new Error('本機 storage 正由另一個程序寫入，請稍後重試')
       await delay(20 + Math.floor(Math.random() * 30))
     }
@@ -106,6 +131,21 @@ class LocalConfigStore {
   async remove(scope, recordKey) {
     return mutateFile(this.file, async () => { const records = await this.records(); delete records[this.key(scope, recordKey)]; await atomicJson(this.file, records) })
   }
+  // Atomic read-modify-write for records shared by concurrent requests and
+  // tabs (compensation queues, the voiceprints index, revoked tokens). The
+  // transform runs inside the per-file mutation queue and the cross-process
+  // lock, so a concurrent writer can never overwrite what it did not see.
+  // Returning undefined aborts without writing.
+  async update(scope, recordKey, transform) {
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); const key = this.key(scope, recordKey)
+      const current = records[key]?.value ?? null
+      const outcome = await transform(current)
+      if (outcome === undefined) return { changed: false, value: current }
+      records[key] = { value: outcome, updatedAt: new Date().toISOString() }; await atomicJson(this.file, records)
+      return { changed: true, value: outcome }
+    })
+  }
   async list(scope, prefix = '') {
     const records = await this.records(); const start = `${safePart(scope, 'scope')}:`; const cleanPrefix = prefix ? safePart(prefix, 'prefix') : ''
     return Object.entries(records).flatMap(([key, entry]) => key.startsWith(start) && key.slice(start.length).startsWith(cleanPrefix) ? [{ key: key.slice(start.length), value: entry.value, updatedAt: entry.updatedAt }] : [])
@@ -127,7 +167,15 @@ class LocalBlobStore {
     if (!inside(this.root, target)) throw new Error('無效的 blob key')
     return target
   }
-  async put(scope, key, bytes) { const target = this.path(scope, key); await mkdir(join(target, '..'), { recursive: true }); await writeFile(target, bytes, { mode: 0o600 }) }
+  async put(scope, key, bytes) {
+    const target = this.path(scope, key)
+    await mkdir(join(target, '..'), { recursive: true })
+    // Stream to a temp file beside the blob root and rename into place: a
+    // reader (or a crash) can never observe a half-written recording, and the
+    // temp name lives outside every scope directory so list() never sees it.
+    const temporary = join(this.root, `.tmp-${randomUUID()}`)
+    try { await writeFile(temporary, bytes, { mode: 0o600 }); await rename(temporary, target) } finally { await rm(temporary, { force: true }) }
+  }
   async get(scope, key) { try { return await readFile(this.path(scope, key)) } catch (error) { if (error && error.code === 'ENOENT') return null; throw error } }
   stream(scope, key) { return createReadStream(this.path(scope, key)) }
   async remove(scope, key) { await rm(this.path(scope, key), { force: true }) }

@@ -144,7 +144,7 @@ const environmentKey = (profileId: string): string | undefined => {
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; requiresApiKey?: boolean; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages: string[]; supportedSampleRates: number[] } }
 type StoredModelConfig = {
   theme: 'system' | 'light' | 'dark'; uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
-  translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryRequiresApiKey: boolean; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; diarizationRequiresApiKey: boolean; embeddingEndpoint: string; embeddingModel: string; embeddingRequiresApiKey: boolean; diarizationPreviewEnabled: boolean; denoiseEnabled: boolean; glossary: string
+  translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryRequiresApiKey: boolean; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; diarizationRequiresApiKey: boolean; embeddingEndpoint: string; embeddingModel: string; embeddingRequiresApiKey: boolean; diarizationPreviewEnabled: boolean; denoiseEnabled: boolean; kaiserResampleEnabled: boolean; sileroVadEnabled: boolean; dynaudnormEnabled: boolean; glossary: string
   vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number; chunkMinMs: number; chunkMaxMs: number }
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
@@ -189,8 +189,8 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     theme: input.theme === 'light' || input.theme === 'dark' ? input.theme : 'system', uiLanguage: input.uiLanguage === 'zh-CN' || input.uiLanguage === 'en' || input.uiLanguage === 'ja' || input.uiLanguage === 'de' ? input.uiLanguage : 'zh-TW', storageLocation: input.storageLocation === 'remote' ? 'remote' : 'local', sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' || input.translationLoadStrategy === 'throttled' ? input.translationLoadStrategy : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), translationProfiles, selectedTranslationModelId: shortText(input.selectedTranslationModelId, 100), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
-    summaryModel: shortText(input.summaryModel, 200), summaryRequiresApiKey: input.summaryRequiresApiKey !== false, summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), diarizationRequiresApiKey: input.diarizationRequiresApiKey !== false, embeddingEndpoint: shortText(input.embeddingEndpoint, 2_000), embeddingModel: shortText(input.embeddingModel, 200), embeddingRequiresApiKey: input.embeddingRequiresApiKey !== false, diarizationPreviewEnabled: input.diarizationPreviewEnabled !== false, denoiseEnabled: input.denoiseEnabled !== false, glossary: shortText(input.glossary, 20_000),
-    vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 500, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30), chunkMinMs: boundedNumber(vadInput.chunkMinMs, 1_000, 300, 3_000), chunkMaxMs: boundedNumber(vadInput.chunkMaxMs, 2_400, 800, 6_000) }
+    summaryModel: shortText(input.summaryModel, 200), summaryRequiresApiKey: input.summaryRequiresApiKey !== false, summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), diarizationRequiresApiKey: input.diarizationRequiresApiKey !== false, embeddingEndpoint: shortText(input.embeddingEndpoint, 2_000), embeddingModel: shortText(input.embeddingModel, 200), embeddingRequiresApiKey: input.embeddingRequiresApiKey !== false, diarizationPreviewEnabled: input.diarizationPreviewEnabled !== false, denoiseEnabled: input.denoiseEnabled !== false, kaiserResampleEnabled: input.kaiserResampleEnabled === true, sileroVadEnabled: input.sileroVadEnabled === true, dynaudnormEnabled: input.dynaudnormEnabled === true, glossary: shortText(input.glossary, 20_000),
+    vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 250, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30), chunkMinMs: boundedNumber(vadInput.chunkMinMs, 700, 300, 3_000), chunkMaxMs: boundedNumber(vadInput.chunkMaxMs, 1_500, 800, 6_000) }
   }
 }
 
@@ -500,6 +500,26 @@ app.whenReady().then(() => {
     if (typeof audioPath !== 'string' || availableAudioPaths.get(audioPath) !== requireDesktopUser(event)) throw new Error('無法讀取此音檔')
     const audio = await readFile(audioPath)
     return audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength)
+  })
+
+  ipcMain.handle('audio:save-local', async (event, input: { key: string; audio: ArrayBuffer }) => {
+    const userId = requireDesktopUser(event)
+    if (!input || typeof input.key !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(input.key) || !(input.audio instanceof ArrayBuffer)) throw new Error('本機音檔資料無效')
+    const directory = join(accountDirectory(userId), 'audio-versions')
+    await mkdir(directory, { recursive: true })
+    const path = join(directory, `${input.key}.wav`)
+    const temporary = `${path}.${randomUUID()}.tmp`
+    await writeFile(temporary, Buffer.from(input.audio), { mode: 0o600 })
+    await rename(temporary, path)
+    availableAudioPaths.set(path, userId)
+    return { audioPath: path }
+  })
+
+  ipcMain.handle('audio:delete-local', async (event, audioPath: string) => {
+    const userId = requireDesktopUser(event)
+    if (typeof audioPath !== 'string' || availableAudioPaths.get(audioPath) !== userId) throw new Error('無法刪除此音檔')
+    await rm(audioPath, { force: true })
+    availableAudioPaths.delete(audioPath)
   })
 
   ipcMain.handle('session:open', async (event) => {

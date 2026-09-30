@@ -18,9 +18,25 @@ const localSecret = async (directory) => {
   }
 }
 const createAuth = async (storage, environment = process.env) => {
+  // Bootstrap admin creation and every later user lookup query the backing
+  // store. Storage owns the schema migration (Postgres CREATE TABLE), so wait
+  // for it before the first SELECT — otherwise startup races the DDL and auth
+  // rejects forever, taking every API request down with it.
+  if (storage?.ready) await storage.ready
   const users = storage.mode.config === 'postgres' ? new PostgresUserStore(storage.config.pool) : new LocalUserStore(storage.config)
-  const secret = environment.S2T_AUTH_SECRET?.trim() || await localSecret(environment.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data'))
+  const configuredSecret = environment.S2T_AUTH_SECRET?.trim()
+  if (environment.S2T_KUBERNETES_MODE === 'true' && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
+  const secret = configuredSecret || await localSecret(environment.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data'))
   const revokedTokensKey = 'revoked-auth-tokens'
+  const requestToken = (request) => {
+    const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '')
+    if (bearer) return bearer
+    const cookie = request.headers.cookie || ''
+    return /(?:^|;\s*)s2t_auth=([^;]+)/.exec(cookie)?.[1] || ''
+  }
+  const cookieSameSite = environment.S2T_COOKIE_SAME_SITE === 'none' ? 'None' : 'Strict'
+  if (cookieSameSite === 'None' && environment.S2T_COOKIE_SECURE !== 'true') throw new Error('S2T_COOKIE_SAME_SITE=none 必須同時設定 S2T_COOKIE_SECURE=true')
+  const setSessionCookie = (response, token) => response.setHeader('set-cookie', `s2t_auth=${token}; Path=/; HttpOnly; SameSite=${cookieSameSite}; Max-Age=604800${environment.S2T_COOKIE_SECURE === 'true' ? '; Secure' : ''}`)
   const issue = (user) => jwt.sign({ sub: user.id }, secret, { algorithm: 'HS256', expiresIn: '7d', jwtid: randomBytes(18).toString('base64url') })
   const failedLogins = new Map()
   const loginWindowMs = 15 * 60_000
@@ -44,10 +60,18 @@ const createAuth = async (storage, environment = process.env) => {
   await ensureBootstrapAdmin()
   const activeRevocations = async (userId) => {
     const now = Math.floor(Date.now() / 1000)
+    const active = (value) => (Array.isArray(value) ? value.filter((entry) => entry && typeof entry.jti === 'string' && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now) : [])
     const stored = await storage.config.get(userId, revokedTokensKey)
-    const active = Array.isArray(stored) ? stored.filter((entry) => entry && typeof entry.jti === 'string' && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now) : []
-    if (active.length !== (Array.isArray(stored) ? stored.length : 0)) await storage.config.put(userId, revokedTokensKey, active)
-    return active
+    const current = active(stored)
+    if (!Array.isArray(stored) || current.length === stored.length) return current
+    // Pruning is a read-modify-write on a record other requests append to
+    // (concurrent logouts); run it through the atomic update so a revocation
+    // is never dropped by an overlapping prune.
+    const result = await storage.config.update(userId, revokedTokensKey, (value) => {
+      const next = active(value)
+      return next.length === (Array.isArray(value) ? value.length : 0) ? undefined : next
+    })
+    return active(result.value)
   }
   return {
     // Kept server-side only.  The gateway derives per-account encrypted
@@ -77,18 +101,22 @@ const createAuth = async (storage, environment = process.env) => {
       try {
         const payload = jwt.verify(token, secret, { algorithms: ['HS256'] })
         if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string' || !Number.isSafeInteger(payload.exp)) return
-        const entries = await activeRevocations(payload.sub)
-        if (!entries.some((entry) => entry.jti === payload.jti)) await storage.config.put(payload.sub, revokedTokensKey, [...entries, { jti: payload.jti, expiresAt: payload.exp }])
+        await activeRevocations(payload.sub)
+        // Two tabs logging out together must not overwrite each other's
+        // revocation, so append through the atomic update instead of put().
+        await storage.config.update(payload.sub, revokedTokensKey, (value) => {
+          const entries = Array.isArray(value) ? value : []
+          return entries.some((entry) => entry?.jti === payload.jti) ? undefined : [...entries, { jti: payload.jti, expiresAt: payload.exp }]
+        })
       } catch { /* An expired or invalid token is already unusable. */ }
     },
     async requireUser(request) {
-      const token = request.headers.authorization?.replace(/^Bearer\s+/i, '') || ''
-      return this.session(token)
+      return this.session(requestToken(request))
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
       if (request.method === 'POST' && url === '/api/auth/register') {
-        try { send(response, 201, await this.register(await readJson(request))) } catch (error) { send(response, error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在') ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
+        try { const result = await this.register(await readJson(request)); setSessionCookie(response, result.token); send(response, 201, result) } catch (error) { send(response, error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在') ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
       }
       if (request.method === 'POST' && url === '/api/auth/login') {
         let input
@@ -98,6 +126,7 @@ const createAuth = async (storage, environment = process.env) => {
         try {
           const result = await this.login(input)
           failedLogins.delete(key)
+          setSessionCookie(response, result.token)
           send(response, 200, result)
         } catch (error) {
           const failures = recentFailures(key); failures.push(Date.now()); failedLogins.set(key, failures)
@@ -106,12 +135,13 @@ const createAuth = async (storage, environment = process.env) => {
         return true
       }
       if (request.method === 'GET' && url === '/api/auth/session') {
-        const token = request.headers.authorization?.replace(/^Bearer\s+/i, '') || ''; const user = await this.session(token)
+        const user = await this.session(requestToken(request))
         send(response, user ? 200 : 401, user ? { user } : { error: '登入狀態已失效' }); return true
       }
       if (request.method === 'POST' && url === '/api/auth/logout') {
-        const token = request.headers.authorization?.replace(/^Bearer\s+/i, '') || ''
+        const token = requestToken(request)
         await this.revoke(token)
+        response.setHeader('set-cookie', 's2t_auth=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0')
         send(response, 204, ''); return true
       }
       return false

@@ -9,7 +9,9 @@
 | TypeScript 型別 | 通過 | `npm run typecheck` |
 | Production bundle | 通過 | `npm run build` |
 | Diff 格式 | 通過 | `git diff --check` |
-| 本機儲存與帳號隔離 | 通過 | `npm run storage:smoke` |
+| 本機儲存與帳號隔離 | 通過 | `npm run storage:smoke`（含原子 `update` 並發寫入與 stale-lock 回收） |
+| Gateway PostgreSQL 啟動 | 通過 | `npm run storage:gateway:smoke`（暫存資料庫實啟 gateway，驗證 schema migration 與 auth bootstrap 無競態、第一個 API 要求不 crash） |
+| Storage 提交寬限 | 通過 | `npm run storage:grace:smoke`（上傳後未提交的音檔不會被無關的 session 儲存刪除；過期後補償仍會清除） |
 | 音訊重取樣 | 通過 | `npm run resample:smoke`（48k→16k、44.1k→16k、原率直通、分塊一致性與停止時尾段 flush） |
 | 術語 JSON 解析 | 通過 | `npm run glossary:smoke`（物件／陣列、無效內容、重複與空資料） |
 | 免 key ASR adapter | 通過 | `npm run model-adapter:smoke`（免 key 模型不查 key；需 key 模型會被阻擋） |

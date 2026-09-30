@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('s2t', {
   finishPcmRecording: (id: string) => ipcRenderer.invoke('recording:finish', id),
   abortPcmRecording: (id: string) => ipcRenderer.invoke('recording:abort', id),
   readAudio: (audioPath: string) => ipcRenderer.invoke('audio:read', audioPath),
+  saveLocalAudio: (key: string, audio: ArrayBuffer) => ipcRenderer.invoke('audio:save-local', { key, audio }),
+  deleteLocalAudio: (audioPath: string) => ipcRenderer.invoke('audio:delete-local', audioPath),
   saveSession: (input: { name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[] }) => ipcRenderer.invoke('session:save', input),
   openSession: () => ipcRenderer.invoke('session:open'),
   listSessions: () => ipcRenderer.invoke('session:list'),

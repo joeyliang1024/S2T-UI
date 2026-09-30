@@ -1,0 +1,105 @@
+{
+  "preset": "new",
+  "vadConfig": {
+    "minSpeechMs": 120,
+    "minSilenceMs": 250,
+    "preRollMs": 300,
+    "noiseFloorOffsetDb": 12,
+    "chunkMinMs": 700,
+    "chunkMaxMs": 1500
+  },
+  "audio": "music/卓文萱 Genie Chuo&曹格 Gary Chaw【梁山伯與茱麗葉】華視偶像劇「戀愛女王」片尾曲 Official Music Video.mp3",
+  "audioSeconds": 45,
+  "tsv": "music/梁山伯與茱麗葉_句級Speaker時間軸.tsv",
+  "endpointHost": "submissions-enter-audit-workstation.trycloudflare.com",
+  "model": "Breeze-ASR-25",
+  "startedAt": "2026-09-30T17:11:51.389Z",
+  "chunks": {
+    "enqueued": 31,
+    "sent": 31,
+    "droppedQueue": 0,
+    "avgAudioMs": 1452,
+    "vadBoundaries": 2,
+    "forcedBoundaries": 29
+  },
+  "asrMs": {
+    "n": 31,
+    "p50": 307,
+    "p95": 380,
+    "max": 392
+  },
+  "queueWaitMs": {
+    "n": 31,
+    "p50": 2,
+    "p95": 4,
+    "max": 5
+  },
+  "errors": {
+    "count": 0,
+    "unique": []
+  },
+  "sentences": {
+    "total": 3,
+    "shown": 3,
+    "dropped": 0,
+    "emptyText": 0,
+    "requestFailed": 0,
+    "notSent": 0
+  },
+  "latencyMs": {
+    "n": 3,
+    "p50": 1620,
+    "p95": 1781,
+    "max": 1781,
+    "within2500ShownPct": 100,
+    "within2500AllPct": 100
+  },
+  "cer": {
+    "refChars": 28,
+    "hypChars": 57,
+    "distance": 34,
+    "cerPct": 121.43
+  },
+  "drainMs": 169,
+  "detail": [
+    {
+      "startMs": 31100,
+      "endMs": 35750,
+      "speaker": "曹格",
+      "text": "我的心想唱首歌給妳聽",
+      "status": "shown",
+      "chunkMs": 1500,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 319,
+      "displayOffsetMs": 32881,
+      "latencyMs": 1781
+    },
+    {
+      "startMs": 37200,
+      "endMs": 41100,
+      "speaker": "曹格",
+      "text": "歌詞是如此的甜蜜",
+      "status": "shown",
+      "chunkMs": 1500,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 256,
+      "displayOffsetMs": 38820,
+      "latencyMs": 1620
+    },
+    {
+      "startMs": 43250,
+      "endMs": 48250,
+      "speaker": "曹格",
+      "text": "可是我害羞 我沒有勇氣",
+      "status": "shown",
+      "chunkMs": 1500,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 205,
+      "displayOffsetMs": 44767,
+      "latencyMs": 1517
+    }
+  ]
+}

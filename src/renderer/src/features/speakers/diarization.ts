@@ -13,6 +13,9 @@ export const stabilizeSpeakerTurns = (previous: SpeakerTurn[], incoming: Speaker
   const stableByIncoming = new Map<string, { speaker: string; amount: number }>()
   for (const next of incoming) {
     for (const prior of previous) {
+      // Identity recognition must be confirmed for each window; do not turn
+      // an anonymous result into an old NT match based only on time overlap.
+      if (!/^SPEAKER_\d+$/.test(prior.speaker)) continue
       const amount = overlap(next, prior)
       if (!amount) continue
       const known = stableByIncoming.get(next.speaker)
@@ -20,11 +23,17 @@ export const stabilizeSpeakerTurns = (previous: SpeakerTurn[], incoming: Speaker
     }
   }
   const allocated = new Map<string, string>()
-  let nextAnonymous = previous.reduce((maximum, turn) => Math.max(maximum, Number(/^SPEAKER_(\d+)$/.exec(turn.speaker)?.[1]) || -1), -1) + 1
+  let nextAnonymous = previous.reduce((maximum, turn) => Math.max(maximum, Number(/^SPEAKER_(\d+)$/.exec(turn.speaker)?.[1] ?? -1)), -1) + 1
+  const claimed = new Set<string>()
   return incoming.map((turn) => {
     if (!/^SPEAKER_\d+$/.test(turn.speaker)) return turn
     const stable = stableByIncoming.get(turn.speaker)?.speaker
-    if (stable) return { ...turn, speaker: stable }
+    if (allocated.has(turn.speaker)) return { ...turn, speaker: allocated.get(turn.speaker)! }
+    if (stable && !claimed.has(stable)) {
+      claimed.add(stable)
+      allocated.set(turn.speaker, stable)
+      return { ...turn, speaker: stable }
+    }
     const allocatedName = allocated.get(turn.speaker) ?? `SPEAKER_${String(nextAnonymous++).padStart(2, '0')}`
     allocated.set(turn.speaker, allocatedName)
     return { ...turn, speaker: allocatedName }

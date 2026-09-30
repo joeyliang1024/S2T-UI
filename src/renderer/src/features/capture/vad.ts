@@ -17,11 +17,15 @@ export type VadConfig = {
 
 export const defaultVadConfig: VadConfig = {
   minSpeechMs: 120,
-  minSilenceMs: 500,
+  // 250 ms keeps sentence-endpoint latency inside the 2.5 s budget;
+  // canMergeHttpCaption re-joins the shorter segments for display.
+  minSilenceMs: 250,
   preRollMs: 300,
   noiseFloorOffsetDb: 12,
-  chunkMinMs: 1_000,
-  chunkMaxMs: 2_400
+  // 700/1500 ms bounds the wait before the first caption: continuous speech
+  // reaches the ASR at ~1.2 s instead of ~2.1 s from the speaker's first word.
+  chunkMinMs: 700,
+  chunkMaxMs: 1_500
 }
 
 /**

@@ -116,7 +116,7 @@ docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml
 npm run storage:remote:smoke
 ```
 
-`storage:remote:smoke` 會實測 MinIO blob、兩個獨立程序的 PostgreSQL CAS 與 Milvus 向量搜尋，並在結束時清除隨機測試資料。通過後，先停止目前 gateway，再以相同外部環境啟動它：
+`storage:remote:smoke` 會實測 MinIO blob、兩個獨立程序的 PostgreSQL CAS、原子記錄更新、Milvus 向量搜尋與 diarization 重試退避，並在結束時清除隨機測試資料。接著執行 `npm run storage:gateway:smoke`，它會用暫存 PostgreSQL 資料庫真的啟動一次 gateway，驗證 schema migration 與 auth bootstrap 不會互相競爭（舊版會讓 `/readyz` 回 503，並讓第一個 API 要求直接 crash）。通過後，先停止目前 gateway，再以相同外部環境啟動它：
 
 ```bash
 set -a
@@ -125,7 +125,7 @@ set +a
 npm run web:serve
 ```
 
-gateway 與外部服務都啟動後，可執行 `npm run storage:compensation:smoke`。它會建立臨時帳號，驗證未提交 session 的音檔可被「重試 Storage 補償」清除、已提交的音檔會保留，以及聲紋補償佇列可清空；結束時會刪除測試帳號與資料。
+gateway 與外部服務都啟動後，可執行 `npm run storage:compensation:smoke`。它會建立臨時帳號，驗證上傳後未提交的音檔在「提交寬限期」（`S2T_STORAGE_COMPENSATION_GRACE_MS`，預設 30 秒）內不會被補償佇列誤刪、過期後仍可被「重試 Storage 補償」清除、已提交的音檔會保留，以及聲紋補償佇列可清空；結束時會刪除測試帳號與資料。純本機模式的 `npm run storage:grace:smoke` 不需任何外部服務，專門回歸驗證「上傳後尚未提交的音檔不會被無關的 session 儲存刪除」。
 
 `npm run storage:voiceprint-backup:smoke` 會驗證聲紋快照包含 PostgreSQL metadata 與 Milvus embedding，並在刪除後還原兩者及帳號下可見的聲紋清單；測試使用隨機帳號與 collection，結束時清除資料。
 

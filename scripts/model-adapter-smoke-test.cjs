@@ -30,16 +30,18 @@ const main = async () => {
   await new Promise((resolve) => setImmediate(resolve))
   assert.ok(requests.length > 0, 'ordinary microphone audio must reach ASR before recording stops')
   assert.ok(transcripts.some((entry) => entry.sourceText === '測試即時字幕'), 'ASR results must be emitted during capture')
+  assert.equal(requests[0].prompt, undefined, 'the first chunk has no rolling context yet')
   await live.stop()
+  assert.ok(requests.length >= 2, 'the final flush must send the remaining pending audio')
+  assert.ok(String(requests[1].prompt || '').includes('測試即時字幕'), 'later chunks must carry the previous caption as rolling prompt')
   const webRequests = []
   const webTranscripts = []
   const webErrors = []
-  global.window = { localStorage: { getItem: () => 'test-session-token' }, setTimeout }
+  global.window = { setTimeout }
   global.fetch = async (url, init) => {
     webRequests.push({ url, ...init })
-    const authorized = init.headers.authorization === 'Bearer test-session-token'
-    return new Response(JSON.stringify(authorized ? { text: '網頁即時字幕' } : { error: '需要登入' }), {
-      status: authorized ? 200 : 401, headers: { 'content-type': 'application/json' }
+    return new Response(JSON.stringify({ text: '網頁即時字幕' }), {
+      status: 200, headers: { 'content-type': 'application/json' }
     })
   }
   const web = new OpenAiChunkedModelAdapter({ id: 'web-asr', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default' })
@@ -51,11 +53,14 @@ const main = async () => {
   }
   await new Promise((resolve) => setImmediate(resolve))
   assert.ok(webRequests.length > 0, 'web capture must send ASR requests during recording')
-  assert.equal(webRequests[0].headers.authorization, 'Bearer test-session-token', 'ASR must carry the login token')
+  assert.equal(webRequests[0].headers.authorization, undefined, 'Web authentication is carried by the HttpOnly cookie, not localStorage')
   assert.equal(webRequests[0].headers['x-s2t-model-id'], 'default')
   assert.equal(webRequests[0].headers['x-s2t-language'], 'zh')
   assert.ok(webTranscripts.some((entry) => entry.sourceText === '網頁即時字幕'), 'authenticated web ASR must emit live captions')
   await web.stop()
+  assert.ok(webRequests.length >= 2, 'the web flush must send the remaining pending audio')
+  assert.equal(webRequests[0].headers['x-s2t-prompt'], undefined, 'the first web chunk has no rolling context yet')
+  assert.ok(String(webRequests[1].headers['x-s2t-prompt'] || '').includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
   assert.deepEqual(webErrors, [])
   console.log('Model adapter smoke test passed.')
 }

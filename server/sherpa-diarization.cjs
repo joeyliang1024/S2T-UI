@@ -58,6 +58,13 @@ const modelPaths = () => {
   }
 }
 
+// Threads per sherpa model. Workers × threads must stay inside the Pod CPU
+// budget, otherwise parallel jobs fight each other and every job slows down.
+const inferThreads = () => {
+  const value = Number.parseInt(process.env.S2T_SHERPA_INFER_THREADS || '', 10)
+  return Number.isInteger(value) && value > 0 ? value : 2
+}
+
 let diarizer
 let embeddingExtractor
 const getDiarizer = () => {
@@ -68,8 +75,8 @@ const getDiarizer = () => {
   // feature is not installed or its models are absent.
   const sherpa = require('sherpa-onnx-node')
   diarizer = new sherpa.OfflineSpeakerDiarization({
-    segmentation: { pyannote: { model: paths.segmentation }, numThreads: 2, provider: 'cpu' },
-    embedding: { model: paths.embedding, numThreads: 2, provider: 'cpu' },
+    segmentation: { pyannote: { model: paths.segmentation }, numThreads: inferThreads(), provider: 'cpu' },
+    embedding: { model: paths.embedding, numThreads: inferThreads(), provider: 'cpu' },
     clustering: { numClusters: 0, threshold: 0.5 }, minDurationOn: 0.25, minDurationOff: 0.35
   })
   return diarizer
@@ -85,7 +92,7 @@ const getEmbeddingExtractor = () => {
   const { embedding } = modelPaths()
   if (!existsSync(embedding)) throw new Error('找不到 sherpa-onnx 聲紋模型。請依 docs/SHERPA_ONNX.zh-TW.md 下載 embedding 模型檔。')
   const sherpa = require('sherpa-onnx-node')
-  embeddingExtractor = new sherpa.SpeakerEmbeddingExtractor({ model: embedding, numThreads: 2, provider: 'cpu' })
+  embeddingExtractor = new sherpa.SpeakerEmbeddingExtractor({ model: embedding, numThreads: inferThreads(), provider: 'cpu' })
   return embeddingExtractor
 }
 
@@ -103,29 +110,202 @@ const extractEmbeddingFromWave = (wave) => {
 
 const extractSpeakerEmbedding = (audio) => extractEmbeddingFromWave(readWavSamples(audio))
 
-/** Build one embedding per diarized speaker by joining that speaker's turns. */
-const extractDiarizedSpeakerEmbeddings = (audio, segments) => {
-  const wave = readWavSamples(audio)
-  const samplesBySpeaker = new Map()
+const envNumber = (name, fallback) => { const value = Number(process.env[name]); return Number.isFinite(value) ? value : fallback }
+const envInteger = (name, fallback) => { const value = Number.parseInt(process.env[name] || '', 10); return Number.isInteger(value) && value > 0 ? value : fallback }
+
+/**
+ * Bounded inputs for voiceprint matching. Joining an entire meeting into one
+ * embedding is both expensive and wrong: a cluster that mixed two people
+ * becomes a blended vector. Instead each diarized speaker is cut into a few
+ * short blocks so the gateway can require consensus across them.
+ */
+const voiceprintBlockOptions = () => ({
+  minSegmentSec: envNumber('S2T_VOICEPRINT_MIN_SEGMENT_SEC', 1.5),
+  minBlockSec: envNumber('S2T_VOICEPRINT_MIN_BLOCK_SEC', 5),
+  maxBlockSec: envNumber('S2T_VOICEPRINT_MAX_BLOCK_SEC', 15),
+  maxBlocks: envInteger('S2T_VOICEPRINT_MAX_BLOCKS', 3),
+  minSpeechSec: envNumber('S2T_VOICEPRINT_MIN_SPEECH_SEC', 8),
+  maxSpeechSec: envNumber('S2T_VOICEPRINT_MAX_SPEECH_SEC', 45),
+  minDbfs: envNumber('S2T_VOICEPRINT_MIN_BLOCK_DBFS', -45),
+  // Optional Silero gate. It only ever runs on the selected blocks, never the
+  // whole recording, and stays off unless explicitly requested.
+  vad: process.env.S2T_VOICEPRINT_VAD === '1',
+  vadMinSpeechRatio: envNumber('S2T_VOICEPRINT_VAD_MIN_RATIO', 0.6)
+})
+
+const rmsDbfsOf = (samples) => {
+  let energy = 0
+  for (let index = 0; index < samples.length; index += 1) energy += samples[index] * samples[index]
+  return 20 * Math.log10(Math.max(Math.sqrt(energy / Math.max(1, samples.length)), 1e-8))
+}
+
+/**
+ * Recording-level veto (default on).
+ *
+ * The per-block ratio gate stays opt-in (`S2T_VOICEPRINT_VAD=1`), but a
+ * recording that contains essentially no speech at all is rejected outright:
+ * on music the embedding model scores instrumental passages against an
+ * enrolled voice (measured 0.702 on a duet track — above the 0.65 threshold),
+ * so labelling it can only produce a wrong identity. Real speech is never
+ * that sparse (a conversation is tens of percent voiced), which is why both
+ * conditions must hold: a quiet-but-real recording still passes.
+ */
+const recordingVadOptions = () => ({
+  enabled: process.env.S2T_VOICEPRINT_AUDIO_VAD !== '0',
+  minVoicedSec: envNumber('S2T_VOICEPRINT_AUDIO_VAD_MIN_SEC', 10),
+  minVoicedRatio: envNumber('S2T_VOICEPRINT_AUDIO_VAD_MIN_RATIO', 0.05)
+})
+
+const shouldVetoRecording = (voicedSec, durationSec, options) => {
+  if (!options.enabled || !(durationSec > 0)) return false
+  return voicedSec < options.minVoicedSec && voicedSec / durationSec < options.minVoicedRatio
+}
+
+/**
+ * Split one speaker's turns into at most `maxBlocks` chronologically ordered
+ * blocks, each capped at `maxBlockSec` and never exceeding `maxSpeechSec`
+ * total. Short turns and quiet turns are dropped before they can reach the
+ * embedding model.
+ */
+const buildSpeakerBlocks = (parts, options) => {
+  const segments = parts.filter((part) => part.duration >= options.minSegmentSec).sort((left, right) => left.start - right.start)
+  if (!segments.length || segments.reduce((sum, part) => sum + part.duration, 0) < options.minSpeechSec) return []
+  const blocks = []
+  let current = []
+  let currentSec = 0
+  let budgetSec = options.maxSpeechSec
+  const flush = () => {
+    if (current.length && currentSec >= options.minBlockSec) {
+      blocks.push({ segments: current, durationSec: currentSec, startSec: current[0].start, endSec: current[current.length - 1].end })
+    }
+    current = []; currentSec = 0
+  }
   for (const segment of segments) {
+    if (budgetSec <= 0 || blocks.length >= options.maxBlocks) break
+    // A single continuous turn is sliced as well: one 20 minute monologue
+    // must not become one 20 minute embedding input, and slicing it is what
+    // makes consensus possible for a speaker who never yields the floor.
+    let position = segment.start
+    let remaining = Math.min(segment.duration, budgetSec)
+    while (remaining > 1e-3) {
+      if (blocks.length >= options.maxBlocks) break
+      if (currentSec >= options.maxBlockSec) {
+        flush()
+        if (blocks.length >= options.maxBlocks) break
+      }
+      const slice = Math.min(remaining, options.maxBlockSec - currentSec, budgetSec)
+      if (slice <= 1e-3) break
+      current.push({ start: position, end: position + slice, duration: slice })
+      currentSec += slice
+      position += slice
+      remaining -= slice
+      budgetSec -= slice
+    }
+    if (blocks.length >= options.maxBlocks || budgetSec <= 0) break
+  }
+  if (blocks.length < options.maxBlocks) flush()
+  return blocks.slice(0, options.maxBlocks)
+}
+
+const joinBlockSamples = (wave, block) => {
+  const length = block.segments.reduce((total, segment) => total + Math.max(0, Math.ceil(segment.end * wave.sampleRate) - Math.floor(segment.start * wave.sampleRate)), 0)
+  if (length <= 0) return null
+  const joined = new Float32Array(length)
+  let offset = 0
+  for (const segment of block.segments) {
     const start = Math.max(0, Math.floor(segment.start * wave.sampleRate))
     const end = Math.min(wave.samples.length, Math.ceil(segment.end * wave.sampleRate))
     if (end <= start) continue
-    const parts = samplesBySpeaker.get(segment.speaker) || []
-    parts.push(wave.samples.slice(start, end))
-    samplesBySpeaker.set(segment.speaker, parts)
+    joined.set(wave.samples.subarray(start, end), offset)
+    offset += end - start
   }
-  return [...samplesBySpeaker.entries()].flatMap(([speaker, parts]) => {
-    const length = parts.reduce((total, part) => total + part.length, 0)
-    if (length < wave.sampleRate) return []
-    const joined = new Float32Array(length); let offset = 0
-    for (const part of parts) { joined.set(part, offset); offset += part.length }
-    try { return [{ speaker, embedding: extractEmbeddingFromWave({ samples: joined, sampleRate: wave.sampleRate }) }] } catch (error) {
-      // A short/noisy anonymous speaker should stay anonymous; it must not
-      // prevent diarization results for the rest of the meeting.
-      return []
+  return offset ? joined.subarray(0, offset) : null
+}
+
+// Optional gate: only the selected block is analysed, never the whole file.
+const passesVadGate = async (samples, sampleRate, options) => {
+  try {
+    // Lazy require: silero-vad.cjs imports the WAV helpers from this module.
+    const { analyzeSamples } = require('./silero-vad.cjs')
+    const result = await analyzeSamples(resampleMono(samples, sampleRate, 16_000))
+    const ratio = result.durationMs ? result.speech.reduce((sum, interval) => sum + Math.max(0, interval.endMs - interval.startMs), 0) / result.durationMs : 0
+    return ratio >= options.vadMinSpeechRatio
+  } catch {
+    // An unavailable VAD must not silently reject audio; the energy gate
+    // above still applies.
+    return true
+  }
+}
+
+/**
+ * Build bounded embeddings for every diarized speaker.
+ *
+ * Replaces the old "join every turn of this speaker into one embedding":
+ * - input is capped per block (default 15 s) and per speaker (default 45 s),
+ *   so CPU cost is predictable instead of proportional to meeting length;
+ * - quiet turns and turns shorter than 1.5 s never reach the model;
+ * - each block is reported separately so the gateway can demand consensus.
+ */
+const extractDiarizedSpeakerBlocks = async (audio, segments) => {
+  const options = voiceprintBlockOptions()
+  const wave = readWavSamples(audio)
+  const groups = new Map()
+  for (const segment of segments) {
+    if (!segment || typeof segment.speaker !== 'string' || !segment.speaker.trim()) continue
+    const start = Math.max(0, Number(segment.start))
+    const end = Math.min(wave.samples.length / wave.sampleRate, Number(segment.end))
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue
+    const parts = groups.get(segment.speaker) || []
+    parts.push({ start, end, duration: end - start })
+    groups.set(segment.speaker, parts)
+  }
+  const output = []
+  // One Silero pass over the whole recording (RTF ≈ 0.003) decides whether
+  // voiceprint labelling may run at all. It runs here rather than before
+  // diarization because the diarized segments are the API's own answer, not
+  // part of the voiceprint path.
+  const recordingVad = recordingVadOptions()
+  let vetoed = false
+  if (recordingVad.enabled) {
+    try {
+      const { analyzeSamples } = require('./silero-vad.cjs')
+      const vad = await analyzeSamples(resampleMono(wave.samples, wave.sampleRate, 16_000))
+      const voicedSec = vad.speech.reduce((sum, interval) => sum + Math.max(0, interval.endMs - interval.startMs), 0) / 1000
+      const durationSec = wave.samples.length / wave.sampleRate
+      vetoed = shouldVetoRecording(voicedSec, durationSec, recordingVad)
+      if (vetoed) console.log(`[voiceprint] ${JSON.stringify({ decision: 'reject', reason: 'recording-no-speech', voicedSec: Math.round(voicedSec * 10) / 10, durationSec: Math.round(durationSec * 10) / 10, voicedRatio: Math.round(voicedSec / durationSec * 1000) / 1000 })}`)
+    } catch {
+      // An unavailable VAD must not silently reject the recording; the energy
+      // gate and the decision thresholds still apply.
     }
-  })
+  }
+  for (const [speaker, parts] of groups) {
+    const usableSec = parts.filter((part) => part.duration >= options.minSegmentSec).reduce((sum, part) => sum + part.duration, 0)
+    if (vetoed) {
+      output.push({ speaker, speechMs: Math.round(usableSec * 1_000), blocks: [], vetoed: true })
+      continue
+    }
+    const blocks = buildSpeakerBlocks(parts, options)
+    const items = []
+    for (const block of blocks) {
+      const joined = joinBlockSamples(wave, block)
+      if (!joined) continue
+      const rmsDbfs = rmsDbfsOf(joined)
+      if (rmsDbfs < options.minDbfs) continue
+      if (options.vad && !(await passesVadGate(joined, wave.sampleRate, options))) continue
+      const startedAt = Date.now()
+      try {
+        const embedding = extractEmbeddingFromWave({ samples: joined, sampleRate: wave.sampleRate })
+        items.push({ index: items.length, startSec: block.startSec, endSec: block.endSec, durationMs: Math.round(block.durationSec * 1_000), rmsDbfs: Math.round(rmsDbfs * 10) / 10, embedding })
+        console.log(`[voiceprint-embed] ${JSON.stringify({ speaker, block: items.length - 1, inputSec: Math.round(block.durationSec * 10) / 10, ms: Date.now() - startedAt })}`)
+      } catch {
+        // A short/noisy block stays anonymous; it must not block the rest of
+        // the diarization result.
+      }
+    }
+    output.push({ speaker, speechMs: Math.round(usableSec * 1_000), blocks: items })
+  }
+  return output
 }
 
 const diarizeWav = (audio) => {
@@ -135,4 +315,4 @@ const diarizeWav = (audio) => {
   return instance.process(samples).map((segment) => ({ start: segment.start, end: segment.end, speaker: `SPEAKER_${String(segment.speaker).padStart(2, '0')}` }))
 }
 
-module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerEmbeddings, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono }
+module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording }

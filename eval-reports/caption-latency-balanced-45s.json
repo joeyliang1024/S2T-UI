@@ -1,0 +1,153 @@
+{
+  "preset": "balanced",
+  "vadConfig": {
+    "minSpeechMs": 120,
+    "minSilenceMs": 300,
+    "preRollMs": 300,
+    "noiseFloorOffsetDb": 12,
+    "chunkMinMs": 1000,
+    "chunkMaxMs": 1500
+  },
+  "contextPrompt": true,
+  "audio": "music/卓文萱 Genie Chuo&曹格 Gary Chaw【梁山伯與茱麗葉】華視偶像劇「戀愛女王」片尾曲 Official Music Video.mp3",
+  "audioSeconds": 45,
+  "tsv": "music/梁山伯與茱麗葉_句級Speaker時間軸.tsv",
+  "endpointHost": "submissions-enter-audit-workstation.trycloudflare.com",
+  "model": "Breeze-ASR-25",
+  "startedAt": "2026-09-30T17:27:44.234Z",
+  "chunks": {
+    "enqueued": 31,
+    "sent": 31,
+    "droppedQueue": 0,
+    "emptyText": 0,
+    "requestFailed": 0,
+    "avgAudioMs": 1452,
+    "vadBoundaries": 2,
+    "forcedBoundaries": 29
+  },
+  "asrMs": {
+    "n": 31,
+    "p50": 359,
+    "p95": 606,
+    "max": 628
+  },
+  "queueWaitMs": {
+    "n": 31,
+    "p50": 2,
+    "p95": 5,
+    "max": 6
+  },
+  "errors": {
+    "count": 0,
+    "unique": []
+  },
+  "sentences": {
+    "total": 3,
+    "shown": 3,
+    "dropped": 0,
+    "emptyText": 0,
+    "requestFailed": 0,
+    "notSent": 0
+  },
+  "latencyMs": {
+    "n": 3,
+    "p50": 1692,
+    "p95": 1708,
+    "max": 1708,
+    "within2500ShownPct": 100,
+    "within2500AllPct": 100
+  },
+  "accuracy": {
+    "corpusCerPct": 107.14,
+    "corpusRefChars": 28,
+    "corpusDistance": 30,
+    "sentenceCerPct": 275
+  },
+  "fragmentation": {
+    "displayedCaptions": 5,
+    "rawFinalEvents": 31,
+    "mergeOperations": 26,
+    "meanCaptionChars": 19.4,
+    "segmentsPerSentenceMean": 1.33,
+    "segmentsPerSentenceMax": 2,
+    "sentencesSplit": 1
+  },
+  "drainMs": 143,
+  "captions": [
+    {
+      "startMs": 0,
+      "endMs": 10500,
+      "text": "<|3.59|><|4.59|><|5.59|><|7.59|><|8.59|><|8.59|><|8.59|>"
+    },
+    {
+      "startMs": 10500,
+      "endMs": 21000,
+      "text": "<|8.59|><|8.59|><|8.59|><|8.59|><|8.59|><|8.59|><|8.59|>"
+    },
+    {
+      "startMs": 21000,
+      "endMs": 32620,
+      "text": "<|8.59|>||我的心想唱首歌給你聽<|7.59|>歌詞是如此的甜蜜可是"
+    },
+    {
+      "startMs": 32620,
+      "endMs": 43120,
+      "text": "我害羞沒有勇氣對你說一句我愛你||為什麼你還是不言不語"
+    },
+    {
+      "startMs": 43120,
+      "endMs": 45000,
+      "text": "<|5.59|>你"
+    }
+  ],
+  "detail": [
+    {
+      "startMs": 31100,
+      "endMs": 35750,
+      "speaker": "曹格",
+      "text": "我的心想唱首歌給妳聽",
+      "status": "shown",
+      "chunkMs": 1500,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 399,
+      "displayOffsetMs": 31501,
+      "latencyMs": 401,
+      "segments": 2,
+      "hyp": "<|8.59|>||我的心想唱首歌給你聽<|7.59|>歌詞是如此的甜蜜可是我害羞沒有勇氣對你說一句我愛你||為什麼你還是不言不語",
+      "sentenceCerPct": 420
+    },
+    {
+      "startMs": 37200,
+      "endMs": 41100,
+      "speaker": "曹格",
+      "text": "歌詞是如此的甜蜜",
+      "status": "shown",
+      "chunkMs": 1500,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 288,
+      "displayOffsetMs": 38892,
+      "latencyMs": 1692,
+      "segments": 1,
+      "hyp": "我害羞沒有勇氣對你說一句我愛你||為什麼你還是不言不語",
+      "sentenceCerPct": 312.5
+    },
+    {
+      "startMs": 43250,
+      "endMs": 48250,
+      "speaker": "曹格",
+      "text": "可是我害羞 我沒有勇氣",
+      "status": "shown",
+      "chunkMs": 1500,
+      "boundary": "forced",
+      "queueWaitMs": 3,
+      "asrMs": 354,
+      "displayOffsetMs": 44958,
+      "latencyMs": 1708,
+      "segments": 1,
+      "hyp": "<|5.59|>你",
+      "sentenceCerPct": 100
+    }
+  ]
+}

@@ -34,6 +34,11 @@ const main = async () => {
     let result = await request(`/api/data/audio/${audioId}`, { method: 'POST', headers: { ...auth, 'content-type': 'audio/wav' }, body: Buffer.from('outage recovery audio') })
     assert.equal(result.response.status, 201)
 
+    // Let the commit grace elapse first so the assertions below observe the
+    // outage itself rather than the in-flight upload protection.
+    const grace = Number((await request('/api/storage')).body?.compensationGraceMs)
+    await delay(Number.isFinite(grace) && grace > 0 ? grace + 500 : 0)
+
     await execFileAsync('docker-compose', [...compose, 'stop', 'minio'])
     minioStopped = true
     result = await request('/api/data/storage-retry', { method: 'POST', headers: auth })

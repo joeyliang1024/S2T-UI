@@ -1,6 +1,5 @@
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
 import { supportedUiLanguages } from '../i18n'
-import { settingsKey, loadJson } from './browser-storage'
 import { defaultVadConfig } from '../../features/capture/vad'
 
 export const modelEndpoint = (endpoint: string, kind: ModelProfile['kind']): string => {
@@ -80,11 +79,16 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   diarizationPreviewEnabled: value.diarizationPreviewEnabled !== false,
   glossary: value.glossary ?? '',
   denoiseEnabled: value.denoiseEnabled !== false,
+  kaiserResampleEnabled: value.kaiserResampleEnabled === true,
+  sileroVadEnabled: value.sileroVadEnabled === true,
+  dynaudnormEnabled: value.dynaudnormEnabled === true,
   vadConfig: { ...defaultVadConfig, ...value.vadConfig }
   }
 }
 
-export const initialSettings = (userId: string): Settings => normalizeSettings(loadJson<Partial<Settings> & { modelEndpoint?: string }>(settingsKey(userId), {}))
+// Durable settings load from the gateway (Web) or Electron account file.
+// Never seed application state from Browser Storage.
+export const initialSettings = (): Settings => normalizeSettings({})
 
 export const textEndpoint = (endpoint: string): string => {
   if (endpoint.startsWith('/api/')) return endpoint

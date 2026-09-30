@@ -11,12 +11,24 @@ export class StreamingResampler {
   private readonly antiAliasKernel: Float32Array
   private filterHistory = new Float32Array(0)
 
-  constructor(private readonly sourceRate: number, private readonly targetRate: number) {
-    this.antiAliasKernel = sourceRate > targetRate ? StreamingResampler.lowPassKernel(targetRate / sourceRate) : new Float32Array(0)
+  constructor(private readonly sourceRate: number, private readonly targetRate: number, options: { kaiserWindow?: boolean } = {}) {
+    this.antiAliasKernel = sourceRate > targetRate ? StreamingResampler.lowPassKernel(targetRate / sourceRate, options.kaiserWindow === true) : new Float32Array(0)
     this.filterHistory = new Float32Array(Math.max(0, this.antiAliasKernel.length - 1))
   }
 
-  private static lowPassKernel(ratio: number): Float32Array {
+  private static besselI0 (value: number): number {
+    // Stable enough for the fixed Kaiser beta below without adding a DSP
+    // dependency to the browser capture path.
+    let sum = 1; let term = 1
+    for (let index = 1; index < 30; index += 1) {
+      term *= (value * value / 4) / (index * index)
+      sum += term
+      if (term < sum * 1e-12) break
+    }
+    return sum
+  }
+
+  private static lowPassKernel(ratio: number, kaiserWindow: boolean): Float32Array {
     // Windowed-sinc low pass before decimation. Keeping the cutoff below the
     // target Nyquist frequency leaves a small transition band and avoids the
     // aliasing produced by plain linear interpolation.
@@ -28,7 +40,10 @@ export class StreamingResampler {
     for (let index = 0; index < taps; index += 1) {
       const offset = index - center
       const sinc = offset === 0 ? 2 * cutoff : Math.sin(2 * Math.PI * cutoff * offset) / (Math.PI * offset)
-      const window = .54 - .46 * Math.cos(2 * Math.PI * index / (taps - 1))
+      const normalizedOffset = (2 * index / (taps - 1)) - 1
+      const window = kaiserWindow
+        ? StreamingResampler.besselI0(8.6 * Math.sqrt(Math.max(0, 1 - normalizedOffset * normalizedOffset))) / StreamingResampler.besselI0(8.6)
+        : .54 - .46 * Math.cos(2 * Math.PI * index / (taps - 1))
       values[index] = sinc * window
       sum += values[index]
     }

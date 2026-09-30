@@ -23,6 +23,8 @@ declare global {
       finishPcmRecording: (id: string) => Promise<{ audioPath: string }>
       abortPcmRecording: (id: string) => Promise<void>
       readAudio: (audioPath: string) => Promise<ArrayBuffer>
+      saveLocalAudio: (key: string, audio: ArrayBuffer) => Promise<{ audioPath: string }>
+      deleteLocalAudio: (audioPath: string) => Promise<void>
       saveSession: (input: { name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[] }) => Promise<{ canceled: boolean; audioPath?: string; directory?: string }>
       openSession: () => Promise<{ canceled: boolean; session?: { id: string; title: string; createdAt: string; durationMs: number; source: string; transcript: string; audioKey: string; nativeAudioPath: string; savedToDisk: boolean; summary?: string; segments: unknown[] } }>
       listSessions: () => Promise<Array<{ id: string; title: string; createdAt: string; durationMs: number; source: string; transcript: string; audioKey: string; nativeAudioPath: string; savedToDisk: boolean; segments: unknown[] }>>
@@ -61,6 +63,9 @@ interface SettingsConfig {
   summaryIncludeTranslation: boolean
   diarizationEndpoint: string
   diarizationModel: string
+  kaiserResampleEnabled: boolean
+  sileroVadEnabled: boolean
+  dynaudnormEnabled: boolean
   glossary: string
   vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number; chunkMinMs: number; chunkMaxMs: number }
 }

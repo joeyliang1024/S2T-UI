@@ -5,6 +5,7 @@ const { createStorage } = require('../server/storage/index.cjs')
 
 dotenv.config({ path: process.env.S2T_STORAGE_ENV_FILE || '.env.local-storage', quiet: true })
 const base = process.env.S2T_COMPENSATION_SMOKE_BASE || 'http://127.0.0.1:8787'
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
 
 const request = async (path, options = {}) => {
   const response = await fetch(`${base}${path}`, options)
@@ -34,6 +35,15 @@ const main = async () => {
     assert.equal(result.response.status, 201)
     result = await request('/api/data/storage-status', { headers: auth })
     assert.deepEqual(result.body, { audioPending: 1, voiceprintPending: 0 })
+    // Inside the commit grace window a fresh upload must survive reconciliation:
+    // the session that references it may not have been saved yet (another tab,
+    // an in-flight save or a premature storage-retry must not delete it).
+    result = await request('/api/data/storage-retry', { method: 'POST', headers: auth })
+    assert.deepEqual(result.body, { retried: true, audioPending: 1, voiceprintPending: 0 }, 'fresh uploads stay protected by the commit grace')
+    result = await request(`/api/data/audio/${orphanId}`, { headers: auth })
+    assert.equal(result.response.status, 200)
+    const grace = Number((await request('/api/storage')).body?.compensationGraceMs)
+    await delay(Number.isFinite(grace) && grace > 0 ? grace + 500 : 0)
     result = await request('/api/data/storage-retry', { method: 'POST', headers: auth })
     assert.deepEqual(result.body, { retried: true, audioPending: 0, voiceprintPending: 0 })
     result = await request(`/api/data/audio/${orphanId}`, { headers: auth })
