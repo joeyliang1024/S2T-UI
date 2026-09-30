@@ -608,7 +608,7 @@ useEffect(() => {
           setStatus(error instanceof Error ? `即時講者識別暫時失敗：${error.message}` : '即時講者識別暫時失敗')
         } finally { liveDiarizationRunningRef.current = false }
       })()
-    }, 15_000)
+    }, 30_000)
     return () => window.clearInterval(timer)
   }, [captureState, settings.diarizationEndpoint, settings.diarizationModel, settings.diarizationPreviewEnabled])
 
@@ -1605,7 +1605,29 @@ const stopCapture = async (): Promise<void> => {
           // The gateway owns this durable job. It waits/retries until the
           // session snapshot is visible, so closing this page cannot lose the
           // final tail after the last 15-second preview tick.
-          void authFetch('/api/data/diarization-jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, audioKey }) }).catch(() => setStatus('錄音已保存；最後講者識別工作排程失敗。'))
+          void (async () => {
+            try {
+              const queued = await readJsonResponse<{ job?: { id?: string } }>(await authFetch('/api/data/diarization-jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, audioKey }) }), '最後講者識別工作排程')
+              const jobId = queued.job?.id
+              if (!jobId) throw new Error('gateway 未回傳工作編號')
+              for (;;) {
+                await new Promise<void>((resolve) => window.setTimeout(resolve, 2_000))
+                const result = await readJsonResponse<{ job?: { state?: string, error?: string } }>(await authFetch(`/api/data/diarization-jobs?id=${encodeURIComponent(jobId)}`), '最後講者識別工作狀態')
+                const job = result.job
+                if (job?.state === 'completed') {
+                  const remote = await remoteSessionStorage.load()
+                  remoteSessionsVersionRef.current = remote.version
+                  setSessions(remote.sessions)
+                  setSessionStorageStates(Object.fromEntries(remote.sessions.map((entry) => [entry.id, 'remote'])))
+                  setStatus('錄音已保存；最後講者識別完成。')
+                  break
+                }
+                if (job?.state === 'failed') throw new Error(job.error || '背景工作失敗')
+              }
+            } catch (error) {
+              setStatus(error instanceof Error ? `錄音已保存；最後講者識別工作失敗：${error.message}` : '錄音已保存；最後講者識別工作失敗。')
+            }
+          })()
           return
         }
         const finalAudio = audioForStorage

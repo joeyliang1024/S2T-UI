@@ -483,16 +483,19 @@ const runDurableDiarizationJob = async (auth, owner) => {
   try {
     const user = job.payload?.user
     if (!user?.id || user.id !== job.userId) throw new Error('工作使用者資料無效')
-    const selected = await accountModelService(auth, user, job.payload?.modelId || 'managed-diarization', 'diarization')
-    if (!selected?.endpoint || !selected.model) throw new Error('講者分離模型尚未設定')
     const audio = await storage.blob.get(user.id, `audio/${job.audioKey}`)
     if (!audio) throw new Error('找不到講者分離工作對應的音檔')
-    const headers = selected.apiKey ? { authorization: `Bearer ${selected.apiKey}` } : {}
-    const form = new FormData(); form.set('model', selected.model); form.set('file', new Blob([audio], { type: 'audio/wav' }), 'recording.wav')
-    const remote = await fetch(selected.endpoint, { method: 'POST', headers, body: form, signal: AbortSignal.timeout(120_000) })
-    const payload = await remote.json().catch(() => null)
-    if (!remote.ok || !payload) throw new Error(`講者分離服務 HTTP ${remote.status}`)
-    const turns = await labelDiarizationTurns(user, audio, diarizationTurns(payload))
+    const selected = await accountModelService(auth, user, job.payload?.modelId || 'managed-diarization', 'diarization')
+    let rawTurns
+    if (selected?.endpoint && selected.model) {
+      const headers = selected.apiKey ? { authorization: `Bearer ${selected.apiKey}` } : {}
+      const form = new FormData(); form.set('model', selected.model); form.set('file', new Blob([audio], { type: 'audio/wav' }), 'recording.wav')
+      const remote = await fetch(selected.endpoint, { method: 'POST', headers, body: form, signal: AbortSignal.timeout(120_000) })
+      const payload = await remote.json().catch(() => null)
+      if (!remote.ok || !payload) throw new Error(`講者分離服務 HTTP ${remote.status}`)
+      rawTurns = diarizationTurns(payload)
+    } else rawTurns = await diarizeWav(audio)
+    const turns = await labelDiarizationTurns(user, audio, rawTurns)
     if (!turns.length) throw new Error('講者分離服務沒有回傳有效區段')
     const stored = await storage.config.get(user.id, 'sessions')
     const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []

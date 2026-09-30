@@ -46,9 +46,9 @@ class SherpaWorkerPool {
     size = positiveInteger(process.env.S2T_SHERPA_WORKERS, 1),
     maxQueue = positiveInteger(process.env.S2T_SHERPA_MAX_QUEUE, 8),
     // Cap for the length-scaled timeout below.
-    capTimeoutMs = positiveInteger(process.env.S2T_SHERPA_JOB_TIMEOUT_MS, 600_000),
+    capTimeoutMs = positiveInteger(process.env.S2T_SHERPA_JOB_TIMEOUT_MS, 1_800_000),
     baseTimeoutMs = positiveNumber(process.env.S2T_SHERPA_JOB_TIMEOUT_BASE_MS, 60_000),
-    timeoutPerAudioSec = positiveNumber(process.env.S2T_SHERPA_JOB_TIMEOUT_PER_AUDIO_SEC, 3)
+    timeoutPerAudioSec = positiveNumber(process.env.S2T_SHERPA_JOB_TIMEOUT_PER_AUDIO_SEC, 400)
   } = {}) {
     this.label = label
     this.size = size
@@ -87,7 +87,7 @@ class SherpaWorkerPool {
   }
 
   spawn () {
-    const entry = { worker: new Worker(join(__dirname, 'sherpa-worker.cjs')), busy: false, jobId: null, intentionalExit: false, audioIds: new Map() }
+    const entry = { worker: new Worker(join(__dirname, 'sherpa-worker.cjs')), busy: false, unavailable: false, jobId: null, intentionalExit: false, audioIds: new Map() }
     entry.worker.on('message', (message) => this.complete(entry, message))
     entry.worker.on('error', (error) => this.failWorker(entry, error))
     entry.worker.on('exit', (code) => {
@@ -107,6 +107,7 @@ class SherpaWorkerPool {
   execute (operation, payload, { priority = 'background', timeoutMs, signal, retainAudio = false } = {}) {
     if (this.closed) return Promise.reject(new Error('sherpa worker pool 已關閉'))
     if (signal?.aborted) return Promise.reject(new Error('sherpa 工作已取消'))
+    if (this.workers.length && this.workers.every((entry) => entry.unavailable)) return Promise.reject(new Error('語者 worker 正在恢復逾時工作，暫時無法接受新工作'))
     if (this.queue.length + this.jobs.size >= this.maxQueue) return Promise.reject(new Error('語者處理佇列已滿，請稍後再試'))
     this.start()
     return new Promise((resolve, reject) => {
@@ -141,7 +142,7 @@ class SherpaWorkerPool {
         if (!this.jobs.has(job.id)) return
         const entry = this.workers.find((item) => item.jobId === job.id)
         this.finishJob(job, new Error('sherpa 工作已取消'))
-        if (entry) { entry.intentionalExit = true; entry.worker.terminate().catch(() => undefined) }
+        if (entry) entry.unavailable = true
       }
       signal?.addEventListener('abort', job.cancel, { once: true })
       if (priority === 'interactive') {
@@ -178,15 +179,16 @@ class SherpaWorkerPool {
 
   dispatch () {
     for (const entry of this.workers) {
-      if (entry.busy || !this.queue.length) continue
+      if (entry.busy || entry.unavailable || !this.queue.length) continue
       const job = this.queue.shift()
       entry.busy = true; entry.jobId = job.id
       job.startedAt = Date.now()
       job.timer = setTimeout(() => {
         if (!this.jobs.has(job.id)) return
         this.finishJob(job, new Error(`sherpa ${job.operation} 逾時`))
-        entry.intentionalExit = true
-        entry.worker.terminate().catch(() => undefined)
+        // sherpa native calls are synchronous. Terminating their thread can
+        // abort the whole Node process, so quarantine it until it returns.
+        entry.unavailable = true
       }, job.timeoutMs)
       this.jobs.set(job.id, job)
       try { entry.worker.postMessage({ id: job.id, operation: job.operation, payload: this.payloadFor(entry, job) }) } catch (error) { this.finishJob(job, error); entry.busy = false; entry.jobId = null }
@@ -195,7 +197,12 @@ class SherpaWorkerPool {
 
   complete (entry, message) {
     const job = this.jobs.get(message?.id)
-    if (!job) return
+    if (!job) {
+      // A cancelled/timed-out native call eventually returned. It is now safe
+      // to put this worker back in service; no work ran concurrently with it.
+      if (entry.jobId === message?.id) { entry.busy = false; entry.unavailable = false; entry.jobId = null; this.dispatch() }
+      return
+    }
     entry.busy = false; entry.jobId = null
     const error = message.error ? Object.assign(new Error(message.error.message), { stack: message.error.stack, code: message.error.code }) : null
     // The worker evicted a retained recording under memory pressure. Re-send
