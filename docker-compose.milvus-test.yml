@@ -1,0 +1,28 @@
+name: s2t-milvus-test
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.18
+    command: etcd --data-dir /etcd --advertise-client-urls http://etcd:2379 --listen-client-urls http://0.0.0.0:2379
+    volumes: [etcd-test:/etcd]
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: milvus-test
+      MINIO_ROOT_PASSWORD: milvus-test-only-password
+    volumes: [minio-test:/data]
+  milvus:
+    image: milvusdb/milvus:v2.5.3
+    command: [milvus, run, standalone]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: milvus-test
+      MINIO_SECRET_ACCESS_KEY: milvus-test-only-password
+    depends_on: [etcd, minio]
+    ports: ["127.0.0.1:29530:19530", "127.0.0.1:29091:9091"]
+    volumes: [milvus-test:/var/lib/milvus]
+volumes:
+  etcd-test:
+  minio-test:
+  milvus-test:

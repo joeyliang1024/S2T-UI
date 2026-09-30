@@ -19,8 +19,19 @@ const localSecret = async (directory) => {
 }
 const createAuth = async (storage, environment = process.env) => {
   const users = storage.mode.config === 'postgres' ? new PostgresUserStore(storage.config.pool) : new LocalUserStore(storage.config)
-  const secret = environment.S2T_AUTH_SECRET?.trim() || await localSecret(environment.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data'))
+  const configuredSecret = environment.S2T_AUTH_SECRET?.trim()
+  if (environment.S2T_KUBERNETES_MODE === 'true' && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
+  const secret = configuredSecret || await localSecret(environment.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data'))
   const revokedTokensKey = 'revoked-auth-tokens'
+  const requestToken = (request) => {
+    const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '')
+    if (bearer) return bearer
+    const cookie = request.headers.cookie || ''
+    return /(?:^|;\s*)s2t_auth=([^;]+)/.exec(cookie)?.[1] || ''
+  }
+  const cookieSameSite = environment.S2T_COOKIE_SAME_SITE === 'none' ? 'None' : 'Strict'
+  if (cookieSameSite === 'None' && environment.S2T_COOKIE_SECURE !== 'true') throw new Error('S2T_COOKIE_SAME_SITE=none 必須同時設定 S2T_COOKIE_SECURE=true')
+  const setSessionCookie = (response, token) => response.setHeader('set-cookie', `s2t_auth=${token}; Path=/; HttpOnly; SameSite=${cookieSameSite}; Max-Age=604800${environment.S2T_COOKIE_SECURE === 'true' ? '; Secure' : ''}`)
   const issue = (user) => jwt.sign({ sub: user.id }, secret, { algorithm: 'HS256', expiresIn: '7d', jwtid: randomBytes(18).toString('base64url') })
   const failedLogins = new Map()
   const loginWindowMs = 15 * 60_000
@@ -82,13 +93,12 @@ const createAuth = async (storage, environment = process.env) => {
       } catch { /* An expired or invalid token is already unusable. */ }
     },
     async requireUser(request) {
-      const token = request.headers.authorization?.replace(/^Bearer\s+/i, '') || ''
-      return this.session(token)
+      return this.session(requestToken(request))
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
       if (request.method === 'POST' && url === '/api/auth/register') {
-        try { send(response, 201, await this.register(await readJson(request))) } catch (error) { send(response, error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在') ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
+        try { const result = await this.register(await readJson(request)); setSessionCookie(response, result.token); send(response, 201, result) } catch (error) { send(response, error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在') ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
       }
       if (request.method === 'POST' && url === '/api/auth/login') {
         let input
@@ -98,6 +108,7 @@ const createAuth = async (storage, environment = process.env) => {
         try {
           const result = await this.login(input)
           failedLogins.delete(key)
+          setSessionCookie(response, result.token)
           send(response, 200, result)
         } catch (error) {
           const failures = recentFailures(key); failures.push(Date.now()); failedLogins.set(key, failures)
@@ -106,12 +117,13 @@ const createAuth = async (storage, environment = process.env) => {
         return true
       }
       if (request.method === 'GET' && url === '/api/auth/session') {
-        const token = request.headers.authorization?.replace(/^Bearer\s+/i, '') || ''; const user = await this.session(token)
+        const user = await this.session(requestToken(request))
         send(response, user ? 200 : 401, user ? { user } : { error: '登入狀態已失效' }); return true
       }
       if (request.method === 'POST' && url === '/api/auth/logout') {
-        const token = request.headers.authorization?.replace(/^Bearer\s+/i, '') || ''
+        const token = requestToken(request)
         await this.revoke(token)
+        response.setHeader('set-cookie', 's2t_auth=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0')
         send(response, 204, ''); return true
       }
       return false

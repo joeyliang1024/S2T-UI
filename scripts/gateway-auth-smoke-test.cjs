@@ -9,6 +9,14 @@ const request = async (base, path, options = {}) => {
   const body = response.status === 204 ? null : await response.json().catch(() => null)
   return { response, body }
 }
+const silentWav = () => {
+  const audio = Buffer.alloc(44 + 16_000 * 2)
+  audio.write('RIFF', 0); audio.writeUInt32LE(audio.length - 8, 4); audio.write('WAVEfmt ', 8)
+  audio.writeUInt32LE(16, 16); audio.writeUInt16LE(1, 20); audio.writeUInt16LE(1, 22)
+  audio.writeUInt32LE(16_000, 24); audio.writeUInt32LE(32_000, 28); audio.writeUInt16LE(2, 32); audio.writeUInt16LE(16, 34)
+  audio.write('data', 36); audio.writeUInt32LE(32_000, 40)
+  return audio
+}
 
 const main = async () => {
   const directory = await mkdtemp(join(tmpdir(), 's2t-gateway-auth-'))
@@ -33,6 +41,11 @@ const main = async () => {
       })
       child.once('exit', (code) => { clearTimeout(timer); reject(new Error(`gateway exited (${code}): ${output}`)) })
     })
+    let result = await request(base, '/livez')
+    assert.deepEqual(result.body, { live: true, role: 'all' })
+    result = await request(base, '/readyz')
+    assert.equal(result.response.status, 200)
+    assert.equal(result.body.ready, true)
     for (const path of ['/api/data/sessions', '/api/data/settings', '/api/data/model-registry', '/api/data/summary-templates', '/api/voiceprints', '/api/voiceprints/identify', '/api/diarizations']) {
       const { response } = await request(base, path, path === '/api/data/sessions' || path === '/api/data/settings' || path === '/api/data/summary-templates' || path === '/api/voiceprints' ? {} : { method: 'POST', body: Buffer.from('x') })
       assert.equal(response.status, 401, `${path} must require authentication`)
@@ -48,7 +61,9 @@ const main = async () => {
       const preflight = await request(base, '/api/voiceprints/example', { method: 'OPTIONS', headers: { origin, 'access-control-request-method': 'DELETE' } })
       assert.equal(preflight.response.status, 204)
       assert.equal(preflight.response.headers.get('access-control-allow-origin'), origin)
+      assert.equal(preflight.response.headers.get('access-control-allow-credentials'), 'true')
       assert.match(preflight.response.headers.get('access-control-allow-methods') || '', /DELETE/)
+      assert.match(preflight.response.headers.get('access-control-allow-headers') || '', /x-s2t-dynaudnorm/)
     }
     const register = async (username, NT, Department) => {
       const { response, body } = await request(base, '/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password: 'smoke-password', NT, Department }) })
@@ -57,8 +72,14 @@ const main = async () => {
       return body.token
     }
     const alice = await register('alice', 'Alice', 'Engineering')
+    const cookieLogin = await request(base, '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'alice', password: 'smoke-password' }) })
+    assert.equal(cookieLogin.response.status, 200)
+    const cookie = cookieLogin.response.headers.get('set-cookie') || ''
+    assert.match(cookie, /s2t_auth=.*HttpOnly.*SameSite=Strict/)
+    const cookieSession = await request(base, '/api/auth/session', { headers: { cookie } })
+    assert.equal(cookieSession.response.status, 200, 'HttpOnly cookie must authorize a Web session without localStorage')
     const bob = await register('bob', 'Bob', 'Sales')
-    let result = await request(base, '/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${alice}` } })
+    result = await request(base, '/api/auth/logout', { method: 'POST', headers: { authorization: `Bearer ${alice}` } })
     assert.equal(result.response.status, 204)
     result = await request(base, '/api/auth/session', { headers: { authorization: `Bearer ${alice}` } })
     assert.equal(result.response.status, 401)
@@ -75,12 +96,23 @@ const main = async () => {
     assert.equal(result.response.status, 409)
     assert.equal(result.body.error, 'NT 已存在')
     const bearer = (token) => ({ authorization: `Bearer ${token}` })
+    result = await request(base, '/api/audio-processing/status', { headers: bearer(activeAlice) })
+    assert.equal(result.response.status, 200)
+    assert.equal(result.body.sileroVad.available, true)
+    result = await request(base, '/api/audio-processing/silero-vad', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'audio/wav' }, body: silentWav() })
+    assert.equal(result.response.status, 200)
+    assert.equal(result.body.durationMs, 1_000)
+    assert.deepEqual(result.body.speech, [])
     result = await request(base, '/api/transcriptions', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'text/plain' }, body: Buffer.from('not audio') })
     assert.equal(result.response.status, 415)
     result = await request(base, '/api/transcriptions', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'audio/wav', 'x-s2t-language': 'fr' }, body: Buffer.from('not audio') })
     assert.equal(result.response.status, 400)
     result = await request(base, '/api/data/sessions', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, sessions: [{ id: 'alice-session', title: 'Alice only' }] }) })
     assert.equal(result.response.status, 200)
+    result = await request(base, '/api/data/sessions', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, sessions: [{ id: 'recording-one', title: 'First', audioKey: 'shared-audio' }, { id: 'recording-two-remote-deadbeef', title: 'Second（遠端衝突版本）', audioKey: 'shared-audio' }] }) })
+    assert.equal(result.response.status, 200)
+    result = await request(base, '/api/data/sessions', { headers: bearer(activeAlice) })
+    assert.deepEqual(result.body.sessions.map((session) => ({ id: session.id, title: session.title, audioKey: session.audioKey })), [{ id: 'recording-one', title: 'First', audioKey: 'shared-audio' }])
     result = await request(base, '/api/data/sessions', { headers: bearer(bob) })
     assert.deepEqual(result.body, { sessions: [], version: 0 })
     const appSettings = { theme: 'dark', sourceLanguage: 'en-US' }
@@ -135,6 +167,9 @@ const main = async () => {
     result = await request(base, '/api/voiceprints', { method: 'POST', headers: { ...bearer(activeAlice), 'x-s2t-voiceprint-sharing': 'department' }, body: Buffer.from('not-a-wav') })
     assert.equal(result.response.status, 400)
     assert.match(result.body.error, /明確同意/)
+    const metrics = await fetch(`${base}/metrics`).then((response) => response.text())
+    assert.match(metrics, /s2t_gateway_request_duration_seconds_bucket\{route="audio_processing_silero_vad"/)
+    assert.match(metrics, /s2t_sherpa_worker_jobs\{state="queued"/)
     console.log('Gateway auth smoke test passed.')
   } finally {
     child.kill()

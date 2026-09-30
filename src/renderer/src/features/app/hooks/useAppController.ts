@@ -1,5 +1,4 @@
 import { type CaptureState, type AudioDevice, type View, type SavedSession, type Settings, type ModelProfile, type ModelCapabilities, type TextModelProfile, type AudioVersion, type CaptureModelSnapshot } from '../../../shared/types'
-import { settingsKey, loadJson, saveLiveDraft, loadLiveDraft, deleteLiveDraft, saveImportCheckpoint, loadImportCheckpoint, deleteImportCheckpoint, saveRecording, loadRecording, deleteRecording } from '../../../shared/services/browser-storage'
 import { dbfs, meterPercent, makeWav, pcm16, BufferedPcmWriter } from '../../../shared/services/audio'
 import { joinCaptionText, makeVtt, makeTranscriptText, makeTranscriptCsv, timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, defaultWebSocketCapabilities, defaultHttpCapabilities, defaultModelProfile, languageName, normalizeSettings, initialSettings, textEndpoint, asrLanguage } from '../../../shared/services/settings'
@@ -127,7 +126,7 @@ const remoteSettingsVersionRef = useRef<number | null>(null)
 const modelRegistryVersionRef = useRef<number | null>(null)
 const modelRegistrySignatureRef = useRef<string | null>(null)
 
-const [settings, setSettings] = useState<Settings>(() => initialSettings(userId))
+const [settings, setSettings] = useState<Settings>(() => initialSettings())
 const [remoteSettingsHydrated, setRemoteSettingsHydrated] = useState(false)
 const [environmentModelsHydrated, setEnvironmentModelsHydrated] = useState(Boolean(window.s2t))
 
@@ -138,9 +137,7 @@ const [importError, setImportError] = useState('')
 const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null)
 
 const [settingsSaved, setSettingsSaved] = useState(false)
-const [browserStorageEstimate, setBrowserStorageEstimate] = useState<{ usage: number; quota: number } | null>(null)
 const [browserRecordingStorage, setBrowserRecordingStorage] = useState<'opfs' | 'memory' | 'electron'>('memory')
-const [browserStoragePersistent, setBrowserStoragePersistent] = useState<boolean | null>(null)
 const [remoteSessionSyncState, setRemoteSessionSyncState] = useState<'ready' | 'syncing' | 'paused'>('syncing')
 const [summaryTemplatesHydrated, setSummaryTemplatesHydrated] = useState(false)
 const [denoiseApplied, setDenoiseApplied] = useState<boolean | null>(null)
@@ -223,6 +220,21 @@ const [summaryText, setSummaryText] = useState('')
 const [summaryStatus, setSummaryStatus] = useState('')
 
 const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization' | 'embedding'>('all')
+const [modelHealth, setModelHealth] = useState<Record<string, { state: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'; reason: string; checkedAt: number }>>({})
+
+const refreshModelHealth = useCallback(async (): Promise<void> => {
+  try {
+    const response = await authFetch('/api/data/model-health', { method: 'POST' })
+    const payload = await response.json().catch(() => ({})) as { health?: Array<{ id?: unknown; state?: unknown; reason?: unknown; checkedAt?: unknown }>; error?: string }
+    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`)
+    const next: Record<string, { state: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'; reason: string; checkedAt: number }> = {}
+    for (const item of payload.health ?? []) {
+      if (typeof item.id !== 'string' || !['healthy', 'degraded', 'unhealthy', 'unknown'].includes(String(item.state))) continue
+      next[item.id] = { state: item.state as 'healthy' | 'degraded' | 'unhealthy' | 'unknown', reason: typeof item.reason === 'string' ? item.reason : '尚未確認', checkedAt: typeof item.checkedAt === 'number' ? item.checkedAt : Date.now() }
+    }
+    setModelHealth(next)
+  } catch (error) { setStatus(error instanceof Error ? `模型健康檢查失敗：${error.message}` : '模型健康檢查失敗') }
+}, [])
 
 const streamRef = useRef<MediaStream | null>(null)
 
@@ -554,7 +566,7 @@ useEffect(() => {
     if (!active || (captureState !== 'recording' && captureState !== 'paused')) return
     const timer = window.setTimeout(() => {
       const segments = transcriptsRef.current.filter((entry) => entry.status !== 'partial')
-      void saveLiveDraft(userId, {
+      if (!window.s2t) void remoteSessionStorage.saveLiveDraft({
         id: active.id, startedAt: active.startedAt, updatedAt: new Date().toISOString(), captureState,
         source: includeSystemAudio ? '麥克風與電腦音訊' : '麥克風', elapsedMs,
         segments, opfsRecordingId: opfsRecordingIdRef.current ?? undefined, sampleRate: sampleRateRef.current
@@ -629,7 +641,7 @@ useEffect(() => {
       const [local, remote, draft] = await Promise.allSettled([
         window.s2t ? window.s2t.listSessions().then((items) => items as SavedSession[]) : Promise.resolve([] as SavedSession[]),
         window.s2t ? Promise.resolve({ sessions: [] as SavedSession[], version: 0 }) : remoteSessionStorage.load(),
-        loadLiveDraft(userId)
+        window.s2t ? Promise.resolve(undefined) : remoteSessionStorage.loadLiveDraft()
       ])
       if (canceled) return
       const localSessions = local.status === 'fulfilled' ? local.value ?? [] : []
@@ -652,43 +664,24 @@ useEffect(() => {
         id: `recovery-live-${recoveredDraft.id}`, title: `復原字幕 ${new Date(recoveredDraft.startedAt).toLocaleString('zh-TW')}`,
         createdAt: recoveredDraft.startedAt, durationMs: recoveredDraft.elapsedMs, source: `${recoveredDraft.source}（強制關閉後復原）`, transcript: makeTranscriptText(recoveredDraft.segments), audioKey: recoveryAudioKey, savedToDisk: false, audioUnavailable: !recoveryAudioAvailable, segments: recoveredDraft.segments
       } satisfies SavedSession] : []
-      // Web storage is the sole source of truth when reachable.  Local data is
-      // an offline fallback only; Electron is intentionally local-first.
-      const primarySessions = !window.s2t && remote.status === 'fulfilled' ? remoteSessions : localSessions
+      // Web has one durable source of truth: shared storage. Do not resurrect
+      // a Browser Storage copy when it is unavailable. Electron is local-first.
+      const primarySessions = window.s2t ? localSessions : remote.status === 'fulfilled' ? remoteSessions : []
       const merged = mergeSessions(primarySessions, recovery)
       setSessions(merged)
       setSessionStorageStates(Object.fromEntries(merged.map((session) => [session.id, window.s2t || remote.status !== 'fulfilled' ? 'local' : 'remote'])))
       if (local.status === 'rejected') setStatus('無法載入本機記錄；為避免覆寫，請確認瀏覽器儲存空間。')
-      else if (remote.status === 'rejected') setStatus('無法載入遠端記錄，將使用本機資料；遠端同步已暫停。')
+      else if (!window.s2t && remote.status === 'rejected') setStatus('無法載入遠端記錄；為避免產生衝突副本，已停止讀寫紀錄直到 storage 恢復。')
       setSessionsHydrated(true)
       if (hasRecovery) {
-        void deleteLiveDraft(userId)
+        if (!window.s2t) void remoteSessionStorage.deleteLiveDraft()
         setStatus(recoveryAudioAvailable ? '已復原強制關閉前的錄音與逐字稿。' : '已復原強制關閉前的逐字稿；原始音檔可能未完成保存。')
       }
-      if (!window.s2t && remote.status === 'fulfilled') {
-        const markerKey = `s2t-ui.remote-audio-migration.v1:${userId}`
-        const migrated = new Set<string>(loadJson<string[]>(markerKey, []))
-        const keys = new Set(merged.flatMap((session) => [session.audioKey, ...(session.audioVersions ?? []).map((version) => version.audioKey)]).filter((key) => /^[A-Za-z0-9._-]{1,160}$/.test(key)))
-        let copied = 0; let pending = 0
-        for (const key of keys) {
-          if (canceled || migrated.has(key)) continue
-          const audio = await loadRecording(userId, key).catch(() => undefined)
-          if (!audio) continue
-          try { await remoteSessionStorage.saveAudio(key, audio); migrated.add(key); copied += 1 } catch { pending += 1 }
-        }
-        if (copied) {
-          window.localStorage.setItem(markerKey, JSON.stringify([...migrated]))
-          enqueueRemoteSessionSave(merged)
-          setStatus(`已遷移 ${copied} 個本機音檔至遠端 storage。`)
-        }
-        setAudioMigrationStatus({ copied, pending })
-      }
+      // New Web records are written directly to remote storage. Legacy
+      // browser copies are intentionally not read as a second source of truth.
+      setAudioMigrationStatus({ copied: 0, pending: 0 })
     })()
     setBrowserRecordingStorage(window.s2t ? 'electron' : typeof navigator.storage?.getDirectory === 'function' ? 'opfs' : 'memory')
-    void navigator.storage?.persist?.().then(setBrowserStoragePersistent).catch(() => setBrowserStoragePersistent(false))
-    void navigator.storage?.estimate?.().then((estimate) => {
-      if (Number.isFinite(estimate.usage) && Number.isFinite(estimate.quota)) setBrowserStorageEstimate({ usage: estimate.usage!, quota: estimate.quota! })
-    }).catch(() => setBrowserStorageEstimate(null))
     return () => { canceled = true }
 }, [userId])
 
@@ -701,9 +694,25 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
   void (async () => {
     try {
       while (pendingRemoteSessionsRef.current && remoteSessionsVersionRef.current !== null) {
-        const next = pendingRemoteSessionsRef.current
+        let next = pendingRemoteSessionsRef.current
         pendingRemoteSessionsRef.current = null
-        remoteSessionsVersionRef.current = await remoteSessionStorage.save(next, remoteSessionsVersionRef.current)
+        // A second browser window may have committed after this view loaded.
+        // Rebase the full snapshot on the new remote version rather than
+        // making a “remote conflict” copy or silently dropping this save.
+        for (;;) {
+          try {
+            remoteSessionsVersionRef.current = await remoteSessionStorage.save(next, remoteSessionsVersionRef.current)
+            break
+          } catch (error) {
+            if (!(error instanceof Error) || !/遠端記錄已有更新|HTTP 409/.test(error.message)) throw error
+            const remote = await remoteSessionStorage.load()
+            const newest = pendingRemoteSessionsRef.current
+            pendingRemoteSessionsRef.current = null
+            next = mergeSessions(newest ?? next, remote.sessions)
+            remoteSessionsVersionRef.current = remote.version
+            setSessions(next)
+          }
+        }
         setSessionStorageStates((current) => ({ ...current, ...Object.fromEntries(next.map((session) => [session.id, 'both' as const])) }))
       }
     } catch (error) {
@@ -725,8 +734,9 @@ const retryRemoteSessionSync = async (): Promise<void> => {
     const remote = await remoteSessionStorage.load()
     remoteSessionsVersionRef.current = remote.version
     setRemoteSessionSyncState('ready')
-    const merged = mergeSessions(remote.sessions, [])
+    const merged = mergeSessions(pendingRemoteSessionsRef.current ?? sessions, remote.sessions)
     setSessions(merged)
+    enqueueRemoteSessionSave(merged)
     setStatus('已重新載入並排程遠端紀錄同步。')
   } catch (error) {
     setRemoteSessionSyncState('paused')
@@ -781,6 +791,13 @@ useEffect(() => {
   }, [userId, environmentModelsHydrated])
 
 useEffect(() => {
+    if (view !== 'models') return
+    void refreshModelHealth()
+    const timer = window.setInterval(() => { void refreshModelHealth() }, 60_000)
+    return () => window.clearInterval(timer)
+  }, [view, refreshModelHealth])
+
+useEffect(() => {
     if (window.s2t || modelRegistryVersionRef.current === null) return
     const models = [
       ...settings.modelProfiles.filter((item) => item.id !== 'none' && !item.id.startsWith('web-')).map((item) => ({ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, purpose: 'asr', requiresApiKey: item.requiresApiKey !== false, capabilities: item.capabilities })),
@@ -800,10 +817,11 @@ useEffect(() => {
         if (!Number.isSafeInteger(saved.version) || Number(saved.version) < 1) throw new Error('伺服器沒有回傳有效模型版本')
         modelRegistryVersionRef.current = Number(saved.version)
         modelRegistrySignatureRef.current = signature
+        void refreshModelHealth()
       }).catch((error: unknown) => setStatus(error instanceof Error ? `模型清單保存失敗：${error.message}` : '模型清單保存失敗；目前變更仍保留在此視窗。'))
     }, 350)
     return () => window.clearTimeout(timer)
-  }, [settings.modelProfiles, settings.translationProfiles, settings.summaryEndpoint, settings.summaryModel, settings.summaryRequiresApiKey, settings.diarizationEndpoint, settings.diarizationModel, settings.diarizationRequiresApiKey, settings.embeddingEndpoint, settings.embeddingModel, settings.embeddingRequiresApiKey])
+  }, [settings.modelProfiles, settings.translationProfiles, settings.summaryEndpoint, settings.summaryModel, settings.summaryRequiresApiKey, settings.diarizationEndpoint, settings.diarizationModel, settings.diarizationRequiresApiKey, settings.embeddingEndpoint, settings.embeddingModel, settings.embeddingRequiresApiKey, refreshModelHealth])
 
 useEffect(() => {
     let canceled = false
@@ -872,10 +890,6 @@ useEffect(() => {
   }, [sessions, sessionsHydrated])
 
 useEffect(() => {
-    window.localStorage.setItem(settingsKey(userId), JSON.stringify(settings))
-  }, [settings, userId])
-
-useEffect(() => {
     if (window.s2t || !remoteSettingsHydrated || remoteSettingsVersionRef.current === null) return
     const timer = window.setTimeout(() => {
       const version = remoteSettingsVersionRef.current
@@ -905,9 +919,8 @@ useEffect(() => {
     return () => window.clearTimeout(timer)
   }, [settings.selectedSummaryTemplateId, settings.summaryTemplates, summaryTemplatesHydrated])
 
-// Browser settings already persist through localStorage above. Mirror every
-// accepted change to Electron's account-scoped config as well, so creating a
-// summary template with 「自訂＋」 is durable without a second save action.
+// Electron persists settings in its account-scoped config. Web persists them
+// via the gateway effect above; neither path uses Browser Storage.
 useEffect(() => {
     if (!window.s2t) return
     const timer = window.setTimeout(() => {
@@ -1162,6 +1175,15 @@ const startCapture = async (): Promise<void> => {
       setStatus(interfaceTranslate(settings.uiLanguage, 'webGatewayModelRequired'))
       return
     }
+    if (settings.sileroVadEnabled || settings.dynaudnormEnabled) {
+      if (window.s2t) { setStatus('Silero VAD 目前由 Web gateway 的 CPU worker 提供。'); return }
+      try {
+        const response = await authFetch('/api/audio-processing/status')
+        const payload = await response.json() as { sileroVad?: { available?: boolean; reason?: string }; dynaudnorm?: { available?: boolean; reason?: string } }
+        const unavailable = settings.sileroVadEnabled && !payload.sileroVad?.available ? `Silero VAD 不可用：${payload.sileroVad?.reason || '模型尚未就緒'}` : settings.dynaudnormEnabled && !payload.dynaudnorm?.available ? `dynaudnorm 不可用：${payload.dynaudnorm?.reason || 'FFmpeg 尚未就緒'}` : ''
+        if (!response.ok || unavailable) { setStatus(unavailable || '無法確認音訊前處理健康狀態。'); return }
+      } catch { setStatus('無法確認 Silero VAD 模型健康狀態。'); return }
+    }
     const supportedLanguages = captureModel.capabilities.supportedLanguages ?? []
     if (captureSourceLanguage !== 'auto' && supportedLanguages.length && !supportedLanguages.includes(captureSourceLanguage)) { setStatus(`「${captureModel.name}」未宣告支援 ${languageName(captureSourceLanguage)}。請改選語言或模型。`); return }
     setCaptureState('starting')
@@ -1186,7 +1208,7 @@ const startCapture = async (): Promise<void> => {
       unsubscribeModelRef.current?.()
       unsubscribeModelErrorRef.current?.()
       modelRef.current = captureModel.kind === 'openai-http'
-        ? new OpenAiChunkedModelAdapter({ ...captureModel, gatewayProfileId: captureGatewayProfileId ?? undefined, prompt: capturePrompt.trim() || undefined, vadConfig: settings.vadConfig })
+        ? new OpenAiChunkedModelAdapter({ ...captureModel, gatewayProfileId: captureGatewayProfileId ?? undefined, prompt: capturePrompt.trim() || undefined, vadConfig: settings.vadConfig, sileroVadEnabled: settings.sileroVadEnabled, dynaudnormEnabled: settings.dynaudnormEnabled })
         : captureModel.endpoint.trim()
           ? new WebSocketModelAdapter(captureModel.endpoint.trim())
           : new NoopModelAdapter()
@@ -1209,7 +1231,7 @@ const startCapture = async (): Promise<void> => {
         inputSampleRate: context.sampleRate,
         modelSampleRate
       }
-      const resampler = new StreamingResampler(context.sampleRate, modelSampleRate)
+      const resampler = new StreamingResampler(context.sampleRate, modelSampleRate, { kaiserWindow: settings.kaiserResampleEnabled })
       resamplerRef.current = resampler
       const microphoneAnalyser = context.createAnalyser(); microphoneAnalyser.fftSize = 1024
       const systemAnalyser = context.createAnalyser(); systemAnalyser.fftSize = 1024
@@ -1393,7 +1415,7 @@ const startCapture = async (): Promise<void> => {
       electronRecordingIdRef.current = null
       continuationTargetRef.current = null
       activeModelSnapshotRef.current = null
-      if (liveDraftRef.current) void deleteLiveDraft(userId)
+      if (liveDraftRef.current && !window.s2t) void remoteSessionStorage.deleteLiveDraft()
       liveDraftRef.current = null
       cleanUpCapture()
       void modelRef.current.stop()
@@ -1477,8 +1499,6 @@ const stopCapture = async (): Promise<void> => {
       const blob = recordingPath ? undefined : opfsRecording ? await opfsRecording.finish() : makeWav(pcmChunksRef.current, sampleRateRef.current)
       opfsRecordingRef.current = null
       opfsRecordingIdRef.current = null
-      const finalSegments = transcriptsRef.current.filter((entry) => entry.status !== 'partial')
-      const transcript = makeTranscriptText(finalSegments)
       const continuation = continuationTargetRef.current
       const name = `s2t-${new Date().toISOString().replace(/[:.]/g, '-')}`
       const sessionId = continuation?.entry.id ?? crypto.randomUUID()
@@ -1488,11 +1508,17 @@ const stopCapture = async (): Promise<void> => {
 
       const capturedAudio = recordingPath && window.s2t ? new Blob([await window.s2t.readAudio(recordingPath)], { type: 'audio/wav' }) : blob
       const audioForStorage = continuation && capturedAudio ? await appendAudio(continuation.audio, capturedAudio) : capturedAudio
+      // Save the immutable session first. The full recording is processed in
+      // the background below, so captions created after the final 15-second
+      // preview tick still get labels without delaying the user-visible save.
+      const finalDiarizationRequired = Boolean(audioForStorage && settings.diarizationModel && settings.diarizationPreviewEnabled)
+      const finalSegments = transcriptsRef.current.filter((entry) => entry.status !== 'partial')
+      const transcript = makeTranscriptText(finalSegments)
       const audioKey = continuation ? `${sessionId}-version-${crypto.randomUUID()}` : sessionId
       const audioFailures: string[] = []
       let audioAvailable = Boolean(recordingPath)
-      // Electron keeps its durable audio locally. In a browser, write storage
-      // first and use IndexedDB only when storage cannot accept the audio.
+      // Electron keeps durable audio locally. The web app writes durable audio
+      // only to shared object storage; it never falls back to Browser Storage.
       if (audioForStorage && !window.s2t) {
         try { await remoteSessionStorage.saveAudio(audioKey, audioForStorage); audioAvailable = true }
         catch {
@@ -1532,11 +1558,41 @@ const stopCapture = async (): Promise<void> => {
       liveSessionIdRef.current = sessionId
       continuationTargetRef.current = null
       activeModelSnapshotRef.current = null
-      if (liveDraftRef.current) void deleteLiveDraft(userId)
+      if (liveDraftRef.current && !window.s2t) void remoteSessionStorage.deleteLiveDraft()
       liveDraftRef.current = null
       void generateSessionTitle(sessionId, transcript)
       setView('history')
       setStatus(audioFailures.length ? `收音已結束；${audioFailures.join('與')}音檔保存失敗，已下載復原 WAV，逐字稿仍可在「記錄」查看。` : '收音已結束。請在「記錄」頁選擇保存位置。')
+      if (audioForStorage && finalDiarizationRequired && finalSegments.length) {
+        if (!window.s2t && audioAvailable) {
+          // The gateway owns this durable job. It waits/retries until the
+          // session snapshot is visible, so closing this page cannot lose the
+          // final tail after the last 15-second preview tick.
+          void authFetch('/api/data/diarization-jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, audioKey }) }).catch(() => setStatus('錄音已保存；最後講者識別工作排程失敗。'))
+          return
+        }
+        const finalAudio = audioForStorage
+        const targetVersionId = version.id
+        void (async () => {
+          try {
+            const endpoint = window.s2t ? (settings.diarizationEndpoint.trim() || '/api/diarizations') : '/api/diarizations'
+            const payload = window.s2t
+              ? await window.s2t.diarizeAudio({ endpoint, model: settings.diarizationModel, audio: await finalAudio.arrayBuffer() })
+              : await readJsonResponse<unknown>(await authFetch(endpoint, { method: 'POST', headers: { 'content-type': 'audio/wav', ...(settings.diarizationEndpoint.trim() && settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: finalAudio }), '最後講者識別')
+            const turns = parseSpeakerTurns(payload)
+            if (!turns.length) return
+            setSessions((current) => current.map((currentEntry) => {
+              if (currentEntry.id !== sessionId || currentEntry.activeAudioVersionId !== targetVersionId) return currentEntry
+              const segments = assignSpeakersByOverlap(currentEntry.segments, turns)
+              const updatedTranscript = makeTranscriptText(segments)
+              const audioVersions = currentEntry.audioVersions?.map((item) => item.id === targetVersionId ? { ...item, segments, transcript: updatedTranscript } : item)
+              return { ...currentEntry, segments, transcript: updatedTranscript, ...(audioVersions ? { audioVersions } : {}) }
+            }))
+          } catch (error) {
+            setStatus(error instanceof Error ? `錄音已保存；最後講者識別失敗：${error.message}` : '錄音已保存；最後講者識別失敗。')
+          }
+        })()
+      }
     } catch (error) {
       if (electronRecordingIdRef.current) await window.s2t?.abortPcmRecording(electronRecordingIdRef.current).catch(() => undefined)
       continuationTargetRef.current = null
@@ -1833,7 +1889,7 @@ const transcribeImportedFile = async (): Promise<void> => {
       const totalChunks = wavLayout ? pcmWavChunkCount(wavLayout) : 1
       const fingerprint = importFileFingerprint(importedFile)
       const modelSnapshot = importModelSnapshot(selectedModel)
-      const checkpoint = isWav ? await loadImportCheckpoint(userId) : undefined
+      const checkpoint = isWav && !window.s2t ? await remoteSessionStorage.loadImportCheckpoint() : undefined
       const checkpointMatches = matchesImportCheckpoint(checkpoint, { fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, totalChunks })
       let wavStartByte = checkpointMatches ? checkpoint!.nextByteOffset : 0
       const segments: TranscriptEvent[] = checkpointMatches ? checkpoint!.segments : []
@@ -1882,10 +1938,10 @@ const transcribeImportedFile = async (): Promise<void> => {
         const appended = mergedNext.slice(merged.length).trim()
         if (appended) segments.push({ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: appended })
         merged = mergedNext
-        if (wavLayout) await saveImportCheckpoint(userId, { fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, nextChunkIndex: index + 1, nextByteOffset: wavStartByte, totalChunks, segments, mergedText: merged, updatedAt: new Date().toISOString() })
+        if (wavLayout && !window.s2t) await remoteSessionStorage.saveImportCheckpoint({ fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, nextChunkIndex: index + 1, nextByteOffset: wavStartByte, totalChunks, segments, mergedText: merged, updatedAt: new Date().toISOString() })
       }
-      if (!segments.length) { if (wavLayout) await deleteImportCheckpoint(userId); throw new Error('模型沒有回傳逐字稿') }
-      if (wavLayout) await deleteImportCheckpoint(userId)
+      if (!segments.length) { if (wavLayout && !window.s2t) await remoteSessionStorage.deleteImportCheckpoint(); throw new Error('模型沒有回傳逐字稿') }
+      if (wavLayout && !window.s2t) await remoteSessionStorage.deleteImportCheckpoint()
       setTranscripts(segments)
       liveSessionIdRef.current = null
       setImportError('轉錄完成，已切換至即時字幕頁，可下載逐字稿。')
@@ -1903,8 +1959,10 @@ const audioVersionsFor = (entry: SavedSession): AudioVersion[] => entry.audioVer
 const activeAudioVersionFor = (entry: SavedSession): AudioVersion => audioVersionsFor(entry).find((version) => version.id === entry.activeAudioVersionId) ?? audioVersionsFor(entry)[0]
 const loadSessionAudio = async (entry: SavedSession): Promise<Blob | undefined> => {
     const version = activeAudioVersionFor(entry)
+    if (version.nativeAudioPath && window.s2t) return new Blob([await window.s2t.readAudio(version.nativeAudioPath)], { type: 'audio/wav' })
     if (entry.nativeAudioPath && window.s2t && version.audioKey === entry.audioKey) return new Blob([await window.s2t.readAudio(entry.nativeAudioPath)], { type: 'audio/wav' })
-    return loadRecording(userId, version.audioKey) ?? remoteSessionStorage.loadAudio(version.audioKey)
+    if (!window.s2t) return remoteSessionStorage.loadAudio(version.audioKey)
+    return remoteSessionStorage.loadAudio(version.audioKey)
   }
 const finalizeSession = async (entry: SavedSession): Promise<void> => {
     if (selectedModel.kind !== 'openai-http') { setStatus('請先選擇 OpenAI 相容 ASR 模型。'); return }
@@ -2023,11 +2081,15 @@ const replaceSessionSegmentAudio = async (entry: SavedSession, segment: Transcri
         : await resampleAudioForAsr(await asrAudioRaw.arrayBuffer(), asrSampleRate)
       const versionId = crypto.randomUUID(); const audioKey = `${entry.id}-version-${versionId}`; const createdAt = new Date().toISOString()
       const failures: string[] = []
-      if (!window.s2t || settings.storageLocation === 'local') { try { await saveRecording(userId, audioKey, audio) } catch { failures.push('本機') } }
-      if (!window.s2t || settings.storageLocation === 'remote') { try { await remoteSessionStorage.saveAudio(audioKey, audio) } catch { failures.push('遠端') } }
-      if (failures.length === (!window.s2t ? 2 : 1)) throw new Error(`${failures.join('與')}保存失敗`)
+      let writes = 0
+      let nativeAudioPath: string | undefined
+      // Web writes only shared object storage. Electron local audio is written
+      // by the main process, never by renderer IndexedDB.
+      if (window.s2t && settings.storageLocation === 'local') { writes += 1; try { nativeAudioPath = (await window.s2t.saveLocalAudio(audioKey, await audio.arrayBuffer())).audioPath } catch { failures.push('本機') } }
+      if (!window.s2t || settings.storageLocation === 'remote') { writes += 1; try { await remoteSessionStorage.saveAudio(audioKey, audio) } catch { failures.push('遠端') } }
+      if (failures.length === writes) throw new Error(`${failures.join('與')}保存失敗`)
       const parent = activeAudioVersionFor(entry)
-      const version: AudioVersion = { id: versionId, audioKey, createdAt, label: `重講 ${timestamp(segment.startMs)}`, parentId: parent.id, replacedSegmentId: segment.id, segments: entry.segments, transcript: entry.transcript }
+      const version: AudioVersion = { id: versionId, audioKey, createdAt, label: `重講 ${timestamp(segment.startMs)}`, parentId: parent.id, replacedSegmentId: segment.id, nativeAudioPath, segments: entry.segments, transcript: entry.transcript }
       setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, audioVersions: [...audioVersionsFor(item), version], activeAudioVersionId: version.id, nativeAudioPath: undefined, audioUnavailable: false } : item))
       setStatus(failures.length ? `已建立重講版本，但${failures.join('與')}同步失敗。` : '已建立重講版本；原始錄音仍可隨時切換。')
       const supportedLanguages = selectedModel.capabilities.supportedLanguages ?? []
@@ -2121,9 +2183,7 @@ const diarizeSession = async (entry: SavedSession): Promise<void> => {
       return
     }
     try {
-      const activeVersion = activeAudioVersionFor(entry)
-      const audioBlob = entry.nativeAudioPath && window.s2t && activeVersion.audioKey === entry.audioKey ? undefined : (await loadRecording(userId, activeVersion.audioKey) ?? await remoteSessionStorage.loadAudio(activeVersion.audioKey))
-      const audio = entry.nativeAudioPath && window.s2t ? await window.s2t.readAudio(entry.nativeAudioPath) : await audioBlob?.arrayBuffer()
+      const audio = await (await loadSessionAudio(entry))?.arrayBuffer()
       if (!audio) throw new Error('找不到本機 WAV 錄音')
       setStatus('正在自動識別講者…')
       const payload = window.s2t
@@ -2146,8 +2206,8 @@ const diarizeSession = async (entry: SavedSession): Promise<void> => {
 
 const deleteSession = async (entry: SavedSession): Promise<void> => {
     try {
-      const audioKeys = [...new Set(audioVersionsFor(entry).map((version) => version.audioKey))]
-      const removals = await Promise.allSettled(audioKeys.map((audioKey) => deleteRecording(userId, audioKey)))
+      const localPaths = window.s2t ? audioVersionsFor(entry).flatMap((version) => version.nativeAudioPath ? [version.nativeAudioPath] : []) : []
+      const removals = await Promise.allSettled(localPaths.map((audioPath) => window.s2t!.deleteLocalAudio(audioPath)))
       const failed = removals.find((result) => result.status === 'rejected')
       if (failed?.status === 'rejected') throw failed.reason
       // The gateway compares session snapshots and removes every unreferenced
@@ -2161,9 +2221,7 @@ const deleteSession = async (entry: SavedSession): Promise<void> => {
 
 const saveSessionToDisk = async (entry: SavedSession): Promise<void> => {
     try {
-      const audio = entry.nativeAudioPath && window.s2t
-        ? undefined
-        : await loadRecording(userId, entry.audioKey) ?? await remoteSessionStorage.loadAudio(entry.audioKey)
+      const audio = entry.nativeAudioPath && window.s2t ? undefined : await loadSessionAudio(entry)
       if (!window.s2t) {
         if (!audio) throw new Error('找不到本機音檔')
         browserDownload(audio, `${entry.title}.wav`)
@@ -2490,9 +2548,7 @@ importError,
 importProgress,
 settingsSaved,
 denoiseApplied,
-browserStorageEstimate,
 browserRecordingStorage,
-browserStoragePersistent,
 remoteSessionSyncState,
 storageHealth,
 audioMigrationStatus,
@@ -2557,6 +2613,8 @@ summaryText,
 summaryStatus,
 modelFilter,
 setModelFilter,
+modelHealth,
+refreshModelHealth,
 systemStreamRef,
 microphoneMeterValueRef,
 systemMeterValueRef,

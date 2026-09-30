@@ -34,12 +34,11 @@ const main = async () => {
   const webRequests = []
   const webTranscripts = []
   const webErrors = []
-  global.window = { localStorage: { getItem: () => 'test-session-token' }, setTimeout }
+  global.window = { setTimeout }
   global.fetch = async (url, init) => {
     webRequests.push({ url, ...init })
-    const authorized = init.headers.authorization === 'Bearer test-session-token'
-    return new Response(JSON.stringify(authorized ? { text: '網頁即時字幕' } : { error: '需要登入' }), {
-      status: authorized ? 200 : 401, headers: { 'content-type': 'application/json' }
+    return new Response(JSON.stringify({ text: '網頁即時字幕' }), {
+      status: 200, headers: { 'content-type': 'application/json' }
     })
   }
   const web = new OpenAiChunkedModelAdapter({ id: 'web-asr', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default' })
@@ -51,7 +50,7 @@ const main = async () => {
   }
   await new Promise((resolve) => setImmediate(resolve))
   assert.ok(webRequests.length > 0, 'web capture must send ASR requests during recording')
-  assert.equal(webRequests[0].headers.authorization, 'Bearer test-session-token', 'ASR must carry the login token')
+  assert.equal(webRequests[0].headers.authorization, undefined, 'Web authentication is carried by the HttpOnly cookie, not localStorage')
   assert.equal(webRequests[0].headers['x-s2t-model-id'], 'default')
   assert.equal(webRequests[0].headers['x-s2t-language'], 'zh')
   assert.ok(webTranscripts.some((entry) => entry.sourceText === '網頁即時字幕'), 'authenticated web ASR must emit live captions')

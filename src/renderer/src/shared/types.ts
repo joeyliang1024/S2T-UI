@@ -11,7 +11,7 @@ export type SummaryTemplate = { id: string; name: string; content: string }
 
 /** An immutable audio asset retained for a session. The active version is used for playback and export. */
 /** Audio and its matching caption snapshot are selected as one version. */
-export type AudioVersion = { id: string; audioKey: string; createdAt: string; label: string; parentId?: string; replacedSegmentId?: string; segments?: TranscriptEvent[]; transcript?: string; modelSnapshot?: CaptureModelSnapshot }
+export type AudioVersion = { id: string; audioKey: string; createdAt: string; label: string; parentId?: string; replacedSegmentId?: string; nativeAudioPath?: string; segments?: TranscriptEvent[]; transcript?: string; modelSnapshot?: CaptureModelSnapshot }
 
 /** Configuration actually used to create an audio version.  It is retained so
  * diagnostics and later exports do not depend on a model registry that may
@@ -119,6 +119,11 @@ export type Settings = {
   diarizationPreviewEnabled: boolean
   glossary: string
   denoiseEnabled: boolean
+  /** Higher quality anti-alias window for the ASR-only resample branch. */
+  kaiserResampleEnabled: boolean
+  /** Uses the gateway's worker-hosted Silero model to reject non-speech ASR chunks. */
+  sileroVadEnabled: boolean
+  dynaudnormEnabled: boolean
   vadConfig: VadConfig
 }
 

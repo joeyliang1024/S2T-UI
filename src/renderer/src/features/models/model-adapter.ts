@@ -231,7 +231,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private prompt?: string
   private vadConfig?: VadConfig
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig }) {
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean }) {
     this.prompt = profile.prompt
     this.vadConfig = profile.vadConfig
   }
@@ -328,6 +328,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.queuedChunks += 1
     this.queued = this.queued.catch(() => undefined).then(async () => {
       const wav = wavFromFloat32(audio, this.sampleRate)
+      if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) return
       const response = await this.transcribeWithRetry(wav)
       const sourceText = response.text.trim()
       if (!sourceText) return
@@ -359,6 +360,14 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       }
     }
     throw lastError instanceof Error ? lastError : new Error('模型轉錄失敗')
+  }
+
+  private async hasSileroSpeech(audio: ArrayBuffer): Promise<boolean> {
+    if (window.s2t) throw new Error('Silero VAD 目前由 Web gateway 的 CPU worker 提供')
+    const response = await authFetch('/api/audio-processing/silero-vad', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio })
+    const payload = await readGatewayPayload(response) as { error?: string; speech?: unknown[] }
+    if (!response.ok) throw new Error(payload.error || `Silero VAD gateway failed (${response.status})`)
+    return Array.isArray(payload.speech) && payload.speech.length > 0
   }
 
   private emitError(message: string): void {
@@ -405,6 +414,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         'content-type': 'audio/wav',
         'x-s2t-language': this.language,
         ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
+        ...(this.profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
         ...(this.profile.prompt ? { 'x-s2t-prompt': this.profile.prompt } : {})
       },
       body: audio

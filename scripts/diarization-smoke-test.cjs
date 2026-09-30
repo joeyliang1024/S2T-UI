@@ -26,6 +26,9 @@ const next = stabilizeSpeakerTurns(previous, [
 assert.equal(next[0].speaker, 'SPEAKER_04', 'overlapping anonymous speaker must retain its prior label')
 assert.equal(next[1].speaker, 'SPEAKER_05', 'new anonymous speaker receives the next stable label')
 assert.equal(next[2].speaker, 'NT-1234', 'recognized NT must never be rewritten')
+assert.equal(stabilizeSpeakerTurns([{ startMs: 0, endMs: 10_000, speaker: 'NT-1234' }], [{ startMs: 5_000, endMs: 12_000, speaker: 'SPEAKER_00' }])[0].speaker, 'SPEAKER_00', 'an old identity match must not relabel a new anonymous window')
+const twoNew = stabilizeSpeakerTurns([{ startMs: 0, endMs: 10_000, speaker: 'SPEAKER_01' }], [{ startMs: 5_000, endMs: 12_000, speaker: 'SPEAKER_00' }, { startMs: 5_000, endMs: 12_000, speaker: 'SPEAKER_02' }])
+assert.notEqual(twoNew[0].speaker, twoNew[1].speaker, 'two incoming anonymous labels must not claim one prior identity')
 
 const captions = [
   { id: 'one', revision: 0, status: 'final', startMs: 15_500, endMs: 18_000, sourceText: 'one' },

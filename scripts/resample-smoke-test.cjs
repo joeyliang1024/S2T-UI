@@ -30,6 +30,10 @@ for (const [sourceRate, targetRate] of [[48_000, 16_000], [44_100, 16_000], [48_
   assert.equal(split.length, onceFinal.length, `${sourceRate} -> ${targetRate}: chunking changed output length`)
   for (let index = 0; index < split.length; index += 1) assert.ok(Math.abs(split[index] - onceFinal[index]) < .0001, `${sourceRate} -> ${targetRate}: chunking changed sample ${index}`)
 }
+const kaiser = new StreamingResampler(48_000, 16_000, { kaiserWindow: true })
+const kaiserOutput = Float32Array.from([...kaiser.process(samples(48_000)), ...kaiser.flush()])
+assert.equal(kaiserOutput.length, 16_000)
+assert.ok(kaiserOutput.every(Number.isFinite))
 assert.equal(chooseModelSampleRate(48_000, [16_000, 44_100]), 44_100)
 assert.equal(chooseModelSampleRate(44_100, [16_000]), 16_000)
 assert.equal(chooseModelSampleRate(48_000, []), 48_000)
