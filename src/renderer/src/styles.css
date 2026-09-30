@@ -644,5 +644,6 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
 .speaker-sidebar-editor .speaker-batch-rename { flex-direction: column; align-items: stretch; gap: 18px; padding: 16px; border: 0; background: transparent; }
 .speaker-sidebar-editor .speaker-batch-rename label { flex: auto; gap: 8px; }
 .speaker-sidebar-editor input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: inherit; font: inherit; }
+.speaker-sidebar-editor input[type='checkbox'] { accent-color: #83a7ff; block-size: 17px; box-sizing: border-box; flex: 0 0 17px; inline-size: 17px; margin: 0; min-height: 0; padding: 0; width: 17px; }
 .history-sidebar .sidebar-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .history-sidebar .sidebar-tabs button { min-width: 0; padding-inline: 6px; overflow-wrap: anywhere; }
