@@ -55,7 +55,13 @@ Web 版若透過 Vite 執行，未填 endpoint 時會直接呼叫同源 `/api/di
 
 分群結果先使用 `SPEAKER_00`、`SPEAKER_01` 等匿名名稱。已註冊聲紋後，可透過下列 API 將單一講者 WAV 轉為 512 維 embedding，並以 Milvus 或本機向量層比對；命中門檻預設為 0.65，回傳註冊帳號的 NT 與 Department。CPU 處理耗時取決於音檔長度與機器；先以 30 秒至數分鐘錄音驗收，再評估長會議的背景工作需求。
 
-`POST /api/diarizations` 的本機模式會自動將同一匿名講者的所有分群區段合併成一個樣本，再做一次聲紋比對。命中的區段 `speaker` 會回傳 NT；未命中者維持 `SPEAKER_XX`。字幕畫面的講者名稱是可編輯文字欄位，使用者可以覆寫自動結果。
+`POST /api/diarizations` 的本機模式會把同一匿名講者的分群區段切成**數個有上限的區塊**（預設每塊最多 15 秒、每人最多 3 塊、總計最多 45 秒，短於 1.5 秒或低於 -45 dBFS 的段落不參與），再逐塊比對：
+
+1. 第一塊對整組可見聲紋做一次搜尋；若分數達 `S2T_VOICEPRINT_FAST_SCORE`（預設 0.75）且領先第二名達 `S2T_VOICEPRINT_FAST_MARGIN`（預設 0.15），直接命中。
+2. 否則其餘區塊只針對前 3 名候選複驗，取各身份分數的中位數；需有 `S2T_VOICEPRINT_MIN_BLOCKS`（預設 2）個區塊達到門檻、且領先第二名達 `S2T_VOICEPRINT_MARGIN` 才命名。
+3. 未達標一律維持 `SPEAKER_XX`（拒識優於錯配）。無可見聲紋時完全跳過 embedding 推論。
+
+命中的區段 `speaker` 會回傳 NT 與 `matchScore`；每次判決以 `[voiceprint]` 一行 JSON 記錄（`S2T_VOICEPRINT_LOG=0` 可關閉），worker 端另有 `[voiceprint-embed]` 記錄每塊輸入秒數與耗時。字幕畫面的講者名稱是可編輯文字欄位，使用者可以覆寫自動結果。
 
 ## 聲紋註冊與比對 API
 

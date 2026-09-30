@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { execFile } = require('node:child_process')
-const { mkdtemp, rm, writeFile } = require('node:fs/promises')
+const { mkdtemp, readdir, rm, utimes, writeFile } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 const { promisify } = require('node:util')
@@ -35,6 +35,26 @@ const main = async () => {
     assert.equal(localCasResults.filter((result) => result.won).length, 1, 'two local processes must not both win the same CAS')
     assert.equal((await storage.config.get('cross-process', 'sessions')).version, 1)
 
+    // Atomic read-modify-write: 24 concurrent appends must all land. The old
+    // get-then-put pattern silently dropped entries under this load, which is
+    // how compensation intents and revocations went missing.
+    await Promise.all(Array.from({ length: 24 }, (_, index) => storage.config.update('alice', 'queue', (value) => [...(Array.isArray(value) ? value : []), { index }])))
+    const queue = await storage.config.get('alice', 'queue')
+    assert.equal(queue.length, 24, 'every concurrent update must be applied')
+    assert.deepEqual(new Set(queue.map((item) => item.index)), new Set(Array.from({ length: 24 }, (_, index) => index)))
+    assert.equal((await storage.config.update('alice', 'queue', () => undefined)).changed, false, 'an aborted transform must not write')
+
+    // A lock left behind by a crashed process must be reclaimed promptly
+    // instead of failing every writer until someone deletes it by hand.
+    const lock = join(directory, 'config.json.lock')
+    await writeFile(lock, `999999\n${new Date().toISOString()}\n`)
+    const staleTime = new Date(Date.now() - 5 * 60_000)
+    await utimes(lock, staleTime, staleTime)
+    const relockStarted = Date.now()
+    await storage.config.put('alice', 'lock-probe', { value: 2 })
+    assert.ok(Date.now() - relockStarted < 5_000, 'a stale lock must be reclaimed promptly')
+    assert.equal((await storage.config.get('alice', 'lock-probe')).value, 2)
+
     const users = new LocalUserStore(storage.config)
     const registration = await Promise.allSettled([
       users.create({ username: 'same-user', passwordHash: 'hash-a', NT: 'Same', Department: 'R&D' }),
@@ -53,6 +73,9 @@ const main = async () => {
     assert.equal((await storage.blob.get('alice', 'sessions/audio.wav')).toString(), 'alice-audio')
     assert.equal((await storage.blob.get('bob', 'sessions/audio.wav')).toString(), 'bob-audio')
     assert.deepEqual(await storage.blob.list('alice', 'sessions'), ['sessions/audio.wav'])
+    // Blob writes go through temp file + rename, so a crash or concurrent
+    // reader can never observe half of a recording.
+    assert.deepEqual((await readdir(join(directory, 'blobs'))).filter((name) => name.startsWith('.tmp-')), [], 'blob writes must not leave temporary files')
 
     await storage.vector.upsert({ id: 'alice-v1', NT: 'alice', Department: 'R&D', embedding: [1, 0, 0] })
     await storage.vector.upsert({ id: 'bob-v1', NT: 'bob', Department: 'Sales', embedding: [0, 1, 0] })

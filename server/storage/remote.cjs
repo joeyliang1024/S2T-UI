@@ -132,6 +132,34 @@ class PostgresConfigStore {
     } finally { client.release() }
   }
   async remove(scope, key) { await this.ready; await this.pool.query('DELETE FROM s2t_config_records WHERE scope = $1 AND record_key = $2', [safePart(scope, 'scope'), safePart(key, 'record key')]) }
+  // Atomic read-modify-write. The row is locked with FOR UPDATE so concurrent
+  // writers queue up and each transform sees the previous writer's result; a
+  // fresh row (no lock possible) can still lose the insert race, which is
+  // retried on the unique violation.
+  async update(scope, key, transform) {
+    await this.ready
+    const cleanScope = safePart(scope, 'scope'); const cleanKey = safePart(key, 'record key')
+    const client = await this.pool.connect()
+    try {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await client.query('BEGIN')
+          const current = await client.query('SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = $2 FOR UPDATE', [cleanScope, cleanKey])
+          const stored = current.rows[0]?.value ?? null
+          const outcome = await transform(stored)
+          if (outcome === undefined) { await client.query('ROLLBACK'); return { changed: false, value: stored } }
+          if (current.rowCount) await client.query('UPDATE s2t_config_records SET value = $3::jsonb, updated_at = NOW() WHERE scope = $1 AND record_key = $2', [cleanScope, cleanKey, JSON.stringify(outcome)])
+          else await client.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb)', [cleanScope, cleanKey, JSON.stringify(outcome)])
+          await client.query('COMMIT')
+          return { changed: true, value: outcome }
+        } catch (error) {
+          await client.query('ROLLBACK').catch(() => undefined)
+          if (error?.code !== '23505' || attempt === 2) throw error
+        }
+      }
+      throw new Error('storage 資料更新衝突，請稍後重試')
+    } finally { client.release() }
+  }
   async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
     await this.ready
     const result = await this.pool.query(`INSERT INTO s2t_diarization_jobs(id, user_id, session_id, audio_key, payload)
@@ -146,7 +174,7 @@ class PostgresConfigStore {
     await this.ready
     const result = await this.pool.query(`WITH candidate AS (
       SELECT id FROM s2t_diarization_jobs
-      WHERE ($2::text IS NULL OR id = $2) AND (state = 'queued' OR (state = 'running' AND lease_until < NOW()))
+      WHERE ($2::text IS NULL OR id = $2) AND ((state = 'queued' AND (lease_until IS NULL OR lease_until < NOW())) OR (state = 'running' AND lease_until < NOW()))
       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1
     ) UPDATE s2t_diarization_jobs AS job SET state = 'running', attempts = attempts + 1, lease_generation = lease_generation + 1, lease_owner = $1, lease_until = NOW() + INTERVAL '5 minutes', updated_at = NOW()
       FROM candidate WHERE job.id = candidate.id
@@ -164,7 +192,12 @@ class PostgresConfigStore {
     if (!Number.isSafeInteger(leaseGeneration) || leaseGeneration < 1) throw new Error('無效的工作租約 generation')
     const retry = typeof error === 'string' && error.startsWith('retry:')
     const state = retry ? 'queued' : error ? 'failed' : 'completed'
-    await this.pool.query('UPDATE s2t_diarization_jobs SET state = $4, error = $5, lease_owner = NULL, lease_until = NULL, updated_at = NOW() WHERE id = $1 AND lease_owner = $2 AND lease_generation = $3', [safePart(id, 'job id'), safePart(owner, 'job owner'), leaseGeneration, state, error ? String(error).replace(/^retry:/, '').slice(0, 1000) : null])
+    // A retried job re-enters the queue behind a growing lease_until so a job
+    // that can never succeed (for example one whose session never appears)
+    // cannot be re-claimed every two seconds and re-run paid inference forever.
+    await this.pool.query(`UPDATE s2t_diarization_jobs SET state = $4, error = $5, lease_owner = NULL,
+      lease_until = CASE WHEN $4 = 'queued' THEN NOW() + LEAST(60, GREATEST(5, attempts * 5)) * INTERVAL '1 second' ELSE NULL END,
+      updated_at = NOW() WHERE id = $1 AND lease_owner = $2 AND lease_generation = $3`, [safePart(id, 'job id'), safePart(owner, 'job owner'), leaseGeneration, state, error ? String(error).replace(/^retry:/, '').slice(0, 1000) : null])
   }
   async list(scope, prefix = '') { await this.ready; const result = await this.pool.query('SELECT record_key AS key, value, updated_at AS "updatedAt" FROM s2t_config_records WHERE scope = $1 AND record_key LIKE $2 ORDER BY record_key', [safePart(scope, 'scope'), `${prefix ? safePart(prefix, 'prefix') : ''}%`]); return result.rows }
   async createVoiceprint({ vectorId, userId, embeddingModel, embeddingVersion, sharingScope = 'private' }) {

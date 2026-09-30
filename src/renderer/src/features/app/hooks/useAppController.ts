@@ -221,6 +221,9 @@ const [summaryStatus, setSummaryStatus] = useState('')
 
 const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization' | 'embedding'>('all')
 const [modelHealth, setModelHealth] = useState<Record<string, { state: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'; reason: string; checkedAt: number }>>({})
+// Silero VAD model availability on the Web gateway CPU worker. `null` means the
+// status check has not answered yet, so the enable checkbox stays hidden.
+const [sileroVadAvailable, setSileroVadAvailable] = useState<boolean | null>(null)
 
 const refreshModelHealth = useCallback(async (): Promise<void> => {
   try {
@@ -358,7 +361,12 @@ const voiceprintChunksRef = useRef<Float32Array[]>([])
 
 const segmentRerecordRef = useRef<{ entry: SavedSession; segment: TranscriptEvent; stream: MediaStream; context: AudioContext; source: MediaStreamAudioSourceNode; processor: ScriptProcessorNode; sink: GainNode; chunks: Float32Array[] } | null>(null)
 
-const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId) ?? defaultModelProfile
+// Prefer the explicit selection; when it is missing or no longer valid fall
+// back to the environment-provided model (env/gateway profiles are kept at the
+// front of the list) before the built-in placeholder.
+const selectedModel = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId)
+  ?? settings.modelProfiles.find((profile) => profile.id === 'environment-asr' || profile.id === 'web-environment-asr' || profile.id.startsWith('web-gateway-asr-'))
+  ?? defaultModelProfile
 // Browser clients may select only an ID published by the gateway. Endpoint and
 // credentials remain server-side; this ID is the sole model-routing input.
 const gatewayAsrProfileId = (modelId: string): string | null => !window.s2t
@@ -791,11 +799,31 @@ useEffect(() => {
   }, [userId, environmentModelsHydrated])
 
 useEffect(() => {
-    if (view !== 'models') return
     void refreshModelHealth()
-    const timer = window.setInterval(() => { void refreshModelHealth() }, 60_000)
+    const timer = window.setInterval(() => { void refreshModelHealth() }, 300_000)
     return () => window.clearInterval(timer)
-  }, [view, refreshModelHealth])
+  }, [refreshModelHealth])
+
+useEffect(() => {
+    // Ask the gateway whether the Silero VAD model actually loads (model file +
+    // sha256 + onnxruntime-node) before offering the checkbox that enables it.
+    let canceled = false
+    const check = async (): Promise<void> => {
+      try {
+        const response = await authFetch('/api/audio-processing/status')
+        const payload = await response.json() as { sileroVad?: { available?: boolean } }
+        if (!canceled) setSileroVadAvailable(Boolean(response.ok && payload.sileroVad?.available))
+      } catch { if (!canceled) setSileroVadAvailable(false) }
+    }
+    void check()
+    const timer = window.setInterval(() => { void check() }, 300_000)
+    return () => { canceled = true; window.clearInterval(timer) }
+  }, [])
+
+useEffect(() => {
+    // Never leave recording blocked: if the model cannot load, drop the toggle.
+    if (sileroVadAvailable === false && settings.sileroVadEnabled) setSettings((current) => ({ ...current, sileroVadEnabled: false }))
+  }, [sileroVadAvailable, settings.sileroVadEnabled, setSettings])
 
 useEffect(() => {
     if (window.s2t || modelRegistryVersionRef.current === null) return
@@ -978,10 +1006,19 @@ useEffect(() => {
         profiles.unshift(...gatewayProfiles)
         const translations = current.translationProfiles.filter((profile) => !['environment-translation', 'web-environment-translation'].includes(profile.id)).map((profile) => ({ ...profile, endpoint: textEndpoint(profile.endpoint) }))
         if (translation?.endpoint && translation.model) translations.push({ id: translationId, name: `${translation.model}（環境設定）`, endpoint: translation.endpoint, model: translation.model })
-        // Load disk settings first, then apply explicit runtime environment values.
-        return { ...current, modelProfiles: profiles, selectedModelId: gatewayProfiles.some((profile) => profile.id === current.selectedModelId) ? current.selectedModelId : gatewayProfiles[0]?.id ?? (profiles.some((profile) => profile.id === current.selectedModelId) ? current.selectedModelId : 'none'),
-          translationProfiles: translations, selectedTranslationModelId: translation?.model ? translationId : current.selectedTranslationModelId,
-          translationEndpoint: translation?.endpoint || textEndpoint(current.translationEndpoint), translationModel: translation?.model || current.translationModel,
+        // Load disk settings first, then apply the environment-provided models as
+        // the default only when the saved selection is missing or no longer valid,
+        // so models registered later can still be selected and kept.
+        const selectedModelId = current.selectedModelId !== 'none' && profiles.some((profile) => profile.id === current.selectedModelId)
+          ? current.selectedModelId
+          : gatewayProfiles[0]?.id ?? 'none'
+        const selectedTranslationModelId = current.selectedTranslationModelId !== 'none' && translations.some((profile) => profile.id === current.selectedTranslationModelId)
+          ? current.selectedTranslationModelId
+          : translation?.model ? translationId : 'none'
+        const activeTranslation = translations.find((profile) => profile.id === selectedTranslationModelId)
+        return { ...current, modelProfiles: profiles, selectedModelId,
+          translationProfiles: translations, selectedTranslationModelId,
+          translationEndpoint: activeTranslation?.endpoint ?? translation?.endpoint ?? textEndpoint(current.translationEndpoint), translationModel: activeTranslation?.model ?? translation?.model ?? current.translationModel,
           summaryEndpoint: config.summary?.endpoint || textEndpoint(current.summaryEndpoint), summaryModel: config.summary?.model || current.summaryModel,
           diarizationEndpoint: config.diarization?.endpoint || current.diarizationEndpoint, diarizationModel: config.diarization?.model || current.diarizationModel }
       })
@@ -1764,7 +1801,13 @@ const updateSelectedModel = (update: Partial<ModelProfile>): void => {
 const selectTranslationProfile = (id: string): void => {
     setSettings((current) => {
       const profile = current.translationProfiles.find((item) => item.id === id)
-      return profile ? { ...current, selectedTranslationModelId: id, translationEndpoint: profile.endpoint, translationModel: profile.model } : { ...current, selectedTranslationModelId: 'none' }
+      const next = profile
+        ? { ...current, selectedTranslationModelId: id, translationEndpoint: profile.endpoint, translationModel: profile.model }
+        : { ...current, selectedTranslationModelId: 'none' }
+      // Electron keeps settings in the account config; persist the switch so it
+      // survives a restart without requiring an explicit "save" click.
+      if (window.s2t) void window.s2t.saveModelConfig(next).catch(() => setStatus('翻譯模型已切換，但設定檔保存失敗。'))
+      return next
     })
   }
 
@@ -2513,7 +2556,7 @@ const loadSessionIntoLive = async (entry: SavedSession): Promise<void> => {
 
 const renameSession = (id: string): void => {
     const title = titleDraft.trim().slice(0, 200)
-    if (!title) return
+    if (!title) { setRenamingSessionId(null); return }
     setSessions((current) => current.map((entry) => entry.id === id ? { ...entry, title } : entry))
     setRenamingSessionId(null)
   }
@@ -2547,6 +2590,7 @@ importedFile,
 importError,
 importProgress,
 settingsSaved,
+environmentModelsHydrated,
 denoiseApplied,
 browserRecordingStorage,
 remoteSessionSyncState,
@@ -2615,6 +2659,7 @@ modelFilter,
 setModelFilter,
 modelHealth,
 refreshModelHealth,
+sileroVadAvailable,
 systemStreamRef,
 microphoneMeterValueRef,
 systemMeterValueRef,

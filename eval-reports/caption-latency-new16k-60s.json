@@ -1,0 +1,205 @@
+{
+  "preset": "new16k",
+  "vadConfig": {
+    "minSpeechMs": 120,
+    "minSilenceMs": 250,
+    "preRollMs": 300,
+    "noiseFloorOffsetDb": 12,
+    "chunkMinMs": 700,
+    "chunkMaxMs": 1500
+  },
+  "contextPrompt": false,
+  "overlapMs": 0,
+  "sampleRate": 16000,
+  "audio": "music/我花了半年 20 萬，終於做出這個可以自動上字幕的網站what'sub！｜壹加壹.mp3",
+  "audioSeconds": 60,
+  "tsv": "music/梁山伯與茱麗葉_句級Speaker時間軸.tsv",
+  "endpointHost": "submissions-enter-audit-workstation.trycloudflare.com",
+  "model": "Breeze-ASR-25",
+  "startedAt": "2026-09-30T17:48:29.095Z",
+  "chunks": {
+    "enqueued": 40,
+    "sent": 40,
+    "droppedQueue": 0,
+    "emptyText": 6,
+    "requestFailed": 0,
+    "avgAudioMs": 1500,
+    "vadBoundaries": 0,
+    "forcedBoundaries": 40
+  },
+  "asrMs": {
+    "n": 40,
+    "p50": 256,
+    "p95": 497,
+    "max": 610
+  },
+  "queueWaitMs": {
+    "n": 40,
+    "p50": 1,
+    "p95": 2,
+    "max": 4
+  },
+  "errors": {
+    "count": 0,
+    "unique": []
+  },
+  "sentences": {
+    "total": 5,
+    "shown": 4,
+    "dropped": 0,
+    "emptyText": 1,
+    "requestFailed": 0,
+    "notSent": 0
+  },
+  "latencyMs": {
+    "n": 4,
+    "p50": 617,
+    "p95": 1045,
+    "max": 1045,
+    "within2500ShownPct": 100,
+    "within2500AllPct": 80
+  },
+  "accuracy": {
+    "corpusCerPct": 182.61,
+    "corpusRefChars": 46,
+    "corpusDistance": 84,
+    "sentenceCerPct": 197.83
+  },
+  "fragmentation": {
+    "displayedCaptions": 9,
+    "rawFinalEvents": 34,
+    "mergeOperations": 25,
+    "meanCaptionChars": 17.44,
+    "segmentsPerSentenceMean": 1.6,
+    "segmentsPerSentenceMax": 2,
+    "sentencesSplit": 3
+  },
+  "drainMs": 327,
+  "captions": [
+    {
+      "startMs": 1500,
+      "endMs": 3000,
+      "text": "好緊張"
+    },
+    {
+      "startMs": 4500,
+      "endMs": 15000,
+      "text": "啊真的是緊張耶你覺得3 2 1(笑)我還沒有要講啊"
+    },
+    {
+      "startMs": 15000,
+      "endMs": 25500,
+      "text": "來不及了這只有一次機會好啦我要公開我花了半獨自一人開發了一個字幕它的名字叫做"
+    },
+    {
+      "startMs": 27000,
+      "endMs": 28500,
+      "text": "What's up."
+    },
+    {
+      "startMs": 30000,
+      "endMs": 40500,
+      "text": "這半年來出片的時間真的非常非常抱歉因為我每天每夜都在投入這個網站的開發BD 為什麼是的"
+    },
+    {
+      "startMs": 40500,
+      "endMs": 42000,
+      "text": "Beep beep."
+    },
+    {
+      "startMs": 43500,
+      "endMs": 46500,
+      "text": "好不是"
+    },
+    {
+      "startMs": 48000,
+      "endMs": 58500,
+      "text": "我非你會喔太舒服了Fainting shit.在睡覺好 快用好了1"
+    },
+    {
+      "startMs": 58500,
+      "endMs": 60000,
+      "text": "My God."
+    }
+  ],
+  "detail": [
+    {
+      "startMs": 31100,
+      "endMs": 35750,
+      "speaker": "曹格",
+      "text": "我的心想唱首歌給妳聽",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 237,
+      "displayOffsetMs": 31717,
+      "latencyMs": 617,
+      "segments": 1,
+      "hyp": "這半年來出片的時間真的非常非常抱歉因為我每天每夜都在",
+      "sentenceCerPct": 250
+    },
+    {
+      "startMs": 37200,
+      "endMs": 41100,
+      "speaker": "曹格",
+      "text": "歌詞是如此的甜蜜",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 0,
+      "asrMs": 596,
+      "displayOffsetMs": 38076,
+      "latencyMs": 876,
+      "segments": 2,
+      "hyp": "投入這個網站的開發BD 為什麼是的Beep beep.",
+      "sentenceCerPct": 287.5
+    },
+    {
+      "startMs": 43250,
+      "endMs": 48250,
+      "speaker": "曹格",
+      "text": "可是我害羞 我沒有勇氣",
+      "status": "empty-text",
+      "segments": 2,
+      "hyp": "好不是我非你",
+      "sentenceCerPct": 90
+    },
+    {
+      "startMs": 49250,
+      "endMs": 54950,
+      "speaker": "曹格",
+      "text": "對妳說一句我愛你",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 273,
+      "displayOffsetMs": 49755,
+      "latencyMs": 505,
+      "segments": 1,
+      "hyp": "我非你會喔太舒服了Fainting shit.在睡覺",
+      "sentenceCerPct": 300
+    },
+    {
+      "startMs": 57650,
+      "endMs": 62350,
+      "speaker": "卓文萱",
+      "text": "為什麼你還是不言不語",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 213,
+      "displayOffsetMs": 58695,
+      "latencyMs": 1045,
+      "segments": 2,
+      "hyp": "1My God.",
+      "sentenceCerPct": 100
+    }
+  ]
+}

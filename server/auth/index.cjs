@@ -18,6 +18,11 @@ const localSecret = async (directory) => {
   }
 }
 const createAuth = async (storage, environment = process.env) => {
+  // Bootstrap admin creation and every later user lookup query the backing
+  // store. Storage owns the schema migration (Postgres CREATE TABLE), so wait
+  // for it before the first SELECT — otherwise startup races the DDL and auth
+  // rejects forever, taking every API request down with it.
+  if (storage?.ready) await storage.ready
   const users = storage.mode.config === 'postgres' ? new PostgresUserStore(storage.config.pool) : new LocalUserStore(storage.config)
   const configuredSecret = environment.S2T_AUTH_SECRET?.trim()
   if (environment.S2T_KUBERNETES_MODE === 'true' && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
@@ -55,10 +60,18 @@ const createAuth = async (storage, environment = process.env) => {
   await ensureBootstrapAdmin()
   const activeRevocations = async (userId) => {
     const now = Math.floor(Date.now() / 1000)
+    const active = (value) => (Array.isArray(value) ? value.filter((entry) => entry && typeof entry.jti === 'string' && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now) : [])
     const stored = await storage.config.get(userId, revokedTokensKey)
-    const active = Array.isArray(stored) ? stored.filter((entry) => entry && typeof entry.jti === 'string' && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now) : []
-    if (active.length !== (Array.isArray(stored) ? stored.length : 0)) await storage.config.put(userId, revokedTokensKey, active)
-    return active
+    const current = active(stored)
+    if (!Array.isArray(stored) || current.length === stored.length) return current
+    // Pruning is a read-modify-write on a record other requests append to
+    // (concurrent logouts); run it through the atomic update so a revocation
+    // is never dropped by an overlapping prune.
+    const result = await storage.config.update(userId, revokedTokensKey, (value) => {
+      const next = active(value)
+      return next.length === (Array.isArray(value) ? value.length : 0) ? undefined : next
+    })
+    return active(result.value)
   }
   return {
     // Kept server-side only.  The gateway derives per-account encrypted
@@ -88,8 +101,13 @@ const createAuth = async (storage, environment = process.env) => {
       try {
         const payload = jwt.verify(token, secret, { algorithms: ['HS256'] })
         if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string' || !Number.isSafeInteger(payload.exp)) return
-        const entries = await activeRevocations(payload.sub)
-        if (!entries.some((entry) => entry.jti === payload.jti)) await storage.config.put(payload.sub, revokedTokensKey, [...entries, { jti: payload.jti, expiresAt: payload.exp }])
+        await activeRevocations(payload.sub)
+        // Two tabs logging out together must not overwrite each other's
+        // revocation, so append through the atomic update instead of put().
+        await storage.config.update(payload.sub, revokedTokensKey, (value) => {
+          const entries = Array.isArray(value) ? value : []
+          return entries.some((entry) => entry?.jti === payload.jti) ? undefined : [...entries, { jti: payload.jti, expiresAt: payload.exp }]
+        })
       } catch { /* An expired or invalid token is already unusable. */ }
     },
     async requireUser(request) {

@@ -2,10 +2,10 @@ export const supportedUiLanguages = ['zh-TW', 'zh-CN', 'en', 'ja', 'de'] as cons
 export type UiLanguage = typeof supportedUiLanguages[number]
 
 const messages = {
-  'zh-TW': { appName: '即時語音字幕', live: '即時字幕', history: '記錄', import: '匯入檔案', models: '模型管理', voiceprints: '聲紋管理', settings: '設定', logout: '登出', menu: '功能選單' },
-  'zh-CN': { appName: '实时语音字幕', live: '实时字幕', history: '记录', import: '导入文件', models: '模型管理', voiceprints: '声纹管理', settings: '设置', logout: '退出登录', menu: '功能菜单' },
-  en: { appName: 'Live Speech Captions', live: 'Live captions', history: 'History', import: 'Import files', models: 'Model management', voiceprints: 'Voiceprints', settings: 'Settings', logout: 'Sign out', menu: 'Menu' },
-  ja: { appName: 'リアルタイム字幕', live: 'ライブ字幕', history: '履歴', import: 'ファイルを読み込む', models: 'モデル管理', voiceprints: '声紋管理', settings: '設定', logout: 'ログアウト', menu: 'メニュー' },
+  'zh-TW': { appName: '即時語音字幕', live: '即時字幕', history: '記錄', import: '匯入檔案', models: '模型管理', voiceprints: '聲紋管理', settings: '偏好設定', logout: '登出', menu: '功能選單' },
+  'zh-CN': { appName: '实时语音字幕', live: '实时字幕', history: '记录', import: '导入文件', models: '模型管理', voiceprints: '声纹管理', settings: '偏好设置', logout: '退出登录', menu: '功能菜单' },
+  en: { appName: 'Live Speech Captions', live: 'Live captions', history: 'History', import: 'Import files', models: 'Model management', voiceprints: 'Voiceprints', settings: 'Preferences', logout: 'Sign out', menu: 'Menu' },
+  ja: { appName: 'リアルタイム字幕', live: 'ライブ字幕', history: '履歴', import: 'ファイルを読み込む', models: 'モデル管理', voiceprints: '声紋管理', settings: '環境設定', logout: 'ログアウト', menu: 'メニュー' },
   de: { appName: 'Live-Sprachuntertitel', live: 'Live-Untertitel', history: 'Verlauf', import: 'Datei importieren', models: 'Modellverwaltung', voiceprints: 'Stimmabdrücke', settings: 'Einstellungen', logout: 'Abmelden', menu: 'Menü' }
 } as const
 
@@ -23,9 +23,8 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   close: { 'zh-TW': '關閉', 'zh-CN': '关闭', en: 'Close', ja: '閉じる', de: 'Schließen' },
   workspace: { 'zh-TW': '工作區', 'zh-CN': '工作区', en: 'Workspace', ja: 'ワークスペース', de: 'Arbeitsbereich' },
   management: { 'zh-TW': '管理', 'zh-CN': '管理', en: 'Management', ja: '管理', de: 'Verwaltung' },
-  quickSettings: { 'zh-TW': '快速設定', 'zh-CN': '快速设置', en: 'Quick settings', ja: 'クイック設定', de: 'Schnelleinstellungen' },
   summary: { 'zh-TW': '摘要', 'zh-CN': '摘要', en: 'Summary', ja: '要約', de: 'Zusammenfassung' },
-  settingsTitle: { 'zh-TW': '功能設定', 'zh-CN': '功能设置', en: 'Settings', ja: '設定', de: 'Einstellungen' },
+  settingsTitle: { 'zh-TW': '偏好設定', 'zh-CN': '偏好设置', en: 'Preferences', ja: '環境設定', de: 'Einstellungen' },
   transcriptionVad: { 'zh-TW': '轉錄與 VAD', 'zh-CN': '转录与 VAD', en: 'Transcription & VAD', ja: '文字起こしと VAD', de: 'Transkription & VAD' },
   translationGlossary: { 'zh-TW': '翻譯與術語', 'zh-CN': '翻译与术语', en: 'Translation & glossary', ja: '翻訳と用語集', de: 'Übersetzung & Glossar' },
   summaryTemplates: { 'zh-TW': '摘要模板管理', 'zh-CN': '摘要模板管理', en: 'Summary templates', ja: '要約テンプレート', de: 'Zusammenfassungsvorlagen' },
@@ -44,12 +43,12 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   saved: { 'zh-TW': '已儲存', 'zh-CN': '已保存', en: 'Saved', ja: '保存しました', de: 'Gespeichert' },
   historyRecords: { 'zh-TW': '歷史紀錄', 'zh-CN': '历史记录', en: 'History', ja: '履歴', de: 'Verlauf' },
   collapseSidebar: { 'zh-TW': '收起側欄', 'zh-CN': '收起侧栏', en: 'Collapse sidebar', ja: 'サイドバーを閉じる', de: 'Seitenleiste einklappen' },
+  expandSidebar: { 'zh-TW': '展開側欄', 'zh-CN': '展开侧栏', en: 'Expand sidebar', ja: 'サイドバーを開く', de: 'Seitenleiste ausklappen' },
   allHistory: { 'zh-TW': '查看全部歷史紀錄', 'zh-CN': '查看全部历史记录', en: 'View all history', ja: 'すべての履歴を見る', de: 'Gesamten Verlauf anzeigen' },
   noHistory: { 'zh-TW': '尚無紀錄', 'zh-CN': '暂无记录', en: 'No history yet', ja: '履歴はまだありません', de: 'Noch kein Verlauf' },
   openHistory: { 'zh-TW': '開啟歷史紀錄', 'zh-CN': '打开历史记录', en: 'Open history', ja: '履歴を開く', de: 'Verlauf öffnen' },
   replaceLiveCaptionsConfirm: { 'zh-TW': '目前即時字幕尚未保存；載入歷史紀錄會取代它。是否繼續？', 'zh-CN': '当前实时字幕尚未保存；加载历史记录会替换它。是否继续？', en: 'Current live captions have not been saved. Loading history will replace them. Continue?', ja: '現在のライブ字幕は保存されていません。履歴を読み込むと置き換えられます。続けますか？', de: 'Die aktuellen Live-Untertitel sind nicht gespeichert. Das Laden des Verlaufs ersetzt sie. Fortfahren?' },
   keptLiveCaptions: { 'zh-TW': '已保留目前即時字幕。', 'zh-CN': '已保留当前实时字幕。', en: 'Current live captions were kept.', ja: '現在のライブ字幕を保持しました。', de: 'Die aktuellen Live-Untertitel wurden beibehalten.' },
-  openQuickSettings: { 'zh-TW': '開啟快速設定', 'zh-CN': '打开快速设置', en: 'Open quick settings', ja: 'クイック設定を開く', de: 'Schnelleinstellungen öffnen' },
   selectRecord: { 'zh-TW': '選擇紀錄', 'zh-CN': '选择记录', en: 'Select recording', ja: '記録を選択', de: 'Aufzeichnung auswählen' },
   chooseHistoryRecord: { 'zh-TW': '請選擇一筆歷史紀錄', 'zh-CN': '请选择一笔历史记录', en: 'Choose a history record', ja: '履歴を選択してください', de: 'Verlaufseintrag auswählen' },
   summaryTemplate: { 'zh-TW': '摘要模板', 'zh-CN': '摘要模板', en: 'Summary template', ja: '要約テンプレート', de: 'Zusammenfassungsvorlage' },
@@ -318,7 +317,22 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   chunkBoundary: { 'zh-TW': 'Chunk 邊界', 'zh-CN': 'Chunk 边界', en: 'Chunk boundary', ja: 'チャンク境界', de: 'Abschnittsgrenze' },
   segmentTimestamp: { 'zh-TW': 'Segment', 'zh-CN': 'Segment', en: 'Segment', ja: 'セグメント', de: 'Segment' },
   wordTimestamp: { 'zh-TW': 'Word', 'zh-CN': 'Word', en: 'Word', ja: '単語', de: 'Wort' },
-  sampleRateCapabilityHint: { 'zh-TW': '未填寫能力時，App 會使用裝置原生取樣率，不會假定服務支援特定格式。', 'zh-CN': '未填写能力时，App 会使用设备原生采样率，不会假定服务支持特定格式。', en: 'When capabilities are not specified, the app keeps the device-native sample rate and does not assume the service supports a particular format.', ja: '機能が未指定の場合、アプリはデバイス本来のサンプルレートを使用し、サービスが特定形式をサポートすると仮定しません。', de: 'Ohne deklarierte Fähigkeiten verwendet die App die native Abtastrate des Geräts und nimmt keine Unterstützung bestimmter Formate an.' }
+  sampleRateCapabilityHint: { 'zh-TW': '未填寫能力時，App 會使用裝置原生取樣率，不會假定服務支援特定格式。', 'zh-CN': '未填写能力时，App 会使用设备原生采样率，不会假定服务支持特定格式。', en: 'When capabilities are not specified, the app keeps the device-native sample rate and does not assume the service supports a particular format.', ja: '機能が未指定の場合、アプリはデバイス本来のサンプルレートを使用し、サービスが特定形式をサポートすると仮定しません。', de: 'Ohne deklarierte Fähigkeiten verwendet die App die native Abtastrate des Geräts und nimmt keine Unterstützung bestimmter Formate an.' },
+  unsavedChanges: { 'zh-TW': '尚未儲存的變更', 'zh-CN': '未保存的更改', en: 'Unsaved changes', ja: '未保存の変更', de: 'Nicht gespeicherte Änderungen' },
+  discardChanges: { 'zh-TW': '放棄變更', 'zh-CN': '放弃更改', en: 'Discard changes', ja: '変更を破棄', de: 'Änderungen verwerfen' },
+  keepEditing: { 'zh-TW': '繼續編輯', 'zh-CN': '继续编辑', en: 'Keep editing', ja: '編集を続ける', de: 'Weiter bearbeiten' },
+  unsavedLeaveConfirm: { 'zh-TW': '設定有尚未儲存的變更，離開後將會放棄這些變更。要離開嗎？', 'zh-CN': '设置有未保存的更改，离开后将放弃这些更改。要离开吗？', en: 'Settings have unsaved changes. Leaving will discard them. Leave anyway?', ja: '設定に未保存の変更があります。このページを離れると変更は破棄されます。続けますか？', de: 'Die Einstellungen haben ungespeicherte Änderungen. Beim Verlassen werden sie verworfen. Trotzdem verlassen?' },
+  resetDefaults: { 'zh-TW': '恢復預設值', 'zh-CN': '恢复默认值', en: 'Reset to defaults', ja: '既定値に戻す', de: 'Standard wiederherstellen' },
+  advancedHelp: { 'zh-TW': '進階說明', 'zh-CN': '高级说明', en: 'Advanced help', ja: '詳細説明', de: 'Erweiterte Hilfe' },
+  inUse: { 'zh-TW': '使用中', 'zh-CN': '使用中', en: 'In use', ja: '使用中', de: 'In Verwendung' },
+  useThisModel: { 'zh-TW': '設為使用中', 'zh-CN': '设为使用中', en: 'Use this model', ja: 'このモデルを使う', de: 'Dieses Modell verwenden' },
+  audioProcessing: { 'zh-TW': '音訊處理', 'zh-CN': '音频处理', en: 'Audio processing', ja: '音声処理', de: 'Audiobearbeitung' },
+  openModelManagement: { 'zh-TW': '前往模型管理', 'zh-CN': '前往模型管理', en: 'Open model management', ja: 'モデル管理を開く', de: 'Modellverwaltung öffnen' },
+  activeModel: { 'zh-TW': '目前使用', 'zh-CN': '当前使用', en: 'Currently active', ja: '現在使用中', de: 'Aktuell aktiv' },
+  modelSelectionHint: { 'zh-TW': '模型選擇已移到「模型管理」；註冊新模型後即可在此切換，未指定時會使用環境變數提供的模型。', 'zh-CN': '模型选择已移到“模型管理”；注册新模型后即可在此切换，未指定时会使用环境变量提供的模型。', en: 'Model selection moved to Model management. After registering a model you can switch here; when nothing is selected the environment-provided model is used.', ja: 'モデルの選択は「モデル管理」へ移動しました。モデルを登録するとここで切り替えられ、未選択の時は環境変数のモデルを使用します。', de: 'Die Modellauswahl wurde in die Modellverwaltung verschoben. Nach der Registrierung können Sie hier wechseln; ohne Auswahl wird das aus der Umgebung bereitgestellte Modell verwendet.' },
+  modelSwitchHint: { 'zh-TW': '選擇各用途目前使用的模型；切換後立即生效並自動保存。', 'zh-CN': '选择各用途当前使用的模型；切换后立即生效并自动保存。', en: 'Choose the model used for each purpose; switching takes effect immediately and is saved automatically.', ja: '各用途で使用するモデルを選択します。切り替えは即時に有効になり、自動保存されます。', de: 'Wählen Sie das Modell für jeden Zweck; der Wechsel wird sofort wirksam und automatisch gespeichert.' },
+  noSelection: { 'zh-TW': '未指定', 'zh-CN': '未指定', en: 'Not selected', ja: '未選択', de: 'Nicht ausgewählt' },
+  singleSlotModel: { 'zh-TW': '單一模型；註冊或編輯即為目前使用', 'zh-CN': '单一模型；注册或编辑即为当前使用', en: 'Single slot; registering or editing sets the active model', ja: '単一スロット；登録または編集で使用中になります', de: 'Einzelner Platz; Registrieren oder Bearbeiten legt das aktive Modell fest.' }
 }
 
 export const interfaceTranslate = (language: UiLanguage, key: keyof typeof interfaceMessages): string => interfaceMessages[key][language]

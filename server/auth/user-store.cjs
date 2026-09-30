@@ -1,4 +1,4 @@
-const { randomUUID } = require('node:crypto')
+const { randomUUID, createHash } = require('node:crypto')
 
 const normalizeUsername = (value) => {
   if (typeof value !== 'string') throw new Error('帳號格式不正確')
@@ -15,6 +15,11 @@ const normalizeNT = (value) => {
   return NT
 }
 const ntKey = (NT) => normalizeNT(NT).toLocaleLowerCase('en-US')
+// Record keys must satisfy the storage key charset, but NT is free text
+// (company identities contain spaces and CJK characters). Reserve a hash of
+// the normalised NT instead; duplicate detection for already stored accounts
+// is still done by scanning the account records in create() below.
+const ntReservationKey = (NT) => `nt-${createHash('sha256').update(ntKey(NT)).digest('hex').slice(0, 40)}`
 const userInput = (input) => {
   const username = normalizeUsername(input?.username)
   if (typeof input?.passwordHash !== 'string' || !input.passwordHash) throw new Error('密碼資料無效')
@@ -34,7 +39,7 @@ class LocalUserStore {
     // before reserving, then use putIfAbsent to serialize concurrent signups.
     const existing = await this.config.list('auth', 'account-')
     if (existing.some((item) => item.value && typeof item.value.NT === 'string' && ntKey(item.value.NT) === ntKey(user.NT))) throw new Error('NT 已存在')
-    const reservation = `nt-${ntKey(user.NT)}`
+    const reservation = ntReservationKey(user.NT)
     if (!await this.config.putIfAbsent('auth', reservation, user.id)) throw new Error('NT 已存在')
     try {
       if (!await this.config.putIfAbsent('auth', key, user)) throw new Error('帳號已存在')

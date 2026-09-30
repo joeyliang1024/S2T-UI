@@ -169,7 +169,8 @@ const main = async () => {
     assert.match(result.body.error, /明確同意/)
     const metrics = await fetch(`${base}/metrics`).then((response) => response.text())
     assert.match(metrics, /s2t_gateway_request_duration_seconds_bucket\{route="audio_processing_silero_vad"/)
-    assert.match(metrics, /s2t_sherpa_worker_jobs\{state="queued"/)
+    assert.match(metrics, /s2t_sherpa_worker_jobs\{pool="interactive",state="queued"/)
+    assert.match(metrics, /s2t_sherpa_op_transferred_bytes_total\{op="sileroVad"\}/)
     console.log('Gateway auth smoke test passed.')
   } finally {
     child.kill()

@@ -51,6 +51,14 @@ const main = async () => {
     assert.equal((await storage.config.get(casScope, 'cross-process-cas')).version, 1)
     await storage.config.remove(casScope, 'cross-process-cas')
 
+    // Atomic read-modify-write: concurrent appenders must all land on the
+    // shared list record instead of overwriting each other.
+    await Promise.all(Array.from({ length: 24 }, (_, index) => storage.config.update(scope, 'queue', (value) => [...(Array.isArray(value) ? value : []), { index }])))
+    const queue = await storage.config.get(scope, 'queue')
+    assert.equal(queue.length, 24, 'every concurrent postgres update must be applied')
+    assert.equal((await storage.config.update(scope, 'queue', () => undefined)).changed, false, 'an aborted transform must not write')
+    await storage.config.remove(scope, 'queue')
+
     const job = await storage.config.enqueueDiarizationJob({ id: jobId, userId, sessionId: runId, audioKey: runId, payload: { user: { id: userId } } })
     assert.equal(job.state, 'queued')
     const claimed = await storage.config.claimDiarizationJob(`smoke-worker-${runId}`, jobId)
@@ -71,6 +79,21 @@ const main = async () => {
     await storage.config.finishDiarizationJob(fencedJobId, `replacement-worker-${runId}`, replacementLease?.leaseGeneration)
     assert.equal((await storage.config.getDiarizationJob(userId, fencedJobId))?.state, 'completed')
 
+    // A job requeued with retry: must wait behind a growing backoff lease
+    // instead of being claimed again on the next two-second drain.
+    const retryJobId = `${jobId}-retry`
+    await storage.config.enqueueDiarizationJob({ id: retryJobId, userId, sessionId: `${runId}-retry`, audioKey: `${runId}-retry`, payload: { user: { id: userId } } })
+    const retryLease = await storage.config.claimDiarizationJob(`retry-worker-${runId}`, retryJobId)
+    assert.equal(retryLease?.id, retryJobId)
+    await storage.config.finishDiarizationJob(retryJobId, `retry-worker-${runId}`, retryLease?.leaseGeneration, 'retry:紀錄尚未同步完成')
+    assert.equal((await storage.config.getDiarizationJob(userId, retryJobId))?.state, 'queued')
+    assert.equal(await storage.config.claimDiarizationJob(`retry-worker-${runId}`, retryJobId), null, 'a retried job must wait behind its backoff lease')
+    await storage.config.pool.query('UPDATE s2t_diarization_jobs SET lease_until = NULL WHERE id = $1', [retryJobId])
+    const retryReclaim = await storage.config.claimDiarizationJob(`retry-worker-${runId}`, retryJobId)
+    assert.equal(retryReclaim?.id, retryJobId, 'the job must be claimable again once the backoff lease expires')
+    await storage.config.finishDiarizationJob(retryJobId, `retry-worker-${runId}`, retryReclaim?.leaseGeneration)
+    assert.equal((await storage.config.getDiarizationJob(userId, retryJobId))?.state, 'completed')
+
     const bytes = Buffer.from(`remote storage smoke ${runId}`)
     await storage.blob.put(scope, blobKey, bytes)
     assert.deepEqual(await storage.blob.get(scope, blobKey), bytes)
@@ -89,6 +112,7 @@ const main = async () => {
       storage.config.remove(scope, 'sessions'),
       storage.config.removeDiarizationJob?.(userId, jobId),
       storage.config.removeDiarizationJob?.(userId, `${jobId}-fenced`),
+      storage.config.removeDiarizationJob?.(userId, `${jobId}-retry`),
       storage.config.pool?.query('DELETE FROM s2t_users WHERE id = $1', [userId]),
       storage.vector.remove(vectorId)
     ])
