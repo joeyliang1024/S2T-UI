@@ -1,4 +1,8 @@
 const { spawn } = require('node:child_process')
+const { randomUUID } = require('node:crypto')
+const { readFile, rm, writeFile } = require('node:fs/promises')
+const { tmpdir } = require('node:os')
+const { join } = require('node:path')
 
 const ffmpegPath = () => {
   try { return require('ffmpeg-static') } catch { return null }
@@ -28,4 +32,33 @@ const dynaudnormWav = (audio) => new Promise((resolve, reject) => {
   child.stdin.end(audio)
 })
 
-module.exports = { dynaudnormStatus, dynaudnormWav }
+// WAV → M4A (AAC inside MP4). The output is staged in a file because ffmpeg
+// cannot mux mp4 to a non-seekable pipe, and faststart keeps the hint table at
+// the front so browsers can start reading immediately.
+const transcodeM4a = async (audio) => {
+  const path = ffmpegPath()
+  if (!path) throw new Error('缺少 ffmpeg-static，無法轉檔 M4A')
+  const inputPath = join(tmpdir(), `s2t-transcode-${randomUUID()}.wav`)
+  const outputPath = join(tmpdir(), `s2t-transcode-${randomUUID()}.m4a`)
+  await writeFile(inputPath, audio, { mode: 0o600 })
+  try {
+    await new Promise((resolve, reject) => {
+      const child = spawn(path, ['-hide_banner', '-loglevel', 'error', '-y', '-i', inputPath, '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', '-f', 'mp4', outputPath], { stdio: ['ignore', 'ignore', 'pipe'] })
+      let errorText = ''
+      child.stderr.on('data', (chunk) => { if (errorText.length < 4000) errorText += chunk.toString('utf8') })
+      const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('M4A 轉檔逾時')) }, 180000)
+      child.on('error', (error) => { clearTimeout(timer); reject(error) })
+      child.on('close', (code) => {
+        clearTimeout(timer)
+        if (code === 0) resolve()
+        else reject(new Error(`ffmpeg M4A 轉檔失敗：${errorText.trim().slice(0, 500) || `exit ${code}`}`))
+      })
+    })
+    return await readFile(outputPath)
+  } finally {
+    await rm(inputPath, { force: true })
+    await rm(outputPath, { force: true })
+  }
+}
+
+module.exports = { dynaudnormStatus, dynaudnormWav, transcodeM4a }

@@ -2,7 +2,9 @@ import type { TranscriptEvent } from '../../models/model-adapter'
 
 export const translationAggregationDelayMs = 220
 export const throttledTranslationDelayMs = 900
-export const maximumAutomaticTranslationQueue = 6
+// External translation calls are independent work. Keep a small concurrent
+// ceiling instead of serializing every caption behind one slow request.
+export const maximumAutomaticTranslationQueue = 2
 export const maximumSentenceWaitMs = 5_000
 
 export type TranslationSourceLanguage = NonNullable<TranscriptEvent['detectedLanguage']>
@@ -23,6 +25,10 @@ export const shouldSkipTranslation = (source: TranslationSourceLanguage | undefi
 export const canMergeHttpCaption = (previous: TranscriptEvent | undefined, next: TranscriptEvent, clearedThroughMs: number): boolean =>
   Boolean(next.id.startsWith('http-') && previous?.id.startsWith('http-') &&
   previous.status === 'final' && next.status === 'final' &&
+  // Never replace a completed translation with a longer, untranslated merge.
+  // Continuing speech will start a new caption which can be translated on its
+  // own, so bilingual output remains stable during long utterances.
+  !previous.translatedText && !previous.translationStatus &&
   previous.endMs > clearedThroughMs && !previous.isSentenceBoundary &&
   next.startMs - previous.endMs < 900 && next.endMs - previous.startMs < 12_000)
 

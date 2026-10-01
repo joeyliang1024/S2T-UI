@@ -37,7 +37,7 @@ const main = async () => {
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(`gateway did not start: ${output}`)), 10_000)
       child.stdout.on('data', () => {
-        if (output.includes('S2T web gateway:')) { clearTimeout(timer); resolve() }
+        if (output.includes('gateway.started')) { clearTimeout(timer); resolve() }
       })
       child.once('exit', (code) => { clearTimeout(timer); reject(new Error(`gateway exited (${code}): ${output}`)) })
     })

@@ -4,6 +4,7 @@ const { join } = require('node:path')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { LocalUserStore, PostgresUserStore, normalizeUsername, publicUser } = require('./user-store.cjs')
+const { logger } = require('../logger.cjs')
 
 const readJson = async (request, maximum = 64 * 1024) => {
   let bytes = 0; const chunks = []
@@ -55,7 +56,10 @@ const createAuth = async (storage, environment = process.env) => {
     const username = environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin'
     const password = environment.S2T_BOOTSTRAP_ADMIN_PASSWORD?.trim() || 'admin'
     if (await users.findByUsername(username)) return
-    try { await users.create({ username, passwordHash: await bcrypt.hash(password, 12), NT: username, Department: 'admin', role: 'admin' }) } catch (error) { if (!(error instanceof Error) || error.message !== '帳號已存在') throw error }
+    try {
+      await users.create({ username, passwordHash: await bcrypt.hash(password, 12), NT: username, Department: 'admin', role: 'admin' })
+      logger.info('auth.bootstrap-admin.created', { username })
+    } catch (error) { if (!(error instanceof Error) || error.message !== '帳號已存在') throw error }
   }
   await ensureBootstrapAdmin()
   const activeRevocations = async (userId) => {
@@ -116,7 +120,14 @@ const createAuth = async (storage, environment = process.env) => {
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
       if (request.method === 'POST' && url === '/api/auth/register') {
-        try { const result = await this.register(await readJson(request)); setSessionCookie(response, result.token); send(response, 201, result) } catch (error) { send(response, error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在') ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' }) }; return true
+        try { const result = await this.register(await readJson(request)); setSessionCookie(response, result.token); send(response, 201, result) } catch (error) {
+          // A duplicate account is the user's own doing; anything else means
+          // the backing store failed and must be visible in the console.
+          const expected = error instanceof Error && (error.message === '帳號已存在' || error.message === 'NT 已存在')
+          if (expected) logger.info('auth.register.rejected', { reason: error.message })
+          else logger.error('auth.register.failed', { error })
+          send(response, expected ? 409 : 400, { error: error instanceof Error ? error.message : '註冊失敗' })
+        }; return true
       }
       if (request.method === 'POST' && url === '/api/auth/login') {
         let input
@@ -130,6 +141,9 @@ const createAuth = async (storage, environment = process.env) => {
           send(response, 200, result)
         } catch (error) {
           const failures = recentFailures(key); failures.push(Date.now()); failedLogins.set(key, failures)
+          // The submitted password is never logged; the attempt count is what
+          // an operator needs to spot a brute-force run.
+          logger.warn('auth.login.failed', { username: typeof input?.username === 'string' ? input.username.slice(0, 64) : '', failures: failures.length, error })
           send(response, 401, { error: error instanceof Error ? error.message : '登入失敗' })
         }
         return true

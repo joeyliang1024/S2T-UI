@@ -1,13 +1,20 @@
 const { Client: MinioClient } = require('minio')
 const { Pool } = require('pg')
 const { safePart, validateEmbedding, validateVectorRecord } = require('./local.cjs')
+const { logger } = require('../logger.cjs')
 
 const minioOptions = (config) => {
   const endpoint = new URL(config.S2T_MINIO_ENDPOINT.includes('://') ? config.S2T_MINIO_ENDPOINT : `http://${config.S2T_MINIO_ENDPOINT}`)
   return { endPoint: endpoint.hostname, port: endpoint.port ? Number(endpoint.port) : endpoint.protocol === 'https:' ? 443 : 80, useSSL: endpoint.protocol === 'https:', accessKey: config.S2T_MINIO_ACCESS_KEY, secretKey: config.S2T_MINIO_SECRET_KEY }
 }
 class MinioBlobStore {
-  constructor(config) { this.bucket = config.S2T_MINIO_BUCKET; this.client = new MinioClient(minioOptions(config)); this.ready = this.ensureBucket() }
+  constructor(config) {
+    this.bucket = config.S2T_MINIO_BUCKET; this.client = new MinioClient(minioOptions(config))
+    // Readiness failures name the component: without this line the aggregated
+    // storage.ready rejection only says "connect ECONNREFUSED" and does not
+    // tell an operator whether MinIO, Postgres or Milvus is the broken one.
+    this.ready = this.ensureBucket().catch((error) => { logger.error('storage.blob.unavailable', { bucket: this.bucket, error }); throw error })
+  }
   async ensureBucket() { if (!await this.client.bucketExists(this.bucket)) await this.client.makeBucket(this.bucket) }
   key(scope, key) { return `${safePart(scope, 'scope')}/${key.split('/').map((part) => safePart(part, 'blob key')).join('/')}` }
   async put(scope, key, bytes) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), bytes) }
@@ -36,12 +43,17 @@ class PostgresConfigStore {
     this.schemaVersion = '001-core-storage'; this.ready = this.migrate()
   }
   async migrate() {
+    // A failed migration must be the loudest line in the console: it is why
+    // every request in this Pod answers 503 until an operator acts.
+    const startedAt = Date.now()
+    logger.info('storage.migration.started', { schemaVersion: this.schemaVersion })
+    let client = null
     // Multiple gateway processes can start at the same time during a deploy.
     // DDL such as ALTER TABLE / CREATE INDEX otherwise takes locks in a
     // different order and can deadlock. Hold the advisory lock on one pooled
     // connection for the complete migration sequence.
-    const client = await this.pool.connect()
     try {
+      client = await this.pool.connect()
       await client.query("SELECT pg_advisory_lock(hashtext('s2t_schema_migrations'))")
       await client.query(`
       CREATE TABLE IF NOT EXISTS s2t_users (
@@ -104,10 +116,16 @@ class PostgresConfigStore {
       ALTER TABLE s2t_diarization_jobs ADD COLUMN IF NOT EXISTS lease_generation INTEGER NOT NULL DEFAULT 0;
       INSERT INTO s2t_schema_migrations(version) VALUES ('001-core-storage') ON CONFLICT(version) DO NOTHING;
     `)
+    } catch (error) {
+      logger.error('storage.migration.failed', { schemaVersion: this.schemaVersion, durationMs: Date.now() - startedAt, error })
+      throw error
     } finally {
-      await client.query("SELECT pg_advisory_unlock(hashtext('s2t_schema_migrations'))").catch(() => undefined)
-      client.release()
+      if (client) {
+        await client.query("SELECT pg_advisory_unlock(hashtext('s2t_schema_migrations'))").catch(() => undefined)
+        client.release()
+      }
     }
+    logger.info('storage.migration.applied', { schemaVersion: this.schemaVersion, durationMs: Date.now() - startedAt })
   }
   async get(scope, key) { await this.ready; const result = await this.pool.query('SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = $2', [safePart(scope, 'scope'), safePart(key, 'record key')]); return result.rows[0]?.value ?? null }
   async put(scope, key, value) { await this.ready; await this.pool.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb) ON CONFLICT(scope, record_key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()', [safePart(scope, 'scope'), safePart(key, 'record key'), JSON.stringify(value)]) }

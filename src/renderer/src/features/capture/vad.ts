@@ -29,6 +29,36 @@ export const defaultVadConfig: VadConfig = {
 }
 
 /**
+ * The only user-facing caption control. Each tier is a curated VadConfig
+ * measured by scripts/caption-latency-eval.cjs on conversational speech:
+ * 'fast' shows captions earliest (shorter, occasionally choppier clips),
+ * 'normal' is the validated P95 ≤ 2.5 s configuration, 'slow' waits for
+ * longer clips (steadier output, later on screen).
+ */
+export type ResponseSpeed = 'fast' | 'normal' | 'slow'
+
+export const responseSpeeds: ReadonlyArray<ResponseSpeed> = ['fast', 'normal', 'slow']
+
+export const responseSpeedVadConfig: Record<ResponseSpeed, VadConfig> = {
+  // Measured on conversational speech: 700/1200 keeps CER level with 'normal'
+  // (35.2% corpus) while cutting median display latency ~270 ms; an earlier
+  // 500/1000 attempt lost 4 of 32 sentences to empty ASR output on short clips.
+  // On clean narration, chunkMin 500 gained nothing over 700 (p50 1219 vs
+  // 1164 ms, corpus CER 14.2% vs 14.0%), so 700 stays.
+  fast: { ...defaultVadConfig, minSilenceMs: 150, chunkMaxMs: 1_200 },
+  normal: { ...defaultVadConfig },
+  // minSilence 800 (not 500): on clean narration it holds clips across short
+  // pauses instead of cutting at them — corpus CER 8.35% vs 10.27%, with 0
+  // premature natural cuts vs 2. On BGM material no boundary ever fires, so
+  // the tier behaves exactly like 500 there (corpus CER 28.88% unchanged).
+  slow: { ...defaultVadConfig, minSilenceMs: 800, chunkMinMs: 1_000, chunkMaxMs: 2_400 }
+}
+
+export const normalizeResponseSpeed = (value: unknown): ResponseSpeed => value === 'fast' || value === 'slow' ? value : 'normal'
+
+export const speedToVadConfig = (speed: ResponseSpeed): VadConfig => ({ ...responseSpeedVadConfig[speed] })
+
+/**
  * An app-side VAD for a request/response ASR service. It chooses better HTTP
  * chunk boundaries and suppresses room tone; it does not claim word timing.
  */

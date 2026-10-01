@@ -1,7 +1,6 @@
 import { type ReactElement, type ReactNode, useEffect, useRef, useState } from 'react'
 import { interfaceTranslate } from '../../../../shared/i18n'
 import type { Settings, View } from '../../../../shared/types'
-import { defaultVadConfig } from '../../../capture/vad'
 import { parseGlossaryJson } from '../../services/glossary-json'
 import type { AppController } from '../../hooks/useAppController'
 
@@ -26,29 +25,6 @@ function SettingsCard({ eyebrow, title, aside, className, children }: SettingsCa
       </header>
       <div className="settings-card-body">{children}</div>
     </section>
-  )
-}
-
-interface SliderFieldProps {
-  label: string
-  value: number
-  min: number
-  max: number
-  step: number
-  unit: string
-  onChange: (value: number) => void
-}
-
-function SliderField({ label, value, min, max, step, unit, onChange }: SliderFieldProps): ReactElement {
-  return (
-    <div className="slider-field">
-      <div className="slider-field-head">
-        <span className="slider-field-label">{label}</span>
-        <output className="slider-field-value">{value}{unit}</output>
-      </div>
-      <input type="range" min={min} max={max} step={step} value={value} aria-label={label} onChange={(event) => onChange(Number(event.target.value))} />
-      <div className="slider-field-scale" aria-hidden="true"><span>{min}{unit}</span><span>{max}{unit}</span></div>
-    </div>
   )
 }
 
@@ -102,13 +78,15 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
   const {
     settings, setSettings, setStatus, saveSettings, settingsSaved, denoiseApplied,
     browserRecordingStorage, remoteSessionSyncState, storageHealth, audioMigrationStatus,
-    storageCompensations, storageOrphanAudio, sileroVadAvailable,
+    storageCompensations, storageOrphanAudio, sileroVadAvailable, modelHealth,
     retryRemoteSessionSync, retryStorageCompensations, cleanOrphanAudio
   } = controller
   const [category, setCategory] = useState<SettingsCategory>('asr')
   const [glossarySearch, setGlossarySearch] = useState('')
   const [newGlossaryTerm, setNewGlossaryTerm] = useState('')
   const [dirty, setDirty] = useState(false)
+  const sileroHealth = modelHealth['managed-silero-vad']
+  const sileroHealthLabel = sileroHealth?.state === 'healthy' ? '健康' : sileroHealth?.state === 'degraded' ? '降級' : sileroHealth?.state === 'unhealthy' ? '失敗' : '未確認'
   // Last saved (or mounted) snapshot: comparison baseline and revert target.
   const savedSnapshotRef = useRef<string>(serializeSettings(settings))
   const savedFlagRef = useRef(false)
@@ -173,17 +151,13 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
     update((current) => ({ ...current, denoiseEnabled: enabled }))
     if (controller.captureState === 'recording' || controller.captureState === 'paused') setStatus('降噪偏好已保存；需切換麥克風或下次開始收音才會建立新的音源 stream。')
   }
-  const resetVadDefaults = (): void => update((current) => ({ ...current, vadConfig: { ...defaultVadConfig } }))
   const revertChanges = (): void => { userEditedRef.current = false; setSettings(JSON.parse(savedSnapshotRef.current) as Settings); setDirty(false); onDirtyChange(false) }
-
-  const activeAsrModelName = settings.modelProfiles.find((profile) => profile.id === settings.selectedModelId)?.name ?? '—'
-  const activeTranslationModelName = settings.translationProfiles.find((profile) => profile.id === settings.selectedTranslationModelId)?.name ?? '—'
 
   const appStorageDashboard = (): ReactElement => (
     <section className="settings-health-dashboard" aria-label={ui('remoteStorage')}>
       <article className="storage-health-card remote-storage-card">
         <div className="storage-health-heading"><span className="eyebrow">REMOTE STORAGE</span><span className={`sync-state ${remoteSessionSyncState}`}>{remoteSessionSyncState === 'ready' ? ui('remoteSyncReady') : remoteSessionSyncState === 'syncing' ? ui('remoteSyncing') : ui('remoteSyncPaused')}</span></div>
-        {storageHealth ? <div className="storage-adapter-list"><span>Blob <strong>{storageHealth.mode.blob}</strong></span><span>Config <strong>{storageHealth.mode.config}</strong></span><span>Vector <strong>{storageHealth.mode.vector}</strong></span></div> : <p>{ui('storageHealthUnavailable')}</p>}
+        {storageHealth ? <div className="storage-adapter-list"><span>Blob <strong>{storageHealth.mode.blob}</strong></span><span>Config <strong>{storageHealth.mode.config}</strong></span><span>Vector <strong>{storageHealth.mode.vector}</strong></span><span>Schema <strong>{storageHealth.schemaVersion}</strong></span></div> : <p>{ui('storageHealthUnavailable')}</p>}
         {remoteSessionSyncState === 'syncing' && <progress className="indeterminate-progress" />}
       </article>
       <article className="storage-health-card queue-health-card">
@@ -216,26 +190,11 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
       <nav className="settings-category-nav" aria-label={ui('settingsTitle')}>{categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'nav-active' : ''} aria-current={category === entry.id ? 'true' : undefined} onClick={() => setCategory(entry.id)}>{entry.label}</button>)}</nav>
 
       {category === 'asr' && <>
-        <SettingsCard eyebrow="MODELS" title={ui('currentModel')} aside={<button className="secondary" onClick={() => onNavigate('models')}>{ui('openModelManagement')}</button>}>
-          <div className="settings-model-pointer"><span className="settings-model-pointer-label">{ui('activeModel')}</span><strong title={activeAsrModelName}>{activeAsrModelName}</strong></div>
-          <p className="hint">{ui('modelSelectionHint')}</p>
-        </SettingsCard>
-
-        <SettingsCard eyebrow="VAD" title={ui('vadAndCaptions')} className="vad-card" aside={<button className="text-button" onClick={resetVadDefaults}>{ui('resetDefaults')}</button>}>
-          <div className="slider-grid">
-            <SliderField label={ui('asrChunkMinimum')} value={settings.vadConfig.chunkMinMs} min={300} max={3000} step={100} unit=" ms" onChange={(value) => update((current) => ({ ...current, vadConfig: { ...current.vadConfig, chunkMinMs: value } }))} />
-            <SliderField label={ui('asrChunkMaximum')} value={settings.vadConfig.chunkMaxMs} min={800} max={6000} step={100} unit=" ms" onChange={(value) => update((current) => ({ ...current, vadConfig: { ...current.vadConfig, chunkMaxMs: value } }))} />
-            <SliderField label={ui('preRoll')} value={settings.vadConfig.preRollMs} min={0} max={1000} step={20} unit=" ms" onChange={(value) => update((current) => ({ ...current, vadConfig: { ...current.vadConfig, preRollMs: value } }))} />
-            <SliderField label={ui('minimumSpeech')} value={settings.vadConfig.minSpeechMs} min={20} max={1000} step={20} unit=" ms" onChange={(value) => update((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSpeechMs: value } }))} />
-            <SliderField label={ui('silenceToSplit')} value={settings.vadConfig.minSilenceMs} min={100} max={5000} step={50} unit=" ms" onChange={(value) => update((current) => ({ ...current, vadConfig: { ...current.vadConfig, minSilenceMs: value } }))} />
-            <SliderField label={ui('noiseFloorOffset')} value={settings.vadConfig.noiseFloorOffsetDb} min={3} max={30} step={1} unit=" dB" onChange={(value) => update((current) => ({ ...current, vadConfig: { ...current.vadConfig, noiseFloorOffsetDb: value } }))} />
-          </div>
-        </SettingsCard>
-
         <SettingsCard eyebrow="AUDIO" title={ui('audioProcessing')}>
           <div className="toggle-list">
             <ToggleRow label={ui('enableDenoise')} checked={settings.denoiseEnabled} onChange={setDenoiseEnabled} />
             <ToggleRow label="使用 Kaiser 高品質重取樣" hint="下一次收音生效" checked={settings.kaiserResampleEnabled} onChange={(enabled) => update((current) => ({ ...current, kaiserResampleEnabled: enabled }))} />
+            <p className="hint">Silero VAD 健康度：<span className={`model-health ${sileroHealth?.state ?? 'unknown'}`} title={sileroHealth?.reason ?? '尚未執行健康檢查'}><i aria-hidden="true" />{sileroHealthLabel}</span>{sileroHealth?.reason ? `－${sileroHealth.reason}` : ''}</p>
             {sileroVadAvailable === true && <ToggleRow label="使用 Silero VAD" hint="Web gateway CPU worker；下一次收音生效" checked={settings.sileroVadEnabled} onChange={(enabled) => update((current) => ({ ...current, sileroVadEnabled: enabled }))} />}
             {sileroVadAvailable === false && <p className="hint">Silero VAD 模型尚未載入（模型檔、checksum 或 onnxruntime-node 檢查未通過），因此不顯示啟用選項。</p>}
             <ToggleRow label="使用 dynaudnorm 音量正規化" hint="Web gateway CPU worker；下一次收音生效" checked={settings.dynaudnormEnabled} onChange={(enabled) => update((current) => ({ ...current, dynaudnormEnabled: enabled }))} />
@@ -258,7 +217,7 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
           </div>
         </SettingsCard>
 
-        <SettingsCard eyebrow="TRANSLATION" title={ui('translationApi')} aside={<button className="text-button" onClick={() => onNavigate('models')}>{ui('openModelManagement')}</button>}>
+        <SettingsCard eyebrow="TRANSLATION" title={ui('translationApi')}>
           <div className="toggle-list">
             <ToggleRow label={ui('enableTranslation')} checked={settings.translationEnabled} onChange={(enabled) => update((current) => ({ ...current, translationEnabled: enabled }))} />
           </div>
@@ -266,9 +225,6 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
             <label>{ui('translationStrategy')}<select value={settings.translationStrategy} onChange={(event) => update((current) => ({ ...current, translationStrategy: event.target.value as 'realtime' | 'sentence' }))}><option value="realtime">{ui('realtimeSegment')}</option><option value="sentence">{ui('completeSentence')}</option></select></label>
             <label>{ui('loadStrategy')}<select value={settings.translationLoadStrategy} onChange={(event) => update((current) => ({ ...current, translationLoadStrategy: event.target.value as 'automatic' | 'throttled' | 'manual' }))}><option value="automatic">{ui('automaticQueue')}</option><option value="throttled">{ui('throttledTranslation')}</option><option value="manual">{ui('manualTranslation')}</option></select></label>
           </div>
-          <div className="settings-model-pointer"><span className="settings-model-pointer-label">{ui('activeModel')}</span><strong title={activeTranslationModelName}>{activeTranslationModelName}</strong></div>
-          <p className="hint">{ui('modelSelectionHint')}</p>
-          <p className="hint">{ui('translationEndpointHint')}</p>
         </SettingsCard>
 
         <SettingsCard eyebrow="GLOSSARY" title={ui('glossary')}>
@@ -295,7 +251,7 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
       {category === 'app' && <>
         <SettingsCard eyebrow="APPEARANCE" title={ui('interfaceDisplay')}>
           <div className="settings-form-grid">
-            <label>{ui('displayLanguage')}<select value={settings.uiLanguage} onChange={(event) => update((current) => ({ ...current, uiLanguage: event.target.value as typeof current.uiLanguage }))}><option value="zh-TW">繁體中文</option><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
+            <label>{ui('displayLanguage')}<select value={settings.uiLanguage} onChange={(event) => update((current) => ({ ...current, uiLanguage: event.target.value as typeof current.uiLanguage }))}><option value="system">{ui('followSystem')}</option><option value="zh-TW">繁體中文</option><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
             <label>{ui('theme')}<select value={settings.theme} onChange={(event) => update((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">{ui('followSystem')}</option><option value="light">{ui('light')}</option><option value="dark">{ui('dark')}</option></select></label>
           </div>
         </SettingsCard>
@@ -308,13 +264,6 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
 
         <SettingsCard eyebrow="REMOTE" title={ui('remoteStorage')}>
           {appStorageDashboard()}
-          <div className="settings-hint-list">
-            <p className="hint">{remoteSessionSyncState === 'ready' ? ui('remoteSyncReady') : remoteSessionSyncState === 'syncing' ? ui('remoteSyncing') : ui('remoteSyncPaused')}</p>
-            <p className="hint">{storageHealth ? `${ui('storageHealthReady')} · blob: ${storageHealth.mode.blob} · config: ${storageHealth.mode.config} · vector: ${storageHealth.mode.vector} · ${storageHealth.schemaVersion}` : ui('storageHealthUnavailable')}</p>
-            {audioMigrationStatus && <p className="hint">{ui('audioMigrationStatus').replace('{copied}', String(audioMigrationStatus.copied)).replace('{pending}', String(audioMigrationStatus.pending))}</p>}
-            {storageCompensations && <p className="hint">{ui('storageCompensationStatus').replace('{audio}', String(storageCompensations.audioPending)).replace('{voiceprint}', String(storageCompensations.voiceprintPending))}</p>}
-            {storageOrphanAudio !== null && <p className="hint">{ui('storageOrphanAudio').replace('{count}', String(storageOrphanAudio))}</p>}
-          </div>
           <div className="settings-button-row">
             <button className="text-button" onClick={() => void retryRemoteSessionSync()}>{ui('retryRemoteSync')}</button>
             <button className="text-button" onClick={() => void retryStorageCompensations()}>{ui('retryStorageCompensations')}</button>

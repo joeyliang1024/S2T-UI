@@ -6,11 +6,13 @@ const { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } 
 const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { config } = require('dotenv')
-const { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, dynaudnormWav } = require('./sherpa-worker-pool.cjs')
+const { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav } = require('./sherpa-worker-pool.cjs')
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
 const { findIdentityCandidates, findMatches, identityCandidates, identityKey, decideIdentity, fastMatch } = require('./voiceprint-matching.cjs')
 const { createStorage } = require('./storage/index.cjs')
 const { createAuth } = require('./auth/index.cjs')
+const { transcodeM4a } = require('./audio-preprocess.cjs')
+const { logger, newRequestId } = require('./logger.cjs')
 
 config({ path: join(process.cwd(), '.env') })
 
@@ -19,14 +21,14 @@ const processRole = process.env.S2T_PROCESS_ROLE || 'all'
 if (!['all', 'api', 'audio-worker'].includes(processRole)) throw new Error('S2T_PROCESS_ROLE 必須是 all、api 或 audio-worker')
 const maxAsrAudioBytes = 100 * 1024 * 1024
 const service = (name) => ({
-  endpoint: process.env[`S2T_${name}_ENDPOINT`] || process.env[`S2T_WEB_${name}_ENDPOINT`] || '',
-  model: process.env[`S2T_${name}_MODEL`] || process.env[`S2T_WEB_${name}_MODEL`] || '',
-  apiKey: process.env[`S2T_${name}_API_KEY`] || process.env[`S2T_WEB_${name}_API_KEY`] || ''
+  endpoint: process.env[`S2T_${name}_ENDPOINT`] || '',
+  model: process.env[`S2T_${name}_MODEL`] || '',
+  apiKey: process.env[`S2T_${name}_API_KEY`] || ''
 })
 const asr = service('ASR')
 const configuredAsrProfiles = (() => {
   const fallback = { id: 'default', name: asr.model || 'Environment ASR', ...asr }
-  const raw = process.env.S2T_WEB_ASR_MODELS_JSON || ''
+  const raw = process.env.S2T_ASR_MODELS_JSON || ''
   if (!raw.trim()) return [fallback]
   try {
     const parsed = JSON.parse(raw)
@@ -44,21 +46,52 @@ const configuredAsrProfiles = (() => {
   } catch { return [fallback] }
 })()
 const asrProfileById = new Map(configuredAsrProfiles.map((profile) => [profile.id, profile]))
+// An incomplete environment ASR profile used to pass readiness and only fail
+// after a user pressed record with an opaque 503. Account-managed profiles may
+// intentionally leave all three values empty, but a partial environment
+// profile is always a deployment error and must keep this API Pod out of the
+// Service endpoints.
+const asrConfigurationError = [asr.endpoint, asr.model, asr.apiKey].some(Boolean) && ![asr.endpoint, asr.model, asr.apiKey].every(Boolean)
+  ? new Error('環境 ASR 設定不完整；S2T_ASR_ENDPOINT、S2T_ASR_MODEL、S2T_ASR_API_KEY 必須同時設定')
+  : null
 const translation = service('TRANSLATION')
 const summary = service('SUMMARY')
 const diarization = service('DIARIZATION')
-// Storage validates partial remote configuration at startup. Each independently
-// configured service falls back to its local adapter only when all of its
-// environment variables are absent.
-const storage = createStorage(process.env)
-if (process.env.S2T_KUBERNETES_MODE === 'true' && Object.values(storage.mode).some((mode) => mode === 'local')) throw new Error('Kubernetes 模式必須設定共享 MinIO、PostgreSQL 與 Milvus，不能使用 Pod 本地 storage')
-const authReady = createAuth(storage, process.env)
+// Storage validates partial remote configuration at startup. Do not let a
+// configuration typo make the process crash-loop: keep liveness available and
+// expose the precise fault through readiness instead. API calls are rejected
+// below until storage/auth can be initialized successfully.
+let storage
+let storageStartupError = null
+try { storage = createStorage(process.env) } catch (error) {
+  storageStartupError = error instanceof Error ? error : new Error('storage 設定無效')
+  storage = { mode: { blob: 'unavailable', config: 'unavailable', vector: 'unavailable' }, config: {}, ready: Promise.reject(storageStartupError) }
+}
+const kubernetesConfigError = process.env.S2T_KUBERNETES_MODE === 'true' && Object.values(storage.mode).some((mode) => mode === 'local')
+  ? new Error('Kubernetes 模式必須設定共享 MinIO、PostgreSQL 與 Milvus，不能使用 Pod 本地 storage')
+  : null
+const startupError = storageStartupError || kubernetesConfigError
+const authReady = startupError ? Promise.reject(startupError) : createAuth(storage, process.env)
+// Readiness reports dependency failures, but a transient startup outage must
+// not become an unhandled rejection that kills the Pod before probes can see
+// the actionable 503. Keep the original promises rejected for callers that
+// await them below.
+storage.ready
+  .then(() => logger.info('storage.ready', { mode: storage.mode, schemaVersion: storage.schemaVersion }))
+  .catch((error) => logger.error('storage.unavailable', { mode: storage.mode, error }))
+authReady
+  .then(() => logger.info('auth.ready'))
+  .catch((error) => logger.error('auth.unavailable', { error }))
+if (startupError) logger.error('startup.failed', { role: processRole, error: startupError })
+if (asrConfigurationError) logger.warn('asr.configuration.incomplete', { error: asrConfigurationError })
+process.on('unhandledRejection', (reason) => logger.error('process.unhandled-rejection', { error: reason }))
 const staticRoot = join(process.cwd(), 'out/renderer')
 const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
 const requestsByIp = new Map()
 const modelHealthChecks = new Map()
 const requestLimits = { transcriptions: 60, translations: 30, summaries: 12, diarizations: 8, audioUploads: 30, voiceprintUploads: 12 }
 const requestLatency = new Map()
+const modelHealthLastState = new Map()
 const latencyBuckets = [.25, .5, 1, 2.5, 5, 10]
 const observeRequest = (path, status, startedAt) => {
   if (!['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/audio-processing/silero-vad'].includes(path)) return
@@ -124,12 +157,17 @@ const baseUrl = (value) => {
   url.pathname = url.pathname.replace(/\/(audio\/transcriptions|chat\/completions)\/?$/, '').replace(/\/$/, '')
   return url.toString().replace(/\/$/, '')
 }
+// The browser only ever calls the same-origin gateway route (endpoint), so
+// credentials and upstream CORS stay server-side. sourceEndpoint carries the
+// original environment value for display only, so operators can see exactly
+// which upstream URL the default model is wired to.
 const publicService = (value, endpoint) => ({
   endpoint,
+  sourceEndpoint: value.endpoint || endpoint,
   model: value.model,
   configured: Boolean(value.endpoint && value.model && value.apiKey)
 })
-const publicAsrProfile = (value) => ({ id: value.id, name: value.name, endpoint: '/api/transcriptions', model: value.model, configured: Boolean(value.endpoint && value.model && value.apiKey) })
+const publicAsrProfile = (value) => ({ id: value.id, name: value.name, endpoint: '/api/transcriptions', sourceEndpoint: value.endpoint || '/api/transcriptions', model: value.model, configured: Boolean(value.endpoint && value.model && value.apiKey) })
 const normalizeDetectedLanguage = (value) => {
   if (typeof value !== 'string') return undefined
   const language = value.toLowerCase()
@@ -202,13 +240,11 @@ const sherpaHealth = async (model) => {
 }
 // Custom validation for Silero VAD: model file, sha256 checksum and the ONNX
 // runtime must all be present before the worker will accept audio.
-const sileroHealth = (model) => {
+const sileroHealth = async (model) => {
   const checkedAt = Date.now()
   try {
-    const status = sileroModelStatus()
-    return status.available
-      ? { id: model.id, state: 'healthy', reason: `Silero VAD 模型與 checksum 驗證通過（${status.path}）`, checkedAt }
-      : { id: model.id, state: 'unhealthy', reason: status.reason || 'Silero VAD 模型不可用', checkedAt }
+    const status = await warmSileroVad()
+    return { id: model.id, state: 'healthy', reason: 'Silero VAD 模型、checksum 與 ONNX runtime 已載入', checkedAt }
   } catch (error) { return { id: model.id, state: 'unhealthy', reason: error instanceof Error ? error.message.slice(0, 160) : 'Silero VAD 驗證失敗', checkedAt } }
 }
 const openaiHealth = async (model, service) => {
@@ -237,11 +273,35 @@ const modelHealth = async (auth, user, model) => {
     return openaiHealth(model, service)
   })()
   modelHealthChecks.set(key, { pending })
-  try { const value = await pending; modelHealthChecks.set(key, { value }); return value } finally { const current = modelHealthChecks.get(key); if (current?.pending === pending) modelHealthChecks.delete(key) }
+  try {
+    const value = await pending
+    modelHealthChecks.set(key, { value })
+    // Only log a transition: a Pod that is missing a model file would
+    // otherwise repeat the same warning on every cached probe refresh.
+    const previous = modelHealthLastState.get(key)
+    modelHealthLastState.set(key, value.state)
+    if (previous !== value.state) {
+      const fields = { modelId: model.id, purpose: model.purpose, state: value.state, reason: value.reason }
+      if (value.state === 'healthy') logger.info('model.health', fields)
+      else if (value.state === 'unknown') logger.debug('model.unknown', fields)
+      else logger.warn('model.unavailable', fields)
+    }
+    return value
+  } finally { const current = modelHealthChecks.get(key); if (current?.pending === pending) modelHealthChecks.delete(key) }
 }
 const send = (response, status, body, type = 'application/json; charset=utf-8') => {
   response.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' })
   response.end(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body))
+}
+// Request-shape validation returns 400 at the call site. Once a valid storage
+// request reaches an adapter, failures are transient dependency failures and
+// must be 503 so Web clients can retry instead of abandoning durable state.
+// The access log records the status; this line carries the reason, which is
+// what an operator needs (Postgres down vs. MinIO down vs. Milvus down).
+const storageFailure = (response, error, fallback) => {
+  const status = error instanceof SyntaxError ? 400 : 503
+  if (status >= 500) logger.warn('storage.request.failed', { status, error })
+  return send(response, status, { error: error instanceof Error ? error.message : fallback })
 }
 const readBody = (request, maximum = 12 * 1024 * 1024) => new Promise((resolve, reject) => {
   let size = 0
@@ -256,6 +316,10 @@ const readBody = (request, maximum = 12 * 1024 * 1024) => new Promise((resolve, 
 const safeUploadFilename = (value) => {
   const name = typeof value === 'string' ? value.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 160) : ''
   return name || 'audio.wav'
+}
+const decodedHeaderValue = (value) => {
+  const text = typeof value === 'string' ? value : ''
+  try { return decodeURIComponent(text) } catch { return text }
 }
 const safeAudioContentType = (value) => {
   const type = typeof value === 'string' ? value.toLowerCase().split(';', 1)[0].trim() : ''
@@ -306,7 +370,7 @@ const voiceprintFastMargin = voiceprintEnvNumber('S2T_VOICEPRINT_FAST_MARGIN', 0
 const voiceprintMinBlocks = voiceprintEnvInteger('S2T_VOICEPRINT_MIN_BLOCKS', 2)
 const voiceprintCandidateLimit = voiceprintEnvInteger('S2T_VOICEPRINT_CANDIDATE_BLOCKS', 3)
 const voiceprintLogEnabled = process.env.S2T_VOICEPRINT_LOG !== '0'
-const voiceprintLog = (event) => { if (voiceprintLogEnabled) console.log(`[voiceprint] ${JSON.stringify(event)}`) }
+const voiceprintLog = (event) => { if (voiceprintLogEnabled) logger.info('voiceprint.event', event) }
 const voiceprintDecisionOptions = {
   threshold: voiceprintThreshold,
   margin: voiceprintMargin,
@@ -477,9 +541,12 @@ const runDurableDiarizationJob = async (auth, owner) => {
   const job = await storage.config.claimDiarizationJob(owner)
   if (!job) return
   if (job.attempts > diarizationJobMaxAttempts) {
+    logger.warn('diarization.job.abandoned', { jobId: job.id, attempt: job.attempts, maxAttempts: diarizationJobMaxAttempts, owner })
     await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, `超過最大重試次數（${diarizationJobMaxAttempts}）`).catch(() => undefined)
     return
   }
+  const jobStartedAt = Date.now()
+  logger.info('diarization.job.started', { jobId: job.id, attempt: job.attempts, sessionId: job.sessionId, owner })
   try {
     const user = job.payload?.user
     if (!user?.id || user.id !== job.userId) throw new Error('工作使用者資料無效')
@@ -520,7 +587,16 @@ const runDurableDiarizationJob = async (auth, owner) => {
     if (!await storage.config.stillOwnsDiarizationJob(job.id, owner, job.leaseGeneration)) return
     if (!await storage.config.compareAndSwap(user.id, 'sessions', version, { sessions: next, version: version + 1 })) throw new Error('retry:紀錄已更新，背景工作將重試')
     await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration)
-  } catch (error) { await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, error instanceof Error ? error.message : '背景講者分離失敗') }
+    logger.info('diarization.job.completed', { jobId: job.id, attempt: job.attempts, durationMs: Date.now() - jobStartedAt, turns: turns.length })
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : '背景講者分離失敗'
+    const fields = { jobId: job.id, attempt: job.attempts, durationMs: Date.now() - jobStartedAt, error }
+    // A job that lost a race or has not synced yet is expected to retry; a
+    // real failure is an error so an operator sees it without debug logging.
+    if (reason.startsWith('retry:')) logger.warn('diarization.job.retry', fields)
+    else logger.error('diarization.job.failed', fields)
+    await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, reason)
+  }
 }
 const staticFile = async (request, response) => {
   const urlPath = new URL(request.url, 'http://localhost').pathname
@@ -568,14 +644,14 @@ if (processRole !== 'api' && typeof storage.config.claimDiarizationJob === 'func
   }).catch(() => undefined)
 }
 
-const httpServer = createServer(async (request, response) => {
+const handleHttpRequest = async (request, response) => {
   // Liveness is intentionally independent of every downstream service. It
   // lets Kubernetes restart a stuck Node process without amplifying a storage
   // outage. Readiness below verifies the shared durable state instead.
   if (request.method === 'GET' && request.url === '/livez') return send(response, 200, { live: true, role: processRole })
   if (request.method === 'GET' && request.url === '/metrics') return send(response, 200, prometheusMetrics(), 'text/plain; version=0.0.4; charset=utf-8')
   if (request.method === 'GET' && request.url === '/readyz') {
-    try { await storage.ready; await authReady; return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
+    try { if (kubernetesConfigError) throw kubernetesConfigError; if (processRole !== 'audio-worker' && asrConfigurationError) throw asrConfigurationError; await storage.ready; await authReady; return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
     catch (error) { return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' }) }
   }
   // The worker has a probe-only HTTP surface. It deliberately cannot serve
@@ -586,13 +662,14 @@ const httpServer = createServer(async (request, response) => {
   const host = request.headers.host || ''
   const sameOrigin = origin === `http://${host}` || origin === `https://${host}`
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
-  if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true') }
+  if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id') }
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-s2t-language, x-s2t-model-id, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent', 'access-control-allow-credentials': 'true' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
   // failed schema migration). Answer 503 instead of letting that rejection
   // escape the request listener: an unhandled rejection would crash the whole
   // gateway on its first API request.
+  if (kubernetesConfigError) return send(response, 503, { error: kubernetesConfigError.message })
   let auth
   try { auth = await authReady } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'storage 尚未就緒，無法處理請求' }) }
   const requestPath = new URL(request.url, 'http://localhost').pathname
@@ -678,7 +755,7 @@ const httpServer = createServer(async (request, response) => {
       }
       await reconcileAudioCompensations(user, sessions).catch(() => undefined)
       return send(response, 200, { saved: true, version })
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存紀錄' }) }
+    } catch (error) { return storageFailure(response, error, '無法保存紀錄') }
   }
   if (storagePath === '/api/data/glossary' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
@@ -696,7 +773,7 @@ const httpServer = createServer(async (request, response) => {
       const saved = typeof storage.config.putGlossary === 'function' ? await storage.config.putGlossary(user.id, content, expectedVersion) : (await storage.config.put(user.id, 'glossary', content), { version: 0 })
       if (!saved) return send(response, 409, { error: '術語已被其他視窗更新；請重新載入後再儲存。' })
       return send(response, 200, { saved: true, version: saved.version, updatedAt: saved.updatedAt ?? null })
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存術語' }) }
+    } catch (error) { return storageFailure(response, error, '無法保存術語') }
   }
   if (storagePath === '/api/data/settings' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
@@ -711,7 +788,7 @@ const httpServer = createServer(async (request, response) => {
       const settings = JSON.parse(JSON.stringify(body.settings))
       if (!await storage.config.compareAndSwap(user.id, 'app-settings', body.version, { settings, version: body.version + 1 })) return send(response, 409, { error: '設定已被其他視窗更新；請重新載入後再儲存。' })
       return send(response, 200, { saved: true, version: body.version + 1 })
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存設定' }) }
+    } catch (error) { return storageFailure(response, error, '無法保存設定') }
   }
   if (['/api/data/live-draft', '/api/data/import-checkpoint'].includes(storagePath) && ['GET', 'POST', 'DELETE'].includes(request.method || '')) {
     const user = await auth.requireUser(request)
@@ -724,7 +801,7 @@ const httpServer = createServer(async (request, response) => {
       if (!body.value || typeof body.value !== 'object' || Array.isArray(body.value)) return send(response, 400, { error: '暫存資料無效' })
       await storage.config.put(user.id, key, JSON.parse(JSON.stringify(body.value)))
       return send(response, 204, '')
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '暫存資料保存失敗' }) }
+    } catch (error) { return storageFailure(response, error, '暫存資料保存失敗') }
   }
   if (storagePath === '/api/data/model-registry' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
@@ -744,7 +821,7 @@ const httpServer = createServer(async (request, response) => {
       if (!await storage.config.compareAndSwap(user.id, 'model-registry', body.version, value)) return send(response, 409, { error: '模型清單已被其他視窗更新；請重新載入。' })
       for (const model of models) modelHealthChecks.delete(`${user.id}:${model.id}`)
       return send(response, 200, { saved: true, version: value.version })
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存模型清單' }) }
+    } catch (error) { return storageFailure(response, error, '無法保存模型清單') }
   }
   if (storagePath === '/api/data/model-health' && request.method === 'POST') {
     const user = await auth.requireUser(request)
@@ -756,6 +833,10 @@ const httpServer = createServer(async (request, response) => {
       // so their badges refresh on the same automatic schedule.
       const add = (check) => { if (check.endpoint && check.model && !checks.some((item) => item.id === check.id)) checks.push(check) }
       for (const profile of configuredAsrProfiles) add({ id: profile.id === 'default' ? 'web-environment-asr' : `web-gateway-asr-${profile.id}`, name: profile.name, endpoint: profile.endpoint, model: profile.model, purpose: 'asr', service: { endpoint: profile.endpoint, model: profile.model, apiKey: profile.apiKey } })
+      // Silero is image/volume configuration rather than an account model, so
+      // add it explicitly: it must be visible in the same health surface as
+      // remote models and never depend on browser storage being populated.
+      add({ id: 'managed-silero-vad', name: 'Silero VAD', endpoint: '/api/audio-processing/silero-vad', model: 'silero-vad', purpose: 'asr' })
       add({ id: 'web-environment-translation', name: translation.model, endpoint: translation.endpoint, model: translation.model, purpose: 'translation', service: { endpoint: translation.endpoint, model: translation.model, apiKey: translation.apiKey } })
       add({ id: 'managed-summary', name: summary.model, endpoint: summary.endpoint, model: summary.model, purpose: 'summary', service: { endpoint: summary.endpoint, model: summary.model, apiKey: summary.apiKey } })
       add({ id: 'managed-diarization', name: diarization.model, endpoint: diarization.endpoint, model: diarization.model, purpose: 'diarization', service: { endpoint: diarization.endpoint, model: diarization.model, apiKey: diarization.apiKey } })
@@ -782,6 +863,20 @@ const httpServer = createServer(async (request, response) => {
       const includeProbabilities = new URL(request.url, 'http://localhost').searchParams.get('frames') === '1'
       return send(response, 200, await analyzeSileroVad(audio, { includeProbabilities }))
     } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'Silero VAD 處理失敗' }) }
+  }
+  if (storagePath === '/api/audio-processing/transcode' && request.method === 'POST') {
+    const format = new URL(request.url, 'http://localhost').searchParams.get('format')
+    if (format !== 'm4a') return send(response, 400, { error: '目前只支援轉檔為 M4A' })
+    const limit = acceptsRequest(request, 'transcode')
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcode requests. Try again later.')
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    try {
+      if (!safeAudioContentType(request.headers['content-type'])) return send(response, 415, { error: '轉檔僅接受支援的音訊格式' })
+      const audio = await readBody(request, maxAsrAudioBytes)
+      if (!audio.length) return send(response, 400, { error: '音訊不可為空' })
+      return send(response, 200, await transcodeM4a(audio), 'audio/mp4')
+    } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'M4A 轉檔失敗' }) }
   }
   if (storagePath === '/api/data/diarization-jobs' && (request.method === 'POST' || request.method === 'GET')) {
     const user = await auth.requireUser(request)
@@ -817,7 +912,7 @@ const httpServer = createServer(async (request, response) => {
       if (typeof body.apiKey !== 'string' || !body.apiKey.trim() || body.apiKey.length > 8_000) return send(response, 400, { error: 'API key 無效' })
       await storage.config.put(user.id, key, encryptCredential(auth.secret, body.apiKey.trim()))
       return send(response, 204, '')
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存 API key' }) }
+    } catch (error) { return storageFailure(response, error, '無法保存 API key') }
   }
   if (storagePath === '/api/data/summary-templates' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
@@ -836,7 +931,7 @@ const httpServer = createServer(async (request, response) => {
       const value = { templates, selectedTemplateId, version: body.version + 1 }
       if (!await storage.config.compareAndSwap(user.id, 'summary-templates', body.version, value)) return send(response, 409, { error: '摘要模板已被其他視窗更新；請重新載入後再儲存。' })
       return send(response, 200, { saved: true, version: value.version })
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法保存摘要模板' }) }
+    } catch (error) { return storageFailure(response, error, '無法保存摘要模板') }
   }
   const audioMatch = storagePath.match(/^\/api\/data\/audio\/([A-Za-z0-9._-]{1,160})$/)
   if (audioMatch && ['GET', 'POST', 'DELETE'].includes(request.method || '')) {
@@ -943,6 +1038,8 @@ const httpServer = createServer(async (request, response) => {
     const selectedAsr = environmentAsr || await accountModelService(auth, user, profileId, 'asr')
     if (!selectedAsr) return send(response, 400, { error: 'The requested ASR model is not registered on this gateway.' })
     if (!selectedAsr.endpoint || !selectedAsr.model || (environmentAsr && !selectedAsr.apiKey)) return send(response, 503, { error: 'Web ASR gateway has not been configured.' })
+    const asrStartedAt = Date.now()
+    let asrAudioBytes = 0
     try {
       const contentType = safeAudioContentType(request.headers['content-type'])
       if (!contentType) return send(response, 415, { error: 'Unsupported audio content type. Use WAV, MP3, M4A/AAC, OGG, WebM, FLAC, MP4, or MOV.' })
@@ -950,15 +1047,27 @@ const httpServer = createServer(async (request, response) => {
       if (requestedLanguage && !['zh', 'en', 'ja', 'de'].includes(requestedLanguage)) return send(response, 400, { error: 'Unsupported ASR language. Use zh, en, ja, de, or omit it for automatic detection.' })
       let audio = await readBody(request, maxAsrAudioBytes)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
+      asrAudioBytes = audio.length
       if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await dynaudnormWav(audio)
+      // Never the prompt itself, the audio or the transcript — only sizes.
+      logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
       const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 1 })
       const result = await client.audio.transcriptions.create({
-        file: await toFile(audio, safeUploadFilename(request.headers['x-s2t-filename']), { type: contentType }), model: selectedAsr.model,
+        file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
         ...(requestedLanguage ? { language: requestedLanguage } : {}),
-        ...(request.headers['x-s2t-prompt'] ? { prompt: String(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
+        ...(request.headers['x-s2t-prompt'] ? { prompt: decodedHeaderValue(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
       })
+      logger.debug('asr.completed', { profileId, model: selectedAsr.model, durationMs: Date.now() - asrStartedAt, audioBytes: asrAudioBytes, chars: (result.text || '').length })
       return send(response, 200, { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) })
     } catch (error) {
+      logger.error('asr.failed', {
+        profileId,
+        model: selectedAsr.model,
+        audioBytes: asrAudioBytes,
+        status: error && typeof error === 'object' ? error.status || error.statusCode : undefined,
+        durationMs: Date.now() - asrStartedAt,
+        error
+      })
       return send(response, 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
     }
   }
@@ -980,7 +1089,12 @@ const httpServer = createServer(async (request, response) => {
       const targetLanguage = supportedTranslationTargetLanguages.has(requestedTargetLanguage) ? requestedTargetLanguage : 'en'
       const glossary = typeof input.glossary === 'string' ? input.glossary.trim().slice(0, 10_000) : ''
       if (!text) return send(response, 400, { error: 'Text is required.' })
+      // The source text and the glossary stay out of the console; sizes and
+      // language pair are enough to follow a slow or failing translation.
+      logger.debug('translation.request', { profileId, sourceLanguage, targetLanguage, glossary: glossary ? 'provided' : 'none', chars: text.length })
+      const translationStartedAt = Date.now()
       const textResult = await completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }])
+      logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
       return send(response, 200, { text: textResult })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'Translation request failed' })
@@ -1038,9 +1152,59 @@ const httpServer = createServer(async (request, response) => {
     }
   }
   return staticFile(request, response)
-}).listen(port, () => console.log(`S2T web gateway: http://0.0.0.0:${port}`))
-
-if (processRole === 'audio-worker') console.log(`S2T audio worker started; health probes on http://0.0.0.0:${port}; durable diarization jobs are enabled.`)
+}
+// One requestId per HTTP request. It is generated here (or adopted from a
+// trusted inbound x-request-id) and stored in an AsyncLocalStorage context so
+// every log emitted while handling the request — ASR, translation, storage,
+// background jobs started from it — carries the same ID.
+const incomingRequestId = (request) => {
+  const header = request.headers['x-request-id']
+  if (typeof header === 'string' && /^[A-Za-z0-9._:-]{8,64}$/.test(header)) return header
+  return newRequestId()
+}
+const requestPathOf = (request) => {
+  try { return new URL(request.url, 'http://localhost').pathname } catch { return 'unknown' }
+}
+// Health probes and static assets are noise at info level: they would drown
+// the business events on every Pod. Everything an operator acts on stays at
+// warn/error so it is visible with the default S2T_LOG_LEVEL.
+const probePaths = new Set(['/livez', '/metrics'])
+const httpLogLevel = (status, probe) => {
+  if (status === 503 || status === 429 || status === 409) return 'warn'
+  if (status >= 500) return 'error'
+  if (status >= 400) return probe || status === 401 || status === 403 ? 'info' : 'warn'
+  return probe ? 'debug' : 'info'
+}
+const httpServer = createServer((request, response) => {
+  const requestId = incomingRequestId(request)
+  const path = requestPathOf(request)
+  const startedAt = performance.now()
+  const probe = probePaths.has(path) || !path.startsWith('/api/')
+  response.setHeader('x-request-id', requestId)
+  response.once('finish', () => {
+    logger.log(httpLogLevel(response.statusCode, probe), 'http.request', {
+      method: request.method,
+      path,
+      status: response.statusCode,
+      durationMs: Math.round(performance.now() - startedAt)
+    })
+  })
+  logger.run({ requestId }, () => {
+    void handleHttpRequest(request, response).catch((error) => {
+      logger.error('http.request.failed', {
+        method: request.method,
+        path,
+        durationMs: Math.round(performance.now() - startedAt),
+        error
+      })
+      if (!response.headersSent && !response.writableEnded) send(response, 503, { error: '服務暫時無法處理此請求，請稍後重試' })
+      else response.destroy()
+    })
+  })
+}).on('error', (error) => logger.error('http.server.error', { port, role: processRole, error })).listen(port, () => {
+  logger.info('gateway.started', { port, role: processRole, storage: storage.mode, logLevel: process.env.S2T_LOG_LEVEL || 'info', logFormat: process.env.S2T_LOG_FORMAT || 'text' })
+  if (processRole === 'audio-worker') logger.info('audio-worker.started', { port, durableDiarizationJobs: true })
+})
 
 const stopServer = () => {
   acceptingDiarizationJobs = false
@@ -1050,6 +1214,7 @@ const stopServer = () => {
   // Pod claims it; the generation fence prevents this Pod's stale result from
   // being committed after that handoff.
   const graceMs = Math.max(1_000, Number(process.env.S2T_SHUTDOWN_GRACE_MS || 25_000))
+  logger.info('gateway.shutdown', { role: processRole, graceMs, activeJob: Boolean(activeDiarizationJob) })
   const finish = activeDiarizationJob ? Promise.race([activeDiarizationJob, new Promise((resolve) => setTimeout(resolve, graceMs))]) : Promise.resolve()
   void finish.finally(() => sherpaWorkerPool.close()).finally(() => process.exit(0))
 }

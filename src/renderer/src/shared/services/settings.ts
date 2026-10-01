@@ -1,6 +1,6 @@
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
 import { supportedUiLanguages } from '../i18n'
-import { defaultVadConfig } from '../../features/capture/vad'
+import { normalizeResponseSpeed } from '../../features/capture/vad'
 
 export const modelEndpoint = (endpoint: string, kind: ModelProfile['kind']): string => {
   try {
@@ -33,7 +33,7 @@ export const supportedSourceLanguages = ['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-
 export const supportedTargetLanguages = ['zh-TW', 'en', 'ja', 'de'] as const
 export const supportedTranslationTargetLanguages = ['auto', ...supportedTargetLanguages] as const
 
-export const languageName = (value: string): string => ({ auto: '自動偵測', 'zh-TW': '繁體中文', 'en-US': '英文', en: '英文', 'ja-JP': '日文', ja: '日文', 'de-DE': '德文', de: '德文' }[value] ?? value)
+export const languageName = (value: string): string => ({ auto: '自動偵測', 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', 'en-US': '英文', en: '英文', 'ja-JP': '日文', ja: '日文', 'de-DE': '德文', de: '德文' }[value] ?? value)
 
 /** OpenAI-compatible ASR detects the source language when this value is absent. */
 export const asrLanguage = (value: string): string => ({ 'zh-TW': 'zh', 'en-US': 'en', 'ja-JP': 'ja', 'de-DE': 'de' }[value] ?? '')
@@ -49,7 +49,9 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   const selectedSummaryTemplate = templates.find((template) => template.id === selectedSummaryTemplateId)!
   return {
   theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : 'system',
-  uiLanguage: supportedUiLanguages.includes(value.uiLanguage as typeof supportedUiLanguages[number]) ? value.uiLanguage! : 'zh-TW',
+  // Display language defaults to following the OS/browser language; an
+  // explicitly saved language keeps winning over the default.
+  uiLanguage: value.uiLanguage === 'system' || supportedUiLanguages.includes(value.uiLanguage as typeof supportedUiLanguages[number]) ? value.uiLanguage! : 'system',
   storageLocation: value.storageLocation === 'remote' ? 'remote' : 'local',
   sourceLanguage: supportedSourceLanguages.includes(value.sourceLanguage as typeof supportedSourceLanguages[number]) ? value.sourceLanguage! : 'zh-TW',
   targetLanguage: supportedTranslationTargetLanguages.includes(value.targetLanguage as typeof supportedTranslationTargetLanguages[number]) ? value.targetLanguage! : 'en',
@@ -82,7 +84,9 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   kaiserResampleEnabled: value.kaiserResampleEnabled === true,
   sileroVadEnabled: value.sileroVadEnabled === true,
   dynaudnormEnabled: value.dynaudnormEnabled === true,
-  vadConfig: { ...defaultVadConfig, ...value.vadConfig }
+  // Legacy per-parameter vadConfig values are intentionally dropped: caption
+  // segmentation is expressed by the three curated response-speed tiers.
+  responseSpeed: normalizeResponseSpeed(value.responseSpeed)
   }
 }
 

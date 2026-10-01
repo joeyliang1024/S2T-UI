@@ -37,7 +37,7 @@ const main = async () => {
   const webRequests = []
   const webTranscripts = []
   const webErrors = []
-  global.window = { setTimeout }
+  global.window = { setTimeout, clearTimeout }
   global.fetch = async (url, init) => {
     webRequests.push({ url, ...init })
     return new Response(JSON.stringify({ text: '網頁即時字幕' }), {
@@ -60,7 +60,7 @@ const main = async () => {
   await web.stop()
   assert.ok(webRequests.length >= 2, 'the web flush must send the remaining pending audio')
   assert.equal(webRequests[0].headers['x-s2t-prompt'], undefined, 'the first web chunk has no rolling context yet')
-  assert.ok(String(webRequests[1].headers['x-s2t-prompt'] || '').includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
+  assert.ok(decodeURIComponent(String(webRequests[1].headers['x-s2t-prompt'] || '')).includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
   assert.deepEqual(webErrors, [])
   console.log('Model adapter smoke test passed.')
 }
