@@ -1,5 +1,36 @@
 export const supportedUiLanguages = ['zh-TW', 'zh-CN', 'en', 'ja', 'de'] as const
 export type UiLanguage = typeof supportedUiLanguages[number]
+/**
+ * The display-language preference may be 'system': the OS language on desktop
+ * (Electron renderer follows the Windows/Linux/macOS locale) or the browser
+ * language on the web. resolveUiLanguage maps it onto a supported language.
+ */
+export type UiLanguagePreference = UiLanguage | 'system'
+
+const matchLanguageTag = (tag: string): UiLanguage | null => {
+  const lower = tag.toLowerCase()
+  if (lower.startsWith('zh')) {
+    if (lower.includes('hans') || lower.startsWith('zh-cn') || lower.startsWith('zh-sg')) return 'zh-CN'
+    return 'zh-TW'
+  }
+  if (lower.startsWith('en')) return 'en'
+  if (lower.startsWith('ja')) return 'ja'
+  if (lower.startsWith('de')) return 'de'
+  return null
+}
+
+let systemUiLanguage: UiLanguage | null = null
+export const resolveUiLanguage = (preference: UiLanguagePreference): UiLanguage => {
+  if (preference !== 'system') return preference
+  if (systemUiLanguage === null) {
+    const tags = typeof navigator === 'undefined' ? [] : (navigator.languages?.length ? [...navigator.languages] : [navigator.language])
+    const matched = tags.map((tag) => matchLanguageTag(tag)).find(Boolean) ?? null
+    // No supported system language (e.g. fr, ko): fall back to English rather
+    // than to the app's default Chinese.
+    systemUiLanguage = matched ?? 'en'
+  }
+  return systemUiLanguage
+}
 
 const messages = {
   'zh-TW': { appName: '即時語音字幕', live: '即時字幕', history: '記錄', import: '匯入檔案', models: '模型管理', voiceprints: '聲紋管理', settings: '偏好設定', logout: '登出', menu: '功能選單' },
@@ -10,7 +41,7 @@ const messages = {
 } as const
 
 export type MessageKey = keyof typeof messages['zh-TW']
-export const translate = (language: UiLanguage, key: MessageKey): string => messages[language][key]
+export const translate = (language: UiLanguagePreference, key: MessageKey): string => messages[resolveUiLanguage(language)][key]
 
 /** Shared UI labels outside the compact top-level navigation dictionary. */
 const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
@@ -73,6 +104,10 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   summaryTitle: { 'zh-TW': '會議摘要', 'zh-CN': '会议摘要', en: 'Meeting summary', ja: '会議要約', de: 'Besprechungszusammenfassung' },
   summaryGeneratingTitle: { 'zh-TW': '正在整理', 'zh-CN': '正在整理', en: 'Preparing summary', ja: '要約を整理中', de: 'Zusammenfassung wird vorbereitet' },
   summaryGeneratingHint: { 'zh-TW': '完成後會顯示格式化摘要。', 'zh-CN': '完成后将显示格式化摘要。', en: 'The formatted summary will appear when it is ready.', ja: '完了すると整形済みの要約が表示されます。', de: 'Die formatierte Zusammenfassung wird anschließend angezeigt.' },
+  summaryLanguageHint: { 'zh-TW': '摘要生成的語言使用的是系統語言。', 'zh-CN': '摘要生成的语言使用的是系统语言。', en: 'The summary is generated in the system language.', ja: '要約はシステム言語で生成されます。', de: 'Die Zusammenfassung wird in der Systemsprache erstellt.' },
+  summaryTranslating: { 'zh-TW': '正在翻譯摘要…', 'zh-CN': '正在翻译摘要…', en: 'Translating summary…', ja: '要約を翻訳中…', de: 'Zusammenfassung wird übersetzt…' },
+  translateSummary: { 'zh-TW': '翻譯摘要', 'zh-CN': '翻译摘要', en: 'Translate summary', ja: '要約を翻訳', de: 'Zusammenfassung übersetzen' },
+  translationLanguage: { 'zh-TW': '翻譯語言', 'zh-CN': '翻译语言', en: 'Translation language', ja: '翻訳言語', de: 'Übersetzungssprache' },
   keyPoints: { 'zh-TW': '重點', 'zh-CN': '重点', en: 'Key points', ja: '要点', de: 'Kernpunkte' },
   decisions: { 'zh-TW': '決策', 'zh-CN': '决策', en: 'Decisions', ja: '決定事項', de: 'Entscheidungen' },
   actionItems: { 'zh-TW': '待辦事項', 'zh-CN': '待办事项', en: 'Action items', ja: 'To-do', de: 'Aufgaben' },
@@ -117,6 +152,22 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   playRecording: { 'zh-TW': '播放錄音', 'zh-CN': '播放录音', en: 'Play recording', ja: '録音を再生', de: 'Aufzeichnung abspielen' },
   downloadWav: { 'zh-TW': '下載 WAV', 'zh-CN': '下载 WAV', en: 'Download WAV', ja: 'WAV をダウンロード', de: 'WAV herunterladen' },
   downloadVtt: { 'zh-TW': '下載 VTT', 'zh-CN': '下载 VTT', en: 'Download VTT', ja: 'VTT をダウンロード', de: 'VTT herunterladen' },
+  download: { 'zh-TW': '下載', 'zh-CN': '下载', en: 'Download', ja: 'ダウンロード', de: 'Herunterladen' },
+  downloadAudio: { 'zh-TW': '下載音檔', 'zh-CN': '下载音频', en: 'Download audio', ja: '音声をダウンロード', de: 'Audio herunterladen' },
+  downloadTranscript: { 'zh-TW': '下載逐字稿', 'zh-CN': '下载文字稿', en: 'Download transcript', ja: '文字起こしをダウンロード', de: 'Transkript herunterladen' },
+  chooseDownloadFormat: { 'zh-TW': '選擇要下載的格式', 'zh-CN': '选择要下载的格式', en: 'Choose a download format', ja: 'ダウンロード形式を選ぶ', de: 'Downloadformat wählen' },
+  audioFile: { 'zh-TW': '音檔', 'zh-CN': '音频', en: 'Audio', ja: '音声', de: 'Audio' },
+  transcriptFile: { 'zh-TW': '逐字稿', 'zh-CN': '文字稿', en: 'Transcript', ja: '文字起こし', de: 'Transkript' },
+  collapsePlayer: { 'zh-TW': '收起播放器', 'zh-CN': '收起播放器', en: 'Collapse player', ja: 'プレイヤーを閉じる', de: 'Player einklappen' },
+  preparingDownload: { 'zh-TW': '正在準備下載…', 'zh-CN': '正在准备下载…', en: 'Preparing download…', ja: 'ダウンロードを準備中…', de: 'Download wird vorbereitet …' },
+  formatWav: { 'zh-TW': '未壓縮音訊', 'zh-CN': '未压缩音频', en: 'Uncompressed audio', ja: '非圧縮音声', de: 'Unkomprimiertes Audio' },
+  formatM4a: { 'zh-TW': 'AAC 壓縮音訊', 'zh-CN': 'AAC 压缩音频', en: 'AAC compressed audio', ja: 'AAC 圧縮音声', de: 'AAC-komprimiertes Audio' },
+  formatDocx: { 'zh-TW': 'Word 文件', 'zh-CN': 'Word 文档', en: 'Word document', ja: 'Word ドキュメント', de: 'Word-Dokument' },
+  formatXlsx: { 'zh-TW': 'Excel 試算表', 'zh-CN': 'Excel 表格', en: 'Excel spreadsheet', ja: 'Excel スプレッドシート', de: 'Excel-Arbeitsblatt' },
+  formatCsv: { 'zh-TW': 'CSV 表格', 'zh-CN': 'CSV 表格', en: 'CSV table', ja: 'CSV 表', de: 'CSV-Tabelle' },
+  formatTxt: { 'zh-TW': '純文字', 'zh-CN': '纯文本', en: 'Plain text', ja: 'プレーンテキスト', de: 'Klartext' },
+  formatMarkdown: { 'zh-TW': 'Markdown 文件', 'zh-CN': 'Markdown 文件', en: 'Markdown file', ja: 'Markdown ファイル', de: 'Markdown-Datei' },
+  formatVtt: { 'zh-TW': '字幕檔', 'zh-CN': '字幕文件', en: 'Subtitle file', ja: '字幕ファイル', de: 'Untertiteldatei' },
   copyTranscript: { 'zh-TW': '複製逐字稿', 'zh-CN': '复制逐字稿', en: 'Copy transcript', ja: '文字起こしをコピー', de: 'Transkript kopieren' },
   deleteRecord: { 'zh-TW': '刪除記錄', 'zh-CN': '删除记录', en: 'Delete recording', ja: '記録を削除', de: 'Aufzeichnung löschen' },
   searchThisRecord: { 'zh-TW': '搜尋此紀錄', 'zh-CN': '搜索此记录', en: 'Search this recording', ja: 'この記録を検索', de: 'Diese Aufzeichnung durchsuchen' },
@@ -193,7 +244,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   optionalTranslation: { 'zh-TW': '翻譯（選填）', 'zh-CN': '翻译（选填）', en: 'Translation (optional)', ja: '翻訳（任意）', de: 'Übersetzung (optional)' },
   doneEditing: { 'zh-TW': '完成編輯', 'zh-CN': '完成编辑', en: 'Done editing', ja: '編集を完了', de: 'Bearbeitung beenden' },
   edit: { 'zh-TW': '編輯', 'zh-CN': '编辑', en: 'Edit', ja: '編集', de: 'Bearbeiten' },
-  retryTranslation: { 'zh-TW': '重新翻譯', 'zh-CN': '重新翻译', en: 'Retry translation', ja: '翻訳を再試行', de: 'Übersetzung erneut versuchen' },
+  retryTranslation: { 'zh-TW': '補翻譯', 'zh-CN': '补翻译', en: 'Retry translation', ja: '翻訳を再試行', de: 'Übersetzung erneut versuchen' },
   translateSegment: { 'zh-TW': '翻譯此段', 'zh-CN': '翻译此段', en: 'Translate this segment', ja: 'このセグメントを翻訳', de: 'Dieses Segment übersetzen' },
   all: { 'zh-TW': '全部', 'zh-CN': '全部', en: 'All', ja: 'すべて', de: 'Alle' },
   modelCategory: { 'zh-TW': '模型類別', 'zh-CN': '模型类别', en: 'Model category', ja: 'モデルカテゴリー', de: 'Modellkategorie' },
@@ -229,8 +280,11 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   supportedSampleRates: { 'zh-TW': '支援取樣率（Hz）', 'zh-CN': '支持采样率（Hz）', en: 'Supported sample rates (Hz)', ja: '対応サンプルレート（Hz）', de: 'Unterstützte Abtastraten (Hz)' },
   removeModel: { 'zh-TW': '刪除此模型', 'zh-CN': '删除此模型', en: 'Delete this model', ja: 'このモデルを削除', de: 'Dieses Modell löschen' },
   vadAndCaptions: { 'zh-TW': 'App VAD 與字幕切段', 'zh-CN': 'App VAD 与字幕分段', en: 'App VAD and caption segmentation', ja: 'App VAD と字幕の区切り', de: 'App-VAD und Untertitelsegmentierung' },
-  asrChunkMinimum: { 'zh-TW': 'ASR 最短送出間隔', 'zh-CN': 'ASR 最短发送间隔', en: 'Minimum ASR send interval', ja: 'ASR 最短送信間隔', de: 'Kürzestes ASR-Sendeintervall' },
-  asrChunkMaximum: { 'zh-TW': 'ASR 最長送出間隔', 'zh-CN': 'ASR 最长发送间隔', en: 'Maximum ASR send interval', ja: 'ASR 最長送信間隔', de: 'Längstes ASR-Sendeintervall' },
+  responseSpeed: { 'zh-TW': '回應速度', 'zh-CN': '响应速度', en: 'Response speed', ja: '応答速度', de: 'Reaktionsgeschwindigkeit' },
+  speedFast: { 'zh-TW': '快', 'zh-CN': '快', en: 'Fast', ja: '速い', de: 'Schnell' },
+  speedNormal: { 'zh-TW': '正常', 'zh-CN': '正常', en: 'Normal', ja: '通常', de: 'Normal' },
+  speedSlow: { 'zh-TW': '慢', 'zh-CN': '慢', en: 'Slow', ja: '遅い', de: 'Langsam' },
+  speedHint: { 'zh-TW': '「快」最早上屏但句子較短；「慢」等較長片段再送出，較穩定但上屏較晚。', 'zh-CN': '「快」最早显示但句子较短；「慢」等较长片段再发送，较稳定但显示较晚。', en: 'Fast shows captions earliest with shorter segments; Slow waits for longer, steadier segments.', ja: '「速い」は最短で表示・短めの区切り、「遅い」は長い単位で表示し安定します。', de: '„Schnell“ zeigt Untertitel am frühesten mit kurzen Abschnitten; „Langsam“ wartet auf längere, stabilere Abschnitte.' },
   autoBidirectional: { 'zh-TW': '自動雙向（中文→英文；其他→繁中）', 'zh-CN': '自动双向（中文→英文；其他→繁中）', en: 'Automatic bilingual (Chinese → English; other → Traditional Chinese)', ja: '自動双方向（中国語→英語、その他→繁体字中国語）', de: 'Automatisch zweisprachig (Chinesisch → Englisch, sonst → traditionelles Chinesisch)' },
   enableDiarizationPreview: { 'zh-TW': '啟用即時講者預覽', 'zh-CN': '启用实时说话人预览', en: 'Enable live speaker preview', ja: 'リアルタイム話者プレビューを有効化', de: 'Live-Sprechervorschau aktivieren' },
   renameSpeakerTo: { 'zh-TW': '批次改為', 'zh-CN': '批量改为', en: 'Rename all to', ja: '一括変更先', de: 'Alle umbenennen in' },
@@ -258,10 +312,6 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   sessionStoragePending: { 'zh-TW': '本機，待同步', 'zh-CN': '本地，待同步', en: 'Local, pending sync', ja: 'ローカル、同期待ち', de: 'Lokal, Synchronisierung ausstehend' },
   liveSettingsNextChunk: { 'zh-TW': '收音中：設定從下一段音訊生效。', 'zh-CN': '录音中：设置从下一段音频生效。', en: 'During recording, settings apply to the next audio chunk.', ja: '録音中の設定は次の音声チャンクから適用されます。', de: 'Während der Aufnahme gelten Einstellungen ab dem nächsten Audioabschnitt.' },
   liveSettingsStartHint: { 'zh-TW': '開始收音後也可調整，會從下一段音訊生效。', 'zh-CN': '开始录音后也可调整，会从下一段音频生效。', en: 'These can also be adjusted during recording and apply to the next chunk.', ja: '録音中にも調整でき、次の音声チャンクから適用されます。', de: 'Diese Werte können auch während der Aufnahme angepasst werden und gelten ab dem nächsten Abschnitt.' },
-  preRoll: { 'zh-TW': '句首保留', 'zh-CN': '句首保留', en: 'Pre-roll', ja: '先頭の保持', de: 'Vorlauf' },
-  minimumSpeech: { 'zh-TW': '起音持續', 'zh-CN': '起音持续', en: 'Minimum speech', ja: '最小発話時間', de: 'Mindestsprachdauer' },
-  silenceToSplit: { 'zh-TW': '停頓斷句', 'zh-CN': '停顿断句', en: 'Silence to split', ja: '無音で分割', de: 'Stille zum Trennen' },
-  noiseFloorOffset: { 'zh-TW': '噪音底線偏移', 'zh-CN': '噪声底线偏移', en: 'Noise-floor offset', ja: 'ノイズフロアのオフセット', de: 'Rauschboden-Offset' },
   enableDenoise: { 'zh-TW': '啟用麥克風降噪', 'zh-CN': '启用麦克风降噪', en: 'Enable microphone noise suppression', ja: 'マイクのノイズ抑制を有効化', de: 'Mikrofon-Rauschunterdrückung aktivieren' },
   denoiseApplied: { 'zh-TW': '目前音軌已套用瀏覽器降噪。', 'zh-CN': '当前音轨已应用浏览器降噪。', en: 'Browser noise suppression is applied to the current audio track.', ja: '現在の音声トラックにはブラウザーのノイズ抑制が適用されています。', de: 'Die Browser-Rauschunterdrückung ist auf die aktuelle Audiospur angewendet.' },
   denoiseNotApplied: { 'zh-TW': '目前音軌未套用瀏覽器降噪。', 'zh-CN': '当前音轨未应用浏览器降噪。', en: 'Browser noise suppression is not applied to the current audio track.', ja: '現在の音声トラックにはブラウザーのノイズ抑制が適用されていません。', de: 'Die Browser-Rauschunterdrückung ist auf die aktuelle Audiospur nicht angewendet.' },
@@ -322,7 +372,6 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   discardChanges: { 'zh-TW': '放棄變更', 'zh-CN': '放弃更改', en: 'Discard changes', ja: '変更を破棄', de: 'Änderungen verwerfen' },
   keepEditing: { 'zh-TW': '繼續編輯', 'zh-CN': '继续编辑', en: 'Keep editing', ja: '編集を続ける', de: 'Weiter bearbeiten' },
   unsavedLeaveConfirm: { 'zh-TW': '設定有尚未儲存的變更，離開後將會放棄這些變更。要離開嗎？', 'zh-CN': '设置有未保存的更改，离开后将放弃这些更改。要离开吗？', en: 'Settings have unsaved changes. Leaving will discard them. Leave anyway?', ja: '設定に未保存の変更があります。このページを離れると変更は破棄されます。続けますか？', de: 'Die Einstellungen haben ungespeicherte Änderungen. Beim Verlassen werden sie verworfen. Trotzdem verlassen?' },
-  resetDefaults: { 'zh-TW': '恢復預設值', 'zh-CN': '恢复默认值', en: 'Reset to defaults', ja: '既定値に戻す', de: 'Standard wiederherstellen' },
   advancedHelp: { 'zh-TW': '進階說明', 'zh-CN': '高级说明', en: 'Advanced help', ja: '詳細説明', de: 'Erweiterte Hilfe' },
   inUse: { 'zh-TW': '使用中', 'zh-CN': '使用中', en: 'In use', ja: '使用中', de: 'In Verwendung' },
   useThisModel: { 'zh-TW': '設為使用中', 'zh-CN': '设为使用中', en: 'Use this model', ja: 'このモデルを使う', de: 'Dieses Modell verwenden' },
@@ -335,7 +384,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   singleSlotModel: { 'zh-TW': '單一模型；註冊或編輯即為目前使用', 'zh-CN': '单一模型；注册或编辑即为当前使用', en: 'Single slot; registering or editing sets the active model', ja: '単一スロット；登録または編集で使用中になります', de: 'Einzelner Platz; Registrieren oder Bearbeiten legt das aktive Modell fest.' }
 }
 
-export const interfaceTranslate = (language: UiLanguage, key: keyof typeof interfaceMessages): string => interfaceMessages[key][language]
+export const interfaceTranslate = (language: UiLanguagePreference, key: keyof typeof interfaceMessages): string => interfaceMessages[key][resolveUiLanguage(language)]
 export const interfaceMessageKeys = Object.freeze(Object.keys(interfaceMessages)) as readonly (keyof typeof interfaceMessages)[]
 
 const authMessages: Record<UiLanguage, Record<'login' | 'register' | 'username' | 'password' | 'nt' | 'department' | 'loginFailed' | 'checking' | 'processing' | 'isolation' | 'noAccount' | 'hasAccount' | 'registerAndLogin', string>> = {

@@ -1,5 +1,6 @@
 const { existsSync } = require('node:fs')
 const { join } = require('node:path')
+const { logger } = require('./logger.cjs')
 
 // This module deliberately has no Python or ffmpeg dependency. sherpa-onnx
 // expects mono, 16 kHz Float32 PCM, so WAV decoding/downsampling happens here.
@@ -67,17 +68,60 @@ const inferThreads = () => {
 
 let diarizer
 let embeddingExtractor
+
+/**
+ * Agglomerative clustering cut-off for anonymous speaker labels: higher merges
+ * more aggressively (fewer speakers), lower keeps more clusters.
+ *
+ * The right cut-off depends on how much evidence the recording carries:
+ *
+ *   - A 45 s live-preview window holds only a handful of segments, so merging
+ *     hard glues different people together. On a two-singer duet, 0.8 collapsed
+ *     4 of 6 preview windows into ONE speaker (sentence accuracy 65.9%→56.1%).
+ *   - A full recording holds dozens-to-hundreds of segments and rewards hard
+ *     merging instead (same duet, full track: 71.4%→82.1%).
+ *
+ * So short inputs keep 0.7 and long inputs use 0.8. Pinning
+ * `S2T_SHERPA_CLUSTERING_THRESHOLD` forces a single value for A/B runs. See
+ * `npm run diarization:eval:timeline`, §10 of
+ * docs/reports/VOICEPRINT_ACCURACY.zh-TW.md, and the preview-window sweep.
+ */
+const shortAudioSeconds = () => {
+  const raw = process.env.S2T_SHERPA_SHORT_AUDIO_SEC
+  // `Number('')` is 0 and is finite, which would silently bypass a fallback —
+  // so an unset or empty variable must return the default explicitly.
+  if (raw === undefined || raw.trim() === '') return 60
+  const value = Number(raw)
+  return Number.isFinite(value) && value > 0 ? value : 60
+}
+
+/** Single-value override (null when unset, so the length rule applies). */
+const clusteringThresholdOverride = () => {
+  const raw = process.env.S2T_SHERPA_CLUSTERING_THRESHOLD
+  if (raw === undefined || raw.trim() === '') return null
+  const value = Number(raw)
+  return Number.isFinite(value) && value > 0 && value <= 1 ? value : null
+}
+
+const clusteringThresholdFor = (audioSeconds) => {
+  const pinned = clusteringThresholdOverride()
+  if (pinned !== null) return pinned
+  return audioSeconds <= shortAudioSeconds() ? 0.7 : 0.8
+}
+
+const clusteringConfigFor = (audioSeconds) => ({ numClusters: 0, threshold: clusteringThresholdFor(audioSeconds) })
+
 const getDiarizer = () => {
   if (diarizer) return diarizer
   const paths = modelPaths()
-  if (!existsSync(paths.segmentation) || !existsSync(paths.embedding)) throw new Error('找不到 sherpa-onnx 講者分離模型。請依 docs/SHERPA_ONNX.zh-TW.md 下載模型檔。')
+  if (!existsSync(paths.segmentation) || !existsSync(paths.embedding)) throw new Error('找不到 sherpa-onnx 講者分離模型。請依 docs/guide/SHERPA_ONNX.zh-TW.md 下載模型檔。')
   // Loaded lazily so the Web ASR gateway still starts when this optional native
   // feature is not installed or its models are absent.
   const sherpa = require('sherpa-onnx-node')
   diarizer = new sherpa.OfflineSpeakerDiarization({
     segmentation: { pyannote: { model: paths.segmentation }, numThreads: inferThreads(), provider: 'cpu' },
     embedding: { model: paths.embedding, numThreads: inferThreads(), provider: 'cpu' },
-    clustering: { numClusters: 0, threshold: 0.5 }, minDurationOn: 0.25, minDurationOff: 0.35
+    clustering: clusteringConfigFor(0), minDurationOn: 0.25, minDurationOff: 0.35
   })
   return diarizer
 }
@@ -90,7 +134,7 @@ const getDiarizer = () => {
 const getEmbeddingExtractor = () => {
   if (embeddingExtractor) return embeddingExtractor
   const { embedding } = modelPaths()
-  if (!existsSync(embedding)) throw new Error('找不到 sherpa-onnx 聲紋模型。請依 docs/SHERPA_ONNX.zh-TW.md 下載 embedding 模型檔。')
+  if (!existsSync(embedding)) throw new Error('找不到 sherpa-onnx 聲紋模型。請依 docs/guide/SHERPA_ONNX.zh-TW.md 下載 embedding 模型檔。')
   const sherpa = require('sherpa-onnx-node')
   embeddingExtractor = new sherpa.SpeakerEmbeddingExtractor({ model: embedding, numThreads: inferThreads(), provider: 'cpu' })
   return embeddingExtractor
@@ -110,7 +154,15 @@ const extractEmbeddingFromWave = (wave) => {
 
 const extractSpeakerEmbedding = (audio) => extractEmbeddingFromWave(readWavSamples(audio))
 
-const envNumber = (name, fallback) => { const value = Number(process.env[name]); return Number.isFinite(value) ? value : fallback }
+// Empty-but-present variables must not collapse to 0: `Number('')` is 0 and is
+// finite, which would silently bypass the fallback (and did, for the clustering
+// threshold).
+const envNumber = (name, fallback) => {
+  const raw = process.env[name]
+  if (raw === undefined || raw.trim() === '') return fallback
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : fallback
+}
 const envInteger = (name, fallback) => { const value = Number.parseInt(process.env[name] || '', 10); return Number.isInteger(value) && value > 0 ? value : fallback }
 
 /**
@@ -273,7 +325,7 @@ const extractDiarizedSpeakerBlocks = async (audio, segments) => {
       const voicedSec = vad.speech.reduce((sum, interval) => sum + Math.max(0, interval.endMs - interval.startMs), 0) / 1000
       const durationSec = wave.samples.length / wave.sampleRate
       vetoed = shouldVetoRecording(voicedSec, durationSec, recordingVad)
-      if (vetoed) console.log(`[voiceprint] ${JSON.stringify({ decision: 'reject', reason: 'recording-no-speech', voicedSec: Math.round(voicedSec * 10) / 10, durationSec: Math.round(durationSec * 10) / 10, voicedRatio: Math.round(voicedSec / durationSec * 1000) / 1000 })}`)
+      if (vetoed) logger.info('voiceprint.decision', { decision: 'reject', reason: 'recording-no-speech', voicedSec: Math.round(voicedSec * 10) / 10, durationSec: Math.round(durationSec * 10) / 10, voicedRatio: Math.round(voicedSec / durationSec * 1000) / 1000 })
     } catch {
       // An unavailable VAD must not silently reject the recording; the energy
       // gate and the decision thresholds still apply.
@@ -297,7 +349,7 @@ const extractDiarizedSpeakerBlocks = async (audio, segments) => {
       try {
         const embedding = extractEmbeddingFromWave({ samples: joined, sampleRate: wave.sampleRate })
         items.push({ index: items.length, startSec: block.startSec, endSec: block.endSec, durationMs: Math.round(block.durationSec * 1_000), rmsDbfs: Math.round(rmsDbfs * 10) / 10, embedding })
-        console.log(`[voiceprint-embed] ${JSON.stringify({ speaker, block: items.length - 1, inputSec: Math.round(block.durationSec * 10) / 10, ms: Date.now() - startedAt })}`)
+        logger.debug('voiceprint.embed', { speaker, block: items.length - 1, inputSec: Math.round(block.durationSec * 10) / 10, ms: Date.now() - startedAt })
       } catch {
         // A short/noisy block stays anonymous; it must not block the rest of
         // the diarization result.
@@ -312,7 +364,10 @@ const diarizeWav = (audio) => {
   const wave = readWavSamples(audio)
   const instance = getDiarizer()
   const samples = resampleMono(wave.samples, wave.sampleRate, instance.sampleRate || 16_000)
+  // The clustering cut-off is per call: a live-preview window and the final
+  // full-track pass need different values (see clusteringThresholdFor).
+  if (typeof instance.setConfig === 'function') instance.setConfig({ clustering: clusteringConfigFor(samples.length / (instance.sampleRate || 16_000)) })
   return instance.process(samples).map((segment) => ({ start: segment.start, end: segment.end, speaker: `SPEAKER_${String(segment.speaker).padStart(2, '0')}` }))
 }
 
-module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording }
+module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording, clusteringThresholdFor }

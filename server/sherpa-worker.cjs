@@ -12,6 +12,15 @@ const operations = {
   diarizeWav: ({ audio }) => sherpa.diarizeWav(audio),
   sileroVad: ({ audio, options }) => silero.analyzeWav(audio, options),
   sileroStatus: () => silero.modelStatus(),
+  // A status check only verifies the model file and package. Run one tiny
+  // inference as the health probe so a bad ONNX graph/provider is reported
+  // before it silently disables VAD for the first recording.
+  sileroWarmup: async () => {
+    const status = silero.modelStatus()
+    if (!status.available) throw new Error(status.reason || 'Silero VAD 模型不可用')
+    await silero.analyzeSamples(new Float32Array(512))
+    return status
+  },
   dynaudnorm: ({ audio }) => preprocess.dynaudnormWav(audio),
   audioPreprocessStatus: () => ({ sileroVad: silero.modelStatus(), dynaudnorm: preprocess.dynaudnormStatus() })
 }

@@ -2,6 +2,7 @@ import { type CaptureState, type AudioDevice, type View, type SavedSession, type
 import { dbfs, meterPercent, makeWav, pcm16, BufferedPcmWriter } from '../../../shared/services/audio'
 import { joinCaptionText, makeVtt, makeTranscriptText, makeTranscriptCsv, timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, defaultWebSocketCapabilities, defaultHttpCapabilities, defaultModelProfile, languageName, normalizeSettings, initialSettings, textEndpoint, asrLanguage } from '../../../shared/services/settings'
+import { speedToVadConfig } from '../../capture/vad'
 import { readJsonResponse } from '../../../shared/services/http'
 import { browserDownload } from '../../../shared/services/download'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -12,20 +13,30 @@ import { joinOverlappedText, nextPcmWavChunkStart, pcmWavChunkCount, readPcmWavF
 import { importFileFingerprint, importModelSnapshot, matchesImportCheckpoint } from '../../transcript/import-checkpoint'
 import { StreamingResampler, chooseModelSampleRate } from '../../capture/resample'
 import { remoteSessionStorage } from '../services/remote-session-storage'
+import { downloadTranscriptBlob, transcriptBlob, type TranscriptDownloadFormat } from '../services/transcript-documents'
+import { encodeM4a, type AudioDownloadFormat } from '../services/audio-export'
 import { mergeSessions } from '../services/session-merge'
 import { canMergeHttpCaption, maximumAutomaticTranslationQueue, resolveTranslationTarget, shouldAutoTranslate, shouldSkipTranslation, throttledTranslationDelayMs, translationAggregationDelayMs } from '../services/translation-policy'
 import { summaryBatches, summaryChunks, transcriptSignature } from '../services/summary-plan'
-import { authFetch } from '../../auth/services/auth-client'
-import { interfaceTranslate } from '../../../shared/i18n'
+import { authFetch, retryableAuthFetch } from '../../auth/services/auth-client'
+import { interfaceTranslate, resolveUiLanguage } from '../../../shared/i18n'
 import { OpfsPcmRecording } from '../../../shared/services/opfs-pcm-recording'
 
 // Browsers without OPFS retain the fallback PCM in RAM until it can be made
 // into a WAV. Keep that fallback bounded; OPFS and Electron stream to disk.
 const maximumMemoryRecordingBytes = 256 * 1024 * 1024
+const browserAsrTimeoutMs = 120_000
+const headerValue = (value: string): string => encodeURIComponent(value)
+const maximumGeneratedSessionTitleLength = 's2t-YYYY-MM-DDTHH-MM-SS-sssZ'.length
 
-const automaticSessionTitle = (transcript: string, createdAt = new Date().toISOString()): string => {
-  const content = transcript.replace(/^\s*(?:\[[^\]]+\]\s*)?(?:[^：:\n]{1,80}[：:]\s*)?/gm, '').replace(/\s+/g, ' ').trim()
-  return content ? content.slice(0, 60) + (content.length > 60 ? '…' : '') : `錄音 ${new Date(createdAt).toLocaleString('zh-TW')}`
+const requestBrowserAsr = async (init: RequestInit, controller = new AbortController()): Promise<Response> => {
+  const timeout = window.setTimeout(() => controller.abort(), browserAsrTimeoutMs)
+  try { return await authFetch('/api/transcriptions', { ...init, signal: controller.signal }) }
+  finally { window.clearTimeout(timeout) }
+}
+
+const automaticSessionTitle = (_transcript: string, createdAt = new Date().toISOString()): string => {
+  return `s2t-${new Date(createdAt).toISOString().replace(/[:.]/g, '-')}`
 }
 
 const remoteSettingsPayload = (settings: Settings): Record<string, unknown> => {
@@ -106,6 +117,8 @@ const remoteSessionsVersionRef = useRef<number | null>(null)
 // two effects can submit the same optimistic version and create a needless 409.
 const pendingRemoteSessionsRef = useRef<SavedSession[] | null>(null)
 const remoteSessionsSyncingRef = useRef(false)
+const remoteSessionRetryTimerRef = useRef<number | null>(null)
+const remoteSessionRetryAttemptRef = useRef(0)
 const liveAsrSettingsSignatureRef = useRef('')
 
 const continuationTargetRef = useRef<{ entry: SavedSession; audio: Blob; baseDurationMs: number } | null>(null)
@@ -328,7 +341,6 @@ const translatingIdsRef = useRef(new Set<string>())
 // Translation must never compete unboundedly with ASR. One ordered worker
 // keeps API load predictable and lets an edited caption invalidate its stale
 // queued request before it is sent.
-const translationQueueRef = useRef<Promise<void>>(Promise.resolve())
 const translationGenerationRef = useRef(0)
 const translationAbortControllersRef = useRef(new Map<string, AbortController>())
 const electronTranslationRequestIdsRef = useRef(new Set<string>())
@@ -436,6 +448,7 @@ const receiveTranscript = useCallback((event: TranscriptEvent): void => {
             sourceText: joinCaptionText(previous.sourceText, event.sourceText),
             translatedText: undefined,
             translationStatus: undefined,
+            translationAttempts: undefined,
             isSentenceBoundary: event.isSentenceBoundary
           }
           return next
@@ -456,21 +469,14 @@ const requestTranslation = useCallback(async (entry: TranscriptEvent): Promise<v
     if (shouldSkipTranslation(entry.detectedLanguage, targetLanguage)) return
     translatingIdsRef.current.add(entry.id)
     const generation = translationGenerationRef.current
-    let releaseQueue: (() => void) | undefined
-    const waitForTurn = translationQueueRef.current
-    translationQueueRef.current = new Promise<void>((resolve) => { releaseQueue = resolve })
-    await waitForTurn.catch(() => undefined)
     try {
       if (generation !== translationGenerationRef.current) return
       const current = transcriptsRef.current.find((candidate) => candidate.id === entry.id)
       if (!current || current.revision !== entry.revision || current.sourceText !== entry.sourceText) return
       const glossary = settings.glossary.trim() ? `\n術語表（請保留或採用指定譯法）：${settings.glossary.trim()}` : ''
-      let result: { text: string } | null = null
-      let lastError: unknown
-      for (const delay of [0, 250, 750]) {
-        if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
-        try {
-          result = window.s2t
+      let result: { text: string }
+      try {
+        result = window.s2t
             ? await (async () => { const requestId = `translation-${crypto.randomUUID()}`; electronTranslationRequestIdsRef.current.add(requestId); try { return await window.s2t!.completeText({ requestId,
               profileId: settings.selectedTranslationModelId === 'none' ? 'translation' : settings.selectedTranslationModelId, endpoint: textEndpoint(settings.translationEndpoint), model: settings.translationModel,
               messages: [
@@ -479,20 +485,22 @@ const requestTranslation = useCallback(async (entry: TranscriptEvent): Promise<v
               ]
             }) } finally { electronTranslationRequestIdsRef.current.delete(requestId) } })()
             : await (async () => { const controller = new AbortController(); translationAbortControllersRef.current.set(entry.id, controller); const timeout = window.setTimeout(() => controller.abort(), 15_000); const profileId = settings.selectedTranslationModelId; try { return await readJsonResponse<{ text: string }>(await authFetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json', ...(profileId !== 'none' && profileId !== 'web-environment-translation' ? { 'x-s2t-model-id': profileId } : {}) }, body: JSON.stringify({ text: entry.sourceText, sourceLanguage: entry.detectedLanguage || settings.sourceLanguage, targetLanguage, glossary: settings.glossary }), signal: controller.signal }), 'Web 翻譯 gateway') } finally { window.clearTimeout(timeout); translationAbortControllersRef.current.delete(entry.id) } })()
-          break
-        } catch (error) { lastError = error }
-      }
-      if (!result) throw lastError instanceof Error ? lastError : new Error('翻譯服務沒有回應')
+      } catch (error) { throw error }
       if (generation === translationGenerationRef.current && result.text) setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id && currentEntry.revision === entry.revision && currentEntry.sourceText === entry.sourceText
-        ? { ...currentEntry, translatedText: result.text, translationStatus: undefined, revision: Math.max(currentEntry.revision, entry.revision) + 1 }
+        ? { ...currentEntry, translatedText: result.text, translationStatus: undefined, translationAttempts: undefined, revision: Math.max(currentEntry.revision, entry.revision) + 1 }
         : currentEntry))
     } catch (error) {
       if (generation !== translationGenerationRef.current) return
-      setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id && currentEntry.revision === entry.revision && currentEntry.sourceText === entry.sourceText ? { ...currentEntry, translationStatus: 'failed' } : currentEntry))
-      setStatus(error instanceof Error ? error.message : '翻譯失敗，可手動重新翻譯')
+      setTranscripts((current) => current.map((currentEntry) => {
+        if (currentEntry.id !== entry.id || currentEntry.revision !== entry.revision || currentEntry.sourceText !== entry.sourceText) return currentEntry
+        const translationAttempts = (currentEntry.translationAttempts ?? 0) + 1
+        return translationAttempts >= 3
+          ? { ...currentEntry, translationAttempts, translationStatus: 'failed' }
+          : { ...currentEntry, translationAttempts, translationStatus: undefined }
+      }))
+      setStatus(error instanceof Error ? error.message : '翻譯失敗，正在重新排隊。')
     } finally {
       translatingIdsRef.current.delete(entry.id)
-      releaseQueue?.()
     }
   }, [settings.glossary, settings.sourceLanguage, settings.targetLanguage, settings.translationEnabled, settings.translationEndpoint, settings.translationModel, settings.selectedTranslationModelId])
 
@@ -548,7 +556,7 @@ useEffect(() => {
   }, [requestTranslation, settings.translationLoadStrategy, settings.translationStrategy])
 
 useEffect(() => {
-    const signature = JSON.stringify({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), vadConfig: settings.vadConfig })
+    const signature = JSON.stringify({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), responseSpeed: settings.responseSpeed })
     if (captureState !== 'recording' && captureState !== 'paused') {
       liveAsrSettingsSignatureRef.current = signature
       return
@@ -559,9 +567,9 @@ useEffect(() => {
       setStatus('目前 ASR 串流模型不支援收音中更新語言、術語或 VAD；請在下一次收音前套用。')
       return
     }
-    modelRef.current.updateLiveSettings({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), vadConfig: settings.vadConfig })
+    modelRef.current.updateLiveSettings({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), vadConfig: speedToVadConfig(settings.responseSpeed) })
     setStatus('ASR 語言、術語與 VAD 設定將自下一段音訊生效。')
-  }, [captureState, settings.glossary, settings.sourceLanguage, settings.vadConfig])
+  }, [captureState, settings.glossary, settings.sourceLanguage, settings.responseSpeed])
 
 useEffect(() => {
     const container = transcriptContainerRef.current
@@ -700,9 +708,11 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
   setRemoteSessionSyncState('syncing')
   setSessionStorageStates((current) => Object.fromEntries(snapshot.map((session) => [session.id, current[session.id] === 'remote' ? 'remote' : 'pending'])))
   void (async () => {
+    let lastSnapshot: SavedSession[] | null = null
     try {
       while (pendingRemoteSessionsRef.current && remoteSessionsVersionRef.current !== null) {
         let next = pendingRemoteSessionsRef.current
+        lastSnapshot = next
         pendingRemoteSessionsRef.current = null
         // A second browser window may have committed after this view loaded.
         // Rebase the full snapshot on the new remote version rather than
@@ -726,10 +736,12 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
     } catch (error) {
       // Keep the newest snapshot in memory for a later explicit reload/retry;
       // never overwrite an unknown remote version after a conflict or outage.
+      if (!pendingRemoteSessionsRef.current && lastSnapshot) pendingRemoteSessionsRef.current = lastSnapshot
       remoteSessionsVersionRef.current = null
       setRemoteSessionSyncState('paused')
       setSessionStorageStates((current) => Object.fromEntries(Object.entries(current).map(([id, state]) => [id, state === 'remote' ? state : 'pending'])))
       setStatus(error instanceof Error ? `${error.message} 本機資料仍已保存。` : '無法同步遠端記錄，本機資料仍已保存。')
+      scheduleRemoteSessionRetry()
     } finally {
       remoteSessionsSyncingRef.current = false
       if (remoteSessionsVersionRef.current !== null) setRemoteSessionSyncState('ready')
@@ -745,12 +757,29 @@ const retryRemoteSessionSync = async (): Promise<void> => {
     const merged = mergeSessions(pendingRemoteSessionsRef.current ?? sessions, remote.sessions)
     setSessions(merged)
     enqueueRemoteSessionSave(merged)
+    remoteSessionRetryAttemptRef.current = 0
     setStatus('已重新載入並排程遠端紀錄同步。')
   } catch (error) {
     setRemoteSessionSyncState('paused')
     setStatus(error instanceof Error ? `無法重新載入遠端記錄：${error.message}` : '無法重新載入遠端記錄。')
+    scheduleRemoteSessionRetry()
   }
 }
+
+function scheduleRemoteSessionRetry(): void {
+  if (window.s2t || remoteSessionRetryTimerRef.current !== null) return
+  const delay = Math.min(30_000, 1_000 * 2 ** Math.min(remoteSessionRetryAttemptRef.current++, 5))
+  remoteSessionRetryTimerRef.current = window.setTimeout(() => {
+    remoteSessionRetryTimerRef.current = null
+    void retryRemoteSessionSync()
+  }, delay)
+}
+
+useEffect(() => () => {
+  if (remoteSessionRetryTimerRef.current !== null) window.clearTimeout(remoteSessionRetryTimerRef.current)
+  remoteSessionRetryTimerRef.current = null
+  remoteSessionRetryAttemptRef.current = 0
+}, [userId])
 
 const retryStorageCompensations = async (): Promise<void> => {
   try {
@@ -787,6 +816,10 @@ useEffect(() => {
       if (!Array.isArray(payload.models)) return
       modelRegistryVersionRef.current = Number.isSafeInteger(payload.version) && Number(payload.version) >= 0 ? Number(payload.version) : 0
       modelRegistrySignatureRef.current = JSON.stringify(payload.models)
+      // The initial health request can finish before this asynchronous catalog
+      // load, leaving every user-managed model card at "未確認" until the
+      // five-minute poll. Refresh as soon as the catalog becomes available.
+      void refreshModelHealth()
       setSettings((current) => {
         const asr = payload.models!.flatMap((item) => item.purpose === 'asr' ? [{ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, kind: 'openai-http' as const, requiresApiKey: item.requiresApiKey !== false, capabilities: { ...defaultHttpCapabilities, ...item.capabilities } }] : [])
         const translation = payload.models!.flatMap((item) => item.purpose === 'translation' ? [{ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, requiresApiKey: item.requiresApiKey !== false }] : [])
@@ -839,7 +872,7 @@ useEffect(() => {
     const timer = window.setTimeout(() => {
       const version = modelRegistryVersionRef.current
       if (version === null) return
-      void authFetch('/api/data/model-registry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ models, version }) }).then(async (response) => {
+      void retryableAuthFetch('/api/data/model-registry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ models, version }) }).then(async (response) => {
         if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
         const saved = await response.json() as { version?: unknown }
         if (!Number.isSafeInteger(saved.version) || Number(saved.version) < 1) throw new Error('伺服器沒有回傳有效模型版本')
@@ -922,7 +955,7 @@ useEffect(() => {
     const timer = window.setTimeout(() => {
       const version = remoteSettingsVersionRef.current
       if (version === null) return
-      void authFetch('/api/data/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ settings: remoteSettingsPayload(settings), version }) }).then(async (response) => {
+      void retryableAuthFetch('/api/data/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ settings: remoteSettingsPayload(settings), version }) }).then(async (response) => {
         if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
         const saved = await response.json() as { version?: unknown }
         if (!Number.isSafeInteger(saved.version) || Number(saved.version) < 1) throw new Error('伺服器沒有回傳有效設定版本')
@@ -937,7 +970,7 @@ useEffect(() => {
     const timer = window.setTimeout(() => {
       const version = summaryTemplateVersionRef.current
       if (version === null) return
-      void authFetch('/api/data/summary-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templates: settings.summaryTemplates, selectedTemplateId: settings.selectedSummaryTemplateId, version }) }).then(async (response) => {
+      void retryableAuthFetch('/api/data/summary-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templates: settings.summaryTemplates, selectedTemplateId: settings.selectedSummaryTemplateId, version }) }).then(async (response) => {
         if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
         const saved = await response.json() as { version?: number }
         if (!Number.isSafeInteger(saved.version) || saved.version! < 1) throw new Error('伺服器沒有回傳有效模板版本')
@@ -1002,10 +1035,10 @@ useEffect(() => {
         const profiles = current.modelProfiles.filter((profile) => profile.id !== 'environment-asr' && profile.id !== 'web-environment-asr' && !profile.id.startsWith('web-gateway-asr-'))
         const gatewayProfiles = window.s2t
           ? asr?.endpoint && asr.model ? [{ id: 'environment-asr', name: `${asr.model}（環境設定）`, endpoint: asr.endpoint, model: asr.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }] : []
-          : (config.asrProfiles?.filter((profile) => profile.configured) ?? (asr?.endpoint && asr.model ? [{ id: 'default', name: asr.model, endpoint: asr.endpoint, model: asr.model, configured: true }] : [])).map((profile) => ({ id: profile.id === 'default' ? 'web-environment-asr' : `web-gateway-asr-${profile.id}`, name: profile.name, endpoint: profile.endpoint, model: profile.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }))
+          : (config.asrProfiles?.filter((profile) => profile.configured) ?? (asr?.endpoint && asr.model ? [{ id: 'default', name: asr.model, endpoint: asr.sourceEndpoint || asr.endpoint, model: asr.model, configured: true }] : [])).map((profile) => ({ id: profile.id === 'default' ? 'web-environment-asr' : `web-gateway-asr-${profile.id}`, name: profile.name, endpoint: profile.sourceEndpoint || profile.endpoint, model: profile.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }))
         profiles.unshift(...gatewayProfiles)
         const translations = current.translationProfiles.filter((profile) => !['environment-translation', 'web-environment-translation'].includes(profile.id)).map((profile) => ({ ...profile, endpoint: textEndpoint(profile.endpoint) }))
-        if (translation?.endpoint && translation.model) translations.push({ id: translationId, name: `${translation.model}（環境設定）`, endpoint: translation.endpoint, model: translation.model })
+        if (translation?.endpoint && translation.model) translations.push({ id: translationId, name: `${translation.model}（環境設定）`, endpoint: translation.sourceEndpoint || translation.endpoint, model: translation.model })
         // Load disk settings first, then apply the environment-provided models as
         // the default only when the saved selection is missing or no longer valid,
         // so models registered later can still be selected and kept.
@@ -1208,18 +1241,39 @@ const startCapture = async (): Promise<void> => {
     const captureSourceLanguage = continuationSnapshot?.sourceLanguage ?? settings.sourceLanguage
     const capturePrompt = continuationSnapshot?.prompt ?? settings.glossary
     const captureGatewayProfileId = gatewayAsrProfileId(captureModel.id)
+    // Preprocessing is optional. A rolling deploy can briefly route this
+    // request to a Pod whose model volume/FFmpeg is not ready; do not turn a
+    // transient 503 into a failure to start recording or to use the ASR API.
+    let captureSileroVadEnabled = settings.sileroVadEnabled
+    let captureDynaudnormEnabled = settings.dynaudnormEnabled
+    let preprocessingFallback = ''
     if (!window.s2t && !captureGatewayProfileId) {
       setStatus(interfaceTranslate(settings.uiLanguage, 'webGatewayModelRequired'))
       return
     }
-    if (settings.sileroVadEnabled || settings.dynaudnormEnabled) {
+    if (captureSileroVadEnabled || captureDynaudnormEnabled) {
       if (window.s2t) { setStatus('Silero VAD 目前由 Web gateway 的 CPU worker 提供。'); return }
       try {
         const response = await authFetch('/api/audio-processing/status')
         const payload = await response.json() as { sileroVad?: { available?: boolean; reason?: string }; dynaudnorm?: { available?: boolean; reason?: string } }
-        const unavailable = settings.sileroVadEnabled && !payload.sileroVad?.available ? `Silero VAD 不可用：${payload.sileroVad?.reason || '模型尚未就緒'}` : settings.dynaudnormEnabled && !payload.dynaudnorm?.available ? `dynaudnorm 不可用：${payload.dynaudnorm?.reason || 'FFmpeg 尚未就緒'}` : ''
-        if (!response.ok || unavailable) { setStatus(unavailable || '無法確認音訊前處理健康狀態。'); return }
-      } catch { setStatus('無法確認 Silero VAD 模型健康狀態。'); return }
+        const unavailable: string[] = []
+        if (!response.ok || !payload.sileroVad?.available) {
+          if (captureSileroVadEnabled) unavailable.push(`Silero VAD：${payload.sileroVad?.reason || '模型尚未就緒'}`)
+          captureSileroVadEnabled = false
+        }
+        if (!response.ok || !payload.dynaudnorm?.available) {
+          if (captureDynaudnormEnabled) unavailable.push(`dynaudnorm：${payload.dynaudnorm?.reason || 'FFmpeg 尚未就緒'}`)
+          captureDynaudnormEnabled = false
+        }
+        if (unavailable.length) preprocessingFallback = `${unavailable.join('；')}，已略過前處理並繼續收音。`
+      } catch {
+        const unavailable: string[] = []
+        if (captureSileroVadEnabled) unavailable.push('Silero VAD')
+        if (captureDynaudnormEnabled) unavailable.push('dynaudnorm')
+        captureSileroVadEnabled = false
+        captureDynaudnormEnabled = false
+        preprocessingFallback = `${unavailable.join('、')} 健康檢查暫時不可用，已略過前處理並繼續收音。`
+      }
     }
     const supportedLanguages = captureModel.capabilities.supportedLanguages ?? []
     if (captureSourceLanguage !== 'auto' && supportedLanguages.length && !supportedLanguages.includes(captureSourceLanguage)) { setStatus(`「${captureModel.name}」未宣告支援 ${languageName(captureSourceLanguage)}。請改選語言或模型。`); return }
@@ -1245,7 +1299,7 @@ const startCapture = async (): Promise<void> => {
       unsubscribeModelRef.current?.()
       unsubscribeModelErrorRef.current?.()
       modelRef.current = captureModel.kind === 'openai-http'
-        ? new OpenAiChunkedModelAdapter({ ...captureModel, gatewayProfileId: captureGatewayProfileId ?? undefined, prompt: capturePrompt.trim() || undefined, vadConfig: settings.vadConfig, sileroVadEnabled: settings.sileroVadEnabled, dynaudnormEnabled: settings.dynaudnormEnabled })
+        ? new OpenAiChunkedModelAdapter({ ...captureModel, gatewayProfileId: captureGatewayProfileId ?? undefined, prompt: capturePrompt.trim() || undefined, vadConfig: speedToVadConfig(settings.responseSpeed), sileroVadEnabled: captureSileroVadEnabled, dynaudnormEnabled: captureDynaudnormEnabled })
         : captureModel.endpoint.trim()
           ? new WebSocketModelAdapter(captureModel.endpoint.trim())
           : new NoopModelAdapter()
@@ -1441,7 +1495,7 @@ const startCapture = async (): Promise<void> => {
       liveDraftRef.current = { id: crypto.randomUUID(), startedAt: new Date().toISOString() }
       setCaptureState('recording')
       const sourceDescription = includeSystemAudio ? (stream ? '麥克風與電腦音訊混音中' : '電腦音訊收音中') : '麥克風收音中'
-      setStatus(captureModel.endpoint.trim() ? `${sourceDescription}，正在接收「${captureModel.name}」字幕。` : `${sourceDescription}。模型尚未接入，字幕會在模型適配器完成後顯示。`)
+      setStatus(preprocessingFallback || (captureModel.endpoint.trim() ? `${sourceDescription}，正在接收「${captureModel.name}」字幕。` : `${sourceDescription}。模型尚未接入，字幕會在模型適配器完成後顯示。`))
     } catch (error) {
       pcmWriterRef.current?.discard()
       pcmWriterRef.current = null
@@ -1551,7 +1605,10 @@ const stopCapture = async (): Promise<void> => {
       const finalDiarizationRequired = Boolean(audioForStorage && settings.diarizationModel && settings.diarizationPreviewEnabled)
       const finalSegments = transcriptsRef.current.filter((entry) => entry.status !== 'partial')
       const transcript = makeTranscriptText(finalSegments)
-      const audioKey = continuation ? `${sessionId}-version-${crypto.randomUUID()}` : sessionId
+      // A continuation rewrites the record's own audio key, so the finished
+      // session stays one audio file (and one growing transcript) instead of
+      // adding a version the user would have to pick from.
+      const audioKey = continuation ? continuation.entry.audioKey || sessionId : sessionId
       const audioFailures: string[] = []
       let audioAvailable = Boolean(recordingPath)
       // Electron keeps durable audio locally. The web app writes durable audio
@@ -1569,14 +1626,23 @@ const stopCapture = async (): Promise<void> => {
       const capturedDurationMs = Math.max(0, captureEndedAt - startAtRef.current - pausedDurationRef.current)
       const durationMs = (continuation?.baseDurationMs ?? 0) + capturedDurationMs
       const modelSnapshot = activeModelSnapshotRef.current ?? continuation?.entry.modelSnapshot
-      const version = { id: continuation ? crypto.randomUUID() : 'original', audioKey, createdAt, label: continuation ? `接續收音 ${new Date(createdAt).toLocaleString('zh-TW')}` : '原始錄音', parentId: continuation ? activeAudioVersionFor(continuation.entry).id : undefined, segments: finalSegments, transcript, modelSnapshot }
-      const generatedTitle = automaticSessionTitle(transcript, createdAt)
+      const sessionCreatedAt = continuation?.entry.createdAt ?? createdAt
+      const version: AudioVersion = { id: 'original', audioKey, createdAt: sessionCreatedAt, label: '原始錄音', segments: finalSegments, transcript, modelSnapshot }
+      const generatedTitle = automaticSessionTitle(transcript, sessionCreatedAt)
+      // The merged continuation audio replaces the record's own file in place.
+      const existingAudioPath = continuation ? continuation.entry.nativeAudioPath ?? activeAudioVersionFor(continuation.entry).nativeAudioPath : undefined
       // Electron persists each finished recording in its account directory;
       // session metadata and audio therefore never depend on Chromium storage.
       const desktopSession = window.s2t && audioForStorage
-        ? await window.s2t.saveSession({ name: generatedTitle, recordingPath, audio: recordingPath ? undefined : await audioForStorage.arrayBuffer(), transcript, createdAt, durationMs, source, segments: finalSegments })
+        ? await window.s2t.saveSession({
+            name: generatedTitle,
+            ...(continuation
+              ? { audio: await audioForStorage.arrayBuffer(), recordingPath, ...(existingAudioPath ? { overwriteAudioPath: existingAudioPath } : {}) }
+              : { recordingPath, audio: recordingPath ? undefined : await audioForStorage.arrayBuffer() }),
+            transcript, createdAt: sessionCreatedAt, durationMs, source, segments: finalSegments
+          })
         : undefined
-      setSessions((current) => continuation ? current.map((entry) => entry.id === sessionId ? { ...entry, title: automaticSessionTitle(transcript, entry.createdAt), durationMs, transcript, modelSnapshot, audioVersions: [...audioVersionsFor(entry), version], activeAudioVersionId: version.id, nativeAudioPath: undefined, savedToDisk: false, audioUnavailable: !audioAvailable, segments: finalSegments, summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined } : entry) : [{
+      setSessions((current) => continuation ? current.map((entry) => entry.id === sessionId ? { ...entry, title: automaticSessionTitle(transcript, entry.createdAt), durationMs, transcript, modelSnapshot, audioVersions: [version], activeAudioVersionId: version.id, nativeAudioPath: desktopSession?.audioPath ?? existingAudioPath, savedToDisk: desktopSession ? true : entry.savedToDisk, audioUnavailable: !audioAvailable, segments: finalSegments, summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined, summaryTranslation: undefined } : entry) : [{
         id: sessionId,
         title: generatedTitle,
         createdAt,
@@ -1592,6 +1658,17 @@ const stopCapture = async (): Promise<void> => {
         audioUnavailable: !audioAvailable,
         segments: finalSegments
       }, ...current])
+      if (continuation) {
+        // Everything the merged file superseded is released so one record never
+        // leaves orphaned audio behind in either storage.
+        const mergedAudioPath = desktopSession?.audioPath
+        for (const superseded of audioVersionsFor(continuation.entry)) {
+          if (superseded.audioKey && superseded.audioKey !== audioKey) void remoteSessionStorage.deleteAudio(superseded.audioKey).catch(() => undefined)
+          if (window.s2t && mergedAudioPath && superseded.nativeAudioPath && superseded.nativeAudioPath !== mergedAudioPath) void window.s2t.deleteLocalAudio(superseded.nativeAudioPath).catch(() => undefined)
+        }
+        const previousPath = continuation.entry.nativeAudioPath
+        if (window.s2t && mergedAudioPath && previousPath && previousPath !== mergedAudioPath) void window.s2t.deleteLocalAudio(previousPath).catch(() => undefined)
+      }
       liveSessionIdRef.current = sessionId
       continuationTargetRef.current = null
       activeModelSnapshotRef.current = null
@@ -1604,7 +1681,7 @@ const stopCapture = async (): Promise<void> => {
         if (!window.s2t && audioAvailable) {
           // The gateway owns this durable job. It waits/retries until the
           // session snapshot is visible, so closing this page cannot lose the
-          // final tail after the last 15-second preview tick.
+          // final tail after the last preview tick.
           void (async () => {
             try {
               const queued = await readJsonResponse<{ job?: { id?: string } }>(await authFetch('/api/data/diarization-jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, audioKey }) }), '最後講者識別工作排程')
@@ -1771,7 +1848,7 @@ const saveSettings = (): void => {
       return
     }
     void (async () => {
-      const response = await authFetch('/api/data/glossary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ glossary: settings.glossary, version: glossaryVersionRef.current ?? 0 }) })
+      const response = await retryableAuthFetch('/api/data/glossary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ glossary: settings.glossary, version: glossaryVersionRef.current ?? 0 }) })
       if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
       const saved = await response.json() as { version?: number }
       glossaryVersionRef.current = Number.isSafeInteger(saved.version) && saved.version! >= 0 ? saved.version! : glossaryVersionRef.current
@@ -1983,20 +2060,26 @@ const transcribeImportedFile = async (): Promise<void> => {
               profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model,
               language: asrLanguage(settings.sourceLanguage), requiresApiKey: selectedModel.requiresApiKey !== false, prompt: settings.glossary || undefined,
               filename: isWav ? `batch-${index + 1}.wav` : importedFile.name, contentType: isWav ? 'audio/wav' : importedFile.type || undefined, audio: asrAudio
-            }) : await authFetch('/api/transcriptions', { method: 'POST', headers: {
+            }) : await (() => {
+              const controller = new AbortController()
+              importAbortRef.current = controller
+              return requestBrowserAsr({ method: 'POST', headers: {
               'content-type': isWav ? 'audio/wav' : (importedFile.type || 'application/octet-stream'),
-              'x-s2t-filename': isWav ? `batch-${index + 1}.wav` : importedFile.name,
+              'x-s2t-filename': headerValue(isWav ? `batch-${index + 1}.wav` : importedFile.name),
               ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}),
               ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}),
-              ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {})
-            }, body: asrAudio, signal: (importAbortRef.current = new AbortController()).signal }).then(async (result) => {
+              ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {})
+            }, body: asrAudio }, controller).finally(() => { if (importAbortRef.current === controller) importAbortRef.current = null })
+            })().then(async (result) => {
               const payload = await readJsonResponse<{ text?: string; error?: string }>(result, '批次 ASR gateway')
               if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
               return { text: payload.text || '' }
             })
-            importAbortRef.current = null
             break
-          } catch (error) { lastError = error }
+          } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') throw new Error(cancelImportRef.current ? '已取消批次轉錄' : '批次 ASR 請求逾時，請確認 ASR 服務後重試。')
+            lastError = error
+          }
         }
         if (!response) throw lastError instanceof Error ? lastError : new Error(`第 ${index + 1} 段轉錄失敗`)
         const mergedNext = joinOverlappedText(merged, response.text)
@@ -2042,7 +2125,7 @@ const finalizeSession = async (entry: SavedSession): Promise<void> => {
         const chunk = await readPcmWavFileChunk(file, layout, offset); offset = nextPcmWavChunkStart(layout, offset)
         const rate = chooseModelSampleRate(layout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? [])
         const data = rate === layout.sampleRate ? chunk.audio : await resampleAudioForAsr(chunk.audio, rate)
-        const asr = window.s2t ? await window.s2t.transcribeAudioChunk({ profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model, language: asrLanguage(settings.sourceLanguage), requiresApiKey: selectedModel.requiresApiKey !== false, prompt: settings.glossary || undefined, filename: `final-${index}.wav`, contentType: 'audio/wav', audio: data }) : await authFetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}) }, body: data }).then(async (response) => { const body = await readJsonResponse<{ text?: string; error?: string }>(response, '最終 ASR'); if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`); return { text: body.text || '' } })
+        const asr = window.s2t ? await window.s2t.transcribeAudioChunk({ profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model, language: asrLanguage(settings.sourceLanguage), requiresApiKey: selectedModel.requiresApiKey !== false, prompt: settings.glossary || undefined, filename: `final-${index}.wav`, contentType: 'audio/wav', audio: data }) : await requestBrowserAsr({ method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-filename': headerValue(`final-${index}.wav`), ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}), ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {}) }, body: data }).then(async (response) => { const body = await readJsonResponse<{ text?: string; error?: string }>(response, '最終 ASR'); if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`); return { text: body.text || '' } })
         const next = joinOverlappedText(merged, asr.text || ''); const appended = next.slice(merged.length).trim()
         if (appended) segments.push({ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: appended })
         merged = next
@@ -2162,7 +2245,7 @@ const replaceSessionSegmentAudio = async (entry: SavedSession, segment: Transcri
         try {
           const result = window.s2t
             ? await window.s2t.transcribeAudioChunk({ profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model, language: asrLanguage(settings.sourceLanguage), requiresApiKey: selectedModel.requiresApiKey !== false, prompt: settings.glossary || undefined, filename: 'segment-rerecord.wav', contentType: 'audio/wav', audio: asrAudio })
-            : await readJsonResponse<{ text?: string }>(await authFetch('/api/transcriptions', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}), ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': settings.glossary } : {}) }, body: asrAudio }), '重講 ASR')
+            : await readJsonResponse<{ text?: string }>(await requestBrowserAsr({ method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-filename': headerValue('segment-rerecord.wav'), ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}), ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {}) }, body: asrAudio }), '重講 ASR')
           const sourceText = result.text?.trim()
           if (sourceText) {
             updateSavedTranscript(entry.id, segment.id, { sourceText })
@@ -2200,7 +2283,17 @@ const stopSegmentRerecord = async (): Promise<void> => {
     await replaceSessionSegmentAudio(active.entry, active.segment, makeWav(active.chunks, active.context.sampleRate))
   }
 
+/** Expands the inline player for one record; pressing it again collapses it.
+ *  History never auto-plays, so a list stays silent until the user asks. */
 const playSession = async (entry: SavedSession): Promise<void> => {
+    if (playingSessionId === entry.id) {
+      if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current)
+      playbackUrlRef.current = null
+      setPlayingSessionId(null)
+      setPlaybackUrl(null)
+      setStatus('已收起播放器。')
+      return
+    }
     try {
       const audio = await loadSessionAudio(entry)
       if (!audio) {
@@ -2212,34 +2305,33 @@ const playSession = async (entry: SavedSession): Promise<void> => {
       playbackUrlRef.current = url
       setPlaybackUrl(url)
       setPlayingSessionId(entry.id)
-      setStatus(`正在準備播放：${entry.title}`)
+      setStatus(`已展開播放器：${entry.title}`)
     } catch {
       setStatus('無法讀取此記錄的音檔。')
     }
   }
 
-const exportSavedTranscript = (entry: SavedSession, format: 'vtt' | 'json' | 'csv'): void => {
-    const segments = entry.segments ?? []
-    const content = format === 'csv' ? makeTranscriptCsv(segments) : format === 'vtt'
-      ? makeVtt(segments)
-      : JSON.stringify(segments, null, 2)
-    if (segments.length === 0) {
-      setStatus('此舊記錄沒有時間軸資料，無法匯出 CSV、VTT 或 JSON。')
-      return
-    }
-    browserDownload(new Blob([content], { type: format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }), `${entry.title}.${format}`)
+// Both download helpers throw so the format picker can show what failed;
+// a successful export reports itself through the status line.
+const exportSavedTranscript = async (entry: SavedSession, format: TranscriptDownloadFormat): Promise<void> => {
+    const blob = await transcriptBlob(entry.segments ?? [], entry.title, format, entry.transcript)
+    if (!blob) throw new Error('此舊記錄沒有時間軸資料，無法匯出此格式。')
+    downloadTranscriptBlob(blob, entry.title, format)
     setStatus(`已匯出 ${format.toUpperCase()} 逐字稿`)
   }
 
-const downloadSessionAudio = async (entry: SavedSession): Promise<void> => {
-    try {
-      const audio = await loadSessionAudio(entry)
-      if (!audio) throw new Error('找不到本機音檔')
+const downloadSessionAudio = async (entry: SavedSession, format: AudioDownloadFormat = 'wav'): Promise<void> => {
+    const audio = await loadSessionAudio(entry)
+    if (!audio) throw new Error('找不到本機音檔')
+    if (format === 'wav') {
       browserDownload(audio, `${entry.title}.wav`)
       setStatus('已下載 WAV 錄音')
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : '無法下載錄音')
+      return
     }
+    setStatus('正在轉檔 M4A…')
+    const m4a = await encodeM4a(audio)
+    browserDownload(m4a, `${entry.title}.m4a`)
+    setStatus('已下載 M4A 錄音')
   }
 
 const diarizeSession = async (entry: SavedSession): Promise<void> => {
@@ -2400,13 +2492,20 @@ const stopVoiceprintCapture = async (): Promise<void> => {
 
 const completeSummary = async (messages: Array<{ role: 'system' | 'user'; content: string }>): Promise<{ text: string }> => {
     if (window.s2t) return window.s2t.completeText({ profileId: 'summary', endpoint: textEndpoint(settings.summaryEndpoint), model: settings.summaryModel, messages })
-    const response = await authFetch('/api/summaries', { method: 'POST', headers: { 'content-type': 'application/json', ...(!window.s2t && settings.summaryEndpoint && settings.summaryEndpoint !== '/api/summaries' ? { 'x-s2t-model-id': 'managed-summary' } : {}) }, body: JSON.stringify({ messages }) })
-    const result = await readJsonResponse<{ text: string; error?: string }>(response, '摘要服務')
-    if (!response.ok) throw new Error(result.error || '摘要請求失敗')
-    return result
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 30_000)
+    try {
+      const response = await authFetch('/api/summaries', { method: 'POST', headers: { 'content-type': 'application/json', ...(!window.s2t && settings.summaryEndpoint && settings.summaryEndpoint !== '/api/summaries' ? { 'x-s2t-model-id': 'managed-summary' } : {}) }, body: JSON.stringify({ messages }), signal: controller.signal })
+      const result = await readJsonResponse<{ text: string; error?: string }>(response, '摘要服務')
+      if (!response.ok) throw new Error(result.error || '摘要請求失敗')
+      return result
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw new Error('摘要服務請求逾時，請稍後重試。')
+      throw error
+    } finally { window.clearTimeout(timeout) }
   }
 
-const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(settings.summaryOutputLanguage)}輸出，保留標題結構並填入內容。${settings.summaryIncludeTranslation ? `每個重點後另以${languageName(settings.targetLanguage)}提供翻譯。` : ''}\n\n模板：\n${settings.summaryTemplate}`
+const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(resolveUiLanguage('system'))}輸出，保留標題結構並填入內容。\n\n模板：\n${settings.summaryTemplate}`
 
 const summarizeTranscript = async (transcript: string): Promise<string> => {
   const chunks = summaryChunks(transcript)
@@ -2437,15 +2536,17 @@ const summarizeTranscript = async (transcript: string): Promise<string> => {
 
 const generateSessionTitle = async (sessionId: string, transcript: string): Promise<void> => {
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
-    const language = ({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: 'English', ja: '日本語', de: 'Deutsch' } as const)[settings.uiLanguage]
+    const language = ({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: 'English', ja: '日本語', de: 'Deutsch' } as const)[resolveUiLanguage(settings.uiLanguage)]
     try {
       const result = await completeSummary([
-        { role: 'system', content: `請以${language}為下列逐字稿生成一個精準標題。只輸出標題本身，不要引號、Markdown 或說明；標題不得超過 10 個字。` },
+        { role: 'system', content: `請以${language}為下列逐字稿生成一個精準標題。只輸出標題本身，不要引號、Markdown 或說明；標題不得超過 ${maximumGeneratedSessionTitleLength} 個字元。` },
         { role: 'user', content: transcript.slice(0, 24_000) }
       ])
       const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()
       if (!title) return
-      const visible = title.slice(0, 10) + (title.length > 10 ? '…' : '')
+      const visible = title.length > maximumGeneratedSessionTitleLength
+        ? `${title.slice(0, maximumGeneratedSessionTitleLength - 1)}…`
+        : title
       setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, title: visible } : entry))
     } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
   }
@@ -2458,17 +2559,50 @@ const createSessionSummary = async (sessionId: string, transcript: string): Prom
     setSessions((current) => current.map((entry) => {
       if (entry.id !== sessionId) return entry
       sourceVersionId = entry.activeAudioVersionId ?? audioVersionsFor(entry)[0]?.id
-      return { ...entry, summary: '正在產生摘要…' }
+      return { ...entry, summary: '正在產生摘要…', summaryTranslation: undefined }
     }))
     try {
       const text = await summarizeTranscript(transcript)
       if (summaryGenerationRef.current.get(sessionId) !== generation) return
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || undefined, summarySourceSignature: text ? transcriptSignature(transcript) : undefined, summarySourceVersionId: text ? sourceVersionId : undefined } : entry))
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || undefined, summarySourceSignature: text ? transcriptSignature(transcript) : undefined, summarySourceVersionId: text ? sourceVersionId : undefined, summaryTranslation: undefined } : entry))
       if (!text) setStatus('摘要服務沒有回傳內容。')
     } catch (error) {
       if (summaryGenerationRef.current.get(sessionId) !== generation) return
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined } : entry))
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined, summaryTranslation: undefined } : entry))
       setStatus(error instanceof Error ? `摘要產生失敗：${error.message}` : '摘要產生失敗。')
+    }
+  }
+
+const summaryTranslationRef = useRef(new Map<string, number>())
+
+/** Translate an already-generated summary into the configured target language.
+ *  The result is stored beside the summary and is replaced only when the
+ *  summary itself is regenerated (the field is cleared on every rewrite).
+ *  A newer call supersedes an in-flight one for the same session. */
+const translateSummary = async (entry: SavedSession, targetOverride?: string): Promise<void> => {
+    const text = entry.summary?.trim()
+    if (!text || text === '正在產生摘要…') return
+    const generation = (summaryTranslationRef.current.get(entry.id) ?? 0) + 1
+    summaryTranslationRef.current.set(entry.id, generation)
+    try {
+      const sourceLanguage = ({ 'zh-TW': 'zh-TW', 'zh-CN': 'zh-TW', en: 'en-US', ja: 'ja-JP', de: 'de-DE' } as const)[resolveUiLanguage('system')]
+      const targetLanguage = targetOverride ?? resolveTranslationTarget(sourceLanguage, settings.targetLanguage)
+      const profileId = settings.selectedTranslationModelId
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 30_000)
+      try {
+        const response = await authFetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json', ...(profileId !== 'none' && profileId !== 'web-environment-translation' ? { 'x-s2t-model-id': profileId } : {}) }, body: JSON.stringify({ text, sourceLanguage, targetLanguage, glossary: settings.glossary }), signal: controller.signal })
+        const payload = await readJsonResponse<{ text: string; error?: string }>(response, '摘要翻譯')
+        if (summaryTranslationRef.current.get(entry.id) !== generation) return
+        if (!response.ok) throw new Error(payload.error || '摘要翻譯請求失敗')
+        if (!payload.text) throw new Error('翻譯服務沒有回傳內容')
+        setSessions((current) => current.map((item) => item.id === entry.id && item.summary === text ? { ...item, summaryTranslation: payload.text } : item))
+      } finally { window.clearTimeout(timeout) }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw new Error('摘要翻譯請求逾時，請稍後重試。')
+      throw error
+    } finally {
+      if (summaryTranslationRef.current.get(entry.id) === generation) summaryTranslationRef.current.delete(entry.id)
     }
   }
 
@@ -2544,7 +2678,7 @@ const saveLiveCaptionsBeforeSwitch = async (): Promise<void> => {
           audioVersions: existing.audioVersions?.map((version) => version.id === existing.activeAudioVersionId
             ? { ...version, segments, transcript }
             : version),
-          ...(transcriptChanged ? { summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined } : {})
+          ...(transcriptChanged ? { summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined, summaryTranslation: undefined } : {})
         }
       : {
           id: sessionId,
@@ -2742,6 +2876,7 @@ startVoiceprintCapture,
 stopVoiceprintCapture,
 createSummary,
 summarizeSession,
+translateSummary,
 canRecord,
 historyPageCount,
 currentHistoryPage,

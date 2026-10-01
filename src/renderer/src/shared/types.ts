@@ -1,5 +1,5 @@
 import { type TranscriptEvent } from '../features/models/model-adapter'
-import { type VadConfig } from '../features/capture/vad'
+import { type ResponseSpeed } from '../features/capture/vad'
 
 export type CaptureState = 'starting' | 'idle' | 'recording' | 'paused' | 'saving'
 
@@ -53,6 +53,8 @@ export type SavedSession = {
   summarySourceSignature?: string
   /** Audio/caption version whose transcript was used to create the summary. */
   summarySourceVersionId?: string
+  /** Standalone translation of the current summary; cleared whenever the summary is regenerated. */
+  summaryTranslation?: string
 }
 
 /** Account-scoped, in-progress Web capture metadata used after a forced close. */
@@ -86,7 +88,7 @@ export type ImportCheckpoint = {
 
 export type Settings = {
   theme: 'system' | 'light' | 'dark'
-  uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'
+  uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de' | 'system'
   /** Electron writes the selected destination by default; reads always merge both. */
   storageLocation: 'local' | 'remote'
   sourceLanguage: string
@@ -124,7 +126,7 @@ export type Settings = {
   /** Uses the gateway's worker-hosted Silero model to reject non-speech ASR chunks. */
   sileroVadEnabled: boolean
   dynaudnormEnabled: boolean
-  vadConfig: VadConfig
+  responseSpeed: ResponseSpeed
 }
 
 export type ModelCapabilities = { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages?: string[]; supportedSampleRates?: number[] }

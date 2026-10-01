@@ -10,3 +10,6 @@ dist/
 !.env.local-storage.example
 models/
 .s2t-data/
+# Local diarization benchmark fixtures (VoxConverse, ~2 GB) — never commit.
+tmp/
+eval-reports/

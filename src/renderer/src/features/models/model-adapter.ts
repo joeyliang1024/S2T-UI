@@ -13,6 +13,8 @@ export type TranscriptEvent = {
   /** User-provided speaker names are authoritative over later diarization passes. */
   speakerManuallyEdited?: boolean
   translationStatus?: 'failed'
+  /** Failed automatic translation attempts for this exact caption revision. */
+  translationAttempts?: number
   /** True only when app-side VAD observed a natural silence boundary. HTTP
    * chunks sent while speech continues deliberately keep this false so the UI
    * can extend one readable caption instead of making a new row. */
@@ -79,7 +81,7 @@ type WireTranscript = {
 
 /**
  * Generic WebSocket transport for the self-hosted STT service contract in
- * docs/MODEL_ADAPTER.md. It deliberately keeps recognition logic server-side.
+ * docs/reference/MODEL_ADAPTER.md. It deliberately keeps recognition logic server-side.
  */
 export class WebSocketModelAdapter implements ModelAdapter {
   private socket: WebSocket | null = null
@@ -241,6 +243,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   /** Tail of the last successful caption; conditions the next short chunk. */
   private rollingContext = ''
   private vadConfig?: VadConfig
+  private activeGatewayRequests = new Set<AbortController>()
+  private readonly gatewayTimeoutMs = 30_000
 
   constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean }) {
     this.prompt = profile.prompt
@@ -265,6 +269,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
     this.pendingContainsSpeech = false
     this.rollingContext = ''
+    this.activeGatewayRequests.clear()
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
@@ -278,7 +283,14 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     const configuredMinimum = this.vadConfig?.chunkMinMs ?? 1_000
     const configuredMaximum = this.vadConfig?.chunkMaxMs ?? 2_400
     const minimumChunkSamples = Math.floor(this.sampleRate * Math.min(configuredMinimum, configuredMaximum) / 1000)
-    const maximumChunkSamples = Math.floor(this.sampleRate * Math.max(configuredMinimum, configuredMaximum, 200) / 1000)
+    const configuredMaximumMs = Math.max(configuredMinimum, configuredMaximum, 200)
+    // HTTP ASR is ordered so rolling context stays correct. If the provider is
+    // marginally slower than real time, fixed 2–3s chunks accumulate one
+    // request at a time until captions are visibly behind. Coalesce only while
+    // backlogged (up to 6s) to recover throughput without sacrificing normal
+    // low-latency behavior.
+    const adaptiveMaximumMs = Math.min(6_000, configuredMaximumMs * (this.queuedChunks >= 2 ? 2 : 1))
+    const maximumChunkSamples = Math.floor(this.sampleRate * adaptiveMaximumMs / 1000)
     this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || vadFrame?.speaking)
     const reachedNaturalBoundary = this.pendingSamples >= minimumChunkSamples && Boolean(vadFrame?.speechEnded)
     // Keep 300 ms of room tone before a voice onset, but avoid sending empty
@@ -301,6 +313,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   async stop(): Promise<void> {
     if (this.stopped) return
     this.stopped = true
+    this.activeGatewayRequests.forEach((controller) => controller.abort())
+    this.activeGatewayRequests.clear()
     if (this.pendingSamples && this.pendingContainsSpeech) {
       const start = this.pendingStart
       this.enqueue(this.takePending(this.pendingSamples), start, true)
@@ -369,6 +383,9 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
           language: this.language, requiresApiKey: this.profile.requiresApiKey !== false, prompt: this.rollingPrompt(), audio
         }) : await this.transcribeThroughWebGateway(audio)
       } catch (error) {
+        // A hung gateway must release the live-caption queue immediately;
+        // retrying the same timed-out request would leave the screen stalled.
+        if (error instanceof Error && error.name === 'TimeoutError') throw error
         lastError = error
       }
     }
@@ -436,17 +453,32 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
 
   private async transcribeThroughWebGateway(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
     const prompt = this.rollingPrompt()
-    const response = await authFetch('/api/transcriptions', {
+    const controller = new AbortController()
+    this.activeGatewayRequests.add(controller)
+    const timeout = window.setTimeout(() => controller.abort(), this.gatewayTimeoutMs)
+    let response: Response
+    try { response = await authFetch('/api/transcriptions', {
       method: 'POST',
       headers: {
         'content-type': 'audio/wav',
         'x-s2t-language': this.language,
         ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
         ...(this.profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
-        ...(prompt ? { 'x-s2t-prompt': prompt } : {})
+        ...(prompt ? { 'x-s2t-prompt': encodeURIComponent(prompt) } : {})
       },
-      body: audio
-    })
+      body: audio,
+      signal: controller.signal
+    }) } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        const timeoutError = new Error(this.stopped ? '即時 ASR 已停止' : '即時 ASR 請求逾時，請確認 ASR 服務')
+        timeoutError.name = 'TimeoutError'
+        throw timeoutError
+      }
+      throw error
+    } finally {
+      window.clearTimeout(timeout)
+      this.activeGatewayRequests.delete(controller)
+    }
     const payload = await readGatewayPayload(response)
     if (!response.ok) throw new Error(payload.error || `Web ASR gateway failed (${response.status})`)
     const detectedLanguage = payload.detectedLanguage === 'zh-TW' || payload.detectedLanguage === 'en-US' || payload.detectedLanguage === 'ja-JP' || payload.detectedLanguage === 'de-DE' ? payload.detectedLanguage : undefined

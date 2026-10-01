@@ -1,6 +1,7 @@
 const { Worker } = require('node:worker_threads')
 const { join } = require('node:path')
 const { modelPaths } = require('./sherpa-diarization.cjs')
+const { logger } = require('./logger.cjs')
 
 const positiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value || '', 10)
@@ -66,6 +67,7 @@ class SherpaWorkerPool {
     this.nextAudioId = 1
     // Buffer identity → the id under which the worker retained it.
     this.audioIdsByBuffer = new WeakMap()
+    this.queueWarnedAt = 0
     this.closed = false
   }
 
@@ -108,7 +110,10 @@ class SherpaWorkerPool {
     if (this.closed) return Promise.reject(new Error('sherpa worker pool 已關閉'))
     if (signal?.aborted) return Promise.reject(new Error('sherpa 工作已取消'))
     if (this.workers.length && this.workers.every((entry) => entry.unavailable)) return Promise.reject(new Error('語者 worker 正在恢復逾時工作，暫時無法接受新工作'))
-    if (this.queue.length + this.jobs.size >= this.maxQueue) return Promise.reject(new Error('語者處理佇列已滿，請稍後再試'))
+    if (this.queue.length + this.jobs.size >= this.maxQueue) {
+      logger.warn('worker.queue.full', { pool: this.label, operation, queued: this.queue.length, inFlight: this.jobs.size, maxQueue: this.maxQueue })
+      return Promise.reject(new Error('語者處理佇列已滿，請稍後再試'))
+    }
     this.start()
     return new Promise((resolve, reject) => {
       // The id must be stable for one recording, otherwise the worker cache
@@ -150,6 +155,15 @@ class SherpaWorkerPool {
         job.priority = priority
         if (firstBackground === -1) this.queue.push(job); else this.queue.splice(firstBackground, 0, job)
       } else { job.priority = priority; this.queue.push(job) }
+      // Warn once per rising waterline instead of on every enqueue: a queue at
+      // 80% of maxQueue means audio-worker capacity is about to reject work.
+      const depth = this.queue.length
+      const warnAt = Math.max(1, Math.ceil(this.maxQueue * 0.8))
+      if (!depth) this.queueWarnedAt = 0
+      else if (depth >= warnAt && depth > this.queueWarnedAt) {
+        this.queueWarnedAt = depth
+        logger.warn('worker.queue.near-full', { pool: this.label, operation, queued: depth, inFlight: this.jobs.size, maxQueue: this.maxQueue })
+      }
       this.dispatch()
     })
   }
@@ -230,6 +244,7 @@ class SherpaWorkerPool {
   }
 
   failWorker (entry, error) {
+    logger.error('worker.crashed', { pool: this.label, jobId: entry.jobId, error })
     if (entry.jobId) {
       const job = this.jobs.get(entry.jobId)
       if (job) this.finishJob(job, error)
@@ -237,10 +252,39 @@ class SherpaWorkerPool {
     }
   }
 
-  async close () {
+  /**
+   * sherpa's `process()` is a synchronous native call: terminating a worker
+   * that is still inside it — or exiting the process while it is — aborts the
+   * whole process with SIGABRT. Wait for those calls to come back first, so a
+   * shutdown during a long diarization stays a normal shutdown.
+   *
+   * Resolves true when every worker was idle, false when the grace expired.
+   */
+  awaitIdle (graceMs) {
+    const blocked = () => this.workers.filter((entry) => entry.busy)
+    if (!blocked().length) return Promise.resolve(true)
+    return new Promise((resolve) => {
+      const deadline = Date.now() + graceMs
+      let timer
+      const settle = (idle) => { clearTimeout(timer); resolve(idle) }
+      const check = () => {
+        if (!blocked().length) return settle(true)
+        if (Date.now() >= deadline) return settle(false)
+        timer = setTimeout(check, 50)
+      }
+      timer = setTimeout(check, 50)
+    })
+  }
+
+  async close ({ graceMs = positiveInteger(process.env.S2T_SHERPA_CLOSE_GRACE_MS, 15_000) } = {}) {
     this.closed = true
     for (const job of this.queue.splice(0)) job.reject(new Error('sherpa worker pool 已關閉'))
     for (const job of this.jobs.values()) this.finishJob(job, new Error('sherpa worker pool 已關閉'))
+    if (!await this.awaitIdle(graceMs)) {
+      // Grace expired: the native call is still running. Terminating it aborts
+      // the process, so make that visible instead of failing silently.
+      logger.warn('worker.close.timeout', { pool: this.label, busy: this.workers.filter((entry) => entry.busy).length, graceMs })
+    }
     await Promise.all(this.workers.map(async (entry) => { entry.intentionalExit = true; await entry.worker.terminate() }))
     this.workers = []
   }
@@ -342,6 +386,7 @@ module.exports = {
   diarizeWav: (audio) => heavyPool.execute('diarizeWav', { audio, segments: [] }, { retainAudio: true }),
   analyzeSileroVad: (audio, options) => interactive('sileroVad', { audio, options }),
   sileroVadStatus: () => interactivePool.execute('sileroStatus', {}, { priority: 'interactive', timeoutMs: 10_000 }),
+  warmSileroVad: () => interactivePool.execute('sileroWarmup', {}, { priority: 'interactive', timeoutMs: 10_000 }),
   dynaudnormWav: (audio) => interactive('dynaudnorm', { audio }),
   audioPreprocessStatus: () => interactivePool.execute('audioPreprocessStatus', {}, { priority: 'interactive', timeoutMs: 10_000 })
 }

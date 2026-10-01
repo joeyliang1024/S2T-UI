@@ -1,12 +1,12 @@
 # S2T-UI 統一需求與改善清單
 
-更新日期：2026-09-28。此檔為 repo **唯一待辦與需求狀態來源**。
+更新日期：2026-10-01。此檔為 repo **唯一待辦與需求狀態來源**。
 
 已整併原 TODO、假日需求單、新版需求單、舊 Enhancement 長時間錄音設計，以及 README、docs 下的規劃、技術契約、部署與驗收文件；並納入本次程式碼盤點與使用者確認。前三份舊待辦已由本檔取代並刪除，歷史原文可從 Git 查閱。技術文件保留作為操作／契約參考，不再另訂優先順序。
 
 **目前急迫需求只有：語者分離系統、斷句速度、翻譯模式。** 舊文件的 P0／P1、先做 storage、先做語系等排序不再沿用。先處理這三項需要的直接依賴，其餘按本檔分類追蹤；本次只整理文件，不代表已完成下列開發。
 
-狀態規則：**部分完成**＝有實作但仍有明確缺口；**未完成**＝未見完整功能路徑；**待驗收**＝已有路徑、缺情境證據；**不確定**＝規格衝突、候選方案或外部契約未定。工程改善建議會明示，不把建議當成新增的使用者承諾。完成項目應移除待辦，保留版本、平台、步驟與結果於 [驗收手冊](docs/VALIDATION.zh-TW.md)。
+狀態規則：**部分完成**＝有實作但仍有明確缺口；**未完成**＝未見完整功能路徑；**待驗收**＝已有路徑、缺情境證據；**不確定**＝規格衝突、候選方案或外部契約未定。工程改善建議會明示，不把建議當成新增的使用者承諾。完成項目應移除待辦，保留版本、平台、步驟與結果於 [驗收手冊](docs/guide/VALIDATION.zh-TW.md)。
 
 已確認的共同規則：
 
@@ -141,6 +141,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### O10 技術文件與部署說明一致性 — 部分完成
 
+- [x] docs/ 依用途分四類並建立索引：`guide`（操作）、`reference`（契約與架構）、`research`（歷史研究與規劃）、`reports`（量測報告），新增 `docs/README.md` 分類索引；根目錄 `0930_plan.md` 移為 `docs/research/K8S_SCALE_PLAN.zh-TW.md`。全 repo 連結、程式碼內文件路徑註解與 README 同步翻新（瘦身為分類索引＋快速開始＋常用指令，長篇 Storage 操作併入部署文件）。
 - [ ] 技術文件的操作範例持續核對現有 code：模型註冊位置、儲存與認證、能力欄位、語者分離即時／離線路徑、檔案大小、取消行為。
   - [x] Gateway 文件已同步 Bearer auth、100 MB 格式上限、模型 registry／加密 key 寫入端點、選定帳號模型代理與目前的限流／錯誤行為；部署文件已說明 bootstrap 帳密只建立新帳號、不會覆寫既有密碼。
   - [x] README、部署與 sherpa 操作文件已同步 Web 啟動順序、`5173`／`8787` 的責任、常見 404／Origin 問題、完整 `.env.example` 與 Linux x64 離線模型 image；`joeyliang1024/s2t-sherpa-models:1.13.8` 已以 `linux/amd64` 建置並驗證包含 segmentation、embedding 與授權檔。
@@ -201,20 +202,20 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 完成條件：已知＋至少兩名未知講者交替對話，跨 45 秒窗口與長停頓仍穩定；Web／Electron 即時回填、歷史最終分離、人工修改、重開、VTT／JSON 講者一致；未登入／私有／同部門／跨部門／刪除權限均符合規則；ASR 與錄音不受分離失敗影響。保留誤配、漏配、分群錯誤及 CPU／延遲數據（V01）。
 
-### U02 斷句速度 — 待驗收（原 7、24；關聯 15、18、19）
+### U02 斷句速度 — 部分完成（原 7、24；關聯 15、18、19）
 
 **目標：斷句快慢可調、字幕及時出現，又不切掉句首／句尾或把連續語句切得過碎。**
 
-現況：有 App VAD、pre-roll／最短語音／靜音等待／noise floor 滑桿；ASR 送出最小／最大間隔、VAD 靜音邊界分開設定。快速設定可在收音中調整送出間隔、停頓、音源、語言和翻譯；變更明示由下一段生效。UI 連續 final 合併上限約 12 秒，仍須以 V02 測量實際延遲和辨識品質。
+現況（2026-10-01）：逐項 VAD 滑桿已移除，收音控制側欄只保留單一「回應速度」滑桿（快／正常／慢），內部對應 `responseSpeedVadConfig` 三組預設（快 700/1200/150、正常 700/1500/250、慢 1000/2400/800）；滾動上下文 prompt 與 ASR 輸出清洗已進產品碼，Settings schema 由 `vadConfig` 收斂為 `responseSpeed`。`npm run caption:eval` 以真實收音節奏實測 Breeze-ASR-25：對話素材（前 300 秒、32 句）正常檔首筆字幕 P50 1029 ms／P95 1701 ms，「≤2500 ms」目標達成率 100%。第二輪以同場六組（BGM）＋九組（無 BGM 旁白）矩陣按「快＝延遲、慢＝CER、正常＝穩定」定案：快維持 700/1200/150（chunkMin 500 無可測收益、chunkMax 1000 漏 4/32 句）、正常維持 250（250 vs 350 產生相同 chunk 流）、慢的 `minSilence` 500→800（無 BGM 語料 CER 10.27%→8.35% 重跑同值、BGM 不回歸）。三速與各輪對照數據、淘汰依據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。UI 連續 final 合併上限維持約 12 秒。
 
-- [x] 將 ASR 送出最小／最大間隔與 VAD 句界分開定義、顯示和調整；UI 合併上限維持約 12 秒。
-- [x] 快速設定加入 App VAD／字幕切段分組（即時講者預覽、送出間隔與停頓滑桿），並保留音源、語言、翻譯開關與目標語言；收音中變更於下一段生效。
-- [ ] 量測語音開始→首段字幕、句尾→final、模型耗時與佇列等待；調整低延遲分段不能靠假 partial 或犧牲錄音完整性。
-- [x] 靜音不持續送空 ASR，短停頓不過度切段，長句有上限，停止不足一段的尾音 flush；HTTP gap／重試／背壓可見。`vad:smoke` 已覆蓋起音門檻、短停頓與靜音句界；實際模型延遲仍在 V02。
+- [x] 斷句參數收斂為三速：移除設定頁 VAD 卡片 6 支滑桿與收音面板 3 支 inline 滑桿，改為收音控制面板單一「回應速度」滑桿（快／正常／慢，i18n 五語系＋無障礙標註）；`responseSpeed` 隨設定持久化，舊存檔逐項參數自動丟棄正規化。
+- [x] 快速設定保留即時講者預覽、音源、語言、翻譯開關與目標語言；收音中變更於下一段音訊生效。
+- [x] 量測語音開始→首段字幕與模型耗時／佇列等待：`caption:eval` 記錄逐句上屏 P50/P95、ASR 推論與排隊延遲、請求數、碎片化與逐句／語料 CER，並產出 `eval-reports/` JSON；正常檔 P95 1701 ms 已達成 ≤2500 ms 目標。**句尾→final（endpoint delay）指標與日文／中英混說素材仍在 V02。**
+- [x] 靜音不持續送空 ASR，短停頓不過度切段，長句有上限，停止不足一段的尾音 flush；HTTP gap／重試／背壓可見。`vad:smoke` 已覆蓋起音門檻、短停頓與靜音句界。
 - [ ] 收音中調整明示立即／下一段／下次開始生效，避免重建 capture 造成缺口；App／server VAD 不互相重複裁切。
-  - [x] 收音中變更語言、術語或 App VAD 時，HTTP chunked ASR 會明示「下一段音訊生效」且不重建 capture；未定義 live-setting 協定的 WebSocket 模型會明示需下次開始，避免假稱已即時套用。
+  - [x] 收音中變更語言、術語或切段設定時，HTTP chunked ASR 會明示「下一段音訊生效」且不重建 capture；未定義 live-setting 協定的 WebSocket 模型會明示需下次開始，避免假稱已即時套用。
 
-完成條件：同一組至少 30 句素材比較快／中／慢設定，包含日文、中英混說、鍵盤噪音、快速對談、短停頓、長句與停止尾音；記錄首段及句尾 P50／P95、漏字／重複、請求數、WAV samples／時間戳；Web／Electron 均可在收音中調整指定參數（V02）。
+完成條件（現況）：已以 32 句對話素材完成快／中／慢三速比較，記錄首段 P50/P95、請求數、漏字與碎片化（BGM 素材、含快速對談、短停頓、長句），並以無 BGM 旁白素材（18 段）補齊三速對照；**仍缺**日文、中英混說、鍵盤噪音素材，句尾→final 指標，以及 Web／Electron 雙平台收音中調整的驗證（V02）。
 
 ### U03 翻譯模式 — 待驗收（原 3、4、5；舊 N05）
 
@@ -239,7 +240,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### 已有基線與證據邊界
 
-本次對話前一輪於 2026-09-26 實際通過：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。本輪文件整理不重跑程式測試，不沿用為後續修改的通過證據。
+2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `eval-reports/`。以下為更早一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
 
 既有文件另記錄 gateway 授權 smoke、Breeze 中文 WAV、HY-MT 英／日翻譯、本機 sherpa 靜音 WAV／原生 addon 成功；本輪未重新驗證。模型 API 有回應不代表麥克風端到端或多人辨識品質完成。字典測試只涵蓋已登錄 key；storage smoke 只涵蓋本機 adapter。每筆實機結果記版本／dirty diff、平台、模型版本、素材、設定、步驟及量測，憑證不得寫入。
 
@@ -295,4 +296,4 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 | Q08 | 研究性延伸 | 獨立降噪模型／更換 VAD、字幕同步回放／變速、MP3／M4A／Word／Excel 匯出、逐字稿優化／問答、視覺摘要、語音口譯、會後第二輪重轉錄僅早期研究／候選功能，不當成已承諾需求；需確認用途與模型能力後再排。 |
 | Q09 | 品質與資源門檻 | 舊文 partial P95≤2 秒、譯文≤4 秒是初始工程目標，HTTP 無 partial 不套該指標；CER／WER、講者誤配／漏配、可接受斷句延遲、heap／RSS／queue 上限與 2 小時 soak 門檻需依指定硬體及模型基線定案。驗收需提供數據，不用空白 WAV 或單句成功代替。 |
 
-技術參考保留：[架構](docs/ARCHITECTURE.zh-TW.md)、[模型契約](docs/MODEL_ADAPTER.md)、[Gateway](docs/WEB_GATEWAY.zh-TW.md)、[分離 API](docs/DIARIZATION_API.zh-TW.md)、[sherpa 操作](docs/SHERPA_ONNX.zh-TW.md)、[音訊品質](docs/AUDIO_QUALITY.zh-TW.md)、[部署備份](docs/DEPLOYMENT.zh-TW.md)、[驗收手冊](docs/VALIDATION.zh-TW.md)。[早期研究](docs/PLAN.zh-TW.md) 與 [後端方案研究](docs/OPEN_SOURCE_BACKENDS.zh-TW.md) 的歷史假設不覆蓋本檔決策。
+技術參考保留：[文件索引](docs/README.md)、[架構](docs/reference/ARCHITECTURE.zh-TW.md)、[模型契約](docs/reference/MODEL_ADAPTER.md)、[Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質](docs/reference/AUDIO_QUALITY.zh-TW.md)、[sherpa 操作](docs/guide/SHERPA_ONNX.zh-TW.md)、[部署備份](docs/guide/DEPLOYMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)。[早期研究](docs/research/PLAN.zh-TW.md) 與 [後端方案研究](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md) 的歷史假設不覆蓋本檔決策；[K8s 擴充計畫](docs/research/K8S_SCALE_PLAN.zh-TW.md) 屬未來規劃，不代表已交付。

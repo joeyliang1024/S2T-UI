@@ -8,3 +8,5 @@ node_modules
 out
 dist
 .s2t-data
+tmp
+music

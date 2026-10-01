@@ -61,6 +61,23 @@ const { canMergeHttpCaption } = loadTs(path.join('src', 'renderer', 'src', 'feat
 // 調整前的舊預設值，用來跟新預設做對照。
 // overlapMs/sampleRate 為尚未產品化的準度與延遲槓桿（見檔頭說明）。
 const PRESETS = {
+  // 目前產品三速：快 700-1200/150（fastv2）、正常 new 700-1500/250、慢 1000-2400/800。
+  // 注意：舊測量標籤 old ＝ minSilence 500 版慢檔；slow 自 2026-10-01 起對齊產品 800。
+  // 調校矩陣（2026-10-01，快=延遲優先／慢=CER 優先／正常=穩定）：
+  //   fast1000／fast1100 = 快的 chunkMax 前哨（與 fastv2 同場對照量出延遲-漏句前緣）
+  //   slow3000 = 慢的 chunkMax 前哨（看 CER 是否隨片段變長繼續下降）
+  //   fast(500-1000/150) 為淘汰對照（空字幕過多、4 句沒上屏）。
+  fast1000: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_000 }, overlapMs: 0, sampleRate: 48_000 },
+  fast1100: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_100 }, overlapMs: 0, sampleRate: 48_000 },
+  slow3000: { vadConfig: { minSpeechMs: 120, minSilenceMs: 500, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 1_000, chunkMaxMs: 3_000 }, overlapMs: 0, sampleRate: 48_000 },
+  // Batch B（乾淨素材）：chunkMin／minSilence 在無 BGM 素材上才有天然句界可驗證
+  fastMin500: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 500, chunkMaxMs: 1_000 }, overlapMs: 0, sampleRate: 48_000 },
+  fast500x: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 500, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000 },
+  cn350: { vadConfig: { minSpeechMs: 120, minSilenceMs: 350, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_500 }, overlapMs: 0, sampleRate: 48_000 },
+  cs800: { vadConfig: { minSpeechMs: 120, minSilenceMs: 800, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 1_000, chunkMaxMs: 2_400 }, overlapMs: 0, sampleRate: 48_000 },
+  fast: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 500, chunkMaxMs: 1_000 }, overlapMs: 0, sampleRate: 48_000 },
+  fastv2: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000 },
+  slow: { vadConfig: { minSpeechMs: 120, minSilenceMs: 800, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 1_000, chunkMaxMs: 2_400 }, overlapMs: 0, sampleRate: 48_000 },
   old: { vadConfig: { minSpeechMs: 120, minSilenceMs: 500, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 1_000, chunkMaxMs: 2_400 }, overlapMs: 0, sampleRate: 48_000 },
   new: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000 },
   newov: { vadConfig: { ...defaultVadConfig }, overlapMs: OVERLAP_MS, sampleRate: 48_000 },

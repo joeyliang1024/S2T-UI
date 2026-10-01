@@ -1,13 +1,14 @@
 import { useState, type FormEvent, type ReactElement } from 'react'
 import type { AuthState } from '../hooks/useAuth'
-import { authTranslate, type UiLanguage } from '../../../shared/i18n'
+import { authTranslate, resolveUiLanguage } from '../../../shared/i18n'
 
 type AuthActions = { login: (input: { username: string; password: string }) => Promise<void>; register: (input: { username: string; password: string; NT: string; Department: string }) => Promise<void>; setError: (message: string) => void }
 
 export function AuthGate({ auth }: { auth: AuthState & AuthActions }): ReactElement {
   const [mode, setMode] = useState<'login' | 'register'>('login'); const [username, setUsername] = useState(''); const [password, setPassword] = useState(''); const [NT, setNT] = useState(''); const [Department, setDepartment] = useState(''); const [submitting, setSubmitting] = useState(false)
-  const language: UiLanguage = navigator.language.startsWith('zh-CN') ? 'zh-CN' : navigator.language.startsWith('ja') ? 'ja' : navigator.language.startsWith('de') ? 'de' : navigator.language.startsWith('en') ? 'en' : 'zh-TW'
-  const t = (key: Parameters<typeof authTranslate>[1]): string => authTranslate(language, key)
+  // The login screen runs before account settings load, so it follows the
+  // system language through the same resolver the app uses after login.
+  const t = (key: Parameters<typeof authTranslate>[1]): string => authTranslate(resolveUiLanguage('system'), key)
   const submit = async (event: FormEvent): Promise<void> => { event.preventDefault(); setSubmitting(true); auth.setError(''); try { if (mode === 'login') await auth.login({ username, password }); else await auth.register({ username, password, NT, Department }) } catch (error) { auth.setError(error instanceof Error ? error.message : t('loginFailed')) } finally { setSubmitting(false) } }
   if (auth.status === 'checking') return <main className="auth-screen"><p>{t('checking')}</p></main>
   return <main className="auth-screen"><section className="auth-card"><p className="eyebrow">S2T UI</p><h1>{mode === 'login' ? t('login') : t('register')}</h1><p className="hint">{t('isolation')}</p><form onSubmit={(event) => void submit(event)}><label>{t('username')}<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required /></label><label>{t('password')}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>{mode === 'register' && <><label>{t('nt')}<input value={NT} onChange={(event) => setNT(event.target.value)} required /></label><label>{t('department')}<input value={Department} onChange={(event) => setDepartment(event.target.value)} required /></label></>}{auth.error && <p className="import-error" role="alert">{auth.error}</p>}<button className="primary" disabled={submitting}>{submitting ? t('processing') : mode === 'login' ? t('login') : t('registerAndLogin')}</button></form><button className="text-button" onClick={() => { setMode((current) => current === 'login' ? 'register' : 'login'); auth.setError('') }}>{mode === 'login' ? t('noAccount') : t('hasAccount')}</button></section></main>

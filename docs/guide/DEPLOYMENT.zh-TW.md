@@ -16,6 +16,34 @@ Docker 服務已連線。
 
 本機 fallback 使用 `S2T_LOCAL_DATA_DIR`，預設為專案下的 `.s2t-data`。它包含設定、文字紀錄、音檔 blob、向量資料與本機登入資料；請以作業系統帳號權限保護此目錄。
 
+## Kubernetes 的 `S2T_AUTH_SECRET`
+
+Kubernetes 部署**必須**設定 `S2T_AUTH_SECRET`，且所有 gateway Pod 必須使用同一個值。程式在 `S2T_KUBERNETES_MODE=true` 時若缺少此值，會讓 readiness 失敗，避免不同 Pod 使用不同的 JWT 簽章與模型憑證加密密鑰。
+
+本機開發未設定時，gateway 會在 `S2T_LOCAL_DATA_DIR/auth-secret` 自動產生並保存一把私有密鑰；這個便利行為不適用於多 Pod、Pod 重建或正式環境。
+
+請以 Kubernetes Secret 保存長且隨機的值，例如：
+
+```bash
+kubectl create secret generic s2t-auth \
+  --from-literal=S2T_AUTH_SECRET="$(openssl rand -base64 48)"
+```
+
+再由 Deployment 注入所有 gateway container：
+
+```yaml
+env:
+  - name: S2T_KUBERNETES_MODE
+    value: "true"
+  - name: S2T_AUTH_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: s2t-auth
+        key: S2T_AUTH_SECRET
+```
+
+不要在每個 Pod 啟動時生成新值，也不要把此值寫進 ConfigMap、image、Git repository 或前端 `VITE_*` 變數。輪替密鑰會使既有登入 token 與已加密的帳號模型 API key 失效，應安排重新登入與模型憑證更新。
+
 ## Linux x64 離線 sherpa 模型
 
 若公司環境無法讓 gateway 下載 sherpa-onnx 講者分離模型，可使用已發布的 Linux x64 模型 image。它是模型傳遞媒介，不會啟動 gateway：
@@ -69,7 +97,15 @@ Web 版驗證可使用本機 Docker Compose 的 MinIO、PostgreSQL 與 Milvus，
    gateway 啟動後再執行 `npm run storage:compensation:smoke`，驗證未提交 session 的音檔補償、已提交音檔保留與聲紋補償清理。
    `npm run storage:outage:smoke` 會暫停本機 Compose 的 MinIO 與 Milvus，再驗證音檔／聲紋補償保留與服務恢復後重試成功；不可對共享／正式服務執行。
    再啟動 gateway，以 Web 版登入兩個帳號驗證音檔、設定及聲紋資料隔離。
-   `storage:smoke` 仍是 fallback 測試，不要用它代替 Docker remote storage 連線驗證。結束後執行：
+   `storage:smoke` 仍是 fallback 測試，不要用它代替 Docker remote storage 連線驗證。
+
+   其他相關 smoke：
+
+   - `npm run storage:gateway:smoke`：用暫存 PostgreSQL 資料庫真的啟動一次 gateway，驗證 schema migration 與 auth bootstrap 不會互相競爭（舊版會讓 `/readyz` 回 503，並讓第一個 API 要求直接 crash）。建議在外部模式啟動前執行。
+   - `npm run storage:grace:smoke`：純本機、不需外部服務，回歸驗證「上傳後尚未提交的音檔不會被無關的 session 儲存刪除」。提交寬限期由 `S2T_STORAGE_COMPENSATION_GRACE_MS` 控制（預設 30 秒），過期後才會被補償佇列清除。
+   - `npm run storage:voiceprint-backup:smoke`：驗證聲紋快照包含 PostgreSQL metadata 與 Milvus embedding，刪除後可還原兩者。
+
+   gateway 啟動後可用 `curl http://127.0.0.1:5173/api/storage` 檢查（`5173` 是 `web:preview` 的 Vite proxy；直連 gateway 則用 `8787`）。fallback 會回傳三個 `local` adapter；外部模式回傳 `minio`、`postgres`、`milvus` 與 `001-core-storage`。瀏覽器重新整理後，設定頁的 Remote Storage 也會顯示實際 adapter 與 schema version。結束後執行：
 
     ```bash
     docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml \
@@ -117,6 +153,12 @@ user ID 存在才遷移；沒有 mapping 時仍維持跳過，不會猜測帳號
 - **Milvus**：依部署版本使用官方 backup 工具或 collection export；向量備份必須和 PostgreSQL 的聲紋 metadata 同一時間點保存。
 
 可用 `npm run storage:voiceprint-backup:smoke` 在本機 Docker 服務演練聲紋 metadata 與 embedding 的快照、刪除、還原及失敗補償。它會建立並移除隨機測試帳號與 collection，不可取代正式環境的全資料庫備份。
+
+## Web 常見問題
+
+- **登入出現 HTTP 404**：確認瀏覽器網址是 `http://127.0.0.1:5173/`，且 `web:serve`、`web:preview` 兩個程序都在執行。不要直接開 `8787`，也不要沿用先前 Vite 程序的 `4173`／`4174` 網址。
+- **顯示 `Origin is not allowed`**：預設只允許 `http://127.0.0.1:5173` 與 `http://localhost:5173`。若從自訂網域或 port 開啟，將完整 origin 加入 `.env` 的 `S2T_WEB_ORIGINS`（多個值以逗號分隔），再重啟 gateway。
+- **`5173` 無法開啟或 port 已被占用**：停止舊的 `vite preview` 程序後重新執行 `npm run web:preview`。此專案固定使用 `5173`，避免 proxy origin 與 gateway 設定不一致。
 
 ## 還原檢查
 

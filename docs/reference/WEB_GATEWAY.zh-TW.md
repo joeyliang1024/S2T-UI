@@ -1,6 +1,6 @@
 # Web ASR Gateway
 
-Web 版使用 Node.js BFF，避免將 ASR API key 暴露給瀏覽器。實作位於 [`server/index.cjs`](../server/index.cjs)。
+Web 版使用 Node.js BFF，避免將 ASR API key 暴露給瀏覽器。實作位於 [`server/index.cjs`](../../server/index.cjs)。
 
 ```text
 Browser microphone
@@ -50,12 +50,30 @@ Web 端對 `/api/transcriptions`、`/api/translations`、`/api/summaries`、`/ap
 | `S2T_ASR_API_KEY` | ASR key；只由 Electron Main 和 BFF 使用。 |
 | `S2T_ASR_ENDPOINT` | 完整 `/v1/audio/transcriptions` URL。 |
 | `S2T_ASR_MODEL` | 例如 `Breeze-ASR-25`。 |
+| `S2T_ASR_MODELS_JSON` | 選用，多個環境 ASR profile 的 JSON array。 |
+| `S2T_TRANSLATION_*`、`S2T_SUMMARY_*`、`S2T_DIARIZATION_*` | 各服務唯一的 endpoint、model、key 設定。 |
 | `S2T_WEB_PORT` | BFF port，預設 8787。 |
-| `S2T_WEB_ASR_*` | 可覆寫 Web 專用 endpoint、model、key、顯示名稱。 |
 | `S2T_WEB_ORIGINS` | 逗號分隔的額外允許 Web origin；同源部署自動允許。 |
 | `S2T_AUTH_SECRET` | 正式部署必填的長隨機登入／模型憑證加密根密鑰；本機未設定時會在 local data directory 生成受權限保護的值。 |
+| `S2T_LOG_LEVEL` | `debug` / `info`（預設）/ `warn` / `error` / `silent`。 |
+| `S2T_LOG_FORMAT` | `text`（預設，人可讀）或 `json`（每行一個 JSON 物件，供 K8s 查詢）。 |
 
 `VITE_*` 只能含可公開的顯示資訊，絕不可包含 API key。
+
+## 日誌
+
+Server 統一由 `server/logger.cjs` 輸出到 stdout，取代散落的 `console.log/error`。預設人可讀格式：
+
+```
+2026-10-01T10:12:31.381+08:00 INFO  gateway.started role=all pod=s2t-api-7d9c port=8787
+2026-10-01T10:12:35.244+08:00 WARN  model.unavailable reason="找不到 Silero VAD 模型"
+2026-10-01T10:12:40.952+08:00 INFO  http.request requestId=9f2c… method=POST path=/api/transcriptions status=200 durationMs=842
+```
+
+- 每行固定帶 `role`（`S2T_PROCESS_ROLE`）、`pod`（`HOSTNAME`）；在 HTTP request 內還會帶 `requestId`。
+- 每個 HTTP request 生成一個 UUID，回傳在 `x-request-id` response header，並沿用到 ASR、翻譯、storage 與從該請求排入的背景 job；同一 ID 可跨服務串起整條請求。
+- 分級：`info` 啟動／關閉、storage 連線、job 開始完成；`warn` 503、429、CAS conflict（409）、模型未就緒、queue 接近滿、登入失敗；`error` 未處理的 request 例外、worker crash、migration 失敗；`debug` 每個 request、ASR chunk、翻譯呼叫與 health probe，需 `S2T_LOG_LEVEL=debug` 才輸出。
+- 絕不印出 API key、Authorization、Cookie、密碼、音檔、逐字稿全文與 prompt 全文，敏感欄位一律以 `[redacted]` 或長度標記取代。
 
 ## 部署注意事項
 

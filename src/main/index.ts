@@ -1,11 +1,14 @@
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
-import { basename, isAbsolute, join, relative } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { spawn } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { createWriteStream, type WriteStream } from 'node:fs'
 import { copyFile, mkdir, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
 import OpenAI, { toFile } from 'openai'
 import { config as loadDotenv } from 'dotenv'
+import ffmpegPath from 'ffmpeg-static'
 
 loadDotenv({ path: join(process.cwd(), '.env') })
 
@@ -145,7 +148,7 @@ type StoredModelProfile = { id: string; name: string; endpoint: string; model: s
 type StoredModelConfig = {
   theme: 'system' | 'light' | 'dark'; uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
   translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryRequiresApiKey: boolean; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; diarizationRequiresApiKey: boolean; embeddingEndpoint: string; embeddingModel: string; embeddingRequiresApiKey: boolean; diarizationPreviewEnabled: boolean; denoiseEnabled: boolean; kaiserResampleEnabled: boolean; sileroVadEnabled: boolean; dynaudnormEnabled: boolean; glossary: string
-  vadConfig: { minSpeechMs: number; minSilenceMs: number; preRollMs: number; noiseFloorOffsetDb: number; chunkMinMs: number; chunkMaxMs: number }
+  responseSpeed: 'fast' | 'normal' | 'slow'
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
 const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
@@ -183,14 +186,13 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     const id = shortText(template.id, 100); const name = shortText(template.name, 100); const content = shortText(template.content, 20_000)
     return id && name && content ? [{ id, name, content }] : []
   }).slice(0, 50) : []
-  const vadInput = input.vadConfig && typeof input.vadConfig === 'object' ? input.vadConfig as Record<string, unknown> : {}
-  const boundedNumber = (value: unknown, fallback: number, minimum: number, maximum: number): number => typeof value === 'number' && Number.isFinite(value) ? Math.max(minimum, Math.min(maximum, value)) : fallback
+  const responseSpeed = input.responseSpeed === 'fast' || input.responseSpeed === 'slow' ? input.responseSpeed : 'normal'
   return {
     theme: input.theme === 'light' || input.theme === 'dark' ? input.theme : 'system', uiLanguage: input.uiLanguage === 'zh-CN' || input.uiLanguage === 'en' || input.uiLanguage === 'ja' || input.uiLanguage === 'de' ? input.uiLanguage : 'zh-TW', storageLocation: input.storageLocation === 'remote' ? 'remote' : 'local', sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' || input.translationLoadStrategy === 'throttled' ? input.translationLoadStrategy : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), translationProfiles, selectedTranslationModelId: shortText(input.selectedTranslationModelId, 100), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
     summaryModel: shortText(input.summaryModel, 200), summaryRequiresApiKey: input.summaryRequiresApiKey !== false, summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), diarizationRequiresApiKey: input.diarizationRequiresApiKey !== false, embeddingEndpoint: shortText(input.embeddingEndpoint, 2_000), embeddingModel: shortText(input.embeddingModel, 200), embeddingRequiresApiKey: input.embeddingRequiresApiKey !== false, diarizationPreviewEnabled: input.diarizationPreviewEnabled !== false, denoiseEnabled: input.denoiseEnabled !== false, kaiserResampleEnabled: input.kaiserResampleEnabled === true, sileroVadEnabled: input.sileroVadEnabled === true, dynaudnormEnabled: input.dynaudnormEnabled === true, glossary: shortText(input.glossary, 20_000),
-    vadConfig: { minSpeechMs: boundedNumber(vadInput.minSpeechMs, 120, 20, 1_000), minSilenceMs: boundedNumber(vadInput.minSilenceMs, 250, 100, 5_000), preRollMs: boundedNumber(vadInput.preRollMs, 300, 0, 1_000), noiseFloorOffsetDb: boundedNumber(vadInput.noiseFloorOffsetDb, 12, 3, 30), chunkMinMs: boundedNumber(vadInput.chunkMinMs, 700, 300, 3_000), chunkMaxMs: boundedNumber(vadInput.chunkMaxMs, 1_500, 800, 6_000) }
+    responseSpeed
   }
 }
 
@@ -465,35 +467,94 @@ app.whenReady().then(() => {
     await updateRecoveryManifest(recording.userId, (entries) => entries.filter((entry) => entry.id !== id))
   })
 
+// M4A export runs through the bundled ffmpeg build. The input and output are
+// staged as files so ffmpeg can rewrite the MP4 hint track (faststart) instead
+// of streaming to a non-seekable pipe.
+const transcodeToM4a = async (audio: Buffer): Promise<ArrayBuffer> => {
+  const binary = typeof ffmpegPath === 'string' && ffmpegPath ? ffmpegPath : null
+  if (!binary) throw new Error('缺少 ffmpeg-static，無法轉檔 M4A')
+  const inputPath = join(tmpdir(), `s2t-transcode-${randomUUID()}.wav`)
+  const outputPath = join(tmpdir(), `s2t-transcode-${randomUUID()}.m4a`)
+  await writeFile(inputPath, audio, { mode: 0o600 })
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn(binary, ['-hide_banner', '-loglevel', 'error', '-y', '-i', inputPath, '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', '-f', 'mp4', outputPath], { stdio: ['ignore', 'ignore', 'pipe'] })
+      let errorText = ''
+      child.stderr?.on('data', (chunk: Buffer) => { if (errorText.length < 4_000) errorText += chunk.toString('utf8') })
+      const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('M4A 轉檔逾時')) }, 180_000)
+      child.on('error', (error) => { clearTimeout(timer); reject(error) })
+      child.on('close', (code) => {
+        clearTimeout(timer)
+        if (code === 0) resolve()
+        else reject(new Error(`ffmpeg M4A 轉檔失敗：${errorText.trim().slice(0, 500) || `exit ${code}`}`))
+      })
+    })
+    const output = await readFile(outputPath)
+    return output.buffer.slice(output.byteOffset, output.byteOffset + output.byteLength)
+  } finally {
+    await rm(inputPath, { force: true })
+    await rm(outputPath, { force: true })
+  }
+}
+
   ipcMain.handle('session:save', async (event, input: {
-    name: string; audio?: ArrayBuffer; recordingPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[]
+    name: string; audio?: ArrayBuffer; recordingPath?: string; overwriteAudioPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[]
   }) => {
     const userId = requireDesktopUser(event)
-    const directory = join(accountSessionsDirectory(userId), `s2t-${randomUUID()}`)
-    await mkdir(directory, { recursive: true })
-    const audioPath = join(directory, 'audio.wav')
-    if (input.recordingPath && availableAudioPaths.get(input.recordingPath) === userId) {
-      await copyFile(input.recordingPath, audioPath)
-    } else if (input.audio) {
-      await writeFile(audioPath, Buffer.from(input.audio))
+    // Continuation rewrites the session's own audio file in place so a record
+    // keeps exactly one audio file instead of accumulating version copies. Only
+    // a real session directory qualifies; anything else (version copies, staged
+    // recordings) gets a fresh session directory with its own metadata.
+    const sessionsRoot = accountSessionsDirectory(userId)
+    const sessionAudioPath = (value: unknown): string | undefined => {
+      if (typeof value !== 'string' || basename(value) !== 'audio.wav' || availableAudioPaths.get(value) !== userId) return undefined
+      const directory = dirname(value)
+      return dirname(directory) === sessionsRoot && basename(directory).startsWith('s2t-') ? value : undefined
+    }
+    const overwrite = sessionAudioPath(input.overwriteAudioPath)
+    const usableRecordingPath = input.recordingPath && availableAudioPaths.get(input.recordingPath) === userId ? input.recordingPath : undefined
+    const directory = overwrite ? dirname(overwrite) : join(sessionsRoot, `s2t-${randomUUID()}`)
+    const audioPath = overwrite ?? join(directory, 'audio.wav')
+    if (!overwrite) await mkdir(directory, { recursive: true })
+    // Explicit bytes always win: a continuation hands over the merged file,
+    // while a fresh recording may only have its staged capture path.
+    if (input.audio) {
+      const temporary = `${audioPath}.${randomUUID()}.tmp`
+      await writeFile(temporary, Buffer.from(input.audio), { mode: 0o600 })
+      await rename(temporary, audioPath)
+    } else if (usableRecordingPath) {
+      await copyFile(usableRecordingPath, audioPath)
     } else {
       throw new Error('沒有可儲存的音訊資料')
     }
-    await writeFile(join(directory, 'transcript.txt'), input.transcript, 'utf8')
-    await writeFile(join(directory, 'transcript.jsonl'), input.segments.map((segment) => JSON.stringify(segment)).join('\n') + (input.segments.length ? '\n' : ''), 'utf8')
-    await writeFile(join(directory, 'events.jsonl'), '', 'utf8')
-    await writeFile(join(directory, 'session.json'), JSON.stringify({
-      version: 1, name: input.name, createdAt: input.createdAt, durationMs: input.durationMs,
-      source: input.source, summary: input.summary, audioFile: 'audio.wav', transcriptFile: 'transcript.jsonl'
-    }, null, 2), 'utf8')
-    if (input.recordingPath && completedRecordings.has(input.recordingPath)) {
-      await rm(input.recordingPath, { force: true })
-      completedRecordings.delete(input.recordingPath)
-      availableAudioPaths.delete(input.recordingPath)
-      await updateRecoveryManifest(userId, (entries) => entries.filter((entry) => entry.path !== input.recordingPath))
+    // Only session directories carry transcripts and metadata; version audio
+    // lives in a flat directory without a session.json. New directories always
+    // get the full set, an overwrite only refreshes a session it recognises.
+    const sessionDirectory = overwrite ? await readFile(join(directory, 'session.json'), 'utf8').then(() => true, () => false) : true
+    if (sessionDirectory) {      await writeFile(join(directory, 'transcript.txt'), input.transcript, 'utf8')
+      await writeFile(join(directory, 'transcript.jsonl'), input.segments.map((segment) => JSON.stringify(segment)).join('\n') + (input.segments.length ? '\n' : ''), 'utf8')
+      if (!overwrite) await writeFile(join(directory, 'events.jsonl'), '', 'utf8')
+      await writeFile(join(directory, 'session.json'), JSON.stringify({
+        version: 1, name: input.name, createdAt: input.createdAt, durationMs: input.durationMs,
+        source: input.source, summary: input.summary, audioFile: 'audio.wav', transcriptFile: 'transcript.jsonl'
+      }, null, 2), 'utf8')
+    }
+    // A staged capture becomes garbage once its bytes are stored, unless the
+    // store wrote back into that very file.
+    if (usableRecordingPath && usableRecordingPath !== audioPath && completedRecordings.has(usableRecordingPath)) {
+      await rm(usableRecordingPath, { force: true })
+      completedRecordings.delete(usableRecordingPath)
+      availableAudioPaths.delete(usableRecordingPath)
+      await updateRecoveryManifest(userId, (entries) => entries.filter((entry) => entry.path !== usableRecordingPath))
     }
     availableAudioPaths.set(audioPath, userId)
     return { canceled: false, audioPath, directory }
+  })
+
+  ipcMain.handle('audio:transcode', async (event, input: { audio: ArrayBuffer; target: string }) => {
+    requireDesktopUser(event)
+    if (!input || input.target !== 'm4a' || !(input.audio instanceof ArrayBuffer)) throw new Error('不支援的音訊轉檔格式')
+    return transcodeToM4a(Buffer.from(input.audio))
   })
 
   ipcMain.handle('audio:read', async (event, audioPath: string) => {

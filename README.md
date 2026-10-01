@@ -2,34 +2,32 @@
 
 以 Electron、TypeScript 與 Web gateway 建立的即時語音轉文字、雙語字幕、會議整理與錄音應用。支援 Web 與 Electron；Web 版透過 gateway 保護模型憑證與帳號隔離的 Storage。
 
-- [統一需求與改善清單（唯一待辦來源）](Enhancement.md)
-- [早期功能研究（歷史參考）](docs/PLAN.zh-TW.md)
+- **待辦與需求（唯一來源）**：[Enhancement.md](Enhancement.md)
+- **文件索引（四類分檔）**：[docs/README.md](docs/README.md)
 
-- [語音處理技術參考與自有模型整合方案](docs/OPEN_SOURCE_BACKENDS.zh-TW.md)
-- [自有模型接入契約](docs/MODEL_ADAPTER.md)
-- [Web ASR Gateway](docs/WEB_GATEWAY.zh-TW.md)
-- [部署與本機 Docker Compose 測試](docs/DEPLOYMENT.zh-TW.md)
-- [驗收手冊](docs/VALIDATION.zh-TW.md)
-- [sherpa-onnx 離線講者分離與模型安裝](docs/SHERPA_ONNX.zh-TW.md)
-
-目前已有麥克風與系統音訊收音、PCM16 WAV、HTTP ASR、翻譯、登入、歷史紀錄、摘要、模型及聲紋管理等功能路徑；逐字稿支援 TXT／VTT／JSON／CSV。實作不等於上線驗收，具體缺口與三項急迫需求以 [Enhancement.md](Enhancement.md) 為準。
-
-ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定。講者分離可選用本機 sherpa-onnx；Linux x64 環境可直接從 Docker Hub 取得離線模型包。
+ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；模型 key 只由 gateway 或 Electron 主程序持有，不進瀏覽器。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](Enhancement.md) 為準。
 
 ## 功能狀態
 
 | 範圍 | 可用功能 | 尚待真人／正式環境驗收 |
 | --- | --- | --- |
-| 即時收音 | 麥克風／系統音訊、VAD 與字幕切段滑桿、即時與整句翻譯策略 | 斷句延遲、不同裝置與長時間收音品質 |
+| 即時收音 | 麥克風／系統音訊、回應速度滑桿（快／正常／慢）、即時與整句翻譯策略 | 斷句延遲、不同裝置與長時間收音品質 |
 | 講者 | sherpa 分群、聲紋註冊／NT 比對、字幕講者手動編輯與 VTT 匯出 | 多人重疊、長會議與誤配率 |
 | 資料 | 登入隔離、歷史、搜尋、排序、複製、摘要模板、術語與 MinIO／PostgreSQL／Milvus | 正式外部 HTTPS 部署與故障情境 |
 | 介面 | 繁中、簡中、英文、日文、德文與深／淺／系統主題 | 全頁窄視窗、無障礙與視覺回歸 |
 
-完整範圍、未完成項目與驗收條件以 [Enhancement.md](Enhancement.md) 為準。
+## 文件導覽
 
-## Web 版啟動
+| 類別 | 文件 |
+| --- | --- |
+| 操作指南 `guide` | [部署、Storage 與遷移](docs/guide/DEPLOYMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)、[sherpa-onnx 安裝](docs/guide/SHERPA_ONNX.zh-TW.md)、[Silero VAD worker](docs/guide/SILERO_VAD.zh-TW.md)、[K8s 容量測試](docs/guide/CAPACITY_TEST.zh-TW.md) |
+| 契約與架構 `reference` | [程式目錄責任](docs/reference/ARCHITECTURE.zh-TW.md)、[模型接入契約](docs/reference/MODEL_ADAPTER.md)、[Web Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質與取樣率](docs/reference/AUDIO_QUALITY.zh-TW.md) |
+| 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md) |
+| 量測報告 `reports` | [字幕延遲調校（P95 ≤ 2.5 秒）](docs/reports/CAPTION_LATENCY.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md) |
 
-Web 版需要同時執行兩個本機程序：`web:serve` 是 gateway，負責登入、模型 key 與 Storage（預設 `8787`）；`web:preview` 是瀏覽器介面（固定 `5173`），並將 `/api` 轉送給 gateway。請從 [http://127.0.0.1:5173/](http://127.0.0.1:5173/) 開啟；`8787` 只提供 API，不是網頁頁面。
+研究類文件為歷史參考，不覆蓋 Enhancement.md 的決策。
+
+## 快速開始
 
 ### 1. 安裝與設定
 
@@ -38,133 +36,98 @@ npm install
 cp .env.example .env
 ```
 
-編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、
-`S2T_ASR_MODEL`。模型 key 只由 gateway 讀取，不會傳入瀏覽器。
+編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`（OpenAI 相容 Breeze ASR 的預設值已附在範例）。`.env` 會被忽略，不應提交到 Git。
 
-首次使用本機資料時，可使用預設登入帳號 `admin`／`admin`。正式環境務必在第一次啟動前設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
+首次使用本機資料可先以 `admin`／`admin` 登入；正式環境務必在第一次啟動前設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
 
-### 2. 選擇 Storage
-
-**本機 fallback（最適合快速驗收）**：`.env.example` 內有外部 Storage 的示範值；請把每一組 `S2T_MINIO_*`、`S2T_POSTGRES_*`、`S2T_MILVUS_*` 全部清空，並保留 `S2T_LOCAL_DATA_DIR=.s2t-data`。每組服務只能「全部設定」或「全部留空」，部分設定會讓 gateway 拒絕啟動。
-
-**外部 Storage**：請依下方「外部 Storage」章節啟動 Docker，並載入 `.env.local-storage`。此模式使用 MinIO 存音檔、PostgreSQL 存帳號／文字資料、Milvus 存聲紋向量。
-
-### 3. 建置並啟動
-
-在**終端 A**執行：
+### 2. Electron 桌面版
 
 ```bash
-npm run build
-npm run web:serve
+npm run dev
 ```
 
-在**終端 B**執行：
+首次啟動請允許麥克風權限。生產建置用 `npm run build`（不等於可安裝包，打包待辦見 Enhancement.md F04）。停止收音只會建立尚未保存的記錄，請在「記錄」頁按「保存工作階段」才選擇正式資料夾。自有模型整合入口在 `src/renderer/src/features/models/model-adapter.ts`，契約見 [MODEL_ADAPTER.md](docs/reference/MODEL_ADAPTER.md)。
+
+### 3. Web 版
+
+Web 版需要同時執行兩個本機程序：
 
 ```bash
+# 終端 A：gateway（登入、模型 key、Storage，預設 8787）
+npm run build
+npm run web:serve
+
+# 終端 B：瀏覽器介面（固定 5173，將 /api 轉送給 gateway）
 npm run web:preview
 ```
 
-然後開啟 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)。修改前端程式後，重新執行 `npm run build` 後再整理瀏覽器；修改 `server/` 或 `.env` 後，重新啟動 `npm run web:serve`。
+開啟 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)；`8787` 只提供 API，不是網頁頁面。Storage 可用本機 fallback（三組 MinIO／PostgreSQL／Milvus 變數全部留空）或 Docker 外部服務；Docker Compose 啟動、驗證 smoke、備份還原與 Web 常見問題（404／Origin／port）見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md)。
 
-可用下列指令確認 gateway 與 Storage：
+## 常用指令
 
-```bash
-curl http://127.0.0.1:5173/api/storage
-```
+| 類別 | 指令 |
+| --- | --- |
+| 開發與建置 | `npm run dev`（Electron）、`npm run build`、`npm run typecheck`、`npm run web:serve`、`npm run web:preview` |
+| 核心 smoke | `gateway:auth-smoke`、`import-checkpoint:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`i18n:smoke`、`vad:smoke`、`storage:smoke` |
+| Storage smoke | `storage:remote:smoke`、`storage:gateway:smoke`、`storage:compensation:smoke`、`storage:grace:smoke`、`storage:outage:smoke`、`storage:voiceprint-backup:smoke`、`storage:migrate:remote` |
+| 講者與聲紋 | `diarization:smoke`、`sherpa:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
+| 量測與評估 | `caption:eval`（字幕延遲）、`caption:reference`（產生標準答案 TSV）、`diarization:eval:timeline`、`capacity:gateway` |
 
-fallback 會回傳三個 `local` adapter；外部模式會回傳 `minio`、`postgres`、`milvus` 與 `001-core-storage`。
+完整清單在 `package.json` 的 `scripts`。
 
-開發驗證可依序執行：
+## 字幕延遲實測與回應速度設定
 
-```bash
-npm run typecheck
-npm run build
-npm run gateway:auth-smoke
-npm run import-checkpoint:smoke
-```
+目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。
 
-`gateway:auth-smoke` 會啟動暫時的 localhost gateway，驗證登入隔離、撤銷、模型 registry 與加密 key 不會由讀取 API 洩漏。`import-checkpoint:smoke` 驗證大檔 WAV checkpoint 只在檔案、模型、語言與術語設定完全相同時接續。
+### 回應速度三速（收音控制面板的單一滑桿）
 
-### Linux x64 離線 sherpa 模型
+| 速度 | minSilence | chunkMin | chunkMax | 延遲 p50 | 延遲 p95 | ≤2500ms | 逐句CER | 語料CER | 沒上屏 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **快** | 150 ms | 700 ms | 1200 ms | **760 ms** | 1759 ms* | 96.9% | 37.44% | 35.16% | 1/32 |
+| **正常（預設）** | 250 ms | 700 ms | 1500 ms | 1029 ms | **1701 ms** | **100%** | 38.63% | 35.01% | 0/32 |
+| **慢** | 800 ms | 1000 ms | 2400 ms | 1532 ms | 2760 ms† | 84.4% | **35.82%** | **28.88%** | 0/32 |
 
-公司網路無法由 gateway 下載聲紋模型時，可先在能存取 Docker Hub 的 Linux x64 主機取出模型，再放到 gateway 工作目錄。模型 image 僅用作離線交付，不包含 gateway 或應用程式：
+\* 該輪 ASR p95 681 ms（他輪 472–504 ms）的伺服器尖峰；快檔 chunk 等待實質低於正常檔，p50 為穩定差異。
+† 「慢」定位為犧牲延遲換準度，p95 超過 2.5 s 屬預期選擇。慢檔 minSilence 於 2026-10-01 由 500 調至 800：BGM 素材不觸發 VAD 句界、此表測值兩者相同；乾淨素材差異見下表。
 
-```bash
-docker pull joeyliang1024/s2t-sherpa-models:1.13.8
-docker create --name s2t-sherpa-models joeyliang1024/s2t-sherpa-models:1.13.8 /bin/sh
-mkdir -p ./models
-docker cp s2t-sherpa-models:/models/sherpa-onnx ./models/sherpa-onnx
-docker rm s2t-sherpa-models
-export S2T_SHERPA_MODELS_DIR="$(pwd)/models/sherpa-onnx"
-```
+### 選型證據（同素材各組對照）
 
-此 image 的目標平台為 `linux/amd64`。完整講者分離設定、模型檔結構與 API 請見 [sherpa-onnx 文件](docs/SHERPA_ONNX.zh-TW.md)。
+| 組合 | chunks | ASR p95 | 延遲 p50 | 延遲 p95 | ≤2500ms | 逐句CER | 語料CER | 字幕行 | 結論 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 舊預設 1000/2400/500（無 prompt） | 125 | 695 ms | 1485 ms | **2706 ms** | 84.4% | 39.07% | 34.64% | 32 | ❌ 不達標 |
+| 新切段 700/1500/250（無 prompt） | 200 | 491 ms | 1033 ms | 1669 ms | 96.9% | 41.14% | 39.07% | 31 | 準度下滑 |
+| ＋滾動上下文 prompt | 200 | 472 ms | 1029 ms | 1701 ms | **100%** | 38.63% | 35.01% | 30 | ✅ 採用（準度復原） |
+| ＋600 ms 重疊 anchor | 200 | 648 ms | 983 ms | 1735 ms | 96.9% | 44.98% | 42.54% | 30 | ❌ 反而變差 |
+| 16 kHz 上傳 | 200 | 504 ms | 1002 ms | 1860 ms | 96.9% | 40.84% | 38.85% | 31 | ❌ 無實測效益 |
+| 快首版 500/1000/150 | 300 | 504 ms | 656 ms | 1223 ms | 87.5% | 41.14% | 39.81% | 35 | ❌ 4 句空字幕沒上屏 |
+| 快 700/1200/150 | 250 | 681 ms | 760 ms | 1759 ms | 96.9% | 37.44% | 35.16% | 32 | ✅ 快檔 |
+| 慢 1000/2400/800（測於 500，BGM 同值）＋prompt | 125 | 759 ms | 1532 ms | 2760 ms | 84.4% | 35.82% | 28.88% | 32 | ✅ 慢檔（準度優先） |
 
-### Web 常見問題
+其他量測結論：滾動 prompt 與輸出清洗（清 `<|…|>`／`||`）已進產品碼；`minSilence/chunkMin` 在有背景音樂的素材上因 VAD 句界恆為 0 而不參與運算——第一輪的這項限制已由下節的無 BGM 素材補齊驗證。
 
-- **登入出現 HTTP 404**：確認瀏覽器網址是 `http://127.0.0.1:5173/`，且終端 A、B 都在執行。不要直接開 `8787`，也不要沿用先前 Vite 程序的 `4173`／`4174` 網址。
-- **顯示 `Origin is not allowed`**：預設只允許 `http://127.0.0.1:5173` 與 `http://localhost:5173`。若從自訂網域或 port 開啟，將完整 origin 加入 `.env` 的 `S2T_WEB_ORIGINS`（多個值以逗號分隔），例如 `S2T_WEB_ORIGINS=http://127.0.0.1:5173,http://localhost:5173,http://localhost:4173`，再重啟 gateway。
-- **`5173` 無法開啟或 port 已被占用**：停止舊的 `vite preview` 程序後重新執行 `npm run web:preview`。此專案固定使用 `5173`，避免 proxy origin 與 gateway 設定不一致。
+### 無 BGM 素材驗證（2026-10-01 第二輪）
 
-## 外部 Storage（MinIO、PostgreSQL、Milvus）
+以 22:36 無 BGM 旁白影片前 300 秒、18 段 Silero 參考做七組同場對照，補齊 `minSilence/chunkMin` 的實測：
 
-本機驗收可用 Docker Compose 啟動三個服務。先複製範例，再以實際本機測試密碼更新 `.env.local-storage`：
+| 觀察點 | 數據 | 結論 |
+| --- | --- | --- |
+| minSilence 決定天然句界能否觸發 | 句界數：150 ms → 8–13 個、500 ms → 2 個、250/350/800 ms → 0 | 旁白停頓多在 150–250 ms；實務素材多數走強制切段，**只有快檔保有主動句尾偵測** |
+| 快 chunkMin 700 → 500 | p50 1219 vs 1164 ms、語料CER 14.2% vs 14.0% | 無可測收益 → **維持 700** |
+| 慢 minSilence 500 → 800 | 語料CER 10.27% → **8.35%**（重跑兩次同值）、過早切斷 2 → 0 | ✅ **採用 800**；BGM 上句界恆 0，28.88% 不回歸 |
+| 正常 minSilence 250 → 350 | 兩者 chunk 流完全相同（200/200、語料CER 197/1616 分毫未差） | 穩定驗證通過 → **維持 250** |
+| 三速乾淨素材語料 CER 梯度 | 快 14.0% → 正常 12.2% → 慢 **8.35%** | 準度梯度與定位一致 |
 
-```bash
-cp .env.local-storage.example .env.local-storage
-docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml --profile milvus up -d
-npm run storage:remote:smoke
-```
+註：乾淨素材僅 18 段參考，p95／≤2500% 易被單次 ASR 尖峰主導（如首句 1489 ms），此節以 p50、語料 CER 與句界數為判讀依據。
 
-`storage:remote:smoke` 會實測 MinIO blob、兩個獨立程序的 PostgreSQL CAS、原子記錄更新、Milvus 向量搜尋與 diarization 重試退避，並在結束時清除隨機測試資料。接著執行 `npm run storage:gateway:smoke`，它會用暫存 PostgreSQL 資料庫真的啟動一次 gateway，驗證 schema migration 與 auth bootstrap 不會互相競爭（舊版會讓 `/readyz` 回 503，並讓第一個 API 要求直接 crash）。通過後，先停止目前 gateway，再以相同外部環境啟動它：
+## 專案結構
 
-```bash
-set -a
-source .env.local-storage
-set +a
-npm run web:serve
-```
+| 位置 | 內容 |
+| --- | --- |
+| `src/renderer/` | React UI：收音、字幕、翻譯、歷史、摘要、模型與聲紋管理 |
+| `src/main/`、`src/preload/` | Electron 主程序與 IPC 橋接 |
+| `server/` | Web gateway：登入、模型 key、Storage 與 ASR／翻譯代理 |
+| `scripts/` | smoke 測試與量測腳本（`package.json` 可見完整對應） |
+| `docs/` | 分類文件（[索引](docs/README.md)） |
+| `eval-reports/` | 量測原始數據（字幕延遲、聲紋、分離時間軸） |
 
-gateway 與外部服務都啟動後，可執行 `npm run storage:compensation:smoke`。它會建立臨時帳號，驗證上傳後未提交的音檔在「提交寬限期」（`S2T_STORAGE_COMPENSATION_GRACE_MS`，預設 30 秒）內不會被補償佇列誤刪、過期後仍可被「重試 Storage 補償」清除、已提交的音檔會保留，以及聲紋補償佇列可清空；結束時會刪除測試帳號與資料。純本機模式的 `npm run storage:grace:smoke` 不需任何外部服務，專門回歸驗證「上傳後尚未提交的音檔不會被無關的 session 儲存刪除」。
-
-`npm run storage:voiceprint-backup:smoke` 會驗證聲紋快照包含 PostgreSQL metadata 與 Milvus embedding，並在刪除後還原兩者及帳號下可見的聲紋清單；測試使用隨機帳號與 collection，結束時清除資料。
-
-若要驗證外部服務故障恢復，執行 `npm run storage:outage:smoke`。此測試會短暫停止本機 Docker 的 MinIO 與 Milvus，確認音檔／聲紋補償佇列保留，然後重新啟動服務並確認重試成功；請勿在使用中的共享環境執行。
-
-瀏覽器重新整理後，設定頁的 Remote Storage 會顯示實際 adapter 與 schema version。容器停止指令如下；加上 `-v` 才會刪除測試資料卷：
-
-```bash
-docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml --profile milvus down
-```
-
-## 從 fallback 遷移到外部 Storage
-
-先停止使用舊 `.s2t-data` 的 gateway，並確定 Docker 外部服務已啟動。遷移工具預設只盤點，不會寫入：
-
-```bash
-npm run storage:migrate:remote
-```
-
-確認輸出後才執行：
-
-```bash
-npm run storage:migrate:remote -- --apply
-```
-
-它只會搬移可由本機 `auth:account-*` 對應至帳號的設定、術語、音檔 blob、聲紋向量與 metadata。匿名／無帳號 scope 的資料會列在 `unowned` 並跳過，避免自動歸給錯誤使用者。確認某個舊 scope 的歸屬後，可明確設定 `S2T_MIGRATION_SCOPE_MAP_JSON` 為「舊 scope → 既有外部 user ID」的 JSON，例如 `{"old-scope":"external-user-id"}`；工具會先確認所有目標 user ID 存在，再採用這些 mapping。外部服務已有同 key 但內容不同時會列為衝突並保留原資料，不會覆蓋。若外部 gateway 已建立相同 username、NT、Department 但不同 user ID 的帳號，確認要沿用外部帳號密碼後，改用：
-
-```bash
-npm run storage:migrate:remote -- --apply --adopt-matching-users
-```
-
-這會把本機帳號資料改寫到既有外部帳號 ID 下，不會改動外部密碼。要遷移不同的本機資料目錄，設定 `S2T_MIGRATION_SOURCE_DIR`。
-
-每次 `--apply` 都會在來源資料夾建立 `migration-last-run.json`（權限僅限目前使用者），記錄開始／完成／失敗與盤點結果。若程序中斷，下一次執行會標示前次未完成；由於遷移不覆蓋不同內容的既有資料，可在先檢視 dry-run 後安全重跑。
-
-## Electron 開發
-
-安裝依賴後執行 `npm run dev` 啟動桌面程式，使用 `npm run build` 產生 production bundle。首次啟動請允許麥克風權限。
-
-自有模型整合入口在 `src/renderer/src/features/models/model-adapter.ts`。將 `NoopModelAdapter` 替換為符合 `ModelAdapter` 的適配器，即可接收每個 PCM 音訊分塊並回傳 partial／final 字幕事件。瀏覽器預覽會下載檔案；Electron 執行時則使用系統儲存對話框。
-
-OpenAI 相容 Breeze ASR 可使用環境變數：複製 `.env.example` 為 `.env`，填入 `S2T_ASR_API_KEY`；endpoint 與模型預設值已附在範例中。`.env` 會被忽略，不應提交到 Git。停止收音只會建立尚未保存的記錄，請在「記錄」頁按「保存工作階段」才選擇正式資料夾。
+目錄責任細節見[程式目錄與責任](docs/reference/ARCHITECTURE.zh-TW.md)。
