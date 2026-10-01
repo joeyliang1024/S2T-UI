@@ -2,10 +2,10 @@
 
 以 Electron、TypeScript 與 Web gateway 建立的即時語音轉文字、雙語字幕、會議整理與錄音應用。支援 Web 與 Electron；Web 版透過 gateway 保護模型憑證與帳號隔離的 Storage。
 
-- **待辦與需求（唯一來源）**：[Enhancement.md](Enhancement.md)
+- **待辦與需求（唯一來源）**：[Enhancement.md](docs/Enhancement.md)
 - **文件索引（四類分檔）**：[docs/README.md](docs/README.md)
 
-ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；模型 key 只由 gateway 或 Electron 主程序持有，不進瀏覽器。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](Enhancement.md) 為準。
+ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；模型 key 只由 gateway 或 Electron 主程序持有，不進瀏覽器。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](docs/Enhancement.md) 為準。
 
 ## 功能狀態
 
@@ -62,6 +62,22 @@ npm run web:preview
 ```
 
 開啟 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)；`8787` 只提供 API，不是網頁頁面。Storage 可用本機 fallback（三組 MinIO／PostgreSQL／Milvus 變數全部留空）或 Docker 外部服務；Docker Compose 啟動、驗證 smoke、備份還原與 Web 常見問題（404／Origin／port）見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md)。
+
+### 4. 公司 Nexus 的離線 Docker Web build
+
+`Dockerfile.web` 會從指定的內部 Nexus 安裝 npm 套件，並使用 repository 內封存的 SheetJS 與 Linux x64 `ffmpeg`，避免 package URL 或 install hook 直接連向公網。請在可連到公司 Nexus、但公網 egress 已封鎖的建置環境執行：
+
+```bash
+docker build -f Dockerfile.web \
+  --build-arg NPM_REGISTRY=https://nexus.example/repository/npm-group/ \
+  -t s2t-web:offline .
+```
+
+`node:22-bookworm-slim` base image 必須已在 Docker daemon 快取，或透過公司的 image mirror 可取得。封存檔版本、checksum 與更新方式見 [dependencies/README.md](dependencies/README.md)。
+
+### 5. Kubernetes 必要設定
+
+Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gateway Pod 注入同一個 `S2T_AUTH_SECRET`。這把密鑰用於 JWT 與帳號模型憑證加密；未設定時 readiness 會失敗。Secret 範例、Storage／模型掛載與完整部署注意事項見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md#kubernetes-的-s2t_auth_secret)。
 
 ## 常用指令
 
