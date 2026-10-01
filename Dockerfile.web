@@ -3,19 +3,34 @@
 # equivalent approved artifact volume in Kubernetes.
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
+ARG NPM_REGISTRY
+# `xlsx` is intentionally vendored because its upstream package declaration
+# normally points at cdn.sheetjs.com instead of the configured npm registry.
 COPY package.json package-lock.json ./
-RUN npm ci
+COPY dependencies/npm ./dependencies/npm
+# Do not run install hooks: Electron, ffmpeg-static, and onnxruntime-node can
+# download binaries from the public Internet. The web bundle does not need
+# those hooks; the runtime image supplies the one binary it needs below.
+RUN test -n "$NPM_REGISTRY" \
+    && npm ci --ignore-scripts --no-audit --no-fund \
+       --registry="$NPM_REGISTRY" --replace-registry-host=always
 COPY . .
 RUN npm run build
 
 FROM node:22-bookworm-slim
 WORKDIR /app
+ARG NPM_REGISTRY
 ENV NODE_ENV=production \
     S2T_WEB_PORT=8787 \
     S2T_SHERPA_MODELS_DIR=/models/sherpa-onnx \
     S2T_SILERO_VAD_MODEL=/models/silero-vad/silero_vad.onnx
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY dependencies/npm ./dependencies/npm
+COPY dependencies/ffmpeg-static/ffmpeg-linux-x64 /opt/s2t-dependencies/ffmpeg
+RUN test -n "$NPM_REGISTRY" \
+    && npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
+       --registry="$NPM_REGISTRY" --replace-registry-host=always \
+    && install -m 0755 /opt/s2t-dependencies/ffmpeg node_modules/ffmpeg-static/ffmpeg
 COPY --from=build /app/out ./out
 COPY server ./server
 EXPOSE 8787

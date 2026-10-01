@@ -21,6 +21,7 @@
     "storage:outage:smoke": "node scripts/storage-outage-recovery-smoke-test.cjs",
     "storage:voiceprint-backup:smoke": "node scripts/storage-voiceprint-backup-smoke-test.cjs",
     "transcript:export:smoke": "node scripts/transcript-export-smoke-test.cjs",
+    "transcript:download:smoke": "node scripts/transcript-download-smoke-test.cjs",
     "glossary:smoke": "node scripts/glossary-json-smoke-test.cjs",
     "model-adapter:smoke": "node scripts/model-adapter-smoke-test.cjs",
     "translation-policy:smoke": "node scripts/translation-policy-smoke-test.cjs",
@@ -32,6 +33,10 @@
     "silero:vad:smoke": "node scripts/silero-vad-smoke-test.cjs",
     "voiceprint:eval": "node scripts/eval-voiceprint.cjs",
     "voiceprint:eval:timeline": "node scripts/eval-voiceprint-timeline.cjs",
+    "diarization:eval:timeline": "node scripts/eval-diarization-timeline.cjs",
+    "diarization:eval:corpus": "node scripts/eval-diarization-corpus.cjs",
+    "diarization:rttm:tsv": "node scripts/rttm-to-tsv.cjs",
+    "diarization:mapping:selftest": "node scripts/eval-diarization-timeline.cjs --mapping-selftest",
     "vad:smoke": "node scripts/vad-smoke-test.cjs",
     "caption:eval": "node scripts/caption-latency-eval.cjs",
     "caption:reference": "node scripts/build-reference-tsv.cjs",
@@ -48,6 +53,7 @@
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "bcryptjs": "^3.0.3",
+    "docx": "^9.8.1",
     "dotenv": "^18.0.1",
     "ffmpeg-static": "^5.3.0",
     "jsonwebtoken": "^9.0.3",
@@ -57,7 +63,8 @@
     "pg": "^8.23.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "sherpa-onnx-node": "^1.13.8"
+    "sherpa-onnx-node": "^1.13.8",
+    "xlsx": "file:dependencies/npm/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@swc/core": "^1.13.5",
