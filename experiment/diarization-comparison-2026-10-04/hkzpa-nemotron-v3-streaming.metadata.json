@@ -1,0 +1,27 @@
+{
+  "id": "hkzpa",
+  "preset": "v3-streaming",
+  "elapsedMs": 116615.257209,
+  "returncode": 0,
+  "command": [
+    "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/nemo-runtime/nemo-speech-0.2.0-macos-aarch64-cpu/bin/nemo-speech",
+    "diarize",
+    "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/wav/audio/hkzpa.wav",
+    "--model",
+    "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/Nemotron-3-Diarization.q8_0.gguf",
+    "--backend",
+    "cpu",
+    "--preset",
+    "v3-streaming",
+    "--format",
+    "rttm",
+    "--recording-id",
+    "hkzpa",
+    "--output",
+    "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/outputs/diarization/hkzpa-nemotron-v3-streaming.rttm"
+  ],
+  "runtime": "NVIDIA official NeMo-Speech.cpp v0.2.0 macos-aarch64-cpu",
+  "model": "Nemotron 3 Diarization q8_0",
+  "audioEgress": false,
+  "pacedRealtime": false
+}

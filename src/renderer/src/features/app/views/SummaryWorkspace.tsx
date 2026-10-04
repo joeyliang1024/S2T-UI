@@ -49,7 +49,7 @@ export function SummaryWorkspace(props: Props): ReactElement {
     setTranslating(true)
     setTranslationError(null)
     void translateSummary(session, activeTarget)
-      .catch((error: unknown) => setTranslationError(error instanceof Error ? error.message : '摘要翻譯失敗'))
+      .catch((error: unknown) => setTranslationError(error instanceof Error ? error.message : ui('summaryTranslationFailed')))
       .finally(() => setTranslating(false))
   }
   const openTranslationTab = (): void => {
@@ -62,7 +62,7 @@ export function SummaryWorkspace(props: Props): ReactElement {
     if (session?.summary && session.summary !== '正在產生摘要…') {
       setTranslating(true)
       void translateSummary(session, value)
-        .catch((error: unknown) => setTranslationError(error instanceof Error ? error.message : '摘要翻譯失敗'))
+        .catch((error: unknown) => setTranslationError(error instanceof Error ? error.message : ui('summaryTranslationFailed')))
         .finally(() => setTranslating(false))
     }
   }

@@ -1,10 +1,11 @@
 const { existsSync, readFileSync, statSync } = require('node:fs')
 const { createHash } = require('node:crypto')
 const { join } = require('node:path')
+const { modelsRoot } = require('./model-paths.cjs')
 const { readWavSamples, resampleMono } = require('./sherpa-diarization.cjs')
 
 const defaultChecksum = '1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3'
-const modelPath = () => process.env.S2T_SILERO_VAD_MODEL || join(process.cwd(), 'models', 'silero-vad', 'silero_vad.onnx')
+const modelPath = () => process.env.S2T_SILERO_VAD_MODEL || join(modelsRoot(), 'silero-vad', 'silero_vad.onnx')
 let sessionPromise
 
 // Status validation reads and hashes the whole model file. Doing that on every

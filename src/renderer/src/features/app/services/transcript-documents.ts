@@ -2,6 +2,7 @@ import { Document, HeadingLevel, Packer, Paragraph, TextRun } from 'docx'
 import { utils, write } from 'xlsx'
 import { browserDownload } from '../../../shared/services/download'
 import { makeTranscriptCsv, makeVtt, timestamp } from '../../../shared/services/transcript'
+import { activeTranslate } from '../../../shared/i18n'
 import type { TranscriptEvent } from '../../models/model-adapter'
 
 export type TranscriptDownloadFormat = 'docx' | 'xlsx' | 'csv' | 'txt' | 'vtt'
@@ -19,7 +20,7 @@ const mimeTypes: Record<TranscriptDownloadFormat, string> = {
 
 /** Gap markers document missing audio rather than speech, so documents skip them. */
 const spokenSegments = (segments: TranscriptEvent[]): TranscriptEvent[] => segments.filter((segment) => segment.status !== 'gap')
-const speakerLabel = (segment: TranscriptEvent): string => segment.speaker?.trim() || '未標記講者'
+const speakerLabel = (segment: TranscriptEvent): string => segment.speaker?.trim() || activeTranslate('unassignedSpeaker')
 
 const plainText = (segments: TranscriptEvent[]): string => spokenSegments(segments)
   .map((segment) => `[${timestamp(segment.startMs)}] ${speakerLabel(segment)}：${segment.sourceText}${segment.translatedText ? `\n${segment.translatedText}` : ''}`)
@@ -42,12 +43,12 @@ const docxBlob = async (segments: TranscriptEvent[], title: string): Promise<Blo
 
 const sheetName = (title: string): string => {
   const cleaned = title.replace(/[\\/?*[\]:]/g, ' ').trim().slice(0, 31)
-  return cleaned || '逐字稿'
+  return cleaned || activeTranslate('transcriptFile')
 }
 
 const xlsxBlob = (segments: TranscriptEvent[], title: string): Blob => {
   const rows: Array<Array<string | number>> = [
-    ['時間', '開始 (ms)', '結束 (ms)', '講者', '原文', '翻譯'],
+    [activeTranslate('time'), activeTranslate('startMilliseconds'), activeTranslate('endMilliseconds'), activeTranslate('speaker'), activeTranslate('sourceText'), activeTranslate('translation')],
     ...spokenSegments(segments).map((segment) => [timestamp(segment.startMs), segment.startMs, segment.endMs, speakerLabel(segment), segment.sourceText, segment.translatedText ?? ''])
   ]
   const sheet = utils.aoa_to_sheet(rows)

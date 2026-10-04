@@ -178,11 +178,17 @@ class PostgresConfigStore {
       throw new Error('storage 資料更新衝突，請稍後重試')
     } finally { client.release() }
   }
+  // A re-enqueue is a fresh user intent (continuation and re-record reuse the
+  // same (user, session, audioKey) triple), so it must not inherit attempts
+  // burned by the previous run: otherwise a session that kept failing would
+  // arrive here already past diarizationJobMaxAttempts and be abandoned
+  // without ever running. The anti-thrash protections still apply, because a
+  // claim re-arms attempts and finishDiarizationJob backs off lease_until.
   async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
     await this.ready
     const result = await this.pool.query(`INSERT INTO s2t_diarization_jobs(id, user_id, session_id, audio_key, payload)
       VALUES($1, $2, $3, $4, $5::jsonb)
-      ON CONFLICT(user_id, session_id, audio_key) DO UPDATE SET payload = EXCLUDED.payload, state = 'queued', lease_owner = NULL, lease_until = NULL, error = NULL, updated_at = NOW()
+      ON CONFLICT(user_id, session_id, audio_key) DO UPDATE SET payload = EXCLUDED.payload, state = 'queued', attempts = 0, lease_owner = NULL, lease_until = NULL, error = NULL, updated_at = NOW()
       RETURNING id, state, attempts, created_at AS "createdAt", updated_at AS "updatedAt"`, [safePart(id, 'job id'), safePart(userId, 'user id'), safePart(sessionId, 'session id'), safePart(audioKey, 'audio key'), JSON.stringify(payload)])
     return result.rows[0]
   }
@@ -203,6 +209,12 @@ class PostgresConfigStore {
     await this.ready
     if (!Number.isSafeInteger(leaseGeneration) || leaseGeneration < 1) return false
     const result = await this.pool.query("SELECT 1 FROM s2t_diarization_jobs WHERE id = $1 AND state = 'running' AND lease_owner = $2 AND lease_generation = $3 AND lease_until > NOW()", [safePart(id, 'job id'), safePart(owner, 'job owner'), leaseGeneration])
+    return result.rowCount === 1
+  }
+  async renewDiarizationJob(id, owner, leaseGeneration) {
+    await this.ready
+    if (!Number.isSafeInteger(leaseGeneration) || leaseGeneration < 1) return false
+    const result = await this.pool.query("UPDATE s2t_diarization_jobs SET lease_until = NOW() + INTERVAL '5 minutes', updated_at = NOW() WHERE id = $1 AND state = 'running' AND lease_owner = $2 AND lease_generation = $3 AND lease_until > NOW()", [safePart(id, 'job id'), safePart(owner, 'job owner'), leaseGeneration])
     return result.rowCount === 1
   }
   async finishDiarizationJob(id, owner, leaseGeneration, error = null) {

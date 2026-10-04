@@ -3,6 +3,7 @@ import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
+import { createRequire } from 'node:module'
 import { createWriteStream, type WriteStream } from 'node:fs'
 import { copyFile, mkdir, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
@@ -302,14 +303,25 @@ app.whenReady().then(() => {
     if (!validSecretId(profileId)) return false
     return Boolean(environmentKey(profileId) || (await readSecrets(requireDesktopUser(event)))[profileId])
   })
-  ipcMain.handle('model:environment-models', () => {
+  ipcMain.handle('model:environment-models', async () => {
     const service = (kind: 'ASR' | 'TRANSLATION' | 'SUMMARY' | 'DIARIZATION') => {
       const endpoint = process.env[`S2T_${kind}_ENDPOINT`] || ''
       const model = process.env[`S2T_${kind}_MODEL`] || ''
       const apiKey = process.env[`S2T_${kind}_API_KEY`] || ''
+      if (kind === 'DIARIZATION' && !endpoint && ['nemotron-3-diarization', 'nvidia/Nemotron-3-Diarization'].includes(model)) {
+        return { endpoint: 's2t-local://diarization', model: 'nemotron-3-diarization', configured: true }
+      }
       return { endpoint, model, configured: Boolean(endpoint && model && (apiKey || kind === 'DIARIZATION')) }
     }
-    return { asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
+    let titleImage = ''
+    const imagePath = process.env.S2T_PRODUCT_TITLE_IMAGE?.trim() || ''
+    if (/^icon\/[A-Za-z0-9_./-]+\.png$/.test(imagePath) && !imagePath.split('/').includes('..')) {
+      try {
+        const image = await readFile(join(process.cwd(), imagePath))
+        if (image.length <= 2 * 1024 * 1024) titleImage = `data:image/png;base64,${image.toString('base64')}`
+      } catch { /* Keep the text title when an optional branding asset is missing. */ }
+    }
+    return { branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
   })
   ipcMain.handle('models:load-config', async (event) => {
     try { return JSON.parse(await readFile(modelConfigPath(requireDesktopUser(event)), 'utf8')) } catch { return null }
@@ -380,8 +392,23 @@ app.whenReady().then(() => {
     if (typeof requestId !== 'string') return
     textRequestControllers.get(`${event.sender.id}:${requestId}`)?.abort()
   })
-  ipcMain.handle('model:diarize', async (event, input: { endpoint: string; model: string; audio: ArrayBuffer }) => {
+  // `embeddings` asks the gateway for one voiceprint per diarization label, so
+  // the sliding-window stabilizer can hold a speaker's name across windows.
+  // Full-track passes never set it: they would pay the same cost over the whole
+  // recording for a signal only the preview reads.
+  ipcMain.handle('model:diarize', async (event, input: { endpoint: string; model: string; audio: ArrayBuffer; embeddings?: boolean }) => {
     if (!(input.audio instanceof ArrayBuffer) || !input.audio.byteLength || input.audio.byteLength > 500 * 1024 * 1024) throw new Error('無效的講者分離音檔')
+    if (input.endpoint === 's2t-local://diarization') {
+      requireDesktopUser(event)
+      if (process.env.S2T_DIARIZATION_ENDPOINT?.trim() || !['nemotron-3-diarization', 'nvidia/Nemotron-3-Diarization'].includes(process.env.S2T_DIARIZATION_MODEL?.trim() || '')) throw new Error('本機 Nemotron 未啟用')
+      // Load the installed gateway worker module; audio never leaves this machine.
+      const localRequire = createRequire(join(process.cwd(), 'package.json'))
+      const worker = localRequire(join(process.cwd(), 'server', 'sherpa-worker-pool.cjs'))
+      const audio = Buffer.from(input.audio)
+      const turns = await worker.diarizeWav(audio)
+      return { model: 'nemotron-3-diarization', runtime: 'cpu', speaker_capacity: 8, speaker_cache_frames: 528,
+        exclusive_diarization: turns, ...(input.embeddings ? { speaker_embeddings: await worker.extractSpeakerLabelEmbeddings(audio, turns) } : {}) }
+    }
     let endpoint: URL
     try { endpoint = new URL(input.endpoint) } catch { throw new Error('無效的講者分離 API 位址') }
     const isLoopbackSherpa = ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) && endpoint.pathname === '/api/diarizations'
@@ -392,8 +419,8 @@ app.whenReady().then(() => {
       form.set('model', input.model)
       form.set('file', new Blob([input.audio], { type: 'audio/wav' }), 'recording.wav')
       const response = await fetch(endpoint, isLoopbackSherpa
-        ? { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: Buffer.from(input.audio), signal: AbortSignal.timeout(120_000) }
-        : { method: 'POST', headers: { ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: form, signal: AbortSignal.timeout(120_000) })
+        ? { method: 'POST', headers: { 'content-type': 'audio/wav', ...(input.embeddings ? { 'x-s2t-speaker-embeddings': '1' } : {}) }, body: Buffer.from(input.audio), signal: AbortSignal.timeout(120_000) }
+        : { method: 'POST', headers: { ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}), ...(input.embeddings ? { 'x-s2t-speaker-embeddings': '1' } : {}) }, body: form, signal: AbortSignal.timeout(120_000) })
       const body = await response.text()
       let payload: unknown
       try { payload = JSON.parse(body) } catch { throw new Error(body.trim() ? `服務回傳非 JSON（HTTP ${response.status}）` : `服務沒有回傳資料（HTTP ${response.status}）`) }

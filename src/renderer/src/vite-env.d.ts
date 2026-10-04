@@ -2,6 +2,7 @@
 
 declare global {
   type EnvironmentModels = Partial<Record<'asr' | 'translation' | 'summary' | 'diarization', { endpoint: string; sourceEndpoint?: string; model: string; configured: boolean }>> & {
+    branding?: { titleImage: string }
     asrProfiles?: Array<{ id: string; name: string; endpoint: string; sourceEndpoint?: string; model: string; configured: boolean }>
   }
   interface Window {
@@ -17,7 +18,7 @@ declare global {
       transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => Promise<{ text: string; detectedLanguage?: 'zh-TW' | 'en-US' | 'ja-JP' | 'de-DE' }>
       completeText: (input: { requestId?: string; profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => Promise<{ text: string }>
       cancelCompleteText: (requestId: string) => Promise<void>
-      diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => Promise<unknown>
+      diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer; embeddings?: boolean }) => Promise<unknown>
       startPcmRecording: (sampleRate: number) => Promise<{ id: string }>
       appendPcm: (id: string, audio: ArrayBuffer) => Promise<{ bytesWritten: number }>
       finishPcmRecording: (id: string) => Promise<{ audioPath: string }>

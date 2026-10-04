@@ -1,0 +1,74 @@
+{
+  "sources": [
+    {
+      "id": "jcako",
+      "kind": "wav",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/wav/audio/jcako.wav",
+      "sha256": "a23d7cc9a8ce0551b0db0fe2a68664aa3c2a24a84de24c4accfef152b67e1039",
+      "bytes": 32471118,
+      "sampleRate": 16000,
+      "channels": 1,
+      "seconds": 1014.72
+    },
+    {
+      "id": "jcako",
+      "kind": "rttm",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/annotations/dev/jcako.rttm",
+      "sha256": "afce3267d174453c66899be7297ea6fc7cc78912ff64c48a19345f4ca7a07477",
+      "bytes": 13455
+    },
+    {
+      "id": "hkzpa",
+      "kind": "wav",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/wav/audio/hkzpa.wav",
+      "sha256": "d0b3926f1754b82937d7891c9426212a905a82612edb44b32a2b81e1a48a1df1",
+      "bytes": 30908996,
+      "sampleRate": 16000,
+      "channels": 1,
+      "seconds": 965.9036875
+    },
+    {
+      "id": "hkzpa",
+      "kind": "rttm",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/annotations/dev/hkzpa.rttm",
+      "sha256": "f622b5fecc3a11c0d15f110974da68a008bb7985caeb30e45d30f6a8eea86015",
+      "bytes": 3805
+    },
+    {
+      "id": "ldnro",
+      "kind": "wav",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/wav/audio/ldnro.wav",
+      "sha256": "af9ba2a9b142e03fbfa4b8226ef0f7a910960cd41901f41362946fc397a21bdd",
+      "bytes": 35114502,
+      "sampleRate": 16000,
+      "channels": 1,
+      "seconds": 1097.32575
+    },
+    {
+      "id": "ldnro",
+      "kind": "rttm",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/annotations/dev/ldnro.rttm",
+      "sha256": "5cb34d8dc1f16d8985b5cf00469bc33e6642ad6e1df52824f469594dc9272bc5",
+      "bytes": 5115
+    },
+    {
+      "id": "qouur",
+      "kind": "wav",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/wav/audio/qouur.wav",
+      "sha256": "1eaf38098e080bd00fed6dda2019e2e2bbabe3b7610c92f4999ec8deba0189b6",
+      "bytes": 33036366,
+      "sampleRate": 16000,
+      "channels": 1,
+      "seconds": 1032.384
+    },
+    {
+      "id": "qouur",
+      "kind": "rttm",
+      "path": "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/annotations/dev/qouur.rttm",
+      "sha256": "47141c0d10744ff35509b6f90049cc1dbc2d25a589a23c489050f5cef7333a66",
+      "bytes": 505
+    }
+  ],
+  "referenceVersionNote": "local VoxConverse annotation README says v0.3; hashes pin actual files used",
+  "originalFilesModified": false
+}

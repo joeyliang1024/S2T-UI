@@ -1,0 +1,1511 @@
+{
+  "date": "2026-10-04 Asia/Taipei",
+  "audioWindow": "00:00–05:00",
+  "referenceStatus": "Unverified machine draft, not human ground truth",
+  "sourceLanguage": "zh-TW",
+  "targetLanguage": "en",
+  "translationStrategy": "realtime; 220ms tick; production queue, concurrency 2",
+  "normalization": "Unicode NFKC → lowercase → macOS ICU Hant-Hans character map → Chinese/Arabic numerals → remove punctuation/whitespace; no synonym replacement",
+  "runs": [
+    {
+      "name": "full-fast-baseline",
+      "seconds": 300,
+      "tier": "fast",
+      "method": "baseline",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 13.76,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1129,
+        "p95": 1420,
+        "max": 1420
+      },
+      "chunkStartToText": {
+        "n": 252,
+        "p50": 1531,
+        "p95": 1761,
+        "max": 2622
+      },
+      "chunkEndToText": {
+        "n": 252,
+        "p50": 335,
+        "p95": 561,
+        "max": 1422
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 253,
+      "translationRequests": 252,
+      "rawFinalEvents": 252,
+      "gaps": 0,
+      "emptyRequests": 1,
+      "queueWait": {
+        "n": 253,
+        "p50": 4,
+        "p95": 6,
+        "max": 247
+      },
+      "requestTime": {
+        "n": 253,
+        "p50": 351,
+        "p95": 560,
+        "max": 1436
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 252,
+        "meanChars": 6.4,
+        "shortRowsUnder8": 176,
+        "shortPct": 69.8,
+        "meanRowsPerReferenceInterval": 14.666666666666666
+      },
+      "displayProjectionFragmentation": {
+        "rows": 37,
+        "meanChars": 43.4,
+        "shortRowsUnder8": 1,
+        "shortPct": 2.7,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 252,
+      "translationDiagnostics": {
+        "requests": 252,
+        "completed": 252,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 103126
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 253,
+        "completed": 253,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 94752,
+        "totalQueueWaitMs": 254
+      },
+      "errors": []
+    },
+    {
+      "name": "full-fast-overlap300",
+      "seconds": 300,
+      "tier": "fast",
+      "method": "overlap300",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 7.95,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1143,
+        "p95": 2097,
+        "max": 2097
+      },
+      "chunkStartToText": {
+        "n": 253,
+        "p50": 1540,
+        "p95": 1964,
+        "max": 3133
+      },
+      "chunkEndToText": {
+        "n": 253,
+        "p50": 340,
+        "p95": 764,
+        "max": 1933
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 253,
+      "translationRequests": 253,
+      "rawFinalEvents": 253,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 253,
+        "p50": 3,
+        "p95": 5,
+        "max": 758
+      },
+      "requestTime": {
+        "n": 253,
+        "p50": 352,
+        "p95": 544,
+        "max": 1946
+      },
+      "dedupDeletedChars": 2,
+      "currentFragmentation": {
+        "rows": 253,
+        "meanChars": 6.7,
+        "shortRowsUnder8": 160,
+        "shortPct": 63.2,
+        "meanRowsPerReferenceInterval": 14.722222222222221
+      },
+      "displayProjectionFragmentation": {
+        "rows": 37,
+        "meanChars": 46,
+        "shortRowsUnder8": 1,
+        "shortPct": 2.7,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 253,
+      "translationDiagnostics": {
+        "requests": 253,
+        "completed": 253,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 110327
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 253,
+        "completed": 253,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 99573,
+        "totalQueueWaitMs": 1709
+      },
+      "errors": []
+    },
+    {
+      "name": "full-normal-baseline-repeat",
+      "seconds": 300,
+      "tier": "normal",
+      "method": "baseline",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 12.44,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 989,
+        "p95": 2595,
+        "max": 2595
+      },
+      "chunkStartToText": {
+        "n": 200,
+        "p50": 1859,
+        "p95": 2036,
+        "max": 2987
+      },
+      "chunkEndToText": {
+        "n": 200,
+        "p50": 359,
+        "p95": 536,
+        "max": 1487
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 200,
+      "translationRequests": 200,
+      "rawFinalEvents": 200,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 200,
+        "p50": 2,
+        "p95": 4,
+        "max": 9
+      },
+      "requestTime": {
+        "n": 200,
+        "p50": 376,
+        "p95": 553,
+        "max": 1502
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 200,
+        "meanChars": 8,
+        "shortRowsUnder8": 80,
+        "shortPct": 40,
+        "meanRowsPerReferenceInterval": 11.88888888888889
+      },
+      "displayProjectionFragmentation": {
+        "rows": 34,
+        "meanChars": 47.3,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 200,
+      "translationDiagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 90850
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 80541,
+        "totalQueueWaitMs": 15
+      },
+      "errors": []
+    },
+    {
+      "name": "full-normal-baseline",
+      "seconds": 300,
+      "tier": "normal",
+      "method": "baseline",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 12.44,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 964,
+        "p95": 1951,
+        "max": 1951
+      },
+      "chunkStartToText": {
+        "n": 200,
+        "p50": 1846,
+        "p95": 2175,
+        "max": 3653
+      },
+      "chunkEndToText": {
+        "n": 200,
+        "p50": 346,
+        "p95": 675,
+        "max": 2153
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 200,
+      "translationRequests": 200,
+      "rawFinalEvents": 200,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 200,
+        "p50": 5,
+        "p95": 7,
+        "max": 678
+      },
+      "requestTime": {
+        "n": 200,
+        "p50": 361,
+        "p95": 681,
+        "max": 2165
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 200,
+        "meanChars": 8,
+        "shortRowsUnder8": 80,
+        "shortPct": 40,
+        "meanRowsPerReferenceInterval": 11.88888888888889
+      },
+      "displayProjectionFragmentation": {
+        "rows": 34,
+        "meanChars": 47.3,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 200,
+      "translationDiagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 91182
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 80312,
+        "totalQueueWaitMs": 696
+      },
+      "errors": []
+    },
+    {
+      "name": "full-normal-overlap300-repeat",
+      "seconds": 300,
+      "tier": "normal",
+      "method": "overlap300",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 8.43,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1144,
+        "p95": 2774,
+        "max": 2774
+      },
+      "chunkStartToText": {
+        "n": 200,
+        "p50": 1885,
+        "p95": 2164,
+        "max": 2986
+      },
+      "chunkEndToText": {
+        "n": 200,
+        "p50": 385,
+        "p95": 664,
+        "max": 1486
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 200,
+      "translationRequests": 200,
+      "rawFinalEvents": 200,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 200,
+        "p50": 2,
+        "p95": 5,
+        "max": 10
+      },
+      "requestTime": {
+        "n": 200,
+        "p50": 399,
+        "p95": 677,
+        "max": 1501
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 200,
+        "meanChars": 8.5,
+        "shortRowsUnder8": 64,
+        "shortPct": 32,
+        "meanRowsPerReferenceInterval": 11.88888888888889
+      },
+      "displayProjectionFragmentation": {
+        "rows": 34,
+        "meanChars": 50.2,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 200,
+      "translationDiagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 96871
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 85749,
+        "totalQueueWaitMs": 16
+      },
+      "errors": []
+    },
+    {
+      "name": "full-normal-overlap300",
+      "seconds": 300,
+      "tier": "normal",
+      "method": "overlap300",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 8.43,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1228,
+        "p95": 1741,
+        "max": 1741
+      },
+      "chunkStartToText": {
+        "n": 200,
+        "p50": 1871,
+        "p95": 2003,
+        "max": 3290
+      },
+      "chunkEndToText": {
+        "n": 200,
+        "p50": 371,
+        "p95": 503,
+        "max": 1790
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 200,
+      "translationRequests": 200,
+      "rawFinalEvents": 200,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 200,
+        "p50": 5,
+        "p95": 7,
+        "max": 316
+      },
+      "requestTime": {
+        "n": 200,
+        "p50": 382,
+        "p95": 512,
+        "max": 1799
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 200,
+        "meanChars": 8.5,
+        "shortRowsUnder8": 64,
+        "shortPct": 32,
+        "meanRowsPerReferenceInterval": 11.88888888888889
+      },
+      "displayProjectionFragmentation": {
+        "rows": 34,
+        "meanChars": 50.2,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 200,
+      "translationDiagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 97763
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 82113,
+        "totalQueueWaitMs": 317
+      },
+      "errors": []
+    },
+    {
+      "name": "full-normal-overlap600",
+      "seconds": 300,
+      "tier": "normal",
+      "method": "overlap600",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 8.25,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1137,
+        "p95": 2523,
+        "max": 2523
+      },
+      "chunkStartToText": {
+        "n": 200,
+        "p50": 1920,
+        "p95": 2145,
+        "max": 2967
+      },
+      "chunkEndToText": {
+        "n": 200,
+        "p50": 420,
+        "p95": 645,
+        "max": 1467
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 200,
+      "translationRequests": 200,
+      "rawFinalEvents": 200,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 200,
+        "p50": 4,
+        "p95": 6,
+        "max": 8
+      },
+      "requestTime": {
+        "n": 200,
+        "p50": 432,
+        "p95": 659,
+        "max": 1479
+      },
+      "dedupDeletedChars": 26,
+      "currentFragmentation": {
+        "rows": 200,
+        "meanChars": 8.6,
+        "shortRowsUnder8": 63,
+        "shortPct": 31.5,
+        "meanRowsPerReferenceInterval": 11.88888888888889
+      },
+      "displayProjectionFragmentation": {
+        "rows": 34,
+        "meanChars": 50.7,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 200,
+      "translationDiagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 97396
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 91366,
+        "totalQueueWaitMs": 6
+      },
+      "errors": []
+    },
+    {
+      "name": "full-normal-terms",
+      "seconds": 300,
+      "tier": "normal",
+      "method": "terms",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 13.82,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1067,
+        "p95": 2145,
+        "max": 2145
+      },
+      "chunkStartToText": {
+        "n": 200,
+        "p50": 1863,
+        "p95": 2296,
+        "max": 3671
+      },
+      "chunkEndToText": {
+        "n": 200,
+        "p50": 363,
+        "p95": 796,
+        "max": 2171
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 200,
+      "translationRequests": 200,
+      "rawFinalEvents": 200,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 200,
+        "p50": 4,
+        "p95": 6,
+        "max": 694
+      },
+      "requestTime": {
+        "n": 200,
+        "p50": 375,
+        "p95": 752,
+        "max": 2186
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 200,
+        "meanChars": 7.8,
+        "shortRowsUnder8": 90,
+        "shortPct": 45,
+        "meanRowsPerReferenceInterval": 11.88888888888889
+      },
+      "displayProjectionFragmentation": {
+        "rows": 34,
+        "meanChars": 45.9,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.8333333333333335
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 200,
+      "translationDiagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 101423
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 200,
+        "completed": 200,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 2,
+        "totalRequestMs": 85996,
+        "totalQueueWaitMs": 1152
+      },
+      "errors": []
+    },
+    {
+      "name": "full-slow-baseline",
+      "seconds": 300,
+      "tier": "slow",
+      "method": "baseline",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 8.49,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1567,
+        "p95": 2784,
+        "max": 2784
+      },
+      "chunkStartToText": {
+        "n": 125,
+        "p50": 2906,
+        "p95": 3073,
+        "max": 3840
+      },
+      "chunkEndToText": {
+        "n": 125,
+        "p50": 506,
+        "p95": 673,
+        "max": 1440
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 125,
+      "translationRequests": 125,
+      "rawFinalEvents": 125,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 125,
+        "p50": 6,
+        "p95": 8,
+        "max": 33
+      },
+      "requestTime": {
+        "n": 125,
+        "p50": 518,
+        "p95": 685,
+        "max": 1453
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 125,
+        "meanChars": 13.1,
+        "shortRowsUnder8": 2,
+        "shortPct": 1.6,
+        "meanRowsPerReferenceInterval": 7.833333333333333
+      },
+      "displayProjectionFragmentation": {
+        "rows": 32,
+        "meanChars": 51.1,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.7222222222222223
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 125,
+      "translationDiagnostics": {
+        "requests": 125,
+        "completed": 125,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 73025
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 125,
+        "completed": 125,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 67810,
+        "totalQueueWaitMs": 4
+      },
+      "errors": []
+    },
+    {
+      "name": "full-slow-overlap300",
+      "seconds": 300,
+      "tier": "slow",
+      "method": "overlap300",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 18,
+      "referenceChars": 1672,
+      "referenceDifferencePct": 4.84,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 18,
+        "p50": 1683,
+        "p95": 2906,
+        "max": 2906
+      },
+      "chunkStartToText": {
+        "n": 125,
+        "p50": 2930,
+        "p95": 3142,
+        "max": 3563
+      },
+      "chunkEndToText": {
+        "n": 125,
+        "p50": 530,
+        "p95": 742,
+        "max": 1163
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 125,
+      "translationRequests": 125,
+      "rawFinalEvents": 125,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 125,
+        "p50": 5,
+        "p95": 7,
+        "max": 9
+      },
+      "requestTime": {
+        "n": 125,
+        "p50": 539,
+        "p95": 750,
+        "max": 1173
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 125,
+        "meanChars": 13.5,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 7.833333333333333
+      },
+      "displayProjectionFragmentation": {
+        "rows": 32,
+        "meanChars": 52.8,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 2.7222222222222223
+      },
+      "tailLastAudioEndMs": 300000,
+      "translationsCompleted": 125,
+      "translationDiagnostics": {
+        "requests": 125,
+        "completed": 125,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 74434
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 125,
+        "completed": 125,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 69572,
+        "totalQueueWaitMs": 6
+      },
+      "errors": []
+    },
+    {
+      "name": "screen-baseline",
+      "seconds": 60,
+      "tier": "normal",
+      "method": "baseline",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 2,
+      "referenceChars": 230,
+      "referenceDifferencePct": 10.87,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 2,
+        "p50": 1424,
+        "p95": 2404,
+        "max": 2404
+      },
+      "chunkStartToText": {
+        "n": 40,
+        "p50": 1878,
+        "p95": 2000,
+        "max": 2628
+      },
+      "chunkEndToText": {
+        "n": 40,
+        "p50": 378,
+        "p95": 500,
+        "max": 1128
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 40,
+      "translationRequests": 40,
+      "rawFinalEvents": 40,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 40,
+        "p50": 5,
+        "p95": 6,
+        "max": 7
+      },
+      "requestTime": {
+        "n": 40,
+        "p50": 394,
+        "p95": 515,
+        "max": 1139
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 40,
+        "meanChars": 7.8,
+        "shortRowsUnder8": 16,
+        "shortPct": 40,
+        "meanRowsPerReferenceInterval": 15.5
+      },
+      "displayProjectionFragmentation": {
+        "rows": 7,
+        "meanChars": 44.3,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "tailLastAudioEndMs": 60000,
+      "translationsCompleted": 40,
+      "translationDiagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 2,
+        "totalRequestMs": 18378
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 16772,
+        "totalQueueWaitMs": 2
+      },
+      "errors": []
+    },
+    {
+      "name": "screen-context180",
+      "seconds": 60,
+      "tier": "normal",
+      "method": "context180",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 2,
+      "referenceChars": 230,
+      "referenceDifferencePct": 15.65,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 2,
+        "p50": 1360,
+        "p95": 1947,
+        "max": 1947
+      },
+      "chunkStartToText": {
+        "n": 40,
+        "p50": 1858,
+        "p95": 2039,
+        "max": 2171
+      },
+      "chunkEndToText": {
+        "n": 40,
+        "p50": 358,
+        "p95": 539,
+        "max": 671
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 40,
+      "translationRequests": 40,
+      "rawFinalEvents": 40,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 40,
+        "p50": 5,
+        "p95": 8,
+        "max": 9
+      },
+      "requestTime": {
+        "n": 40,
+        "p50": 371,
+        "p95": 553,
+        "max": 674
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 40,
+        "meanChars": 7.5,
+        "shortRowsUnder8": 19,
+        "shortPct": 47.5,
+        "meanRowsPerReferenceInterval": 15.5
+      },
+      "displayProjectionFragmentation": {
+        "rows": 7,
+        "meanChars": 43,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "tailLastAudioEndMs": 60000,
+      "translationsCompleted": 40,
+      "translationDiagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 15955
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 15429,
+        "totalQueueWaitMs": 3
+      },
+      "errors": []
+    },
+    {
+      "name": "screen-localAgreement-v3",
+      "seconds": 60,
+      "tier": "normal",
+      "method": "localAgreement",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 2,
+      "referenceChars": 230,
+      "referenceDifferencePct": 6.96,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 2,
+        "p50": 1820,
+        "p95": 2042,
+        "max": 2042
+      },
+      "chunkStartToText": {
+        "n": 7,
+        "p50": 10501,
+        "p95": 10606,
+        "max": 10606
+      },
+      "chunkEndToText": {
+        "n": 7,
+        "p50": 1501,
+        "p95": 1606,
+        "max": 1606
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 40,
+      "translationRequests": 0,
+      "rawFinalEvents": 7,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "max": null
+      },
+      "requestTime": {
+        "n": 40,
+        "p50": 833,
+        "p95": 1453,
+        "max": 1604
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 7,
+        "meanChars": 45.1,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "displayProjectionFragmentation": {
+        "rows": 7,
+        "meanChars": 45.1,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "tailLastAudioEndMs": 60000,
+      "translationsCompleted": 0,
+      "translationDiagnostics": null,
+      "integrity": {
+        "stableConflicts": 6
+      },
+      "diagnostics": {
+        "note": "Client approximation; no model attention or word timestamps"
+      },
+      "errors": [],
+      "previewUpdateLatencyFromStepStart": {
+        "n": 40,
+        "p50": 2333,
+        "p95": 2953,
+        "max": 3105
+      },
+      "previewRevisions": 5,
+      "revisedChars": 33,
+      "stableConflicts": 6
+    },
+    {
+      "name": "screen-overlap300",
+      "seconds": 60,
+      "tier": "normal",
+      "method": "overlap300",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 2,
+      "referenceChars": 230,
+      "referenceDifferencePct": 8.7,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 2,
+        "p50": 1356,
+        "p95": 1651,
+        "max": 1651
+      },
+      "chunkStartToText": {
+        "n": 40,
+        "p50": 1873,
+        "p95": 2040,
+        "max": 2715
+      },
+      "chunkEndToText": {
+        "n": 40,
+        "p50": 373,
+        "p95": 540,
+        "max": 1215
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 40,
+      "translationRequests": 40,
+      "rawFinalEvents": 40,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 40,
+        "p50": 5,
+        "p95": 6,
+        "max": 7
+      },
+      "requestTime": {
+        "n": 40,
+        "p50": 386,
+        "p95": 551,
+        "max": 1226
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 40,
+        "meanChars": 8.1,
+        "shortRowsUnder8": 14,
+        "shortPct": 35,
+        "meanRowsPerReferenceInterval": 15.5
+      },
+      "displayProjectionFragmentation": {
+        "rows": 7,
+        "meanChars": 46.3,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "tailLastAudioEndMs": 60000,
+      "translationsCompleted": 40,
+      "translationDiagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 16589
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 16697,
+        "totalQueueWaitMs": 1
+      },
+      "errors": []
+    },
+    {
+      "name": "screen-overlap600",
+      "seconds": 60,
+      "tier": "normal",
+      "method": "overlap600",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 2,
+      "referenceChars": 230,
+      "referenceDifferencePct": 8.26,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 2,
+        "p50": 1387,
+        "p95": 1647,
+        "max": 1647
+      },
+      "chunkStartToText": {
+        "n": 40,
+        "p50": 1881,
+        "p95": 1988,
+        "max": 2652
+      },
+      "chunkEndToText": {
+        "n": 40,
+        "p50": 381,
+        "p95": 488,
+        "max": 1152
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 40,
+      "translationRequests": 40,
+      "rawFinalEvents": 40,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 40,
+        "p50": 2,
+        "p95": 6,
+        "max": 7
+      },
+      "requestTime": {
+        "n": 40,
+        "p50": 395,
+        "p95": 497,
+        "max": 1161
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 40,
+        "meanChars": 8.1,
+        "shortRowsUnder8": 16,
+        "shortPct": 40,
+        "meanRowsPerReferenceInterval": 15.5
+      },
+      "displayProjectionFragmentation": {
+        "rows": 7,
+        "meanChars": 46,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "tailLastAudioEndMs": 60000,
+      "translationsCompleted": 40,
+      "translationDiagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 18698
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 16766,
+        "totalQueueWaitMs": 2
+      },
+      "errors": []
+    },
+    {
+      "name": "screen-terms",
+      "seconds": 60,
+      "tier": "normal",
+      "method": "terms",
+      "referenceKind": "unverified machine draft; NOT CER",
+      "referenceIntervals": 2,
+      "referenceChars": 230,
+      "referenceDifferencePct": 12.17,
+      "firstTextLatencyFromReferenceOnset": {
+        "n": 2,
+        "p50": 1361,
+        "p95": 1672,
+        "max": 1672
+      },
+      "chunkStartToText": {
+        "n": 40,
+        "p50": 1839,
+        "p95": 1936,
+        "max": 2513
+      },
+      "chunkEndToText": {
+        "n": 40,
+        "p50": 339,
+        "p95": 436,
+        "max": 1013
+      },
+      "intervalsWithNoOverlappingText": 0,
+      "asrRequests": 40,
+      "translationRequests": 40,
+      "rawFinalEvents": 40,
+      "gaps": 0,
+      "emptyRequests": 0,
+      "queueWait": {
+        "n": 40,
+        "p50": 5,
+        "p95": 6,
+        "max": 7
+      },
+      "requestTime": {
+        "n": 40,
+        "p50": 354,
+        "p95": 449,
+        "max": 1025
+      },
+      "dedupDeletedChars": 0,
+      "currentFragmentation": {
+        "rows": 40,
+        "meanChars": 7.6,
+        "shortRowsUnder8": 17,
+        "shortPct": 42.5,
+        "meanRowsPerReferenceInterval": 15.5
+      },
+      "displayProjectionFragmentation": {
+        "rows": 7,
+        "meanChars": 43.3,
+        "shortRowsUnder8": 0,
+        "shortPct": 0,
+        "meanRowsPerReferenceInterval": 3
+      },
+      "tailLastAudioEndMs": 60000,
+      "translationsCompleted": 40,
+      "translationDiagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "failedAttempts": 0,
+        "rateLimited": 0,
+        "staleResults": 0,
+        "peakConcurrent": 1,
+        "totalRequestMs": 18316
+      },
+      "integrity": {
+        "translationLoss": 0,
+        "sourceLengthLoss": 0,
+        "drained": true,
+        "inFlight": 0,
+        "asrInFlight": 0,
+        "projectionSourcePreserved": true
+      },
+      "diagnostics": {
+        "requests": 40,
+        "completed": 40,
+        "rateLimited": 0,
+        "gaps": 0,
+        "inFlight": 0,
+        "maximumQueued": 1,
+        "totalRequestMs": 15075,
+        "totalQueueWaitMs": 4
+      },
+      "errors": []
+    }
+  ],
+  "integrity": {
+    "passed": true,
+    "checks": [
+      "in-flight translation blocks canonical merge",
+      "presentation can group in-flight sources",
+      "completed translations survive projection",
+      "second translation appends without clearing first",
+      "natural boundary preserved",
+      "large pause starts new group",
+      "tail translation drains",
+      "no detached active requests",
+      "source projection preserves all characters",
+      "projection does not mutate canonical entries"
+    ]
+  },
+  "probe": {
+    "at": "2026-10-03T15:54:07.147Z",
+    "audioSeconds": 300,
+    "services": {
+      "ASR": {
+        "host": "submissions-enter-audit-workstation.trycloudflare.com",
+        "path": "/v1/audio/transcriptions",
+        "model": "Breeze-ASR-25",
+        "status": 200,
+        "responseKeys": [
+          "text"
+        ],
+        "ok": true,
+        "elapsedMs": 950,
+        "sample": "嘿大家好我是許惠協今天要跟大家分享的是這本書尼克馬"
+      },
+      "TRANSLATION": {
+        "host": "penetration-garcia-wise-usual.trycloudflare.com",
+        "path": "/v1/chat/completions",
+        "model": "HY-MT1.5-1.8B",
+        "status": 200,
+        "responseKeys": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "choices",
+          "service_tier",
+          "system_fingerprint",
+          "usage",
+          "prompt_logprobs",
+          "kv_transfer_params"
+        ],
+        "ok": true,
+        "elapsedMs": 670,
+        "sample": "Hello everyone, today we are going to share about the ladder of wealth."
+      }
+    },
+    "profiles": []
+  }
+}

@@ -1,0 +1,125 @@
+[
+  {
+    "index": 0,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/native.cjs",
+      "jcako",
+      "full",
+      "0.8"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 195.219177208
+  },
+  {
+    "index": 1,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/native.cjs",
+      "jcako",
+      "preview"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 265.826314458
+  },
+  {
+    "index": 2,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/embed.cjs",
+      "ldnro"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 8.947628375000022
+  },
+  {
+    "index": 3,
+    "command": [
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/metric-venv/bin/python",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/spectral.py",
+      "ldnro"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 0.1503034170000319
+  },
+  {
+    "index": 4,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/embed.cjs",
+      "jcako"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 16.237995624999996
+  },
+  {
+    "index": 5,
+    "command": [
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/metric-venv/bin/python",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/spectral.py",
+      "jcako"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 0.08981024999997089
+  },
+  {
+    "index": 6,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/native.cjs",
+      "hkzpa",
+      "full",
+      "0.8"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 198.42141362500007
+  },
+  {
+    "index": 7,
+    "command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/nemotron-run.py",
+      "hkzpa",
+      "ldnro"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 274.08975691700005
+  },
+  {
+    "index": 8,
+    "command": [
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/metric-venv/bin/python",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/paced-native.py"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 60.85074154200004
+  },
+  {
+    "index": 9,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/compare.cjs"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 0.6842705830000568
+  },
+  {
+    "index": 10,
+    "command": [
+      "node",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/score-final.cjs"
+    ],
+    "returncode": 0,
+    "elapsedSeconds": 0.19492795799999385
+  },
+  {
+    "index": 11,
+    "command": [
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/metric-venv/bin/python",
+      "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/verify-metrics.py"
+    ],
+    "returncode": 1,
+    "elapsedSeconds": 1.0501769170000443,
+    "resolution": "Initial crosscheck failed on duplicated same-label overlapping tracks; normalized each label by interval union and official crosscheck passed all 35 hypotheses. See metric-crosscheck.json."
+  }
+]

@@ -1,0 +1,92 @@
+{
+  "global": {
+    "truthSpeakers": 3,
+    "predictedSpeakers": 4,
+    "DER": 22.92,
+    "missPct": 2.54,
+    "falseAlarmPct": 7.62,
+    "confusionPct": 12.76,
+    "purityPct": 94.09,
+    "referenceSpeakerSeconds": 3632.6400000000067,
+    "mapping": {
+      "speaker_1": "spk01",
+      "speaker_3": "spk00",
+      "speaker_4": "spk02"
+    }
+  },
+  "perCopy": [
+    {
+      "copy": 1,
+      "startSec": 0,
+      "endSec": 1014.72,
+      "truthSpeakers": 3,
+      "predictedSpeakers": 3,
+      "DER": 9.16,
+      "missPct": 0.59,
+      "falseAlarmPct": 8.29,
+      "confusionPct": 0.28,
+      "purityPct": 93.6,
+      "referenceSpeakerSeconds": 908.1600000000004,
+      "mapping": {
+        "speaker_1": "spk01",
+        "speaker_2": "spk02",
+        "speaker_3": "spk00"
+      }
+    },
+    {
+      "copy": 2,
+      "startSec": 1019.72,
+      "endSec": 2034.44,
+      "truthSpeakers": 3,
+      "predictedSpeakers": 4,
+      "DER": 19.48,
+      "missPct": 2.52,
+      "falseAlarmPct": 7.5,
+      "confusionPct": 9.46,
+      "purityPct": 94.14,
+      "referenceSpeakerSeconds": 908.159999999999,
+      "mapping": {
+        "speaker_1": "spk01",
+        "speaker_3": "spk00",
+        "speaker_4": "spk02"
+      }
+    },
+    {
+      "copy": 3,
+      "startSec": 2039.44,
+      "endSec": 3054.16,
+      "truthSpeakers": 3,
+      "predictedSpeakers": 4,
+      "DER": 12.58,
+      "missPct": 1.68,
+      "falseAlarmPct": 7.51,
+      "confusionPct": 3.39,
+      "purityPct": 94.25,
+      "referenceSpeakerSeconds": 908.1600000000035,
+      "mapping": {
+        "speaker_1": "spk01",
+        "speaker_3": "spk00",
+        "speaker_4": "spk02"
+      }
+    },
+    {
+      "copy": 4,
+      "startSec": 3059.16,
+      "endSec": 4073.88,
+      "truthSpeakers": 3,
+      "predictedSpeakers": 4,
+      "DER": 17.52,
+      "missPct": 5.38,
+      "falseAlarmPct": 7.17,
+      "confusionPct": 4.97,
+      "purityPct": 94.41,
+      "referenceSpeakerSeconds": 908.1600000000035,
+      "mapping": {
+        "speaker_1": "spk01",
+        "speaker_4": "spk02",
+        "speaker_3": "spk00"
+      }
+    }
+  ],
+  "note": "Each copy uses its own oracle optimal label mapping ONLY for diagnosis; cannot be used as a deployment correction"
+}

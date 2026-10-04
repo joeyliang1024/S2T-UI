@@ -1,6 +1,6 @@
 # 文件索引
 
-S2T-UI 文件依用途分四類；待辦與需求狀態只看 [../Enhancement.md](../Enhancement.md)，本目錄文件提供操作、契約與量測證據。
+S2T-UI 文件依用途分四類；待辦與需求狀態只看 [Enhancement.md](Enhancement.md)，本目錄文件提供操作、契約與量測證據。
 
 ## guide — 上手與操作
 
@@ -34,5 +34,12 @@ S2T-UI 文件依用途分四類；待辦與需求狀態只看 [../Enhancement.md
 
 | 文件 | 內容 |
 | --- | --- |
+| [CAPTION_COMPARISON_2026-10-04.zh-TW.md](reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md) | 五分鐘旁白獨立比較：顯示分組、上下文、LocalAgreement、音訊重疊；三檔延遲、核對案例與未校對參考限制 |
 | [CAPTION_LATENCY.zh-TW.md](reports/CAPTION_LATENCY.zh-TW.md) | 即時字幕延遲調校（P95 ≤ 2.5 秒）：方法、三速實測與淘汰依據 |
 | [VOICEPRINT_ACCURACY.zh-TW.md](reports/VOICEPRINT_ACCURACY.zh-TW.md) | 聲紋辨識準確率量測與改善計畫 |
+
+- [環境變數與模型設定](guide/ENVIRONMENT.zh-TW.md)：共用模型根目錄、舊覆寫相容、模型服務選擇與 worker 參數範圍。
+
+- [背景處理生命週期檢查](research/SESSION_LIFECYCLE.zh-TW.md)
+
+- [講者標註第一階段修正與驗證](reports/SPEAKER_LABEL_FIX_2026-10-04.zh-TW.md)

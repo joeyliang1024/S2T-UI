@@ -6,7 +6,9 @@ Web gateway 的 Silero VAD 不在 HTTP 主執行緒執行。它跑在**互動池
 S2T_SHERPA_FAST_WORKERS=1
 S2T_SHERPA_WORKERS=1
 S2T_SHERPA_MAX_QUEUE=8
-S2T_SILERO_VAD_MODEL=/models/silero-vad/silero_vad.onnx
+S2T_MODELS_DIR=/models
+# Optional per-file override:
+# S2T_SILERO_VAD_MODEL=/models/silero-vad/silero_vad.onnx
 S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3
 ```
 
@@ -22,7 +24,7 @@ S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d
 - `/api/audio-processing/silero-vad` 永遠回 `speech: []`；
 - 聲紋的逐塊門檻 `S2T_VOICEPRINT_VAD=1` 會把所有區塊（含正常語音）全部否決。
 
-回歸測試：`npm run silero:vad:smoke`（真實語音 fixture 必須被判為語音、靜音必須不是），素材在 `scripts/fixtures/speech-sample.wav`。
+回歸測試：`npm run silero:vad:smoke`（真實語音 fixture 必須被判為語音、靜音必須不是），素材在 `tests/fixtures/speech-sample.wav`。
 
 ## 錄音層否決（聲紋標註，預設開）
 

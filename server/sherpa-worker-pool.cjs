@@ -1,6 +1,7 @@
 const { Worker } = require('node:worker_threads')
 const { join } = require('node:path')
 const { modelPaths } = require('./sherpa-diarization.cjs')
+const { localModelName } = require('./local-diarization.cjs')
 const { logger } = require('./logger.cjs')
 
 const positiveInteger = (value, fallback) => {
@@ -381,9 +382,11 @@ module.exports = {
   sherpaWorkerPool,
   assessVoiceprintSample: (audio) => interactive('assessVoiceprintSample', { audio }),
   extractSpeakerEmbedding: (audio) => interactive('extractSpeakerEmbedding', { audio }),
-  // Both calls below see the same recording inside one request: retain it once.
+  // The calls below see the same recording inside one request: retain it once.
   extractDiarizedSpeakerBlocks: (audio, segments) => heavyPool.execute('extractSpeakerBlocks', { audio, segments }, { retainAudio: true }),
-  diarizeWav: (audio) => heavyPool.execute('diarizeWav', { audio, segments: [] }, { retainAudio: true }),
+  extractSpeakerLabelEmbeddings: (audio, segments) => heavyPool.execute('speakerLabelEmbeddings', { audio, segments }, { retainAudio: true }),
+  diarizeWav: (audio) => heavyPool.execute('diarizeWav', { audio, backend: localModelName(), segments: [] }, { retainAudio: true }),
+  nemotronStatus: () => heavyPool.execute('nemotronStatus', {}, { timeoutMs: 10000 }),
   analyzeSileroVad: (audio, options) => interactive('sileroVad', { audio, options }),
   sileroVadStatus: () => interactivePool.execute('sileroStatus', {}, { priority: 'interactive', timeoutMs: 10_000 }),
   warmSileroVad: () => interactivePool.execute('sileroWarmup', {}, { priority: 'interactive', timeoutMs: 10_000 }),

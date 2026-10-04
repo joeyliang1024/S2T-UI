@@ -54,7 +54,7 @@ docker create --name s2t-sherpa-models joeyliang1024/s2t-sherpa-models:1.13.8 /b
 mkdir -p ./models
 docker cp s2t-sherpa-models:/models/sherpa-onnx ./models/sherpa-onnx
 docker rm s2t-sherpa-models
-export S2T_SHERPA_MODELS_DIR="$(pwd)/models/sherpa-onnx"
+export S2T_MODELS_DIR="$(pwd)/models"
 ```
 
 標籤 `1.13.8` 與 `latest` 都是 `linux/amd64`。先以固定版本部署；驗收或升級完成後才更新標籤。模型路徑與講者分離 API 設定請見 [sherpa-onnx 操作文件](SHERPA_ONNX.zh-TW.md)。

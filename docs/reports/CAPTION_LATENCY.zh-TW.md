@@ -10,7 +10,7 @@
 
 ## 評測方法
 
-評測腳本 `scripts/caption-latency-eval.cjs`（`npm run caption:eval`）：
+評測腳本 `scripts/evaluation/caption-latency-eval.cjs`（`npm run caption:eval`）：
 
 1. 用 esbuild 把**真實的 renderer 模組**（`EnergyVad` + `OpenAiChunkedModelAdapter`）打包進 Node，跑的與 App 同一份切段、排隊、合併程式碼。
 2. 音訊以 20 ms 批次**依真實收音節奏**推送（不加速，排隊行為才與生產一致）。
@@ -25,7 +25,7 @@
 | 素材 | 標準答案來源 | 規模 |
 | --- | --- | --- |
 | 歌曲《梁山伯與茱麗葉》 | 人工句級 TSV | 40 句 |
-| 對話影片（what'sub） | `scripts/build-reference-tsv.cjs` 自動產生 | 61 段 |
+| 對話影片（what'sub） | `scripts/audio/build-reference-tsv.cjs` 自動產生 | 61 段 |
 | 旁白影片（財富階梯，第二輪） | 同上（`--min-silence 250`） | 18 段 |
 
 自動產生方式（`npm run caption:reference`）：**Silero VAD**（`models/silero-vad/`，與被評測的 EnergyVad 是不同模型、互相獨立）偵測語音區間得到句級起訖，再把每個區間**整段**送 ASR（完整上下文、不經切段）取得參考文字。
@@ -170,11 +170,11 @@
 | 翻譯排程策略 | 通過 | `npm run translation-policy:smoke` |
 | VAD | 通過 | `npm run vad:smoke` |
 | 新路徑（重疊 WAV／16k）可執行性 | 通過 | 60 s 煙霧跑（準度數字僅供路徑驗證） |
-| 最終配置端到端確認跑（產品碼滾動 prompt 路徑，對話前 300 s） | **p50 1053 ms / p95 1714 ms / ≤2500 ms 100% / 逐句CER 38.63% / 語料CER 35.01% / 30 行**（與 wave1 的 newctx 吻合） | `npm run caption:eval -- --preset new --max-seconds 300`（`eval-reports/caption-latency-new-300s.json`） |
+| 最終配置端到端確認跑（產品碼滾動 prompt 路徑，對話前 300 s） | **p50 1053 ms / p95 1714 ms / ≤2500 ms 100% / 逐句CER 38.63% / 語料CER 35.01% / 30 行**（與 wave1 的 newctx 吻合） | `npm run caption:eval -- --preset new --max-seconds 300`（`experiment/evaluation-reports/caption-latency-new-300s.json`） |
 | 三速實測（快/快首版/慢） | 通過，數值見「回應速度三速」表 | `npm run caption:eval -- --preset fast,fastv2,slow --max-seconds 300` |
 | 第二輪調校矩陣（BGM 六組同場＋無 BGM 九組＋慢檔重跑） | 通過，數值見「第二輪調校矩陣」兩節 | `--preset fast1000,fast1100,fastv2,new,slow,slow3000`（BGM）、`--preset fast1000,fastMin500,fastv2,new,cn350,slow,cs800` 與 `--preset fast500x,cs800`（無 BGM） |
 | 慢檔 `minSilence` 500→800 改動回歸 | 通過 | `npm run typecheck` ＋ `vad:smoke`／`i18n:smoke`／`model-adapter:smoke` |
-| 滑桿改版回歸（型別、i18n 五語系、adapter 含滾動 prompt 合約、storage、translation-policy、production build） | 通過 | `npm run typecheck` ＋ `node scripts/*-smoke-test.cjs` ＋ `npm run build` |
+| 滑桿改版回歸（型別、i18n 五語系、adapter 含滾動 prompt 合約、storage、translation-policy、production build） | 通過 | `npm run typecheck` ＋ `node tests/smoke/*-smoke-test.cjs` ＋ `npm run build` |
 
 ## 已知限制與後續
 
@@ -197,4 +197,4 @@ npm run caption:eval -- --audio "music/xxx.mp3" --tsv "music/xxx_句級Speaker�
   --max-seconds 300 --preset old,new
 ```
 
-報告 JSON 存於 `eval-reports/`。
+報告 JSON 存於 `experiment/evaluation-reports/`。

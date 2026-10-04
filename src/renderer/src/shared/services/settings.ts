@@ -1,5 +1,5 @@
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
-import { supportedUiLanguages } from '../i18n'
+import { activeTranslate, supportedUiLanguages } from '../i18n'
 import { normalizeResponseSpeed } from '../../features/capture/vad'
 
 export const modelEndpoint = (endpoint: string, kind: ModelProfile['kind']): string => {
@@ -25,7 +25,7 @@ export const defaultWebSocketCapabilities: ModelCapabilities = { asrMode: 'strea
 
 export const defaultHttpCapabilities: ModelCapabilities = { asrMode: 'non-streaming', vadSource: 'app', timestampPrecision: 'chunk' }
 
-export const defaultModelProfile: ModelProfile = { id: 'none', name: '未連接模型', endpoint: '', model: '', kind: 'websocket', capabilities: defaultWebSocketCapabilities }
+export const defaultModelProfile: ModelProfile = { id: 'none', name: activeTranslate('svcModelNotConnected'), endpoint: '', model: '', kind: 'websocket', capabilities: defaultWebSocketCapabilities }
 
 export const defaultSummaryTemplate = '# 會議摘要\n\n## 重點\n\n## 決策\n\n## 待辦事項\n'
 
@@ -33,18 +33,19 @@ export const supportedSourceLanguages = ['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-
 export const supportedTargetLanguages = ['zh-TW', 'en', 'ja', 'de'] as const
 export const supportedTranslationTargetLanguages = ['auto', ...supportedTargetLanguages] as const
 
-export const languageName = (value: string): string => ({ auto: '自動偵測', 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', 'en-US': '英文', en: '英文', 'ja-JP': '日文', ja: '日文', 'de-DE': '德文', de: '德文' }[value] ?? value)
+const languageNameKeys = { auto: 'svcLanguageAuto', 'zh-TW': 'svcLanguageTraditionalChinese', 'zh-CN': 'svcLanguageSimplifiedChinese', 'en-US': 'svcLanguageEnglish', en: 'svcLanguageEnglish', 'ja-JP': 'svcLanguageJapanese', ja: 'svcLanguageJapanese', 'de-DE': 'svcLanguageGerman', de: 'svcLanguageGerman' } as const
+export const languageName = (value: string): string => (value in languageNameKeys ? activeTranslate(languageNameKeys[value as keyof typeof languageNameKeys]) : value)
 
 /** OpenAI-compatible ASR detects the source language when this value is absent. */
 export const asrLanguage = (value: string): string => ({ 'zh-TW': 'zh', 'en-US': 'en', 'ja-JP': 'ja', 'de-DE': 'de' }[value] ?? '')
 
 export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => {
   const fallbackTranslationProfile: TextModelProfile[] = value.translationEndpoint && value.translationModel
-    ? [{ id: 'translation-default', name: `${value.translationModel}（翻譯）`, endpoint: value.translationEndpoint, model: value.translationModel }]
+    ? [{ id: 'translation-default', name: activeTranslate('svcTranslationProfileName').replace('{model}', value.translationModel), endpoint: value.translationEndpoint, model: value.translationModel }]
     : []
   const translationProfiles = value.translationProfiles?.length ? value.translationProfiles.map((profile) => ({ ...profile, requiresApiKey: profile.requiresApiKey !== false })) : fallbackTranslationProfile
   const summaryTemplates: SummaryTemplate[] = value.summaryTemplates?.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.name.trim() && template.content.trim() ? [{ id: template.id.slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000) }] : []) ?? []
-  const templates = summaryTemplates.length ? summaryTemplates : [{ id: 'default-summary', name: '會議摘要', content: value.summaryTemplate?.trim() || defaultSummaryTemplate }]
+  const templates = summaryTemplates.length ? summaryTemplates : [{ id: 'default-summary', name: activeTranslate('summaryTitle'), content: value.summaryTemplate?.trim() || defaultSummaryTemplate }]
   const selectedSummaryTemplateId = templates.some((template) => template.id === value.selectedSummaryTemplateId) ? value.selectedSummaryTemplateId! : templates[0].id
   const selectedSummaryTemplate = templates.find((template) => template.id === selectedSummaryTemplateId)!
   return {

@@ -1,5 +1,6 @@
 const { existsSync } = require('node:fs')
 const { join } = require('node:path')
+const { modelsRoot } = require('./model-paths.cjs')
 const { logger } = require('./logger.cjs')
 
 // This module deliberately has no Python or ffmpeg dependency. sherpa-onnx
@@ -52,7 +53,7 @@ const assessVoiceprintSample = (audio) => {
 }
 
 const modelPaths = () => {
-  const root = process.env.S2T_SHERPA_MODELS_DIR || join(process.cwd(), 'models', 'sherpa-onnx')
+  const root = process.env.S2T_SHERPA_MODELS_DIR || join(modelsRoot(), 'sherpa-onnx')
   return {
     segmentation: process.env.S2T_SHERPA_SEGMENTATION_MODEL || join(root, 'sherpa-onnx-pyannote-segmentation-3-0', 'model.int8.onnx'),
     embedding: process.env.S2T_SHERPA_EMBEDDING_MODEL || join(root, '3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx')
@@ -111,6 +112,22 @@ const clusteringThresholdFor = (audioSeconds) => {
 
 const clusteringConfigFor = (audioSeconds) => ({ numClusters: 0, threshold: clusteringThresholdFor(audioSeconds) })
 
+/**
+ * Sherpa's speaker-segmentation post-processing drops runs shorter than
+ * `minDurationOn` and bridges gaps shorter than `minDurationOff`. It is read
+ * only when the diarizer is constructed: the JS wrapper's `setConfig()`
+ * forwards the key without throwing but the native side only honours
+ * `clustering`, so this is a restart-only knob (measured on an 827 s narration:
+ * 185 segments / 41 speakers → 88 segments / 26 speakers, sub-second segments
+ * 64 → 0). Defaults are sherpa's own.
+ */
+const durationGateSeconds = (name, fallback) => {
+  const raw = process.env[name]
+  if (raw === undefined || raw.trim() === '') return fallback
+  const value = Number(raw)
+  return Number.isFinite(value) && value >= 0 && value <= 10 ? value : fallback
+}
+
 const getDiarizer = () => {
   if (diarizer) return diarizer
   const paths = modelPaths()
@@ -121,7 +138,9 @@ const getDiarizer = () => {
   diarizer = new sherpa.OfflineSpeakerDiarization({
     segmentation: { pyannote: { model: paths.segmentation }, numThreads: inferThreads(), provider: 'cpu' },
     embedding: { model: paths.embedding, numThreads: inferThreads(), provider: 'cpu' },
-    clustering: clusteringConfigFor(0), minDurationOn: 0.25, minDurationOff: 0.35
+    clustering: clusteringConfigFor(0),
+    minDurationOn: durationGateSeconds('S2T_SHERPA_MIN_DURATION_ON', 0.25),
+    minDurationOff: durationGateSeconds('S2T_SHERPA_MIN_DURATION_OFF', 0.35)
   })
   return diarizer
 }
@@ -153,6 +172,49 @@ const extractEmbeddingFromWave = (wave) => {
 }
 
 const extractSpeakerEmbedding = (audio) => extractEmbeddingFromWave(readWavSamples(audio))
+
+/**
+ * One embedding per diarization label, for the preview's label stabilizer.
+ * `diarizeWav` only reports *which* label each turn carries, so when two
+ * speakers' captions and temporal overlap agree on different answers there is
+ * nothing left to break the tie — this supplies that signal (VOICEPRINT_ACCURACY
+ * §12.8: 5x cosine gated at 0.7).
+ *
+ * The window is what bounds the cost: measured RTF 0.022, i.e. ~0.9 s added to
+ * a 45 s preview tick that already spends 5.6 s on diarization. Labels too short
+ * to embed fall back to captions plus overlap, which is what they had before.
+ */
+const extractSpeakerLabelEmbeddings = (audio, segments) => {
+  const wave = readWavSamples(audio)
+  const { sampleRate } = wave
+  const groups = new Map()
+  for (const segment of segments) {
+    if (!segment || typeof segment.speaker !== 'string' || !segment.speaker.trim()) continue
+    const start = Math.max(0, Number(segment.start))
+    const end = Math.min(wave.samples.length / sampleRate, Number(segment.end))
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue
+    const from = Math.floor(start * sampleRate)
+    const to = Math.min(wave.samples.length, Math.ceil(end * sampleRate))
+    if (to <= from) continue
+    const parts = groups.get(segment.speaker) || []
+    parts.push(wave.samples.subarray(from, to))
+    groups.set(segment.speaker, parts)
+  }
+  const output = {}
+  for (const [speaker, parts] of groups) {
+    const joined = new Float32Array(parts.reduce((sum, part) => sum + part.length, 0))
+    let cursor = 0
+    for (const part of parts) { joined.set(part, cursor); cursor += part.length }
+    if (joined.length < sampleRate) continue // under 1 s never reaches the model
+    try {
+      output[speaker] = extractEmbeddingFromWave({ samples: joined, sampleRate })
+    } catch {
+      // Too little clean speech to embed. The stabilizer already has captions
+      // and overlap for this label; a throw here must not fail the window.
+    }
+  }
+  return output
+}
 
 // Empty-but-present variables must not collapse to 0: `Number('')` is 0 and is
 // finite, which would silently bypass the fallback (and did, for the clustering
@@ -370,4 +432,4 @@ const diarizeWav = (audio) => {
   return instance.process(samples).map((segment) => ({ start: segment.start, end: segment.end, speaker: `SPEAKER_${String(segment.speaker).padStart(2, '0')}` }))
 }
 
-module.exports = { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording, clusteringThresholdFor }
+module.exports = { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording, clusteringThresholdFor }

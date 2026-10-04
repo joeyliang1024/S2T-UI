@@ -10,3 +10,12 @@ dist
 .s2t-data
 tmp
 music
+# Local weights/runtimes and experiments are mounted, never baked into images.
+models
+experiment
+.npmrc
+dependencies/ffmpeg-static/*
+!dependencies/ffmpeg-static/ffmpeg-linux-x64
+!dependencies/ffmpeg-static/ffmpeg-linux-arm64
+!dependencies/ffmpeg-static/*.LICENSE
+!dependencies/ffmpeg-static/*.README

@@ -22,13 +22,13 @@ export const resolveTranslationTarget = (source: TranslationSourceLanguage | und
 export const shouldSkipTranslation = (source: TranslationSourceLanguage | undefined, target: string): boolean =>
   Boolean(source && (source === target || (source === 'en-US' && target === 'en') || (source === 'ja-JP' && target === 'ja') || (source === 'de-DE' && target === 'de')))
 
-export const canMergeHttpCaption = (previous: TranscriptEvent | undefined, next: TranscriptEvent, clearedThroughMs: number): boolean =>
+export const canMergeHttpCaption = (previous: TranscriptEvent | undefined, next: TranscriptEvent, clearedThroughMs: number, previousIsTranslating = false): boolean =>
   Boolean(next.id.startsWith('http-') && previous?.id.startsWith('http-') &&
   previous.status === 'final' && next.status === 'final' &&
   // Never replace a completed translation with a longer, untranslated merge.
   // Continuing speech will start a new caption which can be translated on its
   // own, so bilingual output remains stable during long utterances.
-  !previous.translatedText && !previous.translationStatus &&
+  !previousIsTranslating && !previous.translatedText && !previous.translationStatus &&
   previous.endMs > clearedThroughMs && !previous.isSentenceBoundary &&
   next.startMs - previous.endMs < 900 && next.endMs - previous.startMs < 12_000)
 

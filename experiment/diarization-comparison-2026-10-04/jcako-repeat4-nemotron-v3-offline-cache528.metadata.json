@@ -1,0 +1,11 @@
+{
+  "id": "jcako-repeat4",
+  "preset": "v3-offline",
+  "spkcache_frames": 528,
+  "baselineSpkcacheFrames": 264,
+  "elapsedMs": 75003.65212513134,
+  "returncode": 0,
+  "api": "official C ABI, native stream, unpaced full-file push",
+  "pacedRealtime": false,
+  "audioEgress": false
+}

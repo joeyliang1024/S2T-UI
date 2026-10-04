@@ -1,0 +1,2181 @@
+{
+  "id": "jcako",
+  "seconds": 60,
+  "pacedRealtime": true,
+  "frameInputMs": 20,
+  "modelLoadMs": 21.38229226693511,
+  "firstFrameOutputWallMs": 1164.8120409809053,
+  "nativeFrameCadenceSeconds": 0.009999999776482582,
+  "pushCallP50Ms": 0.6342297419905663,
+  "pushCallP95Ms": 0.8163004647940397,
+  "pushCallMaxMs": 166.2600003182888,
+  "feedLatenessP95Ms": 76.21910750586665,
+  "labelledAudioLagP50Ms": 253.5555548965931,
+  "labelledAudioLagP95Ms": 268.69715293869376,
+  "tailFlushMs": 157.40091633051634,
+  "wallSeconds": 60.16807045787573,
+  "events": [
+    {
+      "audioFedSeconds": 1.14,
+      "wallSeconds": 1.1648120409809053,
+      "frames": 104,
+      "labelledThroughSeconds": 1.0399999767541885,
+      "lagMs": 124.81206422671676,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 1.0399999767541885,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 2.18,
+      "wallSeconds": 2.2199086248874664,
+      "frames": 208,
+      "labelledThroughSeconds": 2.079999953508377,
+      "lagMs": 139.90867137908936,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 2.079999953508377,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 3.22,
+      "wallSeconds": 3.2840872909873724,
+      "frames": 312,
+      "labelledThroughSeconds": 3.1199999302625656,
+      "lagMs": 164.08736072480679,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 3.1199999302625656,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 4.26,
+      "wallSeconds": 4.328234666027129,
+      "frames": 416,
+      "labelledThroughSeconds": 4.159999907016754,
+      "lagMs": 168.23475901037455,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 4.159999907016754,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 5.3,
+      "wallSeconds": 5.372324415948242,
+      "frames": 520,
+      "labelledThroughSeconds": 5.199999883770943,
+      "lagMs": 172.32453217729926,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 5.199999883770943,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 6.34,
+      "wallSeconds": 6.417005790863186,
+      "frames": 624,
+      "labelledThroughSeconds": 6.239999860525131,
+      "lagMs": 177.0059303380549,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 6.239999860525131,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 7.38,
+      "wallSeconds": 7.460117457900196,
+      "frames": 728,
+      "labelledThroughSeconds": 7.27999983727932,
+      "lagMs": 180.11762062087655,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 7.27999983727932,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 8.42,
+      "wallSeconds": 8.504790415987372,
+      "frames": 832,
+      "labelledThroughSeconds": 8.319999814033508,
+      "lagMs": 184.7906019538641,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 8.319999814033508,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 9.46,
+      "wallSeconds": 9.548674874939024,
+      "frames": 936,
+      "labelledThroughSeconds": 9.359999790787697,
+      "lagMs": 188.6750841513276,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 9.359999790787697,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 10.5,
+      "wallSeconds": 10.588622124865651,
+      "frames": 1040,
+      "labelledThroughSeconds": 10.399999767541885,
+      "lagMs": 188.62235732376575,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 10.399999767541885,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 11.54,
+      "wallSeconds": 11.635157749988139,
+      "frames": 1144,
+      "labelledThroughSeconds": 11.439999744296074,
+      "lagMs": 195.15800569206476,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 11.439999744296074,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 12.58,
+      "wallSeconds": 12.678368332795799,
+      "frames": 1248,
+      "labelledThroughSeconds": 12.479999721050262,
+      "lagMs": 198.36861174553633,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.479999721050262,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 13.62,
+      "wallSeconds": 13.720636332873255,
+      "frames": 1352,
+      "labelledThroughSeconds": 13.519999697804451,
+      "lagMs": 200.63663506880403,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 14.66,
+      "wallSeconds": 14.762793958187103,
+      "frames": 1456,
+      "labelledThroughSeconds": 14.55999967455864,
+      "lagMs": 202.79428362846375,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 15.7,
+      "wallSeconds": 15.80953879095614,
+      "frames": 1560,
+      "labelledThroughSeconds": 15.599999651312828,
+      "lagMs": 209.5391396433115,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 16.74,
+      "wallSeconds": 16.854972790926695,
+      "frames": 1664,
+      "labelledThroughSeconds": 16.639999628067017,
+      "lagMs": 214.97316285967827,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 17.78,
+      "wallSeconds": 17.89897095784545,
+      "frames": 1768,
+      "labelledThroughSeconds": 17.679999604821205,
+      "lagMs": 218.9713530242443,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 18.82,
+      "wallSeconds": 18.94328762497753,
+      "frames": 1872,
+      "labelledThroughSeconds": 18.719999581575394,
+      "lagMs": 223.28804340213537,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 19.86,
+      "wallSeconds": 19.976024833042175,
+      "frames": 1976,
+      "labelledThroughSeconds": 19.759999558329582,
+      "lagMs": 216.02527471259236,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 20.9,
+      "wallSeconds": 21.041576249990612,
+      "frames": 2080,
+      "labelledThroughSeconds": 20.79999953508377,
+      "lagMs": 241.57671490684152,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 21.94,
+      "wallSeconds": 22.078915874939412,
+      "frames": 2184,
+      "labelledThroughSeconds": 21.83999951183796,
+      "lagMs": 238.9163631014526,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 22.98,
+      "wallSeconds": 23.1220722082071,
+      "frames": 2288,
+      "labelledThroughSeconds": 22.879999488592148,
+      "lagMs": 242.0727196149528,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 24.02,
+      "wallSeconds": 24.16289920778945,
+      "frames": 2392,
+      "labelledThroughSeconds": 23.919999465346336,
+      "lagMs": 242.89974244311452,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 25.06,
+      "wallSeconds": 25.207191083114594,
+      "frames": 2496,
+      "labelledThroughSeconds": 24.959999442100525,
+      "lagMs": 247.19164101406932,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 26.1,
+      "wallSeconds": 26.25697466591373,
+      "frames": 2600,
+      "labelledThroughSeconds": 25.999999418854713,
+      "lagMs": 256.9752470590174,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 27.14,
+      "wallSeconds": 27.301799790933728,
+      "frames": 2704,
+      "labelledThroughSeconds": 27.039999395608902,
+      "lagMs": 261.80039532482624,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 28.18,
+      "wallSeconds": 28.338479666039348,
+      "frames": 2808,
+      "labelledThroughSeconds": 28.07999937236309,
+      "lagMs": 258.48029367625713,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 29.22,
+      "wallSeconds": 29.39056179113686,
+      "frames": 2912,
+      "labelledThroughSeconds": 29.11999934911728,
+      "lagMs": 270.5624420195818,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.11999934911728,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 30.26,
+      "wallSeconds": 30.409707583021373,
+      "frames": 3016,
+      "labelledThroughSeconds": 30.159999325871468,
+      "lagMs": 249.70825714990497,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 31.3,
+      "wallSeconds": 31.469622957985848,
+      "frames": 3120,
+      "labelledThroughSeconds": 31.199999302625656,
+      "lagMs": 269.62365536019206,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.199999302625656,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 32.34,
+      "wallSeconds": 32.49930316582322,
+      "frames": 3224,
+      "labelledThroughSeconds": 32.239999279379845,
+      "lagMs": 259.30388644337654,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.239999279379845,
+          "speaker": "speaker_3"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 33.38,
+      "wallSeconds": 33.54284774977714,
+      "frames": 3328,
+      "labelledThroughSeconds": 33.27999925613403,
+      "lagMs": 262.84849364310503,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.27999925613403,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 34.42,
+      "wallSeconds": 34.57651904085651,
+      "frames": 3432,
+      "labelledThroughSeconds": 34.31999923288822,
+      "lagMs": 256.51980796828866,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 35.46,
+      "wallSeconds": 35.62822129111737,
+      "frames": 3536,
+      "labelledThroughSeconds": 35.35999920964241,
+      "lagMs": 268.22208147495985,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 35.35999920964241,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 36.5,
+      "wallSeconds": 36.64761795802042,
+      "frames": 3640,
+      "labelledThroughSeconds": 36.3999991863966,
+      "lagMs": 247.61877162382007,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 36.3999991863966,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 37.54,
+      "wallSeconds": 37.704198208171874,
+      "frames": 3744,
+      "labelledThroughSeconds": 37.43999916315079,
+      "lagMs": 264.19904502108693,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.43999916315079,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 38.58,
+      "wallSeconds": 38.73749954113737,
+      "frames": 3848,
+      "labelledThroughSeconds": 38.479999139904976,
+      "lagMs": 257.5004012323916,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 39.62,
+      "wallSeconds": 39.773379708174616,
+      "frames": 3952,
+      "labelledThroughSeconds": 39.519999116659164,
+      "lagMs": 253.38059151545167,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.519999116659164,
+          "speaker": "speaker_3"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 40.66,
+      "wallSeconds": 40.81587441591546,
+      "frames": 4056,
+      "labelledThroughSeconds": 40.55999909341335,
+      "lagMs": 255.87532250210643,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 41.7,
+      "wallSeconds": 41.863855000119656,
+      "frames": 4160,
+      "labelledThroughSeconds": 41.59999907016754,
+      "lagMs": 263.8559299521148,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 41.59999907016754,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 42.74,
+      "wallSeconds": 42.903138749767095,
+      "frames": 4264,
+      "labelledThroughSeconds": 42.63999904692173,
+      "lagMs": 263.1397028453648,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 42.63999904692173,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 43.78,
+      "wallSeconds": 43.94833341613412,
+      "frames": 4368,
+      "labelledThroughSeconds": 43.67999902367592,
+      "lagMs": 268.33439245820045,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 43.67999902367592,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 44.82,
+      "wallSeconds": 44.974406000226736,
+      "frames": 4472,
+      "labelledThroughSeconds": 44.71999900043011,
+      "lagMs": 254.40699979662895,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 44.71999900043011,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 45.86,
+      "wallSeconds": 46.03052412485704,
+      "frames": 4576,
+      "labelledThroughSeconds": 45.759998977184296,
+      "lagMs": 270.5251476727426,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 45.759998977184296,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 46.9,
+      "wallSeconds": 47.05708258319646,
+      "frames": 4680,
+      "labelledThroughSeconds": 46.799998953938484,
+      "lagMs": 257.083629257977,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 46.799998953938484,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 47.94,
+      "wallSeconds": 48.10846445802599,
+      "frames": 4784,
+      "labelledThroughSeconds": 47.83999893069267,
+      "lagMs": 268.4655273333192,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.83999893069267,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 48.98,
+      "wallSeconds": 49.13408725010231,
+      "frames": 4888,
+      "labelledThroughSeconds": 48.87999890744686,
+      "lagMs": 254.0883426554501,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 48.87999890744686,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 50.02,
+      "wallSeconds": 50.185535041149706,
+      "frames": 4992,
+      "labelledThroughSeconds": 49.91999888420105,
+      "lagMs": 265.53615694865584,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 49.91999888420105,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 51.06,
+      "wallSeconds": 51.21355441585183,
+      "frames": 5096,
+      "labelledThroughSeconds": 50.95999886095524,
+      "lagMs": 253.5555548965931,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 50.95999886095524,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 52.1,
+      "wallSeconds": 52.266362166032195,
+      "frames": 5200,
+      "labelledThroughSeconds": 51.99999883770943,
+      "lagMs": 266.3633283227682,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 51.99999883770943,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 53.14,
+      "wallSeconds": 53.296575957909226,
+      "frames": 5304,
+      "labelledThroughSeconds": 53.039998814463615,
+      "lagMs": 256.577143445611,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 53.039998814463615,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 54.18,
+      "wallSeconds": 54.34334091609344,
+      "frames": 5408,
+      "labelledThroughSeconds": 54.079998791217804,
+      "lagMs": 263.3421248756349,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 54.079998791217804,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 55.22,
+      "wallSeconds": 55.37822545785457,
+      "frames": 5512,
+      "labelledThroughSeconds": 55.11999876797199,
+      "lagMs": 258.22668988257647,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 55.11999876797199,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 56.26,
+      "wallSeconds": 56.42475112481043,
+      "frames": 5616,
+      "labelledThroughSeconds": 56.15999874472618,
+      "lagMs": 264.7523800842464,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 56.15999874472618,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 57.3,
+      "wallSeconds": 57.45288091618568,
+      "frames": 5720,
+      "labelledThroughSeconds": 57.19999872148037,
+      "lagMs": 252.88219470530748,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 56.74899873332679,
+          "speaker": "speaker_2"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 58.34,
+      "wallSeconds": 58.50482716597617,
+      "frames": 5824,
+      "labelledThroughSeconds": 58.23999869823456,
+      "lagMs": 264.8284677416086,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 56.74899873332679,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 56.8409987243861,
+          "end": 58.23999869823456,
+          "speaker": "speaker_1"
+        }
+      ]
+    },
+    {
+      "audioFedSeconds": 59.38,
+      "wallSeconds": 59.540191375184804,
+      "frames": 5928,
+      "labelledThroughSeconds": 59.27999867498875,
+      "lagMs": 260.19270019605756,
+      "turns": [
+        {
+          "start": 0.19099999061226844,
+          "end": 12.85899971434474,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.31099936208129,
+          "end": 29.218999348670245,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 28.960999347552658,
+          "end": 29.908999333247543,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 29.720999330565334,
+          "end": 31.44899929882586,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 31.160999298378826,
+          "end": 32.318999279379845,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 32.010999279379845,
+          "end": 33.33899925658107,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 33.43099924764037,
+          "end": 34.15899923825264,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 33.980999235346914,
+          "end": 37.99899915242195,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 38.400999136552215,
+          "end": 39.598999116659165,
+          "speaker": "speaker_3"
+        },
+        {
+          "start": 39.22099911822379,
+          "end": 40.338999100118876,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 40.610999087154866,
+          "end": 47.91899893069267,
+          "speaker": "speaker_1"
+        },
+        {
+          "start": 48.22099891705811,
+          "end": 56.74899873332679,
+          "speaker": "speaker_2"
+        },
+        {
+          "start": 56.8409987243861,
+          "end": 59.27999867498875,
+          "speaker": "speaker_1"
+        }
+      ]
+    }
+  ],
+  "turns": [
+    {
+      "start": 0.19099999061226844,
+      "end": 12.85899971434474,
+      "speaker": "speaker_1"
+    },
+    {
+      "start": 28.31099936208129,
+      "end": 29.218999348670245,
+      "speaker": "speaker_1"
+    },
+    {
+      "start": 28.960999347552658,
+      "end": 29.908999333247543,
+      "speaker": "speaker_2"
+    },
+    {
+      "start": 29.720999330565334,
+      "end": 31.44899929882586,
+      "speaker": "speaker_1"
+    },
+    {
+      "start": 31.160999298378826,
+      "end": 32.318999279379845,
+      "speaker": "speaker_3"
+    },
+    {
+      "start": 32.010999279379845,
+      "end": 33.33899925658107,
+      "speaker": "speaker_1"
+    },
+    {
+      "start": 33.43099924764037,
+      "end": 34.15899923825264,
+      "speaker": "speaker_2"
+    },
+    {
+      "start": 33.980999235346914,
+      "end": 37.99899915242195,
+      "speaker": "speaker_1"
+    },
+    {
+      "start": 38.400999136552215,
+      "end": 39.598999116659165,
+      "speaker": "speaker_3"
+    },
+    {
+      "start": 39.22099911822379,
+      "end": 40.338999100118876,
+      "speaker": "speaker_2"
+    },
+    {
+      "start": 40.610999087154866,
+      "end": 47.91899893069267,
+      "speaker": "speaker_1"
+    },
+    {
+      "start": 48.22099891705811,
+      "end": 56.74899873332679,
+      "speaker": "speaker_2"
+    },
+    {
+      "start": 56.8409987243861,
+      "end": 60.009998658671975,
+      "speaker": "speaker_1"
+    }
+  ],
+  "noASRConcurrent": true,
+  "note": "frame/probability output availability, not confirmed identity or subtitle render latency"
+}

@@ -1,3 +1,5 @@
+import { activeTranslate } from '../i18n'
+
 type OpfsDirectory = { getDirectoryHandle: (name: string, options?: { create?: boolean }) => Promise<OpfsDirectory>; getFileHandle: (name: string, options?: { create?: boolean }) => Promise<OpfsFile>; removeEntry?: (name: string) => Promise<void> }
 type OpfsFile = { createWritable: () => Promise<OpfsWritable>; getFile: () => Promise<File> }
 type OpfsWritable = { write: (data: unknown) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> }
@@ -45,13 +47,13 @@ export class OpfsPcmRecording {
   }
 
   append(audio: ArrayBuffer): Promise<void> {
-    if (this.closed) return Promise.reject(new Error('OPFS 錄音已關閉'))
+    if (this.closed) return Promise.reject(new Error(activeTranslate('svcOpfsRecordingClosed')))
     this.pending = this.pending.then(async () => { await this.writable.write(audio); this.dataBytes += audio.byteLength })
     return this.pending
   }
 
   async finish(): Promise<Blob> {
-    if (this.closed) throw new Error('OPFS 錄音已關閉')
+    if (this.closed) throw new Error(activeTranslate('svcOpfsRecordingClosed'))
     this.closed = true
     await this.pending
     await this.writable.write({ type: 'seek', position: 0 })

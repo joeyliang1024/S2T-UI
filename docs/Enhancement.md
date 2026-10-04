@@ -210,7 +210,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 - [x] 斷句參數收斂為三速：移除設定頁 VAD 卡片 6 支滑桿與收音面板 3 支 inline 滑桿，改為收音控制面板單一「回應速度」滑桿（快／正常／慢，i18n 五語系＋無障礙標註）；`responseSpeed` 隨設定持久化，舊存檔逐項參數自動丟棄正規化。
 - [x] 快速設定保留即時講者預覽、音源、語言、翻譯開關與目標語言；收音中變更於下一段音訊生效。
-- [x] 量測語音開始→首段字幕與模型耗時／佇列等待：`caption:eval` 記錄逐句上屏 P50/P95、ASR 推論與排隊延遲、請求數、碎片化與逐句／語料 CER，並產出 `eval-reports/` JSON；正常檔 P95 1701 ms 已達成 ≤2500 ms 目標。**句尾→final（endpoint delay）指標與日文／中英混說素材仍在 V02。**
+- [x] 量測語音開始→首段字幕與模型耗時／佇列等待：`caption:eval` 記錄逐句上屏 P50/P95、ASR 推論與排隊延遲、請求數、碎片化與逐句／語料 CER，並產出 `experiment/evaluation-reports/` JSON；正常檔 P95 1701 ms 已達成 ≤2500 ms 目標。**句尾→final（endpoint delay）指標與日文／中英混說素材仍在 V02。**
 - [x] 靜音不持續送空 ASR，短停頓不過度切段，長句有上限，停止不足一段的尾音 flush；HTTP gap／重試／背壓可見。`vad:smoke` 已覆蓋起音門檻、短停頓與靜音句界。
 - [ ] 收音中調整明示立即／下一段／下次開始生效，避免重建 capture 造成缺口；App／server VAD 不互相重複裁切。
   - [x] 收音中變更語言、術語或切段設定時，HTTP chunked ASR 會明示「下一段音訊生效」且不重建 capture；未定義 live-setting 協定的 WebSocket 模型會明示需下次開始，避免假稱已即時套用。
@@ -240,7 +240,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### 已有基線與證據邊界
 
-2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `eval-reports/`。以下為更早一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
+2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `experiment/evaluation-reports/`。以下為更早一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
 
 既有文件另記錄 gateway 授權 smoke、Breeze 中文 WAV、HY-MT 英／日翻譯、本機 sherpa 靜音 WAV／原生 addon 成功；本輪未重新驗證。模型 API 有回應不代表麥克風端到端或多人辨識品質完成。字典測試只涵蓋已登錄 key；storage smoke 只涵蓋本機 adapter。每筆實機結果記版本／dirty diff、平台、模型版本、素材、設定、步驟及量測，憑證不得寫入。
 

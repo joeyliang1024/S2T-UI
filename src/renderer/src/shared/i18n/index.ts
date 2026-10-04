@@ -43,8 +43,36 @@ const messages = {
 export type MessageKey = keyof typeof messages['zh-TW']
 export const translate = (language: UiLanguagePreference, key: MessageKey): string => messages[resolveUiLanguage(language)][key]
 
+/**
+ * Services and module-scope helpers sit outside React and cannot reach the
+ * settings state, so the renderer keeps a single active display language here.
+ * AppView mirrors the saved preference into it on every change; anything that
+ * must react to a language switch reads it through activeTranslate.
+ */
+let activeUiLanguage: UiLanguagePreference = 'system'
+export const setActiveUiLanguage = (language: UiLanguagePreference): void => { activeUiLanguage = language }
+export const activeUi = (): UiLanguage => resolveUiLanguage(activeUiLanguage)
+
+/**
+ * Dictionaries are split by area so each slice can grow independently:
+ * view-messages hold static UI labels, status-messages hold the transient
+ * status/toast copy produced by the app controller, service-messages hold
+ * user-visible errors raised by shared services. Every key must exist for
+ * every supported language (enforced by the i18n smoke test).
+ */
+import { viewMessages } from './view-messages'
+import { statusMessagesA } from './status-messages-a'
+import { statusMessagesB } from './status-messages-b'
+import { statusMessagesC } from './status-messages-c'
+import { serviceMessages } from './service-messages'
+
 /** Shared UI labels outside the compact top-level navigation dictionary. */
 const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
+  ...viewMessages,
+  ...statusMessagesA,
+  ...statusMessagesB,
+  ...statusMessagesC,
+  ...serviceMessages,
   interfaceDisplay: { 'zh-TW': '介面顯示', 'zh-CN': '界面显示', en: 'Appearance & language', ja: '画面表示', de: 'Darstellung und Sprache' },
   queueMigrated: { 'zh-TW': '遷移完成', 'zh-CN': '迁移完成', en: 'Migrated', ja: '移行済み', de: 'Migriert' },
   queueRetry: { 'zh-TW': '遷移待重試', 'zh-CN': '迁移待重试', en: 'Migration retries', ja: '移行再試行待ち', de: 'Migration ausstehend' },
@@ -252,7 +280,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   searchModelsPlaceholder: { 'zh-TW': '搜尋模型名稱、ID 或 endpoint', 'zh-CN': '搜索模型名称、ID 或 endpoint', en: 'Search model name, ID, or endpoint', ja: 'モデル名、ID、エンドポイントを検索', de: 'Modellname, ID oder Endpunkt suchen' },
   noConfiguredModels: { 'zh-TW': '尚未設定模型', 'zh-CN': '尚未设置模型', en: 'No models configured', ja: 'モデルが設定されていません', de: 'Keine Modelle konfiguriert' },
   noConfiguredModelsHint: { 'zh-TW': '請到完整設定新增模型與服務。', 'zh-CN': '请到完整设置添加模型和服务。', en: 'Add a model and service in full settings.', ja: '詳細設定でモデルとサービスを追加してください。', de: 'Fügen Sie in den vollständigen Einstellungen ein Modell und einen Dienst hinzu.' },
-  openCaptionPopup: { 'zh-TW': '點擊此區開啟彈出字幕', 'zh-CN': '点击此区域打开弹出字幕', en: 'Click this area to open captions in a pop-out.', ja: 'この領域をクリックして字幕ポップアウトを開く', de: 'Hier klicken, um Untertitel in einem Pop-out zu öffnen.' },
+  openCaptionPopup: { 'zh-TW': '開啟子母畫面字幕', 'zh-CN': '打开画中画字幕', en: 'Open picture-in-picture captions', ja: 'ピクチャーインピクチャー字幕を開く', de: 'Bild-in-Bild-Untertitel öffnen' },
   startRecording: { 'zh-TW': '開始收音', 'zh-CN': '开始收音', en: 'Start recording', ja: '録音を開始', de: 'Aufnahme starten' },
   pauseRecording: { 'zh-TW': '暫停', 'zh-CN': '暂停', en: 'Pause', ja: '一時停止', de: 'Pausieren' },
   resumeRecording: { 'zh-TW': '繼續', 'zh-CN': '继续', en: 'Resume', ja: '再開', de: 'Fortsetzen' },
@@ -309,6 +337,17 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   sessionStorageLocal: { 'zh-TW': '本機', 'zh-CN': '本地', en: 'Local', ja: 'ローカル', de: 'Lokal' },
   sessionStorageRemote: { 'zh-TW': '遠端', 'zh-CN': '远程', en: 'Remote', ja: 'リモート', de: 'Remote' },
   sessionStorageBoth: { 'zh-TW': '本機＋遠端', 'zh-CN': '本地＋远程', en: 'Local + remote', ja: 'ローカル＋リモート', de: 'Lokal + Remote' },
+  qualityCorrection: { 'zh-TW': '品質校正', 'zh-CN': '质量校正', en: 'Quality correction', ja: '品質補正', de: 'Qualitätskorrektur' },
+  qualityCorrectionLoading: { 'zh-TW': '準備音檔', 'zh-CN': '准备音频', en: 'Preparing audio', ja: '音声を準備', de: 'Audio vorbereiten' },
+  qualityCorrectionAsr: { 'zh-TW': '校正逐字稿', 'zh-CN': '校正转录', en: 'Correcting transcript', ja: '文字起こしを補正', de: 'Transkript korrigieren' },
+  qualityCorrectionErrorDetails: { 'zh-TW': '查看錯誤詳情', 'zh-CN': '查看错误详情', en: 'View error details', ja: 'エラー詳細を表示', de: 'Fehlerdetails anzeigen' },
+  recordProcessingRunning: { 'zh-TW': '執行中', 'zh-CN': '执行中', en: 'In progress', ja: '処理中', de: 'In Bearbeitung' },
+  recordProcessingCompleted: { 'zh-TW': '已完成', 'zh-CN': '已完成', en: 'Complete', ja: '完了', de: 'Abgeschlossen' },
+  recordProcessingFailed: { 'zh-TW': '未完成', 'zh-CN': '未完成', en: 'Incomplete', ja: '未完了', de: 'Unvollständig' },
+  recordProcessingAsr: { 'zh-TW': '完成尾段字幕', 'zh-CN': '完成尾段字幕', en: 'Finishing captions', ja: '字幕を処理', de: 'Untertitel abschließen' },
+  recordProcessingTranslation: { 'zh-TW': '補完翻譯', 'zh-CN': '补完翻译', en: 'Finishing translations', ja: '翻訳を処理', de: 'Übersetzungen abschließen' },
+  recordProcessingSaving: { 'zh-TW': '保存音檔', 'zh-CN': '保存音频', en: 'Saving audio', ja: '音声を保存', de: 'Audio speichern' },
+  recordProcessingDiarization: { 'zh-TW': '最後講者分離', 'zh-CN': '最后说话人分离', en: 'Final speaker identification', ja: '最後の話者識別', de: 'Abschließende Sprechererkennung' },
   sessionStoragePending: { 'zh-TW': '本機，待同步', 'zh-CN': '本地，待同步', en: 'Local, pending sync', ja: 'ローカル、同期待ち', de: 'Lokal, Synchronisierung ausstehend' },
   liveSettingsNextChunk: { 'zh-TW': '收音中：設定從下一段音訊生效。', 'zh-CN': '录音中：设置从下一段音频生效。', en: 'During recording, settings apply to the next audio chunk.', ja: '録音中の設定は次の音声チャンクから適用されます。', de: 'Während der Aufnahme gelten Einstellungen ab dem nächsten Audioabschnitt.' },
   liveSettingsStartHint: { 'zh-TW': '開始收音後也可調整，會從下一段音訊生效。', 'zh-CN': '开始录音后也可调整，会从下一段音频生效。', en: 'These can also be adjusted during recording and apply to the next chunk.', ja: '録音中にも調整でき、次の音声チャンクから適用されます。', de: 'Diese Werte können auch während der Aufnahme angepasst werden und gelten ab dem nächsten Abschnitt.' },
@@ -337,9 +376,10 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   nextPage: { 'zh-TW': '下一頁', 'zh-CN': '下一页', en: 'Next', ja: '次へ', de: 'Weiter' },
   importAudioOrVideo: { 'zh-TW': '匯入音訊或影片', 'zh-CN': '导入音频或视频', en: 'Import audio or video', ja: '音声または動画を読み込む', de: 'Audio oder Video importieren' },
   chooseFile: { 'zh-TW': '選擇檔案', 'zh-CN': '选择文件', en: 'Choose file', ja: 'ファイルを選択', de: 'Datei auswählen' },
-  importFormats: { 'zh-TW': '支援 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV，最大 2 GB', 'zh-CN': '支持 WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV，最大 2 GB', en: 'Supports WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4, and MOV up to 2 GB.', ja: 'WAV、MP3、M4A、AAC、OGG、WebM、FLAC、MP4、MOV に対応（最大 2 GB）。', de: 'Unterstützt WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4 und MOV bis 2 GB.' },
+  importFormats: { 'zh-TW': '支援 WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4, MOV, MPEG/MPG, MPGA, Opus, MKV, AVI, AIFF/AIF, WMA；輸入與轉換後 WAV 均最大 2 GB，影片需有音軌。', 'zh-CN': '支持 WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4, MOV, MPEG/MPG, MPGA, Opus, MKV, AVI, AIFF/AIF, WMA；输入和转换后 WAV 均最大 2 GB，视频须有音轨。', en: 'Supports WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4, MOV, MPEG/MPG, MPGA, Opus, MKV, AVI, AIFF/AIF, WMA. Input and converted WAV must each be under 2 GB; videos need an audio track.', ja: 'WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4, MOV, MPEG/MPG, MPGA, Opus, MKV, AVI, AIFF/AIF, WMA に対応。入力と変換後 WAV は各 2 GB 以下。動画には音声が必要です。', de: 'WAV, MP3, M4A, AAC, OGG, WebM, FLAC, MP4, MOV, MPEG/MPG, MPGA, Opus, MKV, AVI, AIFF/AIF, WMA. Eingabe und konvertierte WAV jeweils unter 2 GB; Videos benötigen eine Audiospur.' },
   wavBatchHint: { 'zh-TW': 'PCM16 WAV 會每 45 秒切段，保留 1.5 秒重疊並自動去除重複文字。', 'zh-CN': 'PCM16 WAV 将每 45 秒切段，保留 1.5 秒重叠并自动去除重复文字。', en: 'PCM16 WAV files are processed in 45-second chunks with 1.5 seconds of overlap and duplicate removal.', ja: 'PCM16 WAV は45秒ごとに分割し、1.5秒の重複を保持して重複した文字を除去します。', de: 'PCM16-WAV-Dateien werden in 45-Sekunden-Abschnitten mit 1,5 Sekunden Überlappung und Duplikatentfernung verarbeitet.' },
-  otherImportHint: { 'zh-TW': '其他格式會以單一請求上傳；大於 100 MB 時請先轉成 PCM16 WAV。', 'zh-CN': '其他格式将以单次请求上传；大于 100 MB 时请先转换为 PCM16 WAV。', en: 'Other formats are uploaded in one request. Convert files larger than 100 MB to PCM16 WAV first.', ja: '他の形式は1回のリクエストでアップロードされます。100 MBを超える場合は先に PCM16 WAV へ変換してください。', de: 'Andere Formate werden in einer Anfrage hochgeladen. Dateien über 100 MB bitte zuerst in PCM16 WAV umwandeln.' },
+  otherImportHint: { 'zh-TW': '先由 Gateway 的本機 FFmpeg 轉成 PCM16 WAV，再分段轉錄；不另下載套件或編解碼器。', 'zh-CN': '先由 Gateway 本地 FFmpeg 转换成 PCM16 WAV，再分段转录。', en: 'Converted to PCM16 WAV on the gateway before chunked transcription.', ja: 'Gateway で PCM16 WAV に変換してから分割して文字起こしします。', de: 'Vor der abschnittsweisen Transkription konvertiert das Gateway die Datei in PCM16 WAV.' },
+  convertingImport: { 'zh-TW': '正在上傳並轉換為 PCM16 WAV…', 'zh-CN': '正在上传并转换为 PCM16 WAV…', en: 'Uploading and converting to PCM16 WAV…', ja: 'PCM16 WAV にアップロード・変換中…', de: 'Hochladen und in PCM16 WAV konvertieren…' },
   batchTranscription: { 'zh-TW': '開始批次轉錄', 'zh-CN': '开始批量转录', en: 'Start batch transcription', ja: '一括文字起こしを開始', de: 'Stapeltranskription starten' },
   transcribingChunk: { 'zh-TW': '正在轉錄第 {current} / {total} 段', 'zh-CN': '正在转录第 {current} / {total} 段', en: 'Transcribing chunk {current} of {total}', ja: '{current} / {total} 件目を文字起こし中', de: 'Abschnitt {current} von {total} wird transkribiert' },
   cancelBatch: { 'zh-TW': '取消批次轉錄', 'zh-CN': '取消批量转录', en: 'Cancel batch transcription', ja: '一括文字起こしを中止', de: 'Stapeltranskription abbrechen' },
@@ -384,7 +424,9 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   singleSlotModel: { 'zh-TW': '單一模型；註冊或編輯即為目前使用', 'zh-CN': '单一模型；注册或编辑即为当前使用', en: 'Single slot; registering or editing sets the active model', ja: '単一スロット；登録または編集で使用中になります', de: 'Einzelner Platz; Registrieren oder Bearbeiten legt das aktive Modell fest.' }
 }
 
-export const interfaceTranslate = (language: UiLanguagePreference, key: keyof typeof interfaceMessages): string => interfaceMessages[key][resolveUiLanguage(language)]
+export const interfaceTranslate = (language: UiLanguagePreference, key: keyof typeof interfaceMessages): string => interfaceMessages[key]?.[resolveUiLanguage(language)] ?? key
+/** Fallback lookup for code that only has the active language, not settings. */
+export const activeTranslate = (key: keyof typeof interfaceMessages): string => interfaceMessages[key]?.[resolveUiLanguage(activeUiLanguage)] ?? key
 export const interfaceMessageKeys = Object.freeze(Object.keys(interfaceMessages)) as readonly (keyof typeof interfaceMessages)[]
 
 const authMessages: Record<UiLanguage, Record<'login' | 'register' | 'username' | 'password' | 'nt' | 'department' | 'loginFailed' | 'checking' | 'processing' | 'isolation' | 'noAccount' | 'hasAccount' | 'registerAndLogin', string>> = {
