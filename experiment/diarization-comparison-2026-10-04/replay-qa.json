@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "pageErrors": [],
+  "mobileOverflow": false,
+  "recordings": [
+    {
+      "id": "hkzpa",
+      "duration": 965.903688,
+      "methods": 6,
+      "left": "人數 14／參考 2\nDER 18.89% · 漏標 4.43% · 誤報 1.86% · 錯配 12.61%",
+      "right": "人數 3／參考 2\nDER 3.08% · 漏標 0.57% · 誤報 2.49% · 錯配 0.03%",
+      "referenceRows": 2
+    },
+    {
+      "id": "jcako",
+      "duration": 1014.72,
+      "methods": 12,
+      "left": "人數 37／參考 3\nDER 62.24% · 漏標 1.57% · 誤報 8.73% · 錯配 51.94%",
+      "right": "人數 3／參考 3\nDER 9.16% · 漏標 0.59% · 誤報 8.29% · 錯配 0.28%",
+      "referenceRows": 3
+    },
+    {
+      "id": "ldnro",
+      "duration": 1097.32575,
+      "methods": 9,
+      "left": "人數 25／參考 15\nDER 16.23% · 漏標 0.92% · 誤報 1.53% · 錯配 13.79%",
+      "right": "人數 8／參考 15\nDER 23.03% · 漏標 11.12% · 誤報 1.98% · 錯配 9.93%",
+      "referenceRows": 5
+    },
+    {
+      "id": "qouur",
+      "duration": 1032.384,
+      "methods": 4,
+      "left": "人數 2／參考 1\nDER 1.44% · 漏標 1.17% · 誤報 0.12% · 錯配 0.15%",
+      "right": "人數 1／參考 1\nDER 0.3% · 漏標 0% · 誤報 0.3% · 錯配 0%",
+      "referenceRows": 1
+    }
+  ]
+}

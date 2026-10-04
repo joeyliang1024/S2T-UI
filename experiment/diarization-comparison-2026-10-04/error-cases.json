@@ -1,0 +1,326 @@
+[
+  {
+    "id": "hkzpa",
+    "region": "開頭",
+    "seconds": 50.0,
+    "clipStart": 45.0,
+    "clipEnd": 55.0,
+    "referenceActive": [
+      "spk01"
+    ],
+    "baselineRaw": [
+      "SPEAKER_04"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk01"
+    ],
+    "candidateMethod": "nemotron-v3-offline-pad005",
+    "humanListened": false
+  },
+  {
+    "id": "hkzpa",
+    "region": "中段",
+    "seconds": 477.6,
+    "clipStart": 472.6,
+    "clipEnd": 482.6,
+    "referenceActive": [
+      "spk00"
+    ],
+    "baselineRaw": [],
+    "candidateRaw": [
+      "speaker_2"
+    ],
+    "baselineReferenceAlignment": [],
+    "candidateReferenceAlignment": [
+      "spk00"
+    ],
+    "candidateMethod": "nemotron-v3-offline-pad005",
+    "humanListened": false
+  },
+  {
+    "id": "hkzpa",
+    "region": "尾段",
+    "seconds": 930.0,
+    "clipStart": 925.0,
+    "clipEnd": 935.0,
+    "referenceActive": [
+      "spk01"
+    ],
+    "baselineRaw": [
+      "SPEAKER_04"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk01"
+    ],
+    "candidateMethod": "nemotron-v3-offline-pad005",
+    "humanListened": false
+  },
+  {
+    "id": "hkzpa",
+    "region": "候選退步反例",
+    "seconds": 154.2,
+    "clipStart": 149.2,
+    "clipEnd": 159.2,
+    "referenceActive": [
+      "spk01",
+      "spk00"
+    ],
+    "baselineRaw": [
+      "SPEAKER_00",
+      "SPEAKER_01"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "spk01",
+      "spk00"
+    ],
+    "candidateReferenceAlignment": [
+      "spk01"
+    ],
+    "humanListened": false
+  },
+  {
+    "id": "jcako",
+    "region": "開頭",
+    "seconds": 45.2,
+    "clipStart": 40.2,
+    "clipEnd": 50.2,
+    "referenceActive": [
+      "spk01"
+    ],
+    "baselineRaw": [
+      "SPEAKER_07"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk01"
+    ],
+    "candidateMethod": "nemotron-v3-offline-pad005",
+    "humanListened": false
+  },
+  {
+    "id": "jcako",
+    "region": "中段",
+    "seconds": 502.8,
+    "clipStart": 497.8,
+    "clipEnd": 507.8,
+    "referenceActive": [
+      "spk00"
+    ],
+    "baselineRaw": [
+      "SPEAKER_18"
+    ],
+    "candidateRaw": [
+      "speaker_3"
+    ],
+    "baselineReferenceAlignment": [
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk00"
+    ],
+    "candidateMethod": "nemotron-v3-offline-pad005",
+    "humanListened": false
+  },
+  {
+    "id": "jcako",
+    "region": "尾段",
+    "seconds": 969.6,
+    "clipStart": 964.6,
+    "clipEnd": 974.6,
+    "referenceActive": [
+      "spk01"
+    ],
+    "baselineRaw": [
+      "SPEAKER_10"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk01"
+    ],
+    "candidateMethod": "nemotron-v3-offline-pad005",
+    "humanListened": false
+  },
+  {
+    "id": "jcako",
+    "region": "候選退步反例",
+    "seconds": 99.8,
+    "clipStart": 94.8,
+    "clipEnd": 104.8,
+    "referenceActive": [
+      "spk02"
+    ],
+    "baselineRaw": [
+      "SPEAKER_14"
+    ],
+    "candidateRaw": [],
+    "baselineReferenceAlignment": [
+      "spk02"
+    ],
+    "candidateReferenceAlignment": [],
+    "humanListened": false
+  },
+  {
+    "id": "ldnro",
+    "region": "開頭",
+    "seconds": 47.4,
+    "clipStart": 42.4,
+    "clipEnd": 52.4,
+    "referenceActive": [
+      "spk02"
+    ],
+    "baselineRaw": [
+      "SPEAKER_01"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "spk00"
+    ],
+    "candidateReferenceAlignment": [
+      "spk02"
+    ],
+    "candidateMethod": "nemotron-v3-offline",
+    "humanListened": false
+  },
+  {
+    "id": "ldnro",
+    "region": "中段",
+    "seconds": 543.4,
+    "clipStart": 538.4,
+    "clipEnd": 548.4,
+    "referenceActive": [
+      "spk02"
+    ],
+    "baselineRaw": [
+      "SPEAKER_00",
+      "SPEAKER_30"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "spk02",
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk02"
+    ],
+    "candidateMethod": "nemotron-v3-offline",
+    "humanListened": false
+  },
+  {
+    "id": "ldnro",
+    "region": "尾段",
+    "seconds": 1063.4,
+    "clipStart": 1058.4,
+    "clipEnd": 1068.4,
+    "referenceActive": [
+      "spk02"
+    ],
+    "baselineRaw": [
+      "SPEAKER_07"
+    ],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [
+      "unmatched"
+    ],
+    "candidateReferenceAlignment": [
+      "spk02"
+    ],
+    "candidateMethod": "nemotron-v3-offline",
+    "humanListened": false
+  },
+  {
+    "id": "ldnro",
+    "region": "候選退步反例",
+    "seconds": 37.6,
+    "clipStart": 32.6,
+    "clipEnd": 42.6,
+    "referenceActive": [
+      "spk02"
+    ],
+    "baselineRaw": [
+      "SPEAKER_00"
+    ],
+    "candidateRaw": [
+      "speaker_1",
+      "speaker_2"
+    ],
+    "baselineReferenceAlignment": [
+      "spk02"
+    ],
+    "candidateReferenceAlignment": [
+      "spk02",
+      "spk09"
+    ],
+    "humanListened": false
+  },
+  {
+    "id": "qouur",
+    "region": "開頭",
+    "seconds": 40.6,
+    "clipStart": 35.6,
+    "clipEnd": 45.6,
+    "referenceActive": [
+      "spk00"
+    ],
+    "baselineRaw": [],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [],
+    "candidateReferenceAlignment": [
+      "spk00"
+    ],
+    "candidateMethod": "nemotron-v3-offline",
+    "humanListened": false
+  },
+  {
+    "id": "qouur",
+    "region": "尾段",
+    "seconds": 1015.0,
+    "clipStart": 1010.0,
+    "clipEnd": 1020.0,
+    "referenceActive": [
+      "spk00"
+    ],
+    "baselineRaw": [],
+    "candidateRaw": [
+      "speaker_1"
+    ],
+    "baselineReferenceAlignment": [],
+    "candidateReferenceAlignment": [
+      "spk00"
+    ],
+    "candidateMethod": "nemotron-v3-offline",
+    "humanListened": false
+  }
+]

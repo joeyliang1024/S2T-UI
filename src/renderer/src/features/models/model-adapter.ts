@@ -1,9 +1,14 @@
 import { EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
+import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
+import { activeTranslate } from '../../shared/i18n'
 
 export type TranscriptEvent = {
   id: string
   revision: number
+  asrRevision?: number
+  /** Stable display row, locked before speaker identification. */
+  captionGroupId?: string
   status: 'partial' | 'final' | 'gap'
   startMs: number
   endMs: number
@@ -15,6 +20,8 @@ export type TranscriptEvent = {
   translationStatus?: 'failed'
   /** Failed automatic translation attempts for this exact caption revision. */
   translationAttempts?: number
+  /** Changes only when translation input or a manual translation changes. */
+  translationContentRevision?: number
   /** True only when app-side VAD observed a natural silence boundary. HTTP
    * chunks sent while speech continues deliberately keep this false so the UI
    * can extend one readable caption instead of making a new row. */
@@ -99,7 +106,7 @@ export class WebSocketModelAdapter implements ModelAdapter {
       const socket = new WebSocket(this.endpoint)
       const timeout = window.setTimeout(() => {
         socket.close()
-        reject(new Error('模型連線逾時'))
+        reject(new Error(activeTranslate('svcModelConnectTimeout')))
       }, 10_000)
       socket.binaryType = 'arraybuffer'
       socket.onopen = () => {
@@ -116,14 +123,14 @@ export class WebSocketModelAdapter implements ModelAdapter {
       }
       socket.onerror = () => {
         window.clearTimeout(timeout)
-        if (this.socket === socket) this.emitError('模型 WebSocket 連線發生錯誤')
-        reject(new Error('無法連線至模型服務'))
+        if (this.socket === socket) this.emitError(activeTranslate('svcModelSocketError'))
+        reject(new Error(activeTranslate('svcModelConnectFailed')))
       }
       socket.onmessage = (message) => this.handleMessage(message.data)
       socket.onclose = () => {
         if (this.socket !== socket) return
         this.socket = null
-        if (!this.stopping) this.emitError('模型 WebSocket 已中斷；錄音仍會繼續保存')
+        if (!this.stopping) this.emitError(activeTranslate('svcModelSocketClosed'))
       }
     })
   }
@@ -133,7 +140,7 @@ export class WebSocketModelAdapter implements ModelAdapter {
     if (this.socket.bufferedAmount > 2 * 1024 * 1024) {
       if (Date.now() - this.lastBackpressureWarning > 5_000) {
         this.lastBackpressureWarning = Date.now()
-        this.emitError('模型處理過慢，部分即時字幕音訊已略過；完整錄音仍會保存')
+        this.emitError(activeTranslate('svcModelTooSlow'))
       }
       return
     }
@@ -215,8 +222,8 @@ const wavFromFloat32 = (samples: Float32Array, sampleRate: number): ArrayBuffer 
 
 const readGatewayPayload = async (response: Response): Promise<{ text?: string; error?: string; detectedLanguage?: string }> => {
   const body = await response.text()
-  if (!body.trim()) throw new Error(`Web ASR gateway 沒有回傳資料（HTTP ${response.status}）。請確認本機 gateway 是否已啟動。`)
-  try { return JSON.parse(body) as { text?: string; error?: string } } catch { throw new Error(`Web ASR gateway 回傳非 JSON 資料（HTTP ${response.status}）。`) }
+  if (!body.trim()) throw new Error(activeTranslate('svcHttpNoBody').replace('{service}', 'Web ASR gateway').replace('{status}', String(response.status)))
+  try { return JSON.parse(body) as { text?: string; error?: string } } catch { throw new Error(activeTranslate('svcHttpNonJson').replace('{service}', 'Web ASR gateway').replace('{status}', String(response.status))) }
 }
 
 /**
@@ -245,6 +252,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private vadConfig?: VadConfig
   private activeGatewayRequests = new Set<AbortController>()
   private readonly gatewayTimeoutMs = 30_000
+  readonly diagnostics = { requests: 0, completed: 0, rateLimited: 0, gaps: 0, inFlight: 0, maximumQueued: 0, totalRequestMs: 0, totalQueueWaitMs: 0 }
 
   constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean }) {
     this.prompt = profile.prompt
@@ -252,9 +260,9 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   }
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
-    if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error('請設定轉錄 API 位址與模型名稱')
-    if (window.s2t && this.profile.requiresApiKey !== false && !(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error('請先在設定頁儲存此模型的 API key')
-    if (!window.s2t && !this.profile.gatewayProfileId) throw new Error('Web 版只能使用網站管理者設定的 ASR 模型')
+    if (!this.profile.endpoint.trim() || !this.profile.model.trim()) throw new Error(activeTranslate('svcAsrEndpointRequired'))
+    if (window.s2t && this.profile.requiresApiKey !== false && !(await window.s2t.hasModelApiKey(this.profile.id))) throw new Error(activeTranslate('svcModelApiKeyRequired'))
+    if (!window.s2t && !this.profile.gatewayProfileId) throw new Error(activeTranslate('svcWebAsrModelOnly'))
     this.sampleRate = input.sampleRate
     // An empty value deliberately omits OpenAI's optional `language` field and
     // lets the ASR model identify Chinese, English, Japanese, or German.
@@ -270,6 +278,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingContainsSpeech = false
     this.rollingContext = ''
     this.activeGatewayRequests.clear()
+    Object.keys(this.diagnostics).forEach((key) => { this.diagnostics[key as keyof typeof this.diagnostics] = 0 })
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
@@ -313,8 +322,9 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   async stop(): Promise<void> {
     if (this.stopped) return
     this.stopped = true
-    this.activeGatewayRequests.forEach((controller) => controller.abort())
-    this.activeGatewayRequests.clear()
+    // Normal stop drains accepted audio. Aborting here used to turn the last
+    // in-flight chunk into a gap even when the model was working normally.
+    if (this.queuedChunks >= this.maximumQueuedChunks) await this.queued
     if (this.pendingSamples && this.pendingContainsSpeech) {
       const start = this.pendingStart
       this.enqueue(this.takePending(this.pendingSamples), start, true)
@@ -347,12 +357,15 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     const startMs = Math.round(startSample / this.sampleRate * 1000)
     const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
     if (this.queuedChunks >= this.maximumQueuedChunks) {
-      this.emitError('模型處理過慢，部分即時字幕音訊已略過；完整錄音仍會保存')
+      this.emitError(activeTranslate('svcModelTooSlow'))
       this.emitGap(sequence, startMs, endMs, 'queue-overflow')
       return
     }
     this.queuedChunks += 1
+    this.diagnostics.maximumQueued = Math.max(this.diagnostics.maximumQueued, this.queuedChunks)
+    const enqueuedAt = Date.now()
     this.queued = this.queued.catch(() => undefined).then(async () => {
+      this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const wav = wavFromFloat32(audio, this.sampleRate)
       if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) return
       const response = await this.transcribeWithRetry(wav)
@@ -362,12 +375,13 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary }
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
-      this.emitError(error instanceof Error ? error.message : '模型轉錄失敗')
+      this.emitError(error instanceof Error ? error.message : activeTranslate('svcModelTranscribeFailed'))
       this.emitGap(sequence, startMs, endMs, 'request-failed')
     }).finally(() => { this.queuedChunks -= 1 })
   }
 
   private emitGap(sequence: number, startMs: number, endMs: number, gapReason: TranscriptEvent['gapReason']): void {
+    this.diagnostics.gaps += 1
     const event: TranscriptEvent = { id: `gap-${sequence}`, revision: 1, status: 'gap', startMs, endMs, sourceText: '', gapReason }
     this.listeners.forEach((listener) => listener(event))
   }
@@ -378,18 +392,30 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     for (const delay of delays) {
       if (delay) await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
       try {
-        return window.s2t ? await window.s2t.transcribeAudioChunk({
-          profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
-          language: this.language, requiresApiKey: this.profile.requiresApiKey !== false, prompt: this.rollingPrompt(), audio
-        }) : await this.transcribeThroughWebGateway(audio)
+        const startedAt = Date.now()
+        this.diagnostics.requests += 1
+        this.diagnostics.inFlight += 1
+        try {
+          const result = window.s2t ? await window.s2t.transcribeAudioChunk({
+            profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
+            language: this.language, requiresApiKey: this.profile.requiresApiKey !== false, prompt: this.rollingPrompt(), audio
+          }) : await this.transcribeThroughWebGateway(audio)
+          this.diagnostics.completed += 1
+          return result
+        } finally { this.diagnostics.inFlight -= 1; this.diagnostics.totalRequestMs += Date.now() - startedAt }
       } catch (error) {
         // A hung gateway must release the live-caption queue immediately;
         // retrying the same timed-out request would leave the screen stalled.
         if (error instanceof Error && error.name === 'TimeoutError') throw error
+        if (error instanceof HttpServiceError && error.status === 429) {
+          this.diagnostics.rateLimited += 1
+          // Do not rapidly spend retries inside the same rate-limit window.
+          if (delay !== delays[delays.length - 1]) await new Promise<void>((resolve) => window.setTimeout(resolve, (error.retryAfterSeconds ?? 30) * 1000))
+        }
         lastError = error
       }
     }
-    throw lastError instanceof Error ? lastError : new Error('模型轉錄失敗')
+    throw lastError instanceof Error ? lastError : new Error(activeTranslate('svcModelTranscribeFailed'))
   }
 
   /**
@@ -407,10 +433,10 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   }
 
   private async hasSileroSpeech(audio: ArrayBuffer): Promise<boolean> {
-    if (window.s2t) throw new Error('Silero VAD 目前由 Web gateway 的 CPU worker 提供')
+    if (window.s2t) throw new Error(activeTranslate('svcSileroProvidedByGateway'))
     const response = await authFetch('/api/audio-processing/silero-vad', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio })
     const payload = await readGatewayPayload(response) as { error?: string; speech?: unknown[] }
-    if (!response.ok) throw new Error(payload.error || `Silero VAD gateway failed (${response.status})`)
+    if (!response.ok) throw new Error(payload.error || activeTranslate('svcSileroGatewayFailed').replace('{status}', String(response.status)))
     return Array.isArray(payload.speech) && payload.speech.length > 0
   }
 
@@ -456,21 +482,25 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     const controller = new AbortController()
     this.activeGatewayRequests.add(controller)
     const timeout = window.setTimeout(() => controller.abort(), this.gatewayTimeoutMs)
-    let response: Response
-    try { response = await authFetch('/api/transcriptions', {
-      method: 'POST',
-      headers: {
-        'content-type': 'audio/wav',
-        'x-s2t-language': this.language,
-        ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
-        ...(this.profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
-        ...(prompt ? { 'x-s2t-prompt': encodeURIComponent(prompt) } : {})
-      },
-      body: audio,
-      signal: controller.signal
-    }) } catch (error) {
+    try {
+      const response = await authFetch('/api/transcriptions', {
+        method: 'POST',
+        headers: {
+          'content-type': 'audio/wav',
+          'x-s2t-language': this.language,
+          ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
+          ...(this.profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
+          ...(prompt ? { 'x-s2t-prompt': encodeURIComponent(prompt) } : {})
+        },
+        body: audio,
+        signal: controller.signal
+      })
+      const payload = await readJsonResponse<{ text?: string; detectedLanguage?: string }>(response, 'Web ASR gateway')
+      const detectedLanguage = payload.detectedLanguage === 'zh-TW' || payload.detectedLanguage === 'en-US' || payload.detectedLanguage === 'ja-JP' || payload.detectedLanguage === 'de-DE' ? payload.detectedLanguage : undefined
+      return { text: payload.text || '', detectedLanguage }
+    } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        const timeoutError = new Error(this.stopped ? '即時 ASR 已停止' : '即時 ASR 請求逾時，請確認 ASR 服務')
+        const timeoutError = new Error(activeTranslate('svcAsrRequestTimeout'))
         timeoutError.name = 'TimeoutError'
         throw timeoutError
       }
@@ -479,9 +509,5 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       window.clearTimeout(timeout)
       this.activeGatewayRequests.delete(controller)
     }
-    const payload = await readGatewayPayload(response)
-    if (!response.ok) throw new Error(payload.error || `Web ASR gateway failed (${response.status})`)
-    const detectedLanguage = payload.detectedLanguage === 'zh-TW' || payload.detectedLanguage === 'en-US' || payload.detectedLanguage === 'ja-JP' || payload.detectedLanguage === 'de-DE' ? payload.detectedLanguage : undefined
-    return { text: payload.text || '', detectedLanguage }
   }
 }

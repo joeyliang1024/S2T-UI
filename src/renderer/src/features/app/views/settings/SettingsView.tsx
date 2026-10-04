@@ -86,7 +86,6 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
   const [newGlossaryTerm, setNewGlossaryTerm] = useState('')
   const [dirty, setDirty] = useState(false)
   const sileroHealth = modelHealth['managed-silero-vad']
-  const sileroHealthLabel = sileroHealth?.state === 'healthy' ? '健康' : sileroHealth?.state === 'degraded' ? '降級' : sileroHealth?.state === 'unhealthy' ? '失敗' : '未確認'
   // Last saved (or mounted) snapshot: comparison baseline and revert target.
   const savedSnapshotRef = useRef<string>(serializeSettings(settings))
   const savedFlagRef = useRef(false)
@@ -138,18 +137,21 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
       const glossaryImport = parseGlossaryJson(await file.text())
       const glossary = glossaryImport.entries
       update((current) => ({ ...current, glossary: [...current.glossary.split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean), ...glossary].filter((entry, index, all) => all.indexOf(entry) === index).join('\n') }))
-      setStatus(`已載入 ${glossary.length} 筆 JSON 術語${glossaryImport.invalidEntries ? `；略過 ${glossaryImport.invalidEntries} 筆無效資料` : ''}${glossaryImport.ignoredDuplicates ? `；略過 ${glossaryImport.ignoredDuplicates} 筆重複或超出上限資料` : ''}；請儲存設定。`)
+      setStatus(ui('glossaryJsonImported')
+        .replace('{count}', String(glossary.length))
+        .replace('{invalid}', glossaryImport.invalidEntries ? ui('glossaryJsonSkippedInvalid').replace('{count}', String(glossaryImport.invalidEntries)) : '')
+        .replace('{duplicates}', glossaryImport.ignoredDuplicates ? ui('glossaryJsonSkippedDuplicates').replace('{count}', String(glossaryImport.ignoredDuplicates)) : ''))
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
       if (message === 'invalid-json') setStatus(ui('glossaryJsonUnreadable'))
       else if (message === 'invalid-root') setStatus(ui('glossaryJsonRootInvalid'))
-      else if (message === 'empty-glossary') setStatus('找不到可用術語；請使用 {「術語」:「指定譯法」} 或 [{"term":"術語","translation":"指定譯法"}] 格式。')
+      else if (message === 'empty-glossary') setStatus(ui('glossaryJsonEmpty'))
       else setStatus(message || ui('glossaryJsonLoadFailed'))
     }
   }
   const setDenoiseEnabled = (enabled: boolean): void => {
     update((current) => ({ ...current, denoiseEnabled: enabled }))
-    if (controller.captureState === 'recording' || controller.captureState === 'paused') setStatus('降噪偏好已保存；需切換麥克風或下次開始收音才會建立新的音源 stream。')
+    if (controller.captureState === 'recording' || controller.captureState === 'paused') setStatus(ui('denoiseSavedNewStream'))
   }
   const revertChanges = (): void => { userEditedRef.current = false; setSettings(JSON.parse(savedSnapshotRef.current) as Settings); setDirty(false); onDirtyChange(false) }
 
@@ -193,18 +195,18 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
         <SettingsCard eyebrow="AUDIO" title={ui('audioProcessing')}>
           <div className="toggle-list">
             <ToggleRow label={ui('enableDenoise')} checked={settings.denoiseEnabled} onChange={setDenoiseEnabled} />
-            <ToggleRow label="使用 Kaiser 高品質重取樣" hint="下一次收音生效" checked={settings.kaiserResampleEnabled} onChange={(enabled) => update((current) => ({ ...current, kaiserResampleEnabled: enabled }))} />
-            <p className="hint">Silero VAD 健康度：<span className={`model-health ${sileroHealth?.state ?? 'unknown'}`} title={sileroHealth?.reason ?? '尚未執行健康檢查'}><i aria-hidden="true" />{sileroHealthLabel}</span>{sileroHealth?.reason ? `－${sileroHealth.reason}` : ''}</p>
-            {sileroVadAvailable === true && <ToggleRow label="使用 Silero VAD" hint="Web gateway CPU worker；下一次收音生效" checked={settings.sileroVadEnabled} onChange={(enabled) => update((current) => ({ ...current, sileroVadEnabled: enabled }))} />}
-            {sileroVadAvailable === false && <p className="hint">Silero VAD 模型尚未載入（模型檔、checksum 或 onnxruntime-node 檢查未通過），因此不顯示啟用選項。</p>}
-            <ToggleRow label="使用 dynaudnorm 音量正規化" hint="Web gateway CPU worker；下一次收音生效" checked={settings.dynaudnormEnabled} onChange={(enabled) => update((current) => ({ ...current, dynaudnormEnabled: enabled }))} />
+            <ToggleRow label={ui('kaiserResample')} hint={ui('nextRecordingApplies')} checked={settings.kaiserResampleEnabled} onChange={(enabled) => update((current) => ({ ...current, kaiserResampleEnabled: enabled }))} />
+            <p className="hint">{ui('sileroVadHealth')}{ui('labelColon')}<span className={`model-health ${sileroHealth?.state ?? 'unknown'}`} title={sileroHealth?.reason ?? ui('modelHealthNotChecked')}><i aria-hidden="true" />{sileroHealth?.state === 'healthy' ? ui('modelHealthHealthy') : sileroHealth?.state === 'degraded' ? ui('modelHealthDegraded') : sileroHealth?.state === 'unhealthy' ? ui('modelHealthFailed') : ui('modelHealthUnknown')}</span>{sileroHealth?.reason ? `${ui('labelDash')}${sileroHealth.reason}` : ''}</p>
+            {sileroVadAvailable === true && <ToggleRow label={ui('useSileroVad')} hint={ui('webGatewayCpuWorkerHint')} checked={settings.sileroVadEnabled} onChange={(enabled) => update((current) => ({ ...current, sileroVadEnabled: enabled }))} />}
+            {sileroVadAvailable === false && <p className="hint">{ui('sileroVadNotLoaded')}</p>}
+            <ToggleRow label={ui('useDynaudnorm')} hint={ui('webGatewayCpuWorkerHint')} checked={settings.dynaudnormEnabled} onChange={(enabled) => update((current) => ({ ...current, dynaudnormEnabled: enabled }))} />
           </div>
           <details className="help-disclosure">
             <summary>{ui('advancedHelp')}</summary>
-            <p className="hint">此設定請求瀏覽器的 noiseSuppression，只影響新建或切換的麥克風 stream；保存音檔與送往 ASR 的音訊都使用同一處理後 stream。瀏覽器可能不支援此約束。</p>
+            <p className="hint">{ui('noiseSuppressionAdvancedHint')}</p>
             <p className="hint">{denoiseApplied === true ? ui('denoiseApplied') : denoiseApplied === false ? ui('denoiseNotApplied') : ui('denoiseUnknown')}</p>
-            <p className="hint">只會套用在送往 ASR 的重取樣分支，原始錄音與聲紋 embedding 保持未正規化；開啟後會使用較高品質的 anti-alias filter。</p>
-            <p className="hint">預設值採 faster-whisper 常用的 500 ms 靜音起點；Breeze HTTP 的時間戳是 App 音訊 chunk 邊界，不是模型 word timestamps。</p>
+            <p className="hint">{ui('kaiserResampleAdvancedHint')}</p>
+            <p className="hint">{ui('silenceStartAdvancedHint')}</p>
           </details>
         </SettingsCard>
       </>}
@@ -231,7 +233,7 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
           <label className="settings-search-field">{ui('searchGlossary')}<input value={glossarySearch} placeholder={ui('glossarySearchPlaceholder')} onChange={(event) => setGlossarySearch(event.target.value)} /></label>
           <div className="glossary-editor">{filteredGlossaryEntries.map((entry) => <div key={entry.index}><input defaultValue={entry.value} aria-label={ui('glossaryTerm')} onBlur={(event) => replaceGlossaryEntry(entry.index, event.currentTarget.value)} /><button className="text-button danger" aria-label={ui('deleteGlossary')} onClick={() => replaceGlossaryEntry(entry.index, '')}>{ui('deleteGlossary')}</button></div>)}{glossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}{glossaryEntries.length > 0 && filteredGlossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}<div className="glossary-add-row"><input value={newGlossaryTerm} aria-label={ui('addGlossary')} placeholder={ui('glossaryExample')} onChange={(event) => setNewGlossaryTerm(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addGlossaryEntry() } }} /><button className="secondary" onClick={addGlossaryEntry}>{ui('addGlossary')}</button></div></div>
           <label className="glossary-json-import">{ui('loadGlossaryJson')}<input type="file" accept="application/json,.json" onChange={(event) => { const file = event.currentTarget.files?.[0] ?? null; event.currentTarget.value = ''; void importGlossaryJson(file) }} /></label>
-          <details className="help-disclosure"><summary>{ui('advancedHelp')}</summary><p className="hint">支援 {"{「術語」:「指定譯法」}"} 或 [{"{\"term\":\"術語\",\"translation\":\"指定譯法\"}"}]；載入後請儲存設定。</p></details>
+          <details className="help-disclosure"><summary>{ui('advancedHelp')}</summary><p className="hint">{ui('glossaryHelp')}</p></details>
         </SettingsCard>
       </>}
 

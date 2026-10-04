@@ -1,4 +1,5 @@
 import { type TranscriptEvent } from '../../features/models/model-adapter'
+import { activeTranslate } from '../i18n'
 
 export const joinCaptionText = (previous: string, next: string): string => {
   const needsSpace = /[A-Za-z0-9]$/.test(previous) && /^[A-Za-z0-9]/.test(next)
@@ -21,7 +22,7 @@ const vttVoice = (value: string): string => value.replace(/[\r\n<>]/g, ' ').repl
 export const makeVtt = (entries: TranscriptEvent[]): string => `WEBVTT\n\n${entries
   .filter((entry) => entry.status === 'final' && Number.isFinite(entry.startMs) && Number.isFinite(entry.endMs) && entry.startMs >= 0 && entry.endMs > entry.startMs)
   .map((entry) => {
-    const voice = vttVoice(entry.speaker || '未標記講者')
+    const voice = vttVoice(entry.speaker || activeTranslate('unassignedSpeaker'))
     const speaker = `<v ${voice}>`
     return `${vttTime(entry.startMs)} --> ${vttTime(entry.endMs)}\n${speaker}${vttText(entry.sourceText)}${entry.translatedText ? `\n${speaker}${vttText(entry.translatedText)}` : ''}`
   })
@@ -33,7 +34,7 @@ export const makeTranscriptText = (entries: TranscriptEvent[], options: boolean 
   const normalized = typeof options === 'boolean' ? { includeTimestamp: true, includeSpeaker: options, includeTranslation: true } : { includeTimestamp: true, includeSpeaker: true, includeTranslation: true, ...options }
   return entries
   .filter((entry) => entry.status === 'final')
-  .map((entry) => `${normalized.includeTimestamp ? `[${timestamp(entry.startMs)}] ` : ''}${normalized.includeSpeaker ? `${entry.speaker?.trim() || '未標記講者'}：` : ''}${entry.sourceText}${normalized.includeTranslation && entry.translatedText ? `\n${entry.translatedText}` : ''}`)
+  .map((entry) => `${normalized.includeTimestamp ? `[${timestamp(entry.startMs)}] ` : ''}${normalized.includeSpeaker ? `${entry.speaker?.trim() || activeTranslate('unassignedSpeaker')}：` : ''}${entry.sourceText}${normalized.includeTranslation && entry.translatedText ? `\n${entry.translatedText}` : ''}`)
   .join('\n\n')
 }
 

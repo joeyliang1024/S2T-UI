@@ -48,6 +48,14 @@ export type SavedSession = {
   /** The transcript is retained, but no in-app audio copy could be saved. */
   audioUnavailable?: boolean
   segments: TranscriptEvent[]
+  /** Missing state on older records means completed. */
+  processingState?: 'running' | 'completed' | 'failed'
+  processingStage?: 'asr' | 'translation' | 'saving' | 'diarization'
+  processingToken?: string
+  processingError?: string
+  diarizationJobId?: string
+  qualityCorrectionState?: 'completed' | 'failed'
+  qualityCorrectionError?: string
   summary?: string
   /** Deterministic signature of the transcript used when this summary was generated. */
   summarySourceSignature?: string

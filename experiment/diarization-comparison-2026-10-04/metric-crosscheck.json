@@ -1,0 +1,533 @@
+{
+  "passed": true,
+  "package": "pyannote.metrics",
+  "collar": 0,
+  "skipOverlap": false,
+  "rows": [
+    {
+      "id": "hkzpa",
+      "method": "sherpa-0.8",
+      "officialDER": 18.89279990456133,
+      "javascriptDER": 18.89,
+      "differencePP": 0.0027999045613285034,
+      "components": {
+        "total": 947.7600000000003,
+        "missed detection": 41.98730094909675,
+        "false alarm": 17.593512756451716,
+        "confusion": 119.47758666992206,
+        "correct": 786.2951123809814,
+        "diarization error rate": 0.1889279990456133
+      }
+    },
+    {
+      "id": "hkzpa",
+      "method": "nemotron-v3-offline-pad005",
+      "officialDER": 2.7211530345234056,
+      "javascriptDER": 2.72,
+      "differencePP": 0.0011530345234054273,
+      "components": {
+        "total": 947.7600000000003,
+        "missed detection": 9.379999999999615,
+        "false alarm": 16.31999999999939,
+        "confusion": 0.09000000000003183,
+        "correct": 938.2900000000006,
+        "diarization error rate": 0.027211530345234054
+      }
+    },
+    {
+      "id": "hkzpa",
+      "method": "nemotron-v3-offline",
+      "officialDER": 3.084852705326125,
+      "javascriptDER": 3.08,
+      "differencePP": 0.00485270532612514,
+      "components": {
+        "total": 947.7600000000003,
+        "missed detection": 5.368999999999559,
+        "false alarm": 23.587999999999305,
+        "confusion": 0.28000000000002956,
+        "correct": 942.1110000000007,
+        "diarization error rate": 0.03084852705326125
+      }
+    },
+    {
+      "id": "hkzpa",
+      "method": "nemotron-v3-streaming",
+      "officialDER": 3.198278045074585,
+      "javascriptDER": 3.2,
+      "differencePP": -0.001721954925415048,
+      "components": {
+        "total": 947.7600000000003,
+        "missed detection": 5.747999999999454,
+        "false alarm": 24.302999999999194,
+        "confusion": 0.2610000000002515,
+        "correct": 941.7510000000007,
+        "diarization error rate": 0.03198278045074585
+      }
+    },
+    {
+      "id": "hkzpa",
+      "method": "nemotron-v3-offline-silero-pad0",
+      "officialDER": 5.507828986241133,
+      "javascriptDER": 5.51,
+      "differencePP": -0.0021710137588666356,
+      "components": {
+        "total": 947.7600000000003,
+        "missed detection": 37.01499999999941,
+        "false alarm": 15.185999999999574,
+        "confusion": 0.0,
+        "correct": 910.7450000000009,
+        "diarization error rate": 0.05507828986241133
+      }
+    },
+    {
+      "id": "hkzpa",
+      "method": "nemotron-v3-offline-silero-pad0.08",
+      "officialDER": 4.4248543935169655,
+      "javascriptDER": 4.42,
+      "differencePP": 0.004854393516965594,
+      "components": {
+        "total": 947.7600000000003,
+        "missed detection": 24.854999999996185,
+        "false alarm": 17.02600000000023,
+        "confusion": 0.055999999999983174,
+        "correct": 922.8490000000041,
+        "diarization error rate": 0.04424854393516965
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "sherpa-0.8",
+      "officialDER": 62.242790272195606,
+      "javascriptDER": 62.24,
+      "differencePP": 0.0027902721956039045,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 14.30142883300843,
+        "false alarm": 79.2890249538423,
+        "confusion": 471.6736703491209,
+        "correct": 422.18490081787075,
+        "diarization error rate": 0.622427902721956
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-v3-offline-pad005",
+      "officialDER": 5.920762861169742,
+      "javascriptDER": 5.92,
+      "differencePP": 0.0007628611697416687,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 17.76999999999977,
+        "false alarm": 33.849999999999355,
+        "confusion": 2.1500000000000057,
+        "correct": 888.2400000000004,
+        "diarization error rate": 0.05920762861169741
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-v3-offline-repeat",
+      "officialDER": 9.163693622269191,
+      "javascriptDER": 9.16,
+      "differencePP": 0.0036936222691910103,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 5.360000000000301,
+        "false alarm": 75.31999999999962,
+        "confusion": 2.5409999999999684,
+        "correct": 900.2589999999998,
+        "diarization error rate": 0.09163693622269191
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-v3-offline",
+      "officialDER": 9.163693622269191,
+      "javascriptDER": 9.16,
+      "differencePP": 0.0036936222691910103,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 5.360000000000301,
+        "false alarm": 75.31999999999962,
+        "confusion": 2.5409999999999684,
+        "correct": 900.2589999999998,
+        "diarization error rate": 0.09163693622269191
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-v3-streaming",
+      "officialDER": 9.202563424947071,
+      "javascriptDER": 9.2,
+      "differencePP": 0.002563424947071624,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 10.918000000000095,
+        "false alarm": 69.98999999999918,
+        "confusion": 2.6660000000000466,
+        "correct": 894.576,
+        "diarization error rate": 0.09202563424947072
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-segment-spectral-knn-0.1",
+      "officialDER": 46.613702431289624,
+      "javascriptDER": 46.61,
+      "differencePP": 0.0037024312896249967,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 15.973000000000201,
+        "false alarm": 59.946999999999576,
+        "confusion": 347.40700000000015,
+        "correct": 544.7799999999997,
+        "diarization error rate": 0.4661370243128962
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-segment-spectral-knn-0.2",
+      "officialDER": 12.04501409443268,
+      "javascriptDER": 12.05,
+      "differencePP": -0.004985905567320259,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 15.973000000000201,
+        "false alarm": 59.400999999999584,
+        "confusion": 34.01400000000007,
+        "correct": 858.1729999999999,
+        "diarization error rate": 0.12045014094432681
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "spectral-knn-0.1",
+      "officialDER": 40.70416046982511,
+      "javascriptDER": 40.7,
+      "differencePP": 0.004160469825109203,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 22.62626129150458,
+        "false alarm": 58.9263020992281,
+        "confusion": 288.1063403320311,
+        "correct": 597.4273983764645,
+        "diarization error rate": 0.4070416046982511
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "spectral-knn-0.2",
+      "officialDER": 13.980339217597706,
+      "javascriptDER": 13.98,
+      "differencePP": 0.000339217597705499,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 23.506261291504575,
+        "false alarm": 54.355694799423524,
+        "confusion": 49.101892547607235,
+        "correct": 835.5518461608883,
+        "diarization error rate": 0.13980339217597706
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-v3-offline-silero-pad0",
+      "officialDER": 8.252510570824544,
+      "javascriptDER": 8.25,
+      "differencePP": 0.0025105708245440894,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 9.961000000000482,
+        "false alarm": 62.44399999999974,
+        "confusion": 2.5409999999999684,
+        "correct": 895.6579999999997,
+        "diarization error rate": 0.08252510570824544
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "nemotron-v3-offline-silero-pad0.08",
+      "officialDER": 8.498502466525743,
+      "javascriptDER": 8.5,
+      "differencePP": -0.0014975334742572954,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 7.359999999999975,
+        "false alarm": 67.27900000000025,
+        "confusion": 2.5409999999999684,
+        "correct": 898.2590000000001,
+        "diarization error rate": 0.08498502466525742
+      }
+    },
+    {
+      "id": "jcako",
+      "method": "sherpa-preview-current",
+      "officialDER": 76.78389376282223,
+      "javascriptDER": 76.78,
+      "differencePP": 0.0038937628222299736,
+      "components": {
+        "total": 908.1600000000001,
+        "missed detection": 17.24313367664857,
+        "false alarm": 78.89789657004175,
+        "confusion": 601.1795793497561,
+        "correct": 289.73728697359553,
+        "diarization error rate": 0.7678389376282223
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "sherpa-0.8",
+      "officialDER": 16.23291381138316,
+      "javascriptDER": 16.23,
+      "differencePP": 0.0029138113831592705,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 9.82056777954105,
+        "false alarm": 16.434207641706266,
+        "confusion": 147.90491027832024,
+        "correct": 915.1545219421383,
+        "diarization error rate": 0.1623291381138316
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "sherpa-0.75",
+      "officialDER": 26.393982760912976,
+      "javascriptDER": 26.39,
+      "differencePP": 0.003982760912975891,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 9.8036610412598,
+        "false alarm": 16.400516235456266,
+        "confusion": 256.97158496856696,
+        "correct": 806.1047539901729,
+        "diarization error rate": 0.26393982760912976
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "sherpa-0.85",
+      "officialDER": 14.76067112451536,
+      "javascriptDER": 14.76,
+      "differencePP": 0.0006711245153603329,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 9.82056777954105,
+        "false alarm": 16.467960083112516,
+        "confusion": 132.07576049804675,
+        "correct": 930.9836717224118,
+        "diarization error rate": 0.1476067112451536
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "nemotron-v3-offline",
+      "officialDER": 23.026247110580872,
+      "javascriptDER": 23.03,
+      "differencePP": -0.0037528894191289908,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 119.3089999999998,
+        "false alarm": 21.216000000000378,
+        "confusion": 106.5189999999998,
+        "correct": 847.052,
+        "diarization error rate": 0.23026247110580872
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "nemotron-v3-streaming",
+      "officialDER": 33.794646185966734,
+      "javascriptDER": 33.79,
+      "differencePP": 0.004646185966734606,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 246.72899999999981,
+        "false alarm": 22.400000000000205,
+        "confusion": 93.4469999999998,
+        "correct": 732.704,
+        "diarization error rate": 0.33794646185966737
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "spectral-knn-0.1",
+      "officialDER": 34.30002996599135,
+      "javascriptDER": 34.3,
+      "differencePP": 2.9965991352298715e-05,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 20.574137420654353,
+        "false alarm": 12.0846354981516,
+        "confusion": 335.33938858032184,
+        "correct": 716.9664739990234,
+        "diarization error rate": 0.34300029965991347
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "spectral-knn-0.2",
+      "officialDER": 34.785858955304896,
+      "javascriptDER": 34.79,
+      "differencePP": -0.004141044695103346,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 20.574137420654353,
+        "false alarm": 12.0846354981516,
+        "confusion": 340.55175064086905,
+        "correct": 711.7541119384763,
+        "diarization error rate": 0.34785858955304894
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "nemotron-v3-offline-silero-pad0",
+      "officialDER": 23.38285735590186,
+      "javascriptDER": 23.38,
+      "differencePP": 0.0028573559018596484,
+      "components": {
+        "total": 1072.8799999999997,
+        "missed detection": 135.09299999999962,
+        "false alarm": 12.2900000000004,
+        "confusion": 103.48699999999977,
+        "correct": 834.3000000000003,
+        "diarization error rate": 0.2338285735590186
+      }
+    },
+    {
+      "id": "ldnro",
+      "method": "nemotron-v3-offline-silero-pad0.08",
+      "officialDER": 23.16270225933927,
+      "javascriptDER": 23.16,
+      "differencePP": 0.002702259339269375,
+      "components": {
+        "total": 1072.8799999999992,
+        "missed detection": 128.12799999999874,
+        "false alarm": 15.797000000000665,
+        "confusion": 104.58299999999954,
+        "correct": 840.169000000001,
+        "diarization error rate": 0.23162702259339268
+      }
+    },
+    {
+      "id": "qouur",
+      "method": "sherpa-0.8",
+      "officialDER": 1.4425793272178886,
+      "javascriptDER": 1.44,
+      "differencePP": 0.0025793272178886717,
+      "components": {
+        "total": 1016.3999999999999,
+        "missed detection": 11.879882507324197,
+        "false alarm": 1.2637254639715474,
+        "confusion": 1.518768310546875,
+        "correct": 1003.0013491821288,
+        "diarization error rate": 0.014425793272178886
+      }
+    },
+    {
+      "id": "qouur",
+      "method": "nemotron-v3-offline",
+      "officialDER": 0.29604486422668885,
+      "javascriptDER": 0.3,
+      "differencePP": -0.003955135773311136,
+      "components": {
+        "total": 1016.3999999999999,
+        "missed detection": 0.0,
+        "false alarm": 3.009000000000065,
+        "confusion": 0.0,
+        "correct": 1016.3999999999999,
+        "diarization error rate": 0.0029604486422668886
+      }
+    },
+    {
+      "id": "qouur",
+      "method": "nemotron-v3-offline-silero-pad0",
+      "officialDER": 0.6926406926407169,
+      "javascriptDER": 0.69,
+      "differencePP": 0.0026406926407169795,
+      "components": {
+        "total": 1016.4,
+        "missed detection": 5.880000000000066,
+        "false alarm": 1.1600000000001813,
+        "confusion": 0.0,
+        "correct": 1010.5199999999999,
+        "diarization error rate": 0.006926406926407169
+      }
+    },
+    {
+      "id": "qouur",
+      "method": "nemotron-v3-offline-silero-pad0.08",
+      "officialDER": 0.4958677685949969,
+      "javascriptDER": 0.5,
+      "differencePP": -0.004132231405003073,
+      "components": {
+        "total": 1016.4,
+        "missed detection": 3.279999999999231,
+        "false alarm": 1.7600000000003178,
+        "confusion": 0.0,
+        "correct": 1013.1200000000007,
+        "diarization error rate": 0.0049586776859499694
+      }
+    },
+    {
+      "id": "jcako-repeat4",
+      "method": "nemotron-v3-offline-cache528",
+      "officialDER": 9.511058816728124,
+      "javascriptDER": 9.51,
+      "differencePP": 0.0010588167281238015,
+      "components": {
+        "total": 3632.6400000000044,
+        "missed detection": 44.4815580000016,
+        "false alarm": 293.7715379999921,
+        "confusion": 7.24943099999922,
+        "correct": 3580.909011000004,
+        "diarization error rate": 0.09511058816728124
+      }
+    },
+    {
+      "id": "jcako-repeat4",
+      "method": "nemotron-v3-offline",
+      "officialDER": 22.924291974982193,
+      "javascriptDER": 22.92,
+      "differencePP": 0.004291974982191249,
+      "components": {
+        "total": 3632.6400000000044,
+        "missed detection": 92.4289999999998,
+        "false alarm": 276.7009999999949,
+        "confusion": 463.6269999999994,
+        "correct": 3076.5840000000057,
+        "diarization error rate": 0.22924291974982194
+      }
+    },
+    {
+      "id": "jcako-repeat4",
+      "method": "nemotron-segment-spectral-knn-0.1",
+      "officialDER": 32.49873370331209,
+      "javascriptDER": 32.5,
+      "differencePP": -0.0012662966879091186,
+      "components": {
+        "total": 3632.6400000000044,
+        "missed detection": 128.70400000000154,
+        "false alarm": 223.98199999999625,
+        "confusion": 827.8760000000001,
+        "correct": 2676.060000000003,
+        "diarization error rate": 0.32498733703312094
+      }
+    },
+    {
+      "id": "jcako-repeat4",
+      "method": "nemotron-segment-spectral-knn-0.2",
+      "officialDER": 13.93614561310779,
+      "javascriptDER": 13.94,
+      "differencePP": -0.003854386892209405,
+      "components": {
+        "total": 3632.6400000000044,
+        "missed detection": 128.70400000000154,
+        "false alarm": 223.28999999999647,
+        "confusion": 154.2560000000014,
+        "correct": 3349.680000000002,
+        "diarization error rate": 0.1393614561310779
+      }
+    }
+  ]
+}

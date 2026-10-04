@@ -1,0 +1,178 @@
+{
+  "metrics": {
+    "truthSpeakers": 3,
+    "predictedSpeakers": 3,
+    "DER": 11.78,
+    "missPct": 1.28,
+    "falseAlarmPct": 9.17,
+    "confusionPct": 1.32,
+    "purityPct": 93.96,
+    "referenceSpeakerSeconds": 41.519999999999996,
+    "mapping": {
+      "speaker_1": "spk01",
+      "speaker_2": "spk02",
+      "speaker_3": "spk00"
+    }
+  },
+  "firstNonemptySegmentWallMs": 1164.8120409809053,
+  "totalObservedMidpointLabelChanges": 0,
+  "turns": [
+    {
+      "reference": {
+        "start": 31.24,
+        "end": 32.16,
+        "speaker": "spk00"
+      },
+      "midpoint": 31.699999999999996,
+      "finalRawLabel": "speaker_3",
+      "firstLabelWallSeconds": 32.49930316582322,
+      "firstCorrectLabelFromReferenceOnsetMs": 1259.3031658232228,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 29.16,
+        "end": 29.76,
+        "speaker": "spk02"
+      },
+      "midpoint": 29.46,
+      "finalRawLabel": "speaker_2",
+      "firstLabelWallSeconds": 30.409707583021373,
+      "firstCorrectLabelFromReferenceOnsetMs": 1249.7075830213723,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 30.56,
+        "end": 31,
+        "speaker": "spk02"
+      },
+      "midpoint": 30.78,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 31.469622957985848,
+      "firstCorrectLabelFromReferenceOnsetMs": null,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 39.48,
+        "end": 40.239999999999995,
+        "speaker": "spk02"
+      },
+      "midpoint": 39.86,
+      "finalRawLabel": "speaker_2",
+      "firstLabelWallSeconds": 40.81587441591546,
+      "firstCorrectLabelFromReferenceOnsetMs": 1335.8744159154626,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 48.56,
+        "end": 56.64,
+        "speaker": "spk02"
+      },
+      "midpoint": 52.6,
+      "finalRawLabel": "speaker_2",
+      "firstLabelWallSeconds": 53.296575957909226,
+      "firstCorrectLabelFromReferenceOnsetMs": 4736.575957909225,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 38.84,
+        "end": 39.6,
+        "speaker": "spk00"
+      },
+      "midpoint": 39.22,
+      "finalRawLabel": "speaker_3",
+      "firstLabelWallSeconds": 39.773379708174616,
+      "firstCorrectLabelFromReferenceOnsetMs": 933.3797081746127,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 0.48,
+        "end": 12.8,
+        "speaker": "spk01"
+      },
+      "midpoint": 6.640000000000001,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 7.460117457900196,
+      "firstCorrectLabelFromReferenceOnsetMs": 6980.117457900196,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 28.56,
+        "end": 29.16,
+        "speaker": "spk01"
+      },
+      "midpoint": 28.86,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 29.39056179113686,
+      "firstCorrectLabelFromReferenceOnsetMs": 830.5617911368621,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 29.96,
+        "end": 31.44,
+        "speaker": "spk01"
+      },
+      "midpoint": 30.700000000000003,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 31.469622957985848,
+      "firstCorrectLabelFromReferenceOnsetMs": 1509.6229579858473,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 32.32,
+        "end": 37.96,
+        "speaker": "spk01"
+      },
+      "midpoint": 35.14,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 35.62822129111737,
+      "firstCorrectLabelFromReferenceOnsetMs": 3308.2212911173697,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 40.8,
+        "end": 47.8,
+        "speaker": "spk01"
+      },
+      "midpoint": 44.3,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 44.974406000226736,
+      "firstCorrectLabelFromReferenceOnsetMs": 4174.406000226739,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    },
+    {
+      "reference": {
+        "start": 57.08,
+        "end": 60,
+        "speaker": "spk01"
+      },
+      "midpoint": 58.54,
+      "finalRawLabel": "speaker_1",
+      "firstLabelWallSeconds": 59.540191375184804,
+      "firstCorrectLabelFromReferenceOnsetMs": 2460.191375184806,
+      "observedLabelChanges": 0,
+      "lastChangeWallSeconds": null
+    }
+  ],
+  "note": "reference-turn midpoint sampling; does not certify word-aligned stable identity; padding may revise membership at boundaries"
+}

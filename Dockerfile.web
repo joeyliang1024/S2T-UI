@@ -13,7 +13,7 @@ COPY dependencies/npm ./dependencies/npm
 # those hooks; the runtime image supplies the one binary it needs below.
 RUN test -n "$NPM_REGISTRY" \
     && npm ci --ignore-scripts --no-audit --no-fund \
-       --registry="$NPM_REGISTRY" --replace-registry-host=always
+       --registry="$NPM_REGISTRY" --replace-registry-host=npmjs
 COPY . .
 RUN npm run build
 
@@ -22,16 +22,16 @@ WORKDIR /app
 ARG NPM_REGISTRY
 ENV NODE_ENV=production \
     S2T_WEB_PORT=8787 \
-    S2T_SHERPA_MODELS_DIR=/models/sherpa-onnx \
-    S2T_SILERO_VAD_MODEL=/models/silero-vad/silero_vad.onnx
+    S2T_MODELS_DIR=/models
 COPY package.json package-lock.json ./
 COPY dependencies/npm ./dependencies/npm
-COPY dependencies/ffmpeg-static/ffmpeg-linux-x64 /opt/s2t-dependencies/ffmpeg
+COPY dependencies/ffmpeg-static /opt/s2t-dependencies/ffmpeg-static
 RUN test -n "$NPM_REGISTRY" \
     && npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
-       --registry="$NPM_REGISTRY" --replace-registry-host=always \
-    && install -m 0755 /opt/s2t-dependencies/ffmpeg node_modules/ffmpeg-static/ffmpeg
+       --registry="$NPM_REGISTRY" --replace-registry-host=npmjs \
+    && install -m 0755 /opt/s2t-dependencies/ffmpeg-static/ffmpeg-linux-$(node -p process.arch) node_modules/ffmpeg-static/ffmpeg
 COPY --from=build /app/out ./out
 COPY server ./server
+COPY icon ./icon
 EXPOSE 8787
 CMD ["node", "server/index.cjs"]

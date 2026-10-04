@@ -1,0 +1,27 @@
+{
+  "id": "jcako",
+  "preset": "v3-offline",
+  "elapsedMs": 12219.382500000009,
+  "returncode": 0,
+  "command": [
+    "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/nemo-runtime/nemo-speech-0.2.0-macos-aarch64-cpu/bin/nemo-speech",
+    "diarize",
+    "/Users/liangzhiquan/Desktop/S2T-UI/tmp/voxconverse/wav/audio/jcako.wav",
+    "--model",
+    "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/work/diarization/Nemotron-3-Diarization.q8_0.gguf",
+    "--backend",
+    "cpu",
+    "--preset",
+    "v3-offline",
+    "--format",
+    "rttm",
+    "--recording-id",
+    "jcako",
+    "--output",
+    "/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/outputs/diarization/jcako-nemotron-v3-offline.rttm"
+  ],
+  "runtime": "NVIDIA official NeMo-Speech.cpp v0.2.0 macos-aarch64-cpu",
+  "model": "Nemotron 3 Diarization q8_0",
+  "audioEgress": false,
+  "pacedRealtime": false
+}

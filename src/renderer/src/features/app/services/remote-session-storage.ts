@@ -1,4 +1,5 @@
 import { retryableAuthFetch } from '../../auth/services/auth-client'
+import { activeTranslate } from '../../../shared/i18n'
 import type { ImportCheckpoint, LiveTranscriptDraft, SavedSession } from '../../../shared/types'
 
 const check = async (response: Response): Promise<void> => { if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) } }
@@ -18,7 +19,7 @@ export const remoteSessionStorage = {
     const response = await retryableAuthFetch('/api/data/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessions: sessions.map(remoteSession), version }) })
     await check(response)
     const body = await response.json() as { version?: number }
-    if (!Number.isSafeInteger(body.version) || body.version! < 1) throw new Error('遠端沒有回傳有效的紀錄版本')
+    if (!Number.isSafeInteger(body.version) || body.version! < 1) throw new Error(activeTranslate('svcRemoteInvalidVersion'))
     return body.version!
   },
   async saveAudio(id: string, audio: Blob): Promise<void> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }); await check(response) },

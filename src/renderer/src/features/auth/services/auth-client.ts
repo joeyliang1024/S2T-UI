@@ -1,3 +1,5 @@
+import { activeTranslate } from '../../../shared/i18n'
+
 export type AuthUser = { id: string; username: string; NT: string; Department: string; role: 'admin' | 'user'; createdAt: string }
 type AuthResult = { user: AuthUser; token?: string }
 
@@ -44,14 +46,14 @@ export const retryableAuthFetch = async (path: string, init: RequestInit = {}, a
     try {
       const response = await authFetch(path, init)
       if (![502, 503, 504].includes(response.status) || attempt === attempts - 1) return response
-      lastError = new Error(`Gateway 暫時不可用（HTTP ${response.status}）`)
+      lastError = new Error(activeTranslate('svcGatewayUnavailable').replace('{status}', String(response.status)))
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') throw error
       lastError = error
     }
     await new Promise<void>((resolve) => window.setTimeout(resolve, 150 * (attempt + 1)))
   }
-  throw lastError instanceof Error ? lastError : new Error('Gateway 連線中斷')
+  throw lastError instanceof Error ? lastError : new Error(activeTranslate('svcGatewayConnectionLost'))
 }
 
 export const authClient = {

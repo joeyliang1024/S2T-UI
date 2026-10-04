@@ -150,6 +150,70 @@ class LocalConfigStore {
     const records = await this.records(); const start = `${safePart(scope, 'scope')}:`; const cleanPrefix = prefix ? safePart(prefix, 'prefix') : ''
     return Object.entries(records).flatMap(([key, entry]) => key.startsWith(start) && key.slice(start.length).startsWith(cleanPrefix) ? [{ key: key.slice(start.length), value: entry.value, updatedAt: entry.updatedAt }] : [])
   }
+  async mutateDiarizationJobs(transform) {
+    let result
+    await this.update('diarization-system', 'jobs', current => {
+      const jobs = current?.jobs || []
+      const before = JSON.stringify(jobs)
+      result = transform(jobs)
+      return before === JSON.stringify(jobs) ? undefined : { jobs }
+    })
+    return result
+  }
+  async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
+    for (const [value, label] of [[id, 'job id'], [userId, 'user id'], [sessionId, 'session id'], [audioKey, 'audio key']]) safePart(value, label)
+    return this.mutateDiarizationJobs(jobs => {
+      const now = new Date().toISOString()
+      let job = jobs.find(j => j.userId === userId && j.sessionId === sessionId && j.audioKey === audioKey)
+      if (!job) { job = { id, userId, sessionId, audioKey, createdAt: now, leaseGeneration: 0 }; jobs.push(job) }
+      Object.assign(job, { payload, state: 'queued', attempts: 0, leaseOwner: null, leaseUntil: null, error: null, updatedAt: now })
+      return { ...job }
+    })
+  }
+  async getDiarizationJob(userId, id) {
+    safePart(userId, 'user id'); safePart(id, 'job id')
+    const stored = await this.get('diarization-system', 'jobs')
+    const job = stored?.jobs?.find(j => j.userId === userId && j.id === id)
+    return job ? { id: job.id, state: job.state, attempts: job.attempts, error: job.error, createdAt: job.createdAt, updatedAt: job.updatedAt } : null
+  }
+  async removeDiarizationJob(userId, id) {
+    safePart(userId, 'user id'); safePart(id, 'job id')
+    await this.mutateDiarizationJobs(jobs => { const index = jobs.findIndex(j => j.userId === userId && j.id === id); if (index >= 0) jobs.splice(index, 1) })
+  }
+  async claimDiarizationJob(owner, id = null) {
+    safePart(owner, 'job owner'); if (id) safePart(id, 'job id')
+    return this.mutateDiarizationJobs(jobs => {
+      const now = Date.now()
+      const job = jobs.filter(j => (!id || j.id === id) && ['queued', 'running'].includes(j.state) && (!j.leaseUntil || j.leaseUntil < now)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
+      if (!job) return null
+      Object.assign(job, { state: 'running', attempts: job.attempts + 1, leaseGeneration: job.leaseGeneration + 1, leaseOwner: owner, leaseUntil: now + 300000, updatedAt: new Date(now).toISOString() })
+      return { ...job }
+    })
+  }
+  async stillOwnsDiarizationJob(id, owner, generation) {
+    safePart(id, 'job id'); safePart(owner, 'job owner')
+    const stored = await this.get('diarization-system', 'jobs')
+    return Boolean(stored?.jobs?.some(j => j.id === id && j.state === 'running' && j.leaseOwner === owner && j.leaseGeneration === generation && j.leaseUntil > Date.now()))
+  }
+  async renewDiarizationJob(id, owner, generation) {
+    safePart(id, 'job id'); safePart(owner, 'job owner')
+    return this.mutateDiarizationJobs(jobs => {
+      const job = jobs.find(j => j.id === id && j.state === 'running' && j.leaseOwner === owner && j.leaseGeneration === generation && j.leaseUntil > Date.now())
+      if (!job) return false
+      job.leaseUntil = Date.now() + 300000; job.updatedAt = new Date().toISOString()
+      return true
+    })
+  }
+  async finishDiarizationJob(id, owner, generation, error = null) {
+    safePart(id, 'job id'); safePart(owner, 'job owner')
+    if (!Number.isSafeInteger(generation) || generation < 1) throw new Error('無效的工作租約 generation')
+    await this.mutateDiarizationJobs(jobs => {
+      const job = jobs.find(j => j.id === id && j.leaseOwner === owner && j.leaseGeneration === generation)
+      if (!job) return
+      const retry = typeof error === 'string' && error.startsWith('retry:')
+      Object.assign(job, { state: retry ? 'queued' : error ? 'failed' : 'completed', error: error ? String(error).replace(/^retry:/, '').slice(0, 1000) : null, leaseOwner: null, leaseUntil: retry ? Date.now() + Math.min(60, Math.max(5, job.attempts * 5)) * 1000 : null, updatedAt: new Date().toISOString() })
+    })
+  }
   async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
     const records = await this.records()
     return Object.entries(records).flatMap(([key, entry]) => {

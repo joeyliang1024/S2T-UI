@@ -1,5 +1,7 @@
 
 
+import { activeTranslate } from '../i18n'
+
 export const dbfs = (value: number): number => (value > 0 ? Math.max(-60, 20 * Math.log10(value)) : -60)
 
 export const dbfsLabel = (value: number): string => `${value.toFixed(0)} dBFS`
@@ -114,7 +116,7 @@ export class BufferedPcmWriter {
     for (const piece of pieces) { merged.set(new Uint8Array(piece), offset); offset += piece.byteLength }
     this.writing = true
     void this.append(merged.buffer).catch((error: unknown) => {
-      this.failure = error instanceof Error ? error : new Error('錄音暫存檔寫入失敗')
+      this.failure = error instanceof Error ? error : new Error(activeTranslate('svcAudioWriteFailed'))
       this.pending = []
       this.pendingBytes = 0
       this.onFailure(this.failure)

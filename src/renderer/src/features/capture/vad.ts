@@ -30,7 +30,7 @@ export const defaultVadConfig: VadConfig = {
 
 /**
  * The only user-facing caption control. Each tier is a curated VadConfig
- * measured by scripts/caption-latency-eval.cjs on conversational speech:
+ * measured by scripts/evaluation/caption-latency-eval.cjs on conversational speech:
  * 'fast' shows captions earliest (shorter, occasionally choppier clips),
  * 'normal' is the validated P95 ≤ 2.5 s configuration, 'slow' waits for
  * longer clips (steadier output, later on screen).

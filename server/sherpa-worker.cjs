@@ -2,6 +2,7 @@
 // the HTTP event loop: this worker owns its own lazy model instances.
 const { parentPort } = require('node:worker_threads')
 const sherpa = require('./sherpa-diarization.cjs')
+const nemotron = require('./nemotron-diarization.cjs')
 const silero = require('./silero-vad.cjs')
 const preprocess = require('./audio-preprocess.cjs')
 
@@ -9,7 +10,9 @@ const operations = {
   assessVoiceprintSample: ({ audio }) => sherpa.assessVoiceprintSample(audio),
   extractSpeakerEmbedding: ({ audio }) => sherpa.extractSpeakerEmbedding(audio),
   extractSpeakerBlocks: ({ audio, segments }) => sherpa.extractDiarizedSpeakerBlocks(audio, segments),
-  diarizeWav: ({ audio }) => sherpa.diarizeWav(audio),
+  speakerLabelEmbeddings: ({ audio, segments }) => sherpa.extractSpeakerLabelEmbeddings(audio, segments),
+  diarizeWav: ({ audio, backend }) => backend === 'nemotron-3-diarization' ? nemotron.diarizeWav(audio) : sherpa.diarizeWav(audio),
+  nemotronStatus: () => nemotron.verifyRuntime(),
   sileroVad: ({ audio, options }) => silero.analyzeWav(audio, options),
   sileroStatus: () => silero.modelStatus(),
   // A status check only verifies the model file and package. Run one tiny

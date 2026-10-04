@@ -1,0 +1,17 @@
+﻿name,seconds,tier,method,referenceDifferencePct,onsetP95,chunkStartP95,chunkEndP95,rows,groupedRows,shortPct,asrRequests,translationRequests,gaps
+full-fast-baseline,300,fast,baseline,13.76,1420,1761,561,252,37,69.8,253,252,0
+full-fast-overlap300,300,fast,overlap300,7.95,2097,1964,764,253,37,63.2,253,253,0
+full-normal-baseline-repeat,300,normal,baseline,12.44,2595,2036,536,200,34,40,200,200,0
+full-normal-baseline,300,normal,baseline,12.44,1951,2175,675,200,34,40,200,200,0
+full-normal-overlap300-repeat,300,normal,overlap300,8.43,2774,2164,664,200,34,32,200,200,0
+full-normal-overlap300,300,normal,overlap300,8.43,1741,2003,503,200,34,32,200,200,0
+full-normal-overlap600,300,normal,overlap600,8.25,2523,2145,645,200,34,31.5,200,200,0
+full-normal-terms,300,normal,terms,13.82,2145,2296,796,200,34,45,200,200,0
+full-slow-baseline,300,slow,baseline,8.49,2784,3073,673,125,32,1.6,125,125,0
+full-slow-overlap300,300,slow,overlap300,4.84,2906,3142,742,125,32,0,125,125,0
+screen-baseline,60,normal,baseline,10.87,2404,2000,500,40,7,40,40,40,0
+screen-context180,60,normal,context180,15.65,1947,2039,539,40,7,47.5,40,40,0
+screen-localAgreement-v3,60,normal,localAgreement,6.96,2042,10606,1606,7,7,0,40,0,0
+screen-overlap300,60,normal,overlap300,8.7,1651,2040,540,40,7,35,40,40,0
+screen-overlap600,60,normal,overlap600,8.26,1647,1988,488,40,7,40,40,40,0
+screen-terms,60,normal,terms,12.17,1672,1936,436,40,7,42.5,40,40,0

@@ -1,21 +1,37 @@
+const { matchesJob, finalizeDiarizationSession } = require('./diarization-session.cjs')
 const { createServer } = require('node:http')
 const { readFile, stat } = require('node:fs/promises')
-const { existsSync } = require('node:fs')
+const { createReadStream, existsSync, readFileSync } = require('node:fs')
 const { join, normalize, basename } = require('node:path')
+const { config } = require('dotenv')
+// Load .env before modules construct worker pools or capture startup settings.
+// Existing process environment still wins (dotenv's default override=false).
+config({ path: join(process.cwd(), '.env') })
+const { pipeline } = require('node:stream/promises')
+const { convertImportAudio, MAX_IMPORT_BYTES } = require('./import-audio.cjs')
 const { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } = require('node:crypto')
 const OpenAI = require('openai').default
 const { toFile } = require('openai')
-const { config } = require('dotenv')
-const { diarizeWav, extractSpeakerEmbedding, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav } = require('./sherpa-worker-pool.cjs')
+const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav } = require('./sherpa-worker-pool.cjs')
+const { localModelName, NEMOTRON_MODEL } = require('./local-diarization.cjs')
+const { nemotronStatus } = require('./sherpa-worker-pool.cjs')
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
 const { findIdentityCandidates, findMatches, identityCandidates, identityKey, decideIdentity, fastMatch } = require('./voiceprint-matching.cjs')
 const { createStorage } = require('./storage/index.cjs')
 const { createAuth } = require('./auth/index.cjs')
 const { transcodeM4a } = require('./audio-preprocess.cjs')
 const { logger, newRequestId } = require('./logger.cjs')
+const { requestLimits, createRequestLimiter, upstreamRateLimit } = require('./request-limits.cjs')
 
-config({ path: join(process.cwd(), '.env') })
 
+const productTitleImage = (() => {
+  const imagePath = (process.env.S2T_PRODUCT_TITLE_IMAGE || '').trim()
+  if (!imagePath || !/^icon\/[A-Za-z0-9_./-]+\.png$/.test(imagePath) || imagePath.split('/').includes('..')) return ''
+  try {
+    const image = readFileSync(join(process.cwd(), imagePath))
+    return image.length <= 2 * 1024 * 1024 ? `data:image/png;base64,${image.toString('base64')}` : ''
+  } catch { return '' }
+})()
 const port = Number(process.env.S2T_WEB_PORT || 8787)
 const processRole = process.env.S2T_PROCESS_ROLE || 'all'
 if (!['all', 'api', 'audio-worker'].includes(processRole)) throw new Error('S2T_PROCESS_ROLE 必須是 all、api 或 audio-worker')
@@ -87,9 +103,8 @@ if (asrConfigurationError) logger.warn('asr.configuration.incomplete', { error: 
 process.on('unhandledRejection', (reason) => logger.error('process.unhandled-rejection', { error: reason }))
 const staticRoot = join(process.cwd(), 'out/renderer')
 const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
-const requestsByIp = new Map()
 const modelHealthChecks = new Map()
-const requestLimits = { transcriptions: 60, translations: 30, summaries: 12, diarizations: 8, audioUploads: 30, voiceprintUploads: 12 }
+const acceptLimitedRequest = createRequestLimiter(requestLimits())
 const requestLatency = new Map()
 const modelHealthLastState = new Map()
 const latencyBuckets = [.25, .5, 1, 2.5, 5, 10]
@@ -177,8 +192,8 @@ const normalizeDetectedLanguage = (value) => {
   if (language.startsWith('de')) return 'de-DE'
   return undefined
 }
-const completeText = async (value, messages) => {
-  const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries: 1 })
+const completeText = async (value, messages, maxRetries = 1) => {
+  const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries })
   const result = await client.chat.completions.create({ model: value.model, temperature: 0.2, messages })
   return result.choices[0]?.message.content?.trim() || ''
 }
@@ -210,7 +225,7 @@ const accountModelService = async (auth, user, id, purpose) => {
 // OpenAI-compatible services are probed through GET /models (the standard
 // healthy check). Local sherpa-onnx and Silero services expose no such
 // endpoint, so they get dedicated validations below.
-const isLocalEndpoint = (endpoint) => typeof endpoint === 'string' && (endpoint.startsWith('/api/') || /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i.test(endpoint))
+const isLocalEndpoint = (endpoint) => typeof endpoint === 'string' && (endpoint === 's2t-local://diarization' || endpoint.startsWith('/api/') || /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i.test(endpoint))
 const modelProbeKind = (model) => {
   const haystack = `${model.name || ''} ${model.model || ''} ${model.endpoint || ''}`.toLowerCase()
   if (haystack.includes('silero')) return 'silero'
@@ -224,6 +239,11 @@ const sherpaHealth = async (model) => {
   const checkedAt = Date.now()
   try {
     const paths = modelPaths()
+    if (model.purpose === 'diarization' && localModelName() === NEMOTRON_MODEL) {
+      if (!existsSync(paths.embedding)) throw new Error('找不到姓名辨識所需的 sherpa embedding 模型')
+      await nemotronStatus()
+      return { id: model.id, state: 'healthy', reason: 'Nemotron CPU runtime、權重校驗與 embedding 已就緒（最多 8 人）', checkedAt }
+    }
     const required = model.purpose === 'diarization'
       ? [['講者分離 segmentation 模型', paths.segmentation], ['聲紋 embedding 模型', paths.embedding]]
       : model.purpose === 'embedding' ? [['聲紋 embedding 模型', paths.embedding]] : []
@@ -545,11 +565,27 @@ const runDurableDiarizationJob = async (auth, owner) => {
     await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, `超過最大重試次數（${diarizationJobMaxAttempts}）`).catch(() => undefined)
     return
   }
+  const leaseTimer = typeof storage.config.renewDiarizationJob === 'function' ? setInterval(() => {
+    storage.config.renewDiarizationJob(job.id, owner, job.leaseGeneration).catch(error => logger.warn('diarization.job.renew.failed', { jobId: job.id, error }))
+  }, 60000) : null
+  leaseTimer?.unref()
   const jobStartedAt = Date.now()
   logger.info('diarization.job.started', { jobId: job.id, attempt: job.attempts, sessionId: job.sessionId, owner })
   try {
     const user = job.payload?.user
     if (!user?.id || user.id !== job.userId) throw new Error('工作使用者資料無效')
+    const initial = await storage.config.get(user.id, 'sessions')
+    const target = initial?.sessions?.find(session => session.id === job.sessionId)
+    if (!target) throw new Error('retry:紀錄尚未同步完成')
+    if (job.payload?.processingToken && target.processingToken === job.payload.processingToken && target.processingStage !== 'diarization' && target.processingState === 'running') throw new Error('retry:紀錄尚未完成尾段處理')
+    if (!matchesJob(target, job)) {
+      if (job.payload?.processingToken && target.processingToken !== job.payload.processingToken) {
+        await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration)
+        return
+      }
+      throw new Error('retry:紀錄音訊版本尚未同步完成')
+    }
+
     const audio = await storage.blob.get(user.id, `audio/${job.audioKey}`)
     if (!audio) throw new Error('找不到講者分離工作對應的音檔')
     const selected = await accountModelService(auth, user, job.payload?.modelId || 'managed-diarization', 'diarization')
@@ -569,16 +605,9 @@ const runDurableDiarizationJob = async (auth, owner) => {
     const version = Number.isSafeInteger(stored?.version) ? stored.version : 0
     let matched = false
     const next = sessions.map((session) => {
-      if (session?.id !== job.sessionId || session?.activeAudioVersionId && !session.audioVersions?.some((item) => item.id === session.activeAudioVersionId && item.audioKey === job.audioKey)) return session
+      if (!matchesJob(session, job)) return session
       matched = true
-      const segments = Array.isArray(session.segments) ? session.segments.map((entry) => {
-        if (entry?.status !== 'final' || entry.speakerManuallyEdited) return entry
-        let winner; let amount = 0
-        for (const turn of turns) { const shared = Math.max(0, Math.min(entry.endMs, turn.end * 1000) - Math.max(entry.startMs, turn.start * 1000)); if (shared > amount) { amount = shared; winner = turn } }
-        return winner && amount / Math.max(1, entry.endMs - entry.startMs) >= .35 ? { ...entry, speaker: winner.speaker, Department: winner.Department, revision: (entry.revision || 0) + 1 } : entry
-      }) : []
-      const transcript = segments.map((entry) => `${entry.speaker ? `${entry.speaker}：` : ''}${entry.sourceText || ''}`).filter(Boolean).join('\n')
-      return { ...session, segments, transcript }
+      return finalizeDiarizationSession(session, job, turns)
     })
     if (!matched) throw new Error('retry:紀錄尚未同步完成')
     // A pod can be terminated while inference is in flight.  Never let a
@@ -596,7 +625,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
     if (reason.startsWith('retry:')) logger.warn('diarization.job.retry', fields)
     else logger.error('diarization.job.failed', fields)
     await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, reason)
-  }
+  } finally { if (leaseTimer) clearInterval(leaseTimer) }
 }
 const staticFile = async (request, response) => {
   const urlPath = new URL(request.url, 'http://localhost').pathname
@@ -606,23 +635,14 @@ const staticFile = async (request, response) => {
     const info = await stat(filePath)
     if (!info.isFile()) throw new Error('not a file')
     const content = await readFile(filePath)
-    const type = filePath.endsWith('.js') ? 'text/javascript' : filePath.endsWith('.css') ? 'text/css' : filePath.endsWith('.html') ? 'text/html' : 'application/octet-stream'
+    const type = filePath.endsWith('.js') ? 'text/javascript' : filePath.endsWith('.css') ? 'text/css' : filePath.endsWith('.html') ? 'text/html' : filePath.endsWith('.svg') ? 'image/svg+xml' : filePath.endsWith('.png') ? 'image/png' : filePath.endsWith('.ico') ? 'image/x-icon' : 'application/octet-stream'
     send(response, 200, content, type)
   } catch {
     try { send(response, 200, await readFile(join(staticRoot, 'index.html')), 'text/html') } catch { send(response, 404, { error: 'Web build not found. Run npm run build first.' }) }
   }
 }
-const acceptsRequest = (request, bucket) => {
-  const ip = request.socket.remoteAddress || 'unknown'
-  const key = `${ip}:${bucket}`
-  const now = Date.now()
-  const recent = (requestsByIp.get(key) || []).filter((time) => now - time < 60_000)
-  const limit = requestLimits[bucket] ?? 30
-  if (recent.length >= limit) return { accepted: false, retryAfterSeconds: Math.max(1, Math.ceil((60_000 - (now - recent[0])) / 1000)) }
-  recent.push(now)
-  requestsByIp.set(key, recent)
-  return { accepted: true, retryAfterSeconds: 0 }
-}
+const acceptsRequest = (request, bucket, userId) => acceptLimitedRequest(
+  userId ? `user:${userId}` : `ip:${request.socket.remoteAddress || 'unknown'}`, bucket)
 const rateLimitResponse = (response, result, message) => {
   response.setHeader('retry-after', String(result.retryAfterSeconds))
   return send(response, 429, { error: message, retryAfterSeconds: result.retryAfterSeconds })
@@ -662,7 +682,7 @@ const handleHttpRequest = async (request, response) => {
   const host = request.headers.host || ''
   const sameOrigin = origin === `http://${host}` || origin === `https://${host}`
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
-  if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id') }
+  if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after') }
   response.setHeader('vary', 'Origin')
   if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
@@ -677,13 +697,14 @@ const handleHttpRequest = async (request, response) => {
   response.once('finish', () => observeRequest(requestPath, response.statusCode, startedAt))
   if (await auth.handle(request, response, send)) return
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
+    branding: { titleImage: productTitleImage },
     asr: publicService(asr, '/api/transcriptions'),
     asrProfiles: configuredAsrProfiles.map(publicAsrProfile),
     translation: publicService(translation, '/api/translations'),
     summary: publicService(summary, '/api/summaries'),
     diarization: diarization.endpoint && diarization.model
       ? publicService(diarization, '/api/diarizations')
-      : { endpoint: '/api/diarizations', model: 'sherpa-onnx-speaker-diarization', configured: true }
+      : { endpoint: '/api/diarizations', model: localModelName(), configured: true }
   })
   if (request.method === 'GET' && request.url === '/api/storage') {
     // compensationGraceMs lets integration tests wait out the in-flight
@@ -839,7 +860,7 @@ const handleHttpRequest = async (request, response) => {
       add({ id: 'managed-silero-vad', name: 'Silero VAD', endpoint: '/api/audio-processing/silero-vad', model: 'silero-vad', purpose: 'asr' })
       add({ id: 'web-environment-translation', name: translation.model, endpoint: translation.endpoint, model: translation.model, purpose: 'translation', service: { endpoint: translation.endpoint, model: translation.model, apiKey: translation.apiKey } })
       add({ id: 'managed-summary', name: summary.model, endpoint: summary.endpoint, model: summary.model, purpose: 'summary', service: { endpoint: summary.endpoint, model: summary.model, apiKey: summary.apiKey } })
-      add({ id: 'managed-diarization', name: diarization.model, endpoint: diarization.endpoint, model: diarization.model, purpose: 'diarization', service: { endpoint: diarization.endpoint, model: diarization.model, apiKey: diarization.apiKey } })
+      add({ id: 'managed-diarization', name: diarization.model || localModelName(), endpoint: diarization.endpoint || '/api/diarizations', model: diarization.model || localModelName(), purpose: 'diarization', service: { endpoint: diarization.endpoint, model: diarization.model, apiKey: diarization.apiKey } })
       const health = await Promise.all(checks.map((model) => modelHealth(auth, user, model)))
       return send(response, 200, { health })
     } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : '模型健康檢查失敗' }) }
@@ -864,6 +885,28 @@ const handleHttpRequest = async (request, response) => {
       return send(response, 200, await analyzeSileroVad(audio, { includeProbabilities }))
     } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'Silero VAD 處理失敗' }) }
   }
+  if (storagePath === '/api/audio-processing/import-wav' && request.method === 'POST') {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    const limit = acceptsRequest(request, 'transcode')
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many import conversions.')
+    if (Number(request.headers['content-length']) > MAX_IMPORT_BYTES) return send(response, 413, { error: '匯入檔案不可超過 2 GB。' })
+    const controller = new AbortController()
+    const abort = () => { if (!response.writableFinished) controller.abort() }
+    request.once('aborted', abort); response.once('close', abort)
+    let converted
+    try {
+      converted = await convertImportAudio(request, { signal: controller.signal })
+      response.writeHead(200, { 'content-type': 'audio/wav', 'content-length': converted.size, 'cache-control': 'no-store' })
+      await pipeline(createReadStream(converted.path), response, { signal: controller.signal })
+    } catch (error) {
+      if (!response.headersSent && !response.destroyed) send(response, error.status || 503, { error: error.message || '匯入轉換失敗' })
+    } finally {
+      request.removeListener('aborted', abort); response.removeListener('close', abort)
+      if (converted) await converted.dispose()
+    }
+    return
+  }
   if (storagePath === '/api/audio-processing/transcode' && request.method === 'POST') {
     const format = new URL(request.url, 'http://localhost').searchParams.get('format')
     if (format !== 'm4a') return send(response, 400, { error: '目前只支援轉檔為 M4A' })
@@ -878,20 +921,21 @@ const handleHttpRequest = async (request, response) => {
       return send(response, 200, await transcodeM4a(audio), 'audio/mp4')
     } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'M4A 轉檔失敗' }) }
   }
-  if (storagePath === '/api/data/diarization-jobs' && (request.method === 'POST' || request.method === 'GET')) {
+  if (storagePath === '/api/data/diarization-jobs' && (request.method === 'POST' || request.method === 'GET' || request.method === 'DELETE')) {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     if (typeof storage.config.enqueueDiarizationJob !== 'function') return send(response, 503, { error: '目前 storage 不支援持久化講者分離工作' })
     try {
-      if (request.method === 'GET') {
+      if (request.method === 'GET' || request.method === 'DELETE') {
         const id = new URL(request.url, 'http://localhost').searchParams.get('id') || ''
         if (!id) return send(response, 400, { error: 'job id 必須有效' })
+        if (request.method === 'DELETE') { await storage.config.removeDiarizationJob(user.id, id); return send(response, 204, '') }
         const job = await storage.config.getDiarizationJob(user.id, id)
         return job ? send(response, 200, { job }) : send(response, 404, { error: '找不到講者分離工作' })
       }
       const body = JSON.parse((await readBody(request, 32 * 1024)).toString('utf8'))
       if (typeof body.sessionId !== 'string' || typeof body.audioKey !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(body.audioKey)) return send(response, 400, { error: 'sessionId 與 audioKey 必須有效' })
-      const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization' } })
+      const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization', ...(typeof body.processingToken === 'string' ? { processingToken: body.processingToken } : {}) } })
       return send(response, 202, { job })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法建立講者分離工作' }) }
   }
@@ -1029,9 +1073,9 @@ const handleHttpRequest = async (request, response) => {
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '聲紋比對失敗' }) }
   }
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
-    const limit = acceptsRequest(request, 'transcriptions')
-    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcription requests. Try again later.')
     const user = await auth.requireUser(request)
+    const limit = acceptsRequest(request, 'transcriptions', user?.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcription requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
     const profileId = String(request.headers['x-s2t-model-id'] || 'default')
     const environmentAsr = asrProfileById.get(profileId)
@@ -1051,7 +1095,7 @@ const handleHttpRequest = async (request, response) => {
       if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await dynaudnormWav(audio)
       // Never the prompt itself, the audio or the transcript — only sizes.
       logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
-      const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 1 })
+      const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
       const result = await client.audio.transcriptions.create({
         file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
         ...(requestedLanguage ? { language: requestedLanguage } : {}),
@@ -1068,13 +1112,15 @@ const handleHttpRequest = async (request, response) => {
         durationMs: Date.now() - asrStartedAt,
         error
       })
+      const rateLimit = upstreamRateLimit(error)
+      if (rateLimit) return rateLimitResponse(response, rateLimit, 'ASR provider temporarily rate limited. Try again later.')
       return send(response, 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
     }
   }
   if (request.method === 'POST' && request.url === '/api/translations') {
-    const limit = acceptsRequest(request, 'translations')
-    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many translation requests. Try again later.')
     const user = await auth.requireUser(request)
+    const limit = acceptsRequest(request, 'translations', user?.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many translation requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
     const profileId = String(request.headers['x-s2t-model-id'] || '')
     const selectedTranslation = profileId ? await accountModelService(auth, user, profileId, 'translation') : translation
@@ -1093,10 +1139,12 @@ const handleHttpRequest = async (request, response) => {
       // language pair are enough to follow a slow or failing translation.
       logger.debug('translation.request', { profileId, sourceLanguage, targetLanguage, glossary: glossary ? 'provided' : 'none', chars: text.length })
       const translationStartedAt = Date.now()
-      const textResult = await completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }])
+      const textResult = await completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0)
       logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
       return send(response, 200, { text: textResult })
     } catch (error) {
+      const rateLimit = upstreamRateLimit(error)
+      if (rateLimit) return rateLimitResponse(response, rateLimit, 'Translation provider temporarily rate limited. Try again later.')
       return send(response, 502, { error: error instanceof Error ? error.message : 'Translation request failed' })
     }
   }
@@ -1146,7 +1194,18 @@ const handleHttpRequest = async (request, response) => {
       }
       const segments = await diarizeWav(audio)
       const labeledSegments = await labelDiarizationTurns(user, audio, segments)
-      return send(response, 200, { model: 'sherpa-onnx-speaker-diarization', threshold: voiceprintThreshold, exclusive_diarization: labeledSegments })
+      const payload = { model: localModelName(), ...(localModelName() === NEMOTRON_MODEL ? { speaker_capacity: 8, runtime: 'cpu', preset: 'v3-offline', speaker_cache_frames: 528 } : {}), threshold: voiceprintThreshold, exclusive_diarization: labeledSegments }
+      // Only the sliding-window preview asks for these. The full-track pass
+      // would pay the same RTF across the entire recording for a signal only
+      // the stabilizer reads, so the cost stays opt-in per request.
+      if (request.headers['x-s2t-speaker-embeddings'] === '1') {
+        try {
+          payload.speaker_embeddings = await extractSpeakerLabelEmbeddings(audio, segments)
+        } catch (error) {
+          logger.debug('diarization.embeddings.failed', { error: error instanceof Error ? error.message : String(error) })
+        }
+      }
+      return send(response, 200, payload)
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'Speaker diarization failed' })
     }

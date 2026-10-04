@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('s2t', {
   transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:transcribe', input),
   completeText: (input: { requestId?: string; profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => ipcRenderer.invoke('model:complete', input),
   cancelCompleteText: (requestId: string) => ipcRenderer.invoke('model:cancel-complete', requestId),
-  diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:diarize', input),
+  diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer; embeddings?: boolean }) => ipcRenderer.invoke('model:diarize', input),
   startPcmRecording: (sampleRate: number) => ipcRenderer.invoke('recording:start', sampleRate),
   appendPcm: (id: string, audio: ArrayBuffer) => ipcRenderer.invoke('recording:append', { id, audio }),
   finishPcmRecording: (id: string) => ipcRenderer.invoke('recording:finish', id),
