@@ -30,11 +30,12 @@ const createSharedLimits = (env, limits, suppliedClient) => {
   const active = new Map()
   let client = suppliedClient
   let configurationError = null
-  let closing = false, retryTimer, retryResolve
+  let closing = false, sentinelMode = false, retryTimer, retryResolve
   let ready = Promise.resolve()
   if (distributed) {
     try {
       const connection = redisConnection(env)
+      sentinelMode = connection.mode === 'sentinel'
       const redis = require('redis')
       const newClient = () => connection.mode === 'sentinel' ? redis.createSentinel(connection.options) : redis.createClient(connection.options)
       client ||= newClient()
@@ -42,7 +43,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
       ready = client.isOpen ? Promise.resolve() : (async () => {
         do {
           try { await client.connect(); return } catch {
-            if (connection.mode !== 'sentinel' || closing) throw new Error('共享限流服務連線失敗')
+            if (connection.mode !== 'sentinel') throw new Error('共享限流服務連線失敗')
             if (client.isOpen) {
               // A failed discovery may also reject destroy; retry cleanup after it settles.
               try { await client.destroy() } catch { await client.destroy().catch(() => undefined) }
@@ -116,7 +117,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     async loginAllowed(key) { return distributed ? window(key, 'login', 8, 900000, 'peek') : { accepted: localFailures(key).length < 8, retryAfterSeconds: 900 } },
     async loginFailed(key) { if (distributed) return window(key, 'login', 8, 900000, 'take'); const times = localFailures(key); times.push(Date.now()); return { count: times.length } },
     async loginSucceeded(key) { if (distributed) return window(key, 'login', 8, 900000, 'clear'); failures.delete(key) },
-    async close() { closing = true; clearTimeout(retryTimer); retryResolve?.(); if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
+    async close() { closing = true; clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
   }
 }
 module.exports = { createSharedLimits, WINDOW }

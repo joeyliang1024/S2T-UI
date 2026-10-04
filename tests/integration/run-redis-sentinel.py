@@ -1,8 +1,8 @@
 import subprocess,tempfile,time,pathlib
-prefix='s2t-sentinel-check'; names=[]
+prefix='s2t-sentinel-check'; names=[]; created=False
 def docker(*args): return subprocess.check_output(['docker',*args],text=True).strip()
 try:
- docker('network','create',prefix)
+ docker('network','create',prefix); created=True
  for i in range(3):
   name=f'{prefix}-r{i}'
   args=['run','-d','--name',name,'--network',prefix,'redis:7-alpine','redis-server','--requirepass','redis-test-password','--masterauth','redis-test-password']
@@ -18,9 +18,10 @@ try:
   subprocess.Popen(['docker','exec',name,'redis-server','/tmp/sentinel.conf','--sentinel'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  time.sleep(5)
  docker('stop',f'{prefix}-s0')
- result=subprocess.run(['docker','run','--rm','--network',prefix,'-v',str(pathlib.Path(__file__).resolve().parents[2])+':/test:ro','-w','/test','s2t-scale-test:web','node','tests/integration/redis-sentinel-integration.cjs'],timeout=90)
+ names.append(prefix+'-client')
+ result=subprocess.run(['docker','run','--name',prefix+'-client','--rm','--network',prefix,'-v',str(pathlib.Path(__file__).resolve().parents[2])+':/test:ro','-w','/test','s2t-scale-test:web','node','tests/integration/redis-sentinel-integration.cjs'],timeout=90)
  if result.returncode: raise RuntimeError('Sentinel integration failed')
 finally:
  for name in names:
   subprocess.run(['docker','rm','-f',name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
- subprocess.run(['docker','network','rm',prefix],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ if created: subprocess.run(['docker','network','rm',prefix],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
