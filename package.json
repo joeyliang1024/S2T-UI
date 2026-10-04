@@ -62,7 +62,8 @@
     "nemotron:smoke": "node tests/smoke/nemotron-diarization-smoke-test.cjs",
     "storage:migrate:schema": "node scripts/storage/migrate-schema.cjs",
     "scale:smoke": "node tests/smoke/scale-safety-smoke-test.cjs",
-    "scale:integration": "node tests/integration/scale-safety-integration.cjs"
+    "scale:integration": "node tests/integration/scale-safety-integration.cjs",
+    "redis:sentinel:smoke": "node tests/smoke/redis-sentinel-config-smoke-test.cjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",

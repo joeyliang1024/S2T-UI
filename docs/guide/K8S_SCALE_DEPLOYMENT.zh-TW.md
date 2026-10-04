@@ -4,7 +4,7 @@
 
 同一個 Dockerfile.web 映像。未設定 S2T_KUBERNETES_MODE=true 時，預設角色仍為 all，保留本地 Storage／本地密鑰、本容器 worker threads、FFmpeg；不連 Redis、不要求獨立 worker、不自動偵測 K8s 切換模式。現有 docker-compose.gateway.yml 啟動與資料 volume 不變。單一 Deployment 可同樣使用此模式，但只能一個副本。
 
-多副本必須明確設 S2T_KUBERNETES_MODE=true，所有角色使用同一組共享 MinIO／PostgreSQL／Milvus 及 S2T_AUTH_SECRET；共享限流使用 S2T_REDIS_URL。Redis 中断時受限操作回覆 503，不回退本地。Redis 重啟／非同步 failover 可能重置短期限流及容量租約；可靠資料與任務擁有權始終以 PostgreSQL 為準，不宣稱 Redis 配額 exactly-once。
+多副本必須明確設 S2T_KUBERNETES_MODE=true，所有角色使用同一組共享 MinIO／PostgreSQL／Milvus 及 S2T_AUTH_SECRET；共享限流使用 S2T_REDIS_URL 或 Sentinel 設定。Redis 中断時受限操作回覆 503，不回退本地。Redis 重啟／非同步 failover 可能重置短期限流及容量租約；可靠資料與任務擁有權始終以 PostgreSQL 為準，不宣稱 Redis 配額 exactly-once。
 
 ## 角色與必要設定
 
@@ -13,7 +13,24 @@
 - audio-service：只接受內部 token 認證的音訊處理，公開 API 不可用。token 必須與 api 相同；只公開 ClusterIP，不掛公開 Ingress。
 - audio-worker：只提供 probes／metrics；從 PostgreSQL 取得完整分離工作。
 
-S2T_REDIS_URL 支援 redis:// 或 rediss://；本版本使用單一服務 URL，Sentinel 環境須透過受管理的穩定 primary endpoint，不支援直接填 Sentinel 節點列表。密鑰、URL 與 provider credentials 使用 Secret，禁止放在公開 frontend。
+Redis 可二選一：`S2T_REDIS_URL`（redis:// 或 rediss://），或原生 Sentinel。不可同時設定；部分 Sentinel 設定也會拒絕啟動 readiness。所有 Pod 使用相同設定。
+
+```dotenv
+S2T_REDIS_URL=
+S2T_REDIS_SENTINEL_NODES=redis-0.redis-headless:26379,redis-1.redis-headless:26379,redis-2.redis-headless:26379
+S2T_REDIS_SENTINEL_MASTER_NAME=mymaster
+S2T_REDIS_SENTINEL_USERNAME=
+S2T_REDIS_SENTINEL_PASSWORD=replace-sentinel-password
+S2T_REDIS_USERNAME=default
+S2T_REDIS_PASSWORD=replace-redis-password
+S2T_REDIS_DATABASE=0
+S2T_REDIS_SENTINEL_TLS=false
+S2T_REDIS_TLS=false
+```
+
+NODES 為逗號分隔 host:port，IPv6 使用 [address]:port；可設定三個 Sentinel 種子，client 發現其他節點並追蹤 primary 切換。master name 必須符合 `sentinel monitor`，不是 Pod／Service 名稱。Sentinel 與 Redis 密碼分開；只有密碼認證時 username 留空。TLS 兩側獨立啟用，使用系統信任 CA，未提供自訂 CA 環境變數。密鑰、URL 與 provider credentials 使用 Secret，禁止放在公開 frontend。
+
+限流讀寫皆送 primary，不讀 replica。命令整體最多等待三秒，切換期間可能回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。
 
 S2T_AUDIO_WARMUP 可設 silero、nemotron、diarization 的逗號列表。silero 載入模型；nemotron 驗證 runtime／權重；diarization 實際推論一秒靜音以預熱。失敗使 readiness 不通過。Docker 預設空白。Nemotron CLI 每次工作仍會載入權重，預熱不是持續模型駐留承諾。ASR／翻譯模型服務自行配置完成推論暖機才 Ready。
 
@@ -41,7 +58,7 @@ ASR／翻譯支援 x-s2t-idempotency-key。後端依帳號、路由、key 與內
 
 ## 部署流程
 
-deploy/k8s 為可調整的範例，不是 100 人容量保證。先替換 kustomization 的 registry／immutable tag，建立 s2t-secrets，包含現有 Storage／模型設定、S2T_AUTH_SECRET、S2T_REDIS_URL、S2T_AUDIO_SERVICE_TOKEN；建立模型 PVC。Ingress／TLS 沿用組織現有方案，仅指向 s2t-gateway。
+deploy/k8s 為可調整的範例，不是 100 人容量保證。先替換 kustomization 的 registry／immutable tag，建立 s2t-secrets，包含現有 Storage／模型設定、S2T_AUTH_SECRET、Redis URL 或 Sentinel 設定、S2T_AUDIO_SERVICE_TOKEN；建立模型 PVC。Ingress／TLS 沿用組織現有方案，仅指向 s2t-gateway。
 
 ```sh
 kubectl kustomize deploy/k8s

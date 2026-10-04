@@ -41,3 +41,11 @@
 Native Nemotron 仍按工作載入模型。未完成 ACK 的尾段依賴 OPFS 恢復，跨裝置自動發現錄音 ID UI 尚未提供。Redis 配額／容量在失去狀態後可能重置；可靠任務擁有權仍在 PostgreSQL。
 
 操作與可重現流程見 ../guide/K8S_SCALE_DEPLOYMENT.zh-TW.md、../guide/CAPACITY_TEST.zh-TW.md。
+
+## Redis Sentinel 增補
+
+新增原生 node-redis Sentinel：三個種子、master name、獨立 Sentinel／Redis username/password、兩侧 TLS 與資料庫選擇；與 URL 模式互斥。限流只使用 primary，切換期間命令整體逾時三秒；初次探索失敗會重試，Docker 單機不讀取 Sentinel 設定。
+
+已通過配置／錯誤配置、整體命令逾時、原有 scale smoke、typecheck，以及專用 Docker Redis 7 primary + 兩 replica + 三 Sentinel 的實測：不同 Sentinel／Redis 密碼、兩側錯誤密碼拒絕 readiness、第一個 Sentinel 不可用、跨 client 共享配額與 SENTINEL FAILOVER 真正提升 replica 後恢復。這是隔離 Docker 的受控切換，不等同正式 K8s Pod kill／網路分區／TLS 憑證／ACL username 完整驗收。
+
+可重現：`npm run redis:sentinel:smoke`；`python3 tests/integration/run-redis-sentinel.py`（需本機 redis:7-alpine 與 s2t-scale-test:web 映像，runner 掛載當前 source，專用資源完成後清理）。
