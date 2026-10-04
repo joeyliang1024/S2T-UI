@@ -6,6 +6,7 @@ const positiveLimit = (value, fallback) => {
 const requestLimits = (env = process.env) => ({
   transcriptions: positiveLimit(env.S2T_ASR_REQUESTS_PER_MINUTE, 180),
   translations: positiveLimit(env.S2T_TRANSLATION_REQUESTS_PER_MINUTE, 180),
+  'silero-vad': positiveLimit(env.S2T_VAD_REQUESTS_PER_MINUTE, env.S2T_KUBERNETES_MODE === 'true' ? 180 : 30),
   summaries: 12, diarizations: 8, audioUploads: 30, voiceprintUploads: 12
 })
 

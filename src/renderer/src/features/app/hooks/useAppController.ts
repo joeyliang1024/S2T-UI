@@ -24,6 +24,7 @@ import { upsertLiveCaption, renderedLiveCaptionWindow, editCaptionContent, compl
 import { summaryBatches, summaryChunks, transcriptSignature } from '../services/summary-plan'
 import { authFetch, retryableAuthFetch } from '../../auth/services/auth-client'
 import { activeTranslate, interfaceTranslate, resolveUiLanguage } from '../../../shared/i18n'
+import { RemotePcmRecording } from '../../../shared/services/remote-pcm-recording'
 import { OpfsPcmRecording } from '../../../shared/services/opfs-pcm-recording'
 
 // Browsers without OPFS retain the fallback PCM in RAM until it can be made
@@ -361,6 +362,7 @@ const recorderRef = useRef<MediaRecorder | null>(null)
 const pcmChunksRef = useRef<Float32Array[]>([])
 const memoryRecordingBytesRef = useRef(0)
 const memoryRecordingLimitReachedRef = useRef(false)
+const remotePcmRecordingRef = useRef<RemotePcmRecording | null>(null)
 const opfsRecordingRef = useRef<OpfsPcmRecording | null>(null)
 const opfsRecordingIdRef = useRef<string | null>(null)
 
@@ -547,7 +549,7 @@ const translateCaption = useCallback<TranslateCaption>(async (entry, signal) => 
     const profileId = settings.selectedTranslationModelId
     try {
       return (await readJsonResponse<{ text: string }>(await authFetch('/api/translations', {
-        method: 'POST', headers: { 'content-type': 'application/json', ...(profileId !== 'none' && profileId !== 'web-environment-translation' ? { 'x-s2t-model-id': profileId } : {}) },
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-s2t-idempotency-key': crypto.randomUUID(), ...(profileId !== 'none' && profileId !== 'web-environment-translation' ? { 'x-s2t-model-id': profileId } : {}) },
         body: JSON.stringify({ text: entry.sourceText, sourceLanguage: entry.detectedLanguage || settings.sourceLanguage, targetLanguage, glossary: settings.glossary }), signal: controller.signal
       }), activeTranslate('stWebTranslationGateway'))).text
     } finally { window.clearTimeout(timeout); signal.removeEventListener('abort', cancel) }
@@ -763,7 +765,7 @@ useEffect(() => {
       const recoveryAudioKey = recoveredDraft?.opfsRecordingId ? `recovery-live-${recoveredDraft.id}` : ''
       let recoveryAudioAvailable = false
       if (!window.s2t && recoveredDraft?.opfsRecordingId && Number.isFinite(recoveredDraft.sampleRate) && (recoveredDraft.sampleRate ?? 0) > 0) {
-        const audio = await OpfsPcmRecording.recover(recoveredDraft.opfsRecordingId, recoveredDraft.sampleRate!)
+        const audio = await OpfsPcmRecording.recover(recoveredDraft.opfsRecordingId, recoveredDraft.sampleRate!).catch(() => undefined) || await RemotePcmRecording.recover(recoveredDraft.opfsRecordingId)
         if (audio) {
           await remoteSessionStorage.saveAudio(recoveryAudioKey, audio).catch(() => undefined)
           recoveryAudioAvailable = Boolean(await remoteSessionStorage.loadAudio(recoveryAudioKey).catch(() => undefined))
@@ -1505,6 +1507,14 @@ const startCapture = async (): Promise<void> => {
         const opfsId = `capture-${crypto.randomUUID()}`
         opfsRecordingRef.current = await OpfsPcmRecording.create(opfsId, context.sampleRate).catch(() => null)
         opfsRecordingIdRef.current = opfsRecordingRef.current ? opfsId : null
+        const configResponse = await authFetch('/api/config')
+        if (!configResponse.ok) throw new Error('無法確認錄音服務設定')
+        const config = await configResponse.json() as { capabilities?: { distributed?: boolean; durableRecordingChunks?: boolean } }
+        if (config.capabilities?.distributed && config.capabilities.durableRecordingChunks) {
+          if (!opfsRecordingRef.current) throw new Error('分散式錄音需要瀏覽器持久化音訊支援')
+          remotePcmRecordingRef.current = new RemotePcmRecording(opfsId, context.sampleRate)
+        }
+
       }
       if (electronRecordingIdRef.current && window.s2t) {
         const recordingId = electronRecordingIdRef.current
@@ -1543,7 +1553,7 @@ const startCapture = async (): Promise<void> => {
       if (opfsRecordingRef.current) {
         const recording = opfsRecordingRef.current
         pcmWriterRef.current = new BufferedPcmWriter(
-          (audio) => recording.append(audio),
+          async (audio) => { await recording.append(audio); await remotePcmRecordingRef.current?.append(audio) },
           (active) => {
             const recorder = recorderRef.current
             if (active) {
@@ -1573,7 +1583,9 @@ const startCapture = async (): Promise<void> => {
             if (recorderRef.current?.state === 'recording') recorderRef.current.pause()
             setCaptureState('paused')
             setStatus(activeTranslate('stBrowserRecordingWriteFailedDetail').replace('{error}', String(error.message)))
-          }
+          },
+          remotePcmRecordingRef.current ? context.sampleRate * 2 : 24_000,
+          remotePcmRecordingRef.current ? context.sampleRate * 8 : 192_000
         )
       }
       if (stream) attachInput(stream, context)
@@ -1605,6 +1617,7 @@ const startCapture = async (): Promise<void> => {
     } catch (error) {
       pcmWriterRef.current?.discard()
       pcmWriterRef.current = null
+      remotePcmRecordingRef.current = null
       void opfsRecordingRef.current?.discard()
       opfsRecordingRef.current = null
       opfsRecordingIdRef.current = null
@@ -1717,6 +1730,9 @@ const stopCapture = async (): Promise<void> => {
       patchProcessing({ processingStage: 'saving' })
       const recordingId = electronRecordingIdRef.current
       if ((recordingId && window.s2t) || opfsRecordingRef.current) await pcmWriterRef.current?.closeAndDrain()
+      const remoteRecording = remotePcmRecordingRef.current
+      await remoteRecording?.finish()
+      remotePcmRecordingRef.current = null
       const recordingPath = recordingId && window.s2t ? (await window.s2t.finishPcmRecording(recordingId)).audioPath : undefined
       electronRecordingIdRef.current = null
       const opfsRecording = opfsRecordingRef.current
@@ -1740,7 +1756,7 @@ const stopCapture = async (): Promise<void> => {
       // Electron keeps durable audio locally. The web app writes durable audio
       // only to shared object storage; it never falls back to Browser Storage.
       if (audioForStorage && !window.s2t) {
-        try { await remoteSessionStorage.saveAudio(audioKey, audioForStorage); audioAvailable = true }
+        try { if (remoteRecording && !continuation) await remoteRecording.promote(audioKey); else await remoteSessionStorage.saveAudio(audioKey, audioForStorage); audioAvailable = true; await remoteRecording?.discardCompleted().catch(() => undefined) }
         catch {
           audioFailures.push(activeTranslate('sessionStorageRemote'))
         }
@@ -2808,7 +2824,7 @@ const translateSummary = async (entry: SavedSession, targetOverride?: string): P
       const controller = new AbortController()
       const timeout = window.setTimeout(() => controller.abort(), 30_000)
       try {
-        const response = await authFetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json', ...(profileId !== 'none' && profileId !== 'web-environment-translation' ? { 'x-s2t-model-id': profileId } : {}) }, body: JSON.stringify({ text, sourceLanguage, targetLanguage, glossary: settings.glossary }), signal: controller.signal })
+        const response = await authFetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json', 'x-s2t-idempotency-key': crypto.randomUUID(), ...(profileId !== 'none' && profileId !== 'web-environment-translation' ? { 'x-s2t-model-id': profileId } : {}) }, body: JSON.stringify({ text, sourceLanguage, targetLanguage, glossary: settings.glossary }), signal: controller.signal })
         const payload = await readJsonResponse<{ text: string; error?: string }>(response, activeTranslate('stSummaryTranslationService'))
         if (summaryTranslationRef.current.get(entry.id) !== generation) return
         if (!response.ok) throw new Error(payload.error || activeTranslate('stSummaryTranslationRequestFailed'))

@@ -249,3 +249,7 @@ Electron 的本機設定使用 `s2t-local://diarization`，直接載入工作目
 | tmp/、music/、.s2t-data/ | 現有素材與資料，保留原路徑 |
 
 npm 指令名稱保留。見 [背景處理生命週期檢查](docs/research/SESSION_LIFECYCLE.zh-TW.md)。
+
+### Docker 相容與 K8s 多副本
+
+未設定 `S2T_KUBERNETES_MODE=true` 時維持同容器 `all` 模式，不新增 Redis 或獨立 worker 必要依賴。多副本部署、共享限流、任務交易、音訊 ACK、migration 與 HPA 範例見 [多副本部署指南](docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)；[容量測試](docs/guide/CAPACITY_TEST.zh-TW.md) 支援不同帳號與固定到達率，正式 100 人容量仍須實測。

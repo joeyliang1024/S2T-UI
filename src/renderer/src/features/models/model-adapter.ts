@@ -487,6 +487,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         method: 'POST',
         headers: {
           'content-type': 'audio/wav',
+          'x-s2t-idempotency-key': crypto.randomUUID(),
           'x-s2t-language': this.language,
           ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
           ...(this.profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),

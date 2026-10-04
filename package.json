@@ -59,7 +59,10 @@
     "caption:display:smoke": "node tests/smoke/caption-display-group-smoke-test.cjs",
     "model-paths:smoke": "node tests/smoke/model-paths-smoke-test.cjs",
     "gateway:env-smoke": "node tests/smoke/gateway-env-smoke-test.cjs",
-    "nemotron:smoke": "node tests/smoke/nemotron-diarization-smoke-test.cjs"
+    "nemotron:smoke": "node tests/smoke/nemotron-diarization-smoke-test.cjs",
+    "storage:migrate:schema": "node scripts/storage/migrate-schema.cjs",
+    "scale:smoke": "node tests/smoke/scale-safety-smoke-test.cjs",
+    "scale:integration": "node tests/integration/scale-safety-integration.cjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -75,6 +78,7 @@
     "pg": "^8.23.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "redis": "^5.12.1",
     "sherpa-onnx-node": "^1.13.8",
     "xlsx": "file:dependencies/npm/xlsx-0.20.3.tgz"
   },

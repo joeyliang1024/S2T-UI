@@ -1,0 +1,23 @@
+# Helm values for prometheus-community/prometheus-adapter.
+# Prometheus scraping must attach namespace/pod labels and service=s2t-gateway.
+# Set prometheus.url to the actual cluster Prometheus Service before installation.
+prometheus:
+  url: http://REPLACE_WITH_PROMETHEUS_SERVICE
+rules:
+  default: false
+  custom:
+    - seriesQuery: 's2t_gateway_inflight_requests{namespace!="",pod!=""}'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+          pod: {resource: pod}
+      name: {matches: "^s2t_gateway_inflight_requests$", as: "s2t_gateway_inflight_requests"}
+      metricsQuery: 'max(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+    - seriesQuery: 's2t_diarization_pending_audio_seconds{namespace!="",service="s2t-gateway"}'
+      resources:
+        overrides:
+          namespace: {resource: namespace}
+          service: {resource: service}
+      name: {matches: "^s2t_diarization_pending_audio_seconds$", as: "s2t_diarization_pending_audio_seconds"}
+      # Each gateway reports the same shared backlog. SUM would multiply it.
+      metricsQuery: 'max(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)'

@@ -15,10 +15,12 @@ class MinioBlobStore {
     // tell an operator whether MinIO, Postgres or Milvus is the broken one.
     this.ready = this.ensureBucket().catch((error) => { logger.error('storage.blob.unavailable', { bucket: this.bucket, error }); throw error })
   }
-  async ensureBucket() { if (!await this.client.bucketExists(this.bucket)) await this.client.makeBucket(this.bucket) }
+  async ensureBucket() { if (!await this.client.bucketExists(this.bucket)) { try { await this.client.makeBucket(this.bucket) } catch (error) { if (!['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'].includes(error.code) || !await this.client.bucketExists(this.bucket)) throw error } } }
   key(scope, key) { return `${safePart(scope, 'scope')}/${key.split('/').map((part) => safePart(part, 'blob key')).join('/')}` }
   async put(scope, key, bytes) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), bytes) }
+  async putStream(scope, key, stream, size) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), stream, size) }
   async get(scope, key) { await this.ready; try { const stream = await this.client.getObject(this.bucket, this.key(scope, key)); const chunks = []; for await (const chunk of stream) chunks.push(chunk); return Buffer.concat(chunks) } catch (error) { if (error && error.code === 'NoSuchKey') return null; throw error } }
+  async readStream(scope, key) { await this.ready; try { return await this.client.getObject(this.bucket, this.key(scope, key)) } catch (error) { if (error.code === 'NoSuchKey') return null; throw error } }
   async remove(scope, key) { await this.ready; await this.client.removeObject(this.bucket, this.key(scope, key)) }
   async list(scope, prefix = '') {
     await this.ready
@@ -40,7 +42,13 @@ class PostgresConfigStore {
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000
     })
-    this.schemaVersion = '001-core-storage'; this.ready = this.migrate()
+    this.schemaVersion = '001-core-storage'
+    this.ready = config.S2T_STORAGE_MIGRATIONS === 'verify' ? this.verifySchema() : this.migrate()
+  }
+  async verifySchema() {
+    const result = await this.pool.query("SELECT 1 FROM s2t_schema_migrations WHERE version = $1", [this.schemaVersion])
+    if (!result.rowCount) throw new Error('請先執行 Storage migration Job')
+    await this.pool.query('SELECT lease_generation FROM s2t_diarization_jobs LIMIT 0')
   }
   async migrate() {
     // A failed migration must be the loudest line in the console: it is why
@@ -178,17 +186,18 @@ class PostgresConfigStore {
       throw new Error('storage 資料更新衝突，請稍後重試')
     } finally { client.release() }
   }
-  // A re-enqueue is a fresh user intent (continuation and re-record reuse the
-  // same (user, session, audioKey) triple), so it must not inherit attempts
-  // burned by the previous run: otherwise a session that kept failing would
-  // arrive here already past diarizationJobMaxAttempts and be abandoned
-  // without ever running. The anti-thrash protections still apply, because a
-  // claim re-arms attempts and finishDiarizationJob backs off lease_until.
   async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
     await this.ready
     const result = await this.pool.query(`INSERT INTO s2t_diarization_jobs(id, user_id, session_id, audio_key, payload)
       VALUES($1, $2, $3, $4, $5::jsonb)
-      ON CONFLICT(user_id, session_id, audio_key) DO UPDATE SET payload = EXCLUDED.payload, state = 'queued', attempts = 0, lease_owner = NULL, lease_until = NULL, error = NULL, updated_at = NOW()
+      ON CONFLICT(user_id, session_id, audio_key) DO UPDATE SET
+      payload = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.payload ELSE EXCLUDED.payload END,
+      state = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.state ELSE 'queued' END,
+      attempts = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.attempts ELSE 0 END,
+      lease_owner = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.lease_owner ELSE NULL END,
+      lease_until = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.lease_until ELSE NULL END,
+      error = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.error ELSE NULL END,
+      updated_at = NOW()
       RETURNING id, state, attempts, created_at AS "createdAt", updated_at AS "updatedAt"`, [safePart(id, 'job id'), safePart(userId, 'user id'), safePart(sessionId, 'session id'), safePart(audioKey, 'audio key'), JSON.stringify(payload)])
     return result.rows[0]
   }
@@ -227,7 +236,34 @@ class PostgresConfigStore {
     // cannot be re-claimed every two seconds and re-run paid inference forever.
     await this.pool.query(`UPDATE s2t_diarization_jobs SET state = $4, error = $5, lease_owner = NULL,
       lease_until = CASE WHEN $4 = 'queued' THEN NOW() + LEAST(60, GREATEST(5, attempts * 5)) * INTERVAL '1 second' ELSE NULL END,
-      updated_at = NOW() WHERE id = $1 AND lease_owner = $2 AND lease_generation = $3`, [safePart(id, 'job id'), safePart(owner, 'job owner'), leaseGeneration, state, error ? String(error).replace(/^retry:/, '').slice(0, 1000) : null])
+      updated_at = NOW() WHERE id = $1 AND state = 'running' AND lease_until > NOW() AND lease_owner = $2 AND lease_generation = $3`, [safePart(id, 'job id'), safePart(owner, 'job owner'), leaseGeneration, state, error ? String(error).replace(/^retry:/, '').slice(0, 1000) : null])
+  }
+  async commitDiarizationJob(id, owner, generation, userId, expectedVersion, value) {
+    await this.ready
+    if (!Number.isSafeInteger(generation) || generation < 1 || !Number.isSafeInteger(expectedVersion) || expectedVersion < 0) throw new Error('無效的工作或資料版本')
+    const client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+      const job = await client.query("SELECT id FROM s2t_diarization_jobs WHERE id = $1 AND user_id = $2 AND state = 'running' AND lease_owner = $3 AND lease_generation = $4 AND lease_until > clock_timestamp() FOR UPDATE", [safePart(id, 'job id'), safePart(userId, 'user id'), safePart(owner, 'owner'), generation])
+      if (!job.rowCount) { await client.query('ROLLBACK'); return 'lost' }
+      const record = await client.query("SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = 'sessions' FOR UPDATE", [userId])
+      if (!record.rowCount || (record.rows[0].value?.version ?? 0) !== expectedVersion) { await client.query('ROLLBACK'); return 'conflict' }
+      // Recheck using wall time after potentially waiting for the record lock.
+      const finished = await client.query("UPDATE s2t_diarization_jobs SET state = 'completed', error = NULL, lease_owner = NULL, lease_until = NULL, updated_at = NOW() WHERE id = $1 AND lease_until > clock_timestamp() RETURNING id", [id])
+      if (!finished.rowCount) { await client.query('ROLLBACK'); return 'lost' }
+      await client.query("UPDATE s2t_config_records SET value = $2::jsonb, updated_at = NOW() WHERE scope = $1 AND record_key = 'sessions'", [userId, JSON.stringify(value)])
+      await client.query('COMMIT')
+      return 'committed'
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
+  }
+  async pruneExpiredRequests() {
+    await this.ready
+    await this.pool.query("DELETE FROM s2t_config_records WHERE record_key ~ '^request-[a-f0-9]{64}$' AND (value->>'expiresAt')::numeric < $1", [Date.now()])
+  }
+  async diarizationBacklog() {
+    await this.ready
+    const result = await this.pool.query("SELECT COUNT(*)::int AS pending, COALESCE(SUM(COALESCE((payload->>'audioSeconds')::float, 60)), 0)::float AS \"audioSeconds\", COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(created_at)), 0)::float AS oldest FROM s2t_diarization_jobs WHERE state IN ('queued', 'running')")
+    return result.rows[0]
   }
   async list(scope, prefix = '') { await this.ready; const result = await this.pool.query('SELECT record_key AS key, value, updated_at AS "updatedAt" FROM s2t_config_records WHERE scope = $1 AND record_key LIKE $2 ORDER BY record_key', [safePart(scope, 'scope'), `${prefix ? safePart(prefix, 'prefix') : ''}%`]); return result.rows }
   async createVoiceprint({ vectorId, userId, embeddingModel, embeddingVersion, sharingScope = 'private' }) {
