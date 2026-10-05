@@ -1,0 +1,476 @@
+2026-10-05T15:45:57Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-67895dbcc4-4dgj4   1/1     Running   0          74s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          58s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          83s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          66s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:45:59Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-67895dbcc4-4dgj4   1/1     Running   0          76s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          60s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          85s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          68s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:01Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-67895dbcc4-4dgj4   1/1     Running   0          78s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          62s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          87s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          70s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:03Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-67895dbcc4-4dgj4   1/1     Running   0          80s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          64s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          89s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          72s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:05Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-67895dbcc4-4dgj4   1/1     Running   0          82s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          66s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          91s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          74s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:07Z
+NAME                       READY   STATUS              RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   0/1     ContainerCreating   0          1s    <none>       colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running             0          85s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running             0          69s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running             0          94s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running             0          77s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:09Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   0/1     Running   0          3s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running   0          87s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          71s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          96s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          79s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:12Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   0/1     Running   0          5s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running   0          89s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          73s   10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          98s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          81s   10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:14Z
+NAME                       READY   STATUS    RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   1/1     Running   0          7s     10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running   0          91s    10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running   0          75s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running   0          100s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Running   0          83s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:16Z
+NAME                       READY   STATUS              RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-8dl66   0/1     ContainerCreating   0          0s     <none>       colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running             0          9s     10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running             0          93s    10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running             0          77s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running             0          102s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Terminating         0          85s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:18Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-8dl66   0/1     Running       0          2s     10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          11s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          95s    10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running       0          79s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          104s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   1/1     Terminating   0          87s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:20Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-8dl66   0/1     Running       0          4s     10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          13s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          97s    10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running       0          81s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          106s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   0/1     Terminating   0          89s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:22Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-8dl66   1/1     Running       0          6s     10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          15s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          99s    10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running       0          83s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          108s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   0/1     Terminating   0          91s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:24Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-8dl66   1/1     Running       0          8s     10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          17s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          101s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Running       0          85s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          110s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   0/1     Terminating   0          93s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:26Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Running       0          1s     10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          10s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          19s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          103s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   1/1     Terminating   0          87s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          112s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   0/1     Terminating   0          95s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:28Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Running       0          3s     10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          12s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          21s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          105s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   0/1     Terminating   0          89s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          114s   10.42.0.67   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-s7gqt   0/1     Completed     0          97s    10.42.0.69   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:30Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Running       0          5s     10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          14s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          23s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          107s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   0/1     Terminating   0          91s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          116s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:32Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          8s     10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          17s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          26s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          110s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   0/1     Terminating   0          94s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Running       0          119s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:34Z
+NAME                       READY   STATUS              RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running             0          10s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running             0          19s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     ContainerCreating   0          1s     <none>       colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running             0          28s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running             0          112s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   0/1     Terminating         0          96s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   1/1     Terminating         0          2m1s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:37Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          12s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          21s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     Running       0          3s     10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          30s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          114s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-qhn8b   0/1     Completed     0          98s    10.42.0.70   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   0/1     Terminating   0          2m3s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:39Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          14s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          23s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     Running       0          5s     10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          32s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          116s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   0/1     Terminating   0          2m5s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:41Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          16s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          25s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running       0          7s     10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          34s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Running       0          118s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   0/1     Terminating   0          2m7s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:43Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          18s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          27s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running       0          9s     10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          36s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Terminating   0          2m     10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   0/1     Terminating   0          2m9s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:45Z
+NAME                       READY   STATUS        RESTARTS   AGE     IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          20s     10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          29s     10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running       0          11s     10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          38s     10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   1/1     Terminating   0          2m2s    10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-r24vj   0/1     Terminating   0          2m11s   10.42.0.67   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:47Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          22s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          31s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running       0          13s    10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          40s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   0/1     Terminating   0          2m4s   10.42.0.68   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:49Z
+NAME                       READY   STATUS              RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running             0          24s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running             0          33s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running             0          15s    10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running             0          42s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   0/1     Terminating         0          2m6s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   0/1     ContainerCreating   0          1s     <none>       colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:51Z
+NAME                       READY   STATUS        RESTARTS   AGE    IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          26s    10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          35s    10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running       0          17s    10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          44s    10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   0/1     Terminating   0          2m8s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   0/1     Running       0          3s     10.42.0.75   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:53Z
+NAME                       READY   STATUS      RESTARTS   AGE     IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running     0          28s     10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running     0          37s     10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running     0          19s     10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running     0          46s     10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-67895dbcc4-4dgj4   0/1     Completed   0          2m10s   10.42.0.68   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   0/1     Running     0          5s      10.42.0.75   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:55Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running   0          30s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running   0          39s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Running   0          21s   10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running   0          48s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running   0          7s    10.42.0.75   colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:57Z
+NAME                       READY   STATUS              RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running             0          33s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running             0          42s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   1/1     Terminating         0          24s   10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running             0          51s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running             0          10s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   0/1     ContainerCreating   0          1s    <none>       colima-s2t-stress   <none>           <none>
+2026-10-05T15:46:59Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          35s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          44s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     Terminating   0          26s   10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          53s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          12s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   0/1     Running       0          3s    10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:02Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          37s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          46s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     Terminating   0          28s   10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          55s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          14s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   0/1     Running       0          5s    10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:04Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          39s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Running       0          48s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     Terminating   0          30s   10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          57s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          16s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          7s    10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:06Z
+NAME                       READY   STATUS              RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running             0          41s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   1/1     Terminating         0          50s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-qn22n   0/1     Terminating         0          32s   10.42.0.74   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running             0          59s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running             0          18s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   0/1     ContainerCreating   0          0s    <none>       colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running             0          9s    10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:08Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          43s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   0/1     Terminating   0          52s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          61s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          20s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   0/1     Running       0          2s    10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          11s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:10Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          45s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   0/1     Terminating   0          54s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          63s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          22s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   0/1     Running       0          4s    10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          13s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:12Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Running       0          47s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   0/1     Terminating   0          56s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          65s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          24s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          6s    10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          15s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:14Z
+NAME                       READY   STATUS              RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   1/1     Terminating         0          49s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   0/1     Terminating         0          58s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running             0          67s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running             0          26s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   0/1     ContainerCreating   0          0s    <none>       colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running             0          8s    10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running             0          17s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:16Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Terminating   0          51s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-8dl66   0/1     Completed     0          60s   10.42.0.72   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          69s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          28s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   0/1     Running       0          2s    10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          10s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          19s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:18Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Terminating   0          53s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          71s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          30s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   0/1     Running       0          4s    10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          12s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          21s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:20Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Terminating   0          55s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Running       0          73s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          32s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running       0          6s    10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          14s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          23s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:22Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Terminating   0          57s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   1/1     Terminating   0          75s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          34s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running       0          8s    10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          16s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          25s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:24Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-4bb5j   0/1     Completed     0          59s   10.42.0.73   colima-s2t-stress   <none>           <none>
+gateway-57cdf77bf4-tkjjt   0/1     Terminating   0          77s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          36s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running       0          10s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          18s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          27s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:26Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   0/1     Terminating   0          80s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          39s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running       0          13s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          21s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          30s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:28Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   0/1     Terminating   0          82s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          41s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running       0          15s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          23s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          32s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:31Z
+NAME                       READY   STATUS        RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-57cdf77bf4-tkjjt   0/1     Terminating   0          84s   10.42.0.71   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-2czzr   1/1     Running       0          43s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running       0          17s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running       0          25s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running       0          34s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:33Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          45s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          19s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          27s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          36s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:35Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          47s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          21s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          29s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          38s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:37Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          49s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          23s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          31s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          40s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:39Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          51s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          25s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          33s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          42s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:41Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          53s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          27s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          35s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          44s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:43Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          55s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          29s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          37s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          46s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:45Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          57s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          31s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          39s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          48s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:47Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          59s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          33s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          41s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          50s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:49Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          61s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          35s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          43s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          52s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:51Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          63s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          37s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          45s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          54s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:53Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          66s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          40s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          48s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          57s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:55Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          68s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          42s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          50s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          59s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:47:58Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          70s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          44s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          52s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          61s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:00Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          72s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          46s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          54s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          63s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:02Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          74s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          48s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          56s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          65s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:04Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          76s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          50s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          58s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          67s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:06Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          78s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          52s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          60s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          69s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:08Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          80s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          54s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          62s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          71s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:10Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          82s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          56s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          64s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          73s   10.42.0.76   colima-s2t-stress   <none>           <none>
+2026-10-05T15:48:12Z
+NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                NOMINATED NODE   READINESS GATES
+gateway-8689985fc9-2czzr   1/1     Running   0          84s   10.42.0.75   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-gpd27   1/1     Running   0          58s   10.42.0.78   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-h82ls   1/1     Running   0          66s   10.42.0.77   colima-s2t-stress   <none>           <none>
+gateway-8689985fc9-t5bnw   1/1     Running   0          75s   10.42.0.76   colima-s2t-stress   <none>           <none>

@@ -80,9 +80,32 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     upstreamStarted = started
     const pending = fetch(`${one.base}/api/transcriptions`, { method: 'POST', headers: { ...headers, 'x-s2t-idempotency-key': 'drain-segment' }, body: Buffer.from(audio) })
     await waiting
+    one.child.kill('SIGUSR2')
+    let unready = false
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const probe = await fetch(`${one.base}/readyz`)
+      await probe.arrayBuffer()
+      if (probe.status === 503) { unready = true; break }
+      await delay(20)
+    }
+    assert.equal(unready, true, 'preStop preparation must withdraw readiness')
+    const preparedResponse = await pending
+    assert.equal(preparedResponse.status, 200, 'preStop must finish existing model requests')
+    assert.equal(preparedResponse.headers.get('connection'), 'close', 'clients must retire the old Pod connection')
+    await preparedResponse.arrayBuffer()
+    const propagatedRequest = await fetch(`${one.base}/api/transcriptions`, { method: 'POST', headers: { ...headers, 'x-s2t-idempotency-key': 'prestop-propagation' }, body: Buffer.from(audio) })
+    assert.equal(propagatedRequest.status, 200, 'preStop must serve traffic during endpoint propagation')
+    assert.equal(propagatedRequest.headers.get('connection'), 'close')
+    await propagatedRequest.arrayBuffer()
+    assert.equal((await fetch(`${one.base}/livez`)).status, 200)
+    let termStarted
+    const termWaiting = new Promise(resolve => { termStarted = resolve })
+    upstreamStarted = termStarted
+    const termPending = fetch(`${one.base}/api/transcriptions`, { method: 'POST', headers: { ...headers, 'x-s2t-idempotency-key': 'sigterm-segment' }, body: Buffer.from(audio) })
+    await termWaiting
     const exit = once(one.child, 'exit')
     one.child.kill('SIGTERM')
-    const drainedResponse = await pending
+    const drainedResponse = await termPending
     assert.equal(drainedResponse.status, 200, 'SIGTERM must allow active HTTP work to complete')
     assert.equal((await drainedResponse.json()).text, 'caption')
     const [code] = await exit; assert.equal(code, 0)
@@ -97,7 +120,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     assert.ok(Buffer.isBuffer(output)); assert.ok(output.length > 0)
     const publicApi = await fetch(`${service.base}/api/config`)
     assert.equal(publicApi.status, 401)
-    console.log('PASS: unchanged standalone startup, two gateway processes, durable chunk handoff, HTTP replay, content conflict and SIGTERM request drain. No external model calls.')
+    console.log('PASS: standalone startup, two gateway processes, durable chunk handoff, HTTP replay, content conflict, preStop readiness/connection handoff and SIGTERM request drain. No external model calls.')
   } finally {
     for (const child of children) if (child.exitCode === null) child.kill('SIGKILL')
     await new Promise(resolve => upstream.close(resolve))

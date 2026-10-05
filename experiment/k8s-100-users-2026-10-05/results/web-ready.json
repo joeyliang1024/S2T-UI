@@ -1,0 +1,1 @@
+{"ready":true,"role":"api","storage":{"blob":"minio","config":"postgres","vector":"milvus"}}

@@ -30,7 +30,7 @@ S2T_REDIS_TLS=false
 
 NODES 為逗號分隔 host:port，IPv6 使用 [address]:port；可設定三個 Sentinel 種子，client 發現其他節點並追蹤 primary 切換。master name 必須符合 `sentinel monitor`，不是 Pod／Service 名稱。Sentinel 與 Redis 密碼分開；只有密碼認證時 username 留空。TLS 兩側獨立啟用，使用系統信任 CA，未提供自訂 CA 環境變數。密鑰、URL 與 provider credentials 使用 Secret，禁止放在公開 frontend。
 
-限流讀寫皆送 primary，不讀 replica。命令整體最多等待三秒，切換期間可能回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。
+限流讀寫皆送 primary，不讀 replica。命令整體最多等待三秒，切換期間可能回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。Kubernetes 自行部署 Redis／Sentinel 時，所有公告位址應使用 StatefulSet 的固定 DNS 名稱，並啟用 Sentinel resolve-hostnames／announce-hostnames；只啟用 resolve-hostnames 仍可能把舊 Pod IP 寫入持久化配置，重建後失聯。
 
 S2T_AUDIO_WARMUP 可設 silero、nemotron、diarization 的逗號列表。silero 載入模型；nemotron 驗證 runtime／權重；diarization 實際推論一秒靜音以預熱。失敗使 readiness 不通過。Docker 預設空白。Nemotron CLI 每次工作仍會載入權重，預熱不是持續模型駐留承諾。ASR／翻譯模型服務自行配置完成推論暖機才 Ready。
 
@@ -75,7 +75,7 @@ Gateway HPA 使用 CPU／進行中請求，音訊服務使用 CPU，背景 worke
 
 S2T_ASR_MAX_INFLIGHT、S2T_TRANSLATION_MAX_INFLIGHT 在多副本預設各 64；單機預設不增加全域上限。它們依用途保護共用模型容量，可能使不同 provider 共用較保守上限。不是 64 使用者限制，須依實測模型吞吐調整。
 
-Gateway 至少兩副本，更新 maxUnavailable=0／maxSurge=1，節點分散、PDB 保留一個。SIGTERM 排空 HTTP／背景任務，應用 45 秒、Pod 60 秒。長任務強制終止後由租約接手。PDB 不保障非自願故障，也不代替更新策略。節點須容納新副本及更新 surge。
+Gateway 至少兩副本，更新 maxUnavailable=0／maxSurge=1，節點分散、PDB 保留一個。Gateway／audio-service 的 preStop 先以 SIGUSR2 切掉 readiness，繼續服務 endpoint 傳播期間的請求，並以 Connection: close 將 keep-alive 客戶端移到其他 Pod；等待 10 秒後 Kubernetes 才送 SIGTERM。SIGTERM 排空 HTTP／背景任務，應用 45 秒、Pod 60 秒，包含 preStop 的 10 秒。長任務強制終止後由租約接手。PDB 不保障非自願故障，也不代替更新策略。節點須容納新副本及更新 surge。
 
 連線預算為各角色 (最大副本 + surge) × 每 Pod pool max，加 migration、監控及其他客戶端。S2T_POSTGRES_MAX_CONNECTIONS 已實際傳入 pool；範例每 Pod 為 4。避免將本機 Compose 的 max_connections=24 直接當作正式容量。
 

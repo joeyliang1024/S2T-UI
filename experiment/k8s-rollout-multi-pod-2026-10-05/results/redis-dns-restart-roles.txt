@@ -1,0 +1,44 @@
+# Replication
+role:slave
+master_host:redis-1.redis.s2t-stress-20261005.svc.cluster.local
+master_port:6379
+master_link_status:up
+master_last_io_seconds_ago:0
+master_sync_in_progress:0
+slave_read_repl_offset:905298
+slave_repl_offset:905298
+slave_priority:100
+slave_read_only:1
+replica_announced:1
+connected_slaves:0
+master_failover_state:no-failover
+master_replid:3d6b236100abd3b7a83a1f3832da725347fff65a
+# Replication
+role:master
+connected_slaves:2
+slave0:ip=redis-2.redis.s2t-stress-20261005.svc.cluster.local,port=6379,state=online,offset=871206,lag=0
+slave1:ip=redis-0.redis.s2t-stress-20261005.svc.cluster.local,port=6379,state=online,offset=848321,lag=1
+master_failover_state:no-failover
+master_replid:3d6b236100abd3b7a83a1f3832da725347fff65a
+master_replid2:0000000000000000000000000000000000000000
+master_repl_offset:916931
+second_repl_offset:-1
+repl_backlog_active:1
+repl_backlog_size:1048576
+repl_backlog_first_byte_offset:1
+repl_backlog_histlen:916931
+# Replication
+role:slave
+master_host:redis-1.redis.s2t-stress-20261005.svc.cluster.local
+master_port:6379
+master_link_status:up
+master_last_io_seconds_ago:0
+master_sync_in_progress:0
+slave_read_repl_offset:930043
+slave_repl_offset:930043
+slave_priority:100
+slave_read_only:1
+replica_announced:1
+connected_slaves:0
+master_failover_state:no-failover
+master_replid:3d6b236100abd3b7a83a1f3832da725347fff65a

@@ -1,0 +1,4 @@
+# 實驗紀錄
+
+- [2026-10-05：本機 Kubernetes 100 人模擬壓測](k8s-100-users-2026-10-05/README.zh-TW.md)
+- [2026-10-05：多 Pod、模擬 API 延遲與滾動更新修正驗證](k8s-rollout-multi-pod-2026-10-05/README.zh-TW.md)

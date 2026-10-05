@@ -19,6 +19,16 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
   try {
     await Promise.all([a.ready, b.ready])
     await a.pool.query('INSERT INTO s2t_users(id, username, password_hash, nt, department) VALUES($1,$1,$2,$1,$2)', [userId, 'test'])
+    for (let index = 0; index < 20; index++) {
+      const initialCas = await Promise.all([a.compareAndSwap(userId, `initial-cas-${index}`, 0, { version: 1, writer: 'a' }), b.compareAndSwap(userId, `initial-cas-${index}`, 0, { version: 1, writer: 'b' })])
+      assert.equal(initialCas.filter(Boolean).length, 1, 'first config write has exactly one CAS winner')
+      await a.pool.query('DELETE FROM s2t_glossaries WHERE user_id = $1', [userId])
+      const writes = await Promise.all([a.putGlossary(userId, 'pod-a', 0), b.putGlossary(userId, 'pod-b', 0)])
+      assert.equal(writes.filter(Boolean).length, 1, 'first glossary write has exactly one CAS winner')
+      assert.equal(writes.find(Boolean).version, 1)
+      assert.equal(await b.putGlossary(userId, 'stale', 0), null)
+      assert.equal((await a.getGlossary(userId)).version, 1)
+    }
     await a.put(userId, 'sessions', { version: 1, sessions: [] })
     const input = { id: jobId, userId, sessionId: run, audioKey: run, payload: { processingToken: 'intent-1' } }
     await a.enqueueDiarizationJob(input)

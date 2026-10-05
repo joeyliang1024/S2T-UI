@@ -38,6 +38,10 @@ spec:
         - name: app
           image: s2t-ui
           ports: [{containerPort: 8787, name: http}]
+          lifecycle:
+            preStop:
+              exec:
+                command: [node, -e, 'process.kill(1, "SIGUSR2"); setTimeout(() => {}, 10000)']
           envFrom:
             - configMapRef: {name: s2t-runtime}
             - secretRef: {name: s2t-secrets}
@@ -102,6 +106,10 @@ spec:
         - name: app
           image: s2t-ui
           ports: [{containerPort: 8787, name: http}]
+          lifecycle:
+            preStop:
+              exec:
+                command: [node, -e, 'process.kill(1, "SIGUSR2"); setTimeout(() => {}, 10000)']
           envFrom:
             - configMapRef: {name: s2t-runtime}
             - secretRef: {name: s2t-secrets}

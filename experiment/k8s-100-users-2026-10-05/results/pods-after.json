@@ -1,0 +1,4177 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:57:21Z",
+                "generateName": "audio-worker-6c895c997d-",
+                "generation": 1,
+                "labels": {
+                    "app": "audio-worker",
+                    "pod-template-hash": "6c895c997d"
+                },
+                "name": "audio-worker-6c895c997d-kbdsh",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "audio-worker-6c895c997d",
+                        "uid": "f2fe70c0-0414-432c-a5a0-1b9063f79814"
+                    }
+                ],
+                "resourceVersion": "1769",
+                "uid": "6218559c-0455-4859-bdd4-927c18ac63c7"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "S2T_PROCESS_ROLE",
+                                "value": "audio-worker"
+                            }
+                        ],
+                        "envFrom": [
+                            {
+                                "secretRef": {
+                                    "name": "s2t-stress-config"
+                                }
+                            }
+                        ],
+                        "image": "s2t-stress:20261005-fixed2",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "audio-worker",
+                        "ports": [
+                            {
+                                "containerPort": 8787,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/readyz",
+                                "port": 8787,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "100m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/readyz",
+                                "port": 8787,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-vcrxc",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "kube-api-access-vcrxc",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:57:22Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:57:21Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:57:26Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:57:26Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:57:21Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "100m",
+                            "memory": "256Mi"
+                        },
+                        "containerID": "docker://08beef17914b9b8cd519bd99c173e9bd04898cbacf9fafd672ef3908d2cba47e",
+                        "image": "s2t-stress:20261005-fixed2",
+                        "imageID": "docker-pullable://s2t-stress@sha256:059e66b2cee9a8fb98c7c6804f77efd0b33b7d3c955449719eeb6a63e5d22d9d",
+                        "lastState": {},
+                        "name": "audio-worker",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "100m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:57:22Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-vcrxc",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.36",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.36"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:57:21Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "etcd-9cf796568-",
+                "generation": 1,
+                "labels": {
+                    "app": "etcd",
+                    "pod-template-hash": "9cf796568"
+                },
+                "name": "etcd-9cf796568-ltvpl",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "etcd-9cf796568",
+                        "uid": "f503c19b-f8a5-4be9-9dd4-30114431faf4"
+                    }
+                ],
+                "resourceVersion": "937",
+                "uid": "1b2eda79-27e4-49c9-b790-6a12b9d633f4"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "etcd",
+                            "--name",
+                            "s2t-stress-etcd",
+                            "--data-dir",
+                            "/etcd",
+                            "--advertise-client-urls",
+                            "http://etcd:2379",
+                            "--listen-client-urls",
+                            "http://0.0.0.0:2379"
+                        ],
+                        "image": "quay.io/coreos/etcd:v3.5.18",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "etcd",
+                        "ports": [
+                            {
+                                "containerPort": 2379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/health",
+                                "port": 2379,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "512Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/health",
+                                "port": 2379,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/etcd",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-nmvjl",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "etcd-data"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-nmvjl",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:41Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:41Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:47Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:47Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:41Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "128Mi"
+                        },
+                        "containerID": "docker://40c1a3e2956a3517ed4a4f0bb702272c9459b6856d7f868810d74928a6467461",
+                        "image": "quay.io/coreos/etcd:v3.5.18",
+                        "imageID": "docker-pullable://quay.io/coreos/etcd@sha256:d0a641d5fbcc89678c931a61b7de7b8a1cf097149f135c9c73bc81d076a1494b",
+                        "lastState": {},
+                        "name": "etcd",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "512Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:41Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/etcd",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-nmvjl",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.10",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.10"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:41Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/restartedAt": "2026-10-05T22:58:54+08:00"
+                },
+                "creationTimestamp": "2026-10-05T14:58:54Z",
+                "generateName": "gateway-5d975df9cc-",
+                "generation": 1,
+                "labels": {
+                    "app": "gateway",
+                    "pod-template-hash": "5d975df9cc"
+                },
+                "name": "gateway-5d975df9cc-r5qg2",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "gateway-5d975df9cc",
+                        "uid": "b9a893a6-c344-4b87-8869-228088b74cf7"
+                    }
+                ],
+                "resourceVersion": "1899",
+                "uid": "38a88f97-6e89-46da-ace0-8276f49050d4"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "S2T_PROCESS_ROLE",
+                                "value": "api"
+                            }
+                        ],
+                        "envFrom": [
+                            {
+                                "secretRef": {
+                                    "name": "s2t-stress-config"
+                                }
+                            }
+                        ],
+                        "image": "s2t-stress:20261005-fixed2",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "gateway",
+                        "ports": [
+                            {
+                                "containerPort": 8787,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/readyz",
+                                "port": 8787,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/readyz",
+                                "port": 8787,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-4lplv",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "kube-api-access-4lplv",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:58:55Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:58:54Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:01Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:01Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:58:54Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "500m",
+                            "memory": "256Mi"
+                        },
+                        "containerID": "docker://f91e5e688f441b94d9200cf19373ad11efddbb7f9a61ee2f9a77b9f2931ce242",
+                        "image": "s2t-stress:20261005-fixed2",
+                        "imageID": "docker-pullable://s2t-stress@sha256:059e66b2cee9a8fb98c7c6804f77efd0b33b7d3c955449719eeb6a63e5d22d9d",
+                        "lastState": {},
+                        "name": "gateway",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:58:55Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-4lplv",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.38",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.38"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:58:54Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/restartedAt": "2026-10-05T22:58:54+08:00"
+                },
+                "creationTimestamp": "2026-10-05T14:59:01Z",
+                "generateName": "gateway-5d975df9cc-",
+                "generation": 1,
+                "labels": {
+                    "app": "gateway",
+                    "pod-template-hash": "5d975df9cc"
+                },
+                "name": "gateway-5d975df9cc-xzkl9",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "gateway-5d975df9cc",
+                        "uid": "b9a893a6-c344-4b87-8869-228088b74cf7"
+                    }
+                ],
+                "resourceVersion": "1939",
+                "uid": "588e651e-609c-4d6d-a4c8-148950c3fcbe"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "S2T_PROCESS_ROLE",
+                                "value": "api"
+                            }
+                        ],
+                        "envFrom": [
+                            {
+                                "secretRef": {
+                                    "name": "s2t-stress-config"
+                                }
+                            }
+                        ],
+                        "image": "s2t-stress:20261005-fixed2",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "gateway",
+                        "ports": [
+                            {
+                                "containerPort": 8787,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/readyz",
+                                "port": 8787,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/readyz",
+                                "port": 8787,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-7gw6c",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "kube-api-access-7gw6c",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:02Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:01Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:06Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:06Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:59:01Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "500m",
+                            "memory": "256Mi"
+                        },
+                        "containerID": "docker://0e36e13cc714d255c8299b6aa92fda222b71e05deea21b80a24f5b3120061c07",
+                        "image": "s2t-stress:20261005-fixed2",
+                        "imageID": "docker-pullable://s2t-stress@sha256:059e66b2cee9a8fb98c7c6804f77efd0b33b7d3c955449719eeb6a63e5d22d9d",
+                        "lastState": {},
+                        "name": "gateway",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:59:01Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-7gw6c",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.39",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.39"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:59:01Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Pod\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"load-client\"},\"name\":\"load-client\",\"namespace\":\"s2t-stress-20261005\"},\"spec\":{\"containers\":[{\"command\":[\"node\",\"-e\",\"setInterval(()=\\u003e{},100000)\"],\"image\":\"s2t-stress:20261005\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"load-client\",\"resources\":{\"limits\":{\"memory\":\"768Mi\"},\"requests\":{\"cpu\":\"250m\",\"memory\":\"128Mi\"}},\"volumeMounts\":[{\"mountPath\":\"/test\",\"name\":\"code\"}]}],\"restartPolicy\":\"Never\",\"volumes\":[{\"configMap\":{\"name\":\"load-test-code\"},\"name\":\"code\"}]}}\n"
+                },
+                "creationTimestamp": "2026-10-05T14:39:07Z",
+                "generation": 1,
+                "labels": {
+                    "app": "load-client"
+                },
+                "name": "load-client",
+                "namespace": "s2t-stress-20261005",
+                "resourceVersion": "1248",
+                "uid": "dd86be66-83d9-4710-a5ef-d10447bc5af3"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "node",
+                            "-e",
+                            "setInterval(()=\u003e{},100000)"
+                        ],
+                        "image": "s2t-stress:20261005",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "load-client",
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/test",
+                                "name": "code"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-sf5cs",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Never",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "load-test-code"
+                        },
+                        "name": "code"
+                    },
+                    {
+                        "name": "kube-api-access-sf5cs",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:39:09Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:39:07Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:39:09Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:39:09Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:39:07Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "128Mi"
+                        },
+                        "containerID": "docker://ff2acb63ca5d30a23a59b5118d73d3947695d87e83b07bff55d7577d5ee5a804",
+                        "image": "s2t-stress:20261005",
+                        "imageID": "docker-pullable://s2t-stress@sha256:36db2c79018ae5aec030c6434d6d985d2be49ade21413a34b7997c594642d0f0",
+                        "lastState": {},
+                        "name": "load-client",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:39:08Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/test",
+                                "name": "code"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-sf5cs",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.31",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.31"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:39:07Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "milvus-6448ff498f-",
+                "generation": 1,
+                "labels": {
+                    "app": "milvus",
+                    "pod-template-hash": "6448ff498f"
+                },
+                "name": "milvus-6448ff498f-6x4v5",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "milvus-6448ff498f",
+                        "uid": "35d8c9fe-7d0c-4422-bcfd-6c6bfce8c1f1"
+                    }
+                ],
+                "resourceVersion": "1098",
+                "uid": "f01b7395-e5dc-4599-89d4-c0a9ce3d4d49"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "milvus",
+                            "run",
+                            "standalone"
+                        ],
+                        "env": [
+                            {
+                                "name": "ETCD_ENDPOINTS",
+                                "value": "etcd:2379"
+                            },
+                            {
+                                "name": "MINIO_ADDRESS",
+                                "value": "minio:9000"
+                            },
+                            {
+                                "name": "MINIO_ACCESS_KEY_ID",
+                                "value": "stress-minio"
+                            },
+                            {
+                                "name": "MINIO_SECRET_ACCESS_KEY",
+                                "value": "stress-minio-test-only"
+                            }
+                        ],
+                        "image": "milvusdb/milvus:v2.5.3",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "milvus",
+                        "ports": [
+                            {
+                                "containerPort": 9091,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 19530,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/healthz",
+                                "port": 9091,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "3Gi"
+                            },
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "1Gi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/healthz",
+                                "port": 9091,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/milvus",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-dwpxz",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "milvus-data"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-dwpxz",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:43Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:42Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:58Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:58Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:42Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "500m",
+                            "memory": "1Gi"
+                        },
+                        "containerID": "docker://6031e83d6fba46a12e5fd7c86eb72c5f5573b054383cacf94e4a3563c88554f6",
+                        "image": "milvusdb/milvus:v2.5.3",
+                        "imageID": "docker-pullable://milvusdb/milvus@sha256:711b55e92b863100f1a89569012d6836b92fd97f723cd0f7759f6f4c8f3f3ae1",
+                        "lastState": {},
+                        "name": "milvus",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "3Gi"
+                            },
+                            "requests": {
+                                "cpu": "500m",
+                                "memory": "1Gi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:43Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/milvus",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-dwpxz",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.12",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.12"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:42Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:36Z",
+                "generateName": "minio-76786f845d-",
+                "generation": 1,
+                "labels": {
+                    "app": "minio",
+                    "pod-template-hash": "76786f845d"
+                },
+                "name": "minio-76786f845d-jfz9r",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "minio-76786f845d",
+                        "uid": "70ca283c-d140-4fa1-a1bd-80d85b2d5d61"
+                    }
+                ],
+                "resourceVersion": "979",
+                "uid": "a9029cf8-80e3-4bba-abe4-92b70fb72f15"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "minio",
+                            "server",
+                            "/data",
+                            "--console-address",
+                            ":9001"
+                        ],
+                        "env": [
+                            {
+                                "name": "MINIO_ROOT_USER",
+                                "value": "stress-minio"
+                            },
+                            {
+                                "name": "MINIO_ROOT_PASSWORD",
+                                "value": "stress-minio-test-only"
+                            }
+                        ],
+                        "image": "cgr.dev/chainguard/minio:latest",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "minio",
+                        "ports": [
+                            {
+                                "containerPort": 9000,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 9001,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/minio/health/ready",
+                                "port": 9000,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/minio/health/ready",
+                                "port": 9000,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-gfwwj",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {
+                    "fsGroup": 65532
+                },
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "minio-data"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-gfwwj",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:44Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:43Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:50Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:50Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:43Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "256Mi"
+                        },
+                        "containerID": "docker://c4de9e8e44284327a8169ad12d22c64829d3d0247fb8855bc7919faa2e86ce94",
+                        "image": "cgr.dev/chainguard/minio:latest",
+                        "imageID": "docker-pullable://cgr.dev/chainguard/minio@sha256:bd014394a80898e68c149f2311fdf8d5a2c2f3bb2c33b9327ae6d02b4b065ae1",
+                        "lastState": {},
+                        "name": "minio",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:44Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-gfwwj",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.13",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.13"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:43Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "mock-models-8658f56dd7-",
+                "generation": 1,
+                "labels": {
+                    "app": "mock-models",
+                    "pod-template-hash": "8658f56dd7"
+                },
+                "name": "mock-models-8658f56dd7-zddbw",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "mock-models-8658f56dd7",
+                        "uid": "0c577d42-ab64-415d-80eb-1c653e5c20b7"
+                    }
+                ],
+                "resourceVersion": "856",
+                "uid": "9d2058e3-f0f9-4930-8f13-acbf20599298"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "node",
+                            "/mocks/mock-services.cjs"
+                        ],
+                        "image": "s2t-stress:20261005",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "mock-models",
+                        "ports": [
+                            {
+                                "containerPort": 9090,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/healthz",
+                                "port": 9090,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "512Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 90,
+                            "httpGet": {
+                                "path": "/healthz",
+                                "port": 9090,
+                                "scheme": "HTTP"
+                            },
+                            "periodSeconds": 5,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 3
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/mocks",
+                                "name": "mock-code"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-zrzpd",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "mock-model-code"
+                        },
+                        "name": "mock-code"
+                    },
+                    {
+                        "name": "kube-api-access-zrzpd",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:38Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:37Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:42Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:42Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:37Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "128Mi"
+                        },
+                        "containerID": "docker://923c5ac25c655149823308129f659b9573f7cdccfe8575b11b66e14625f1b675",
+                        "image": "s2t-stress:20261005",
+                        "imageID": "docker-pullable://s2t-stress@sha256:36db2c79018ae5aec030c6434d6d985d2be49ade21413a34b7997c594642d0f0",
+                        "lastState": {},
+                        "name": "mock-models",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "512Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "128Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:37Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/mocks",
+                                "name": "mock-code"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-zrzpd",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.8",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.8"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:37Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:58Z",
+                "generateName": "postgres-669f66469b-",
+                "generation": 1,
+                "labels": {
+                    "app": "postgres",
+                    "pod-template-hash": "669f66469b"
+                },
+                "name": "postgres-669f66469b-vc2rg",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "postgres-669f66469b",
+                        "uid": "64ca7aee-d2de-4a27-8916-d402bf53cd40"
+                    }
+                ],
+                "resourceVersion": "1121",
+                "uid": "964eae37-f7e0-4b6c-a99f-cae6f9c25cee"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "docker-entrypoint.sh",
+                            "postgres",
+                            "-c",
+                            "shared_buffers=128MB",
+                            "-c",
+                            "max_connections=100",
+                            "-c",
+                            "work_mem=4MB"
+                        ],
+                        "env": [
+                            {
+                                "name": "POSTGRES_DB",
+                                "value": "s2t"
+                            },
+                            {
+                                "name": "POSTGRES_USER",
+                                "value": "s2t"
+                            },
+                            {
+                                "name": "POSTGRES_PASSWORD",
+                                "value": "stress-postgres-test-only"
+                            }
+                        ],
+                        "image": "postgres:16-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "postgres",
+                        "ports": [
+                            {
+                                "containerPort": 5432,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/postgresql/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-4h75p",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "postgres-data"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-4h75p",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:59Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:58Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:59Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:59Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:58Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "256Mi"
+                        },
+                        "containerID": "docker://785758f53618d2f2244f0ead223a2cb80bb3bf2e34ebf47b6e103eed65845fb3",
+                        "image": "postgres:16-alpine",
+                        "imageID": "docker-pullable://postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+                        "lastState": {},
+                        "name": "postgres",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "768Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "256Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:58Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/postgresql/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-4h75p",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.26",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.26"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:58Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "redis-",
+                "generation": 1,
+                "labels": {
+                    "app": "redis",
+                    "apps.kubernetes.io/pod-index": "0",
+                    "controller-revision-hash": "redis-76767ff497",
+                    "statefulset.kubernetes.io/pod-name": "redis-0"
+                },
+                "name": "redis-0",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "redis",
+                        "uid": "16524a32-83d7-498e-9e3a-64d2c6b29aa8"
+                    }
+                ],
+                "resourceVersion": "1015",
+                "uid": "ecb50f32-6e3a-438d-85ff-51545e16f77a"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "set -eu\nmaster=\"\"\nfor i in 0 1 2; do\n master=$(redis-cli -h sentinel-$i.sentinel -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning --raw SENTINEL get-master-addr-by-name s2t-stress-master 2\u003e/dev/null | head -n 1) || true\n [ -n \"$master\" ] \u0026\u0026 break\ndone\nif [ -z \"$master\" ]; then master=redis-0.redis; fi\nown=$(hostname -i | awk '{print $1}')\nif [ \"$HOSTNAME\" = redis-0 ] \u0026\u0026 [ \"$master\" = redis-0.redis ] || [ \"$master\" = \"$own\" ]; then\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replica-announce-ip \"$own\" --replica-announce-port 6379\nelse\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replicaof \"$master\" 6379 --replica-announce-ip \"$own\" --replica-announce-port 6379\nfi"
+                        ],
+                        "env": [
+                            {
+                                "name": "REDIS_PASSWORD",
+                                "value": "stress-redis-test-only"
+                            },
+                            {
+                                "name": "SENTINEL_PASSWORD",
+                                "value": "stress-sentinel-test-only"
+                            }
+                        ],
+                        "image": "redis:7.4-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "livenessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "name": "redis",
+                        "ports": [
+                            {
+                                "containerPort": 6379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-k6jhz",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostname": "redis-0",
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "subdomain": "redis",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "data-redis-0"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-k6jhz",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:49Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:48Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:47Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "64Mi"
+                        },
+                        "containerID": "docker://44d5a36cece11e6e07e31a41c6fb68e4f44adec8e2969c92f1150cf94299d946",
+                        "image": "redis:7.4-alpine",
+                        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+                        "lastState": {},
+                        "name": "redis",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:48Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-k6jhz",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.18",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.18"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:48Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "redis-",
+                "generation": 1,
+                "labels": {
+                    "app": "redis",
+                    "apps.kubernetes.io/pod-index": "1",
+                    "controller-revision-hash": "redis-76767ff497",
+                    "statefulset.kubernetes.io/pod-name": "redis-1"
+                },
+                "name": "redis-1",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "redis",
+                        "uid": "16524a32-83d7-498e-9e3a-64d2c6b29aa8"
+                    }
+                ],
+                "resourceVersion": "1005",
+                "uid": "9d9959c3-9841-4b42-b2bd-1bfaaf0a7943"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "set -eu\nmaster=\"\"\nfor i in 0 1 2; do\n master=$(redis-cli -h sentinel-$i.sentinel -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning --raw SENTINEL get-master-addr-by-name s2t-stress-master 2\u003e/dev/null | head -n 1) || true\n [ -n \"$master\" ] \u0026\u0026 break\ndone\nif [ -z \"$master\" ]; then master=redis-0.redis; fi\nown=$(hostname -i | awk '{print $1}')\nif [ \"$HOSTNAME\" = redis-0 ] \u0026\u0026 [ \"$master\" = redis-0.redis ] || [ \"$master\" = \"$own\" ]; then\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replica-announce-ip \"$own\" --replica-announce-port 6379\nelse\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replicaof \"$master\" 6379 --replica-announce-ip \"$own\" --replica-announce-port 6379\nfi"
+                        ],
+                        "env": [
+                            {
+                                "name": "REDIS_PASSWORD",
+                                "value": "stress-redis-test-only"
+                            },
+                            {
+                                "name": "SENTINEL_PASSWORD",
+                                "value": "stress-sentinel-test-only"
+                            }
+                        ],
+                        "image": "redis:7.4-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "livenessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "name": "redis",
+                        "ports": [
+                            {
+                                "containerPort": 6379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-mzpjg",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostname": "redis-1",
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "subdomain": "redis",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "data-redis-1"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-mzpjg",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:51Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:50Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:51Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:51Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:50Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "64Mi"
+                        },
+                        "containerID": "docker://0f4d87fd6e4cfb54adc1dabbd8bec7b581d0b73d4dbef2d619874c2fce1a8abd",
+                        "image": "redis:7.4-alpine",
+                        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+                        "lastState": {},
+                        "name": "redis",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:50Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-mzpjg",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.20",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.20"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:50Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "redis-",
+                "generation": 1,
+                "labels": {
+                    "app": "redis",
+                    "apps.kubernetes.io/pod-index": "2",
+                    "controller-revision-hash": "redis-76767ff497",
+                    "statefulset.kubernetes.io/pod-name": "redis-2"
+                },
+                "name": "redis-2",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "redis",
+                        "uid": "16524a32-83d7-498e-9e3a-64d2c6b29aa8"
+                    }
+                ],
+                "resourceVersion": "1056",
+                "uid": "b6a025f4-9e61-423b-b77b-3a15b3f02787"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "set -eu\nmaster=\"\"\nfor i in 0 1 2; do\n master=$(redis-cli -h sentinel-$i.sentinel -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning --raw SENTINEL get-master-addr-by-name s2t-stress-master 2\u003e/dev/null | head -n 1) || true\n [ -n \"$master\" ] \u0026\u0026 break\ndone\nif [ -z \"$master\" ]; then master=redis-0.redis; fi\nown=$(hostname -i | awk '{print $1}')\nif [ \"$HOSTNAME\" = redis-0 ] \u0026\u0026 [ \"$master\" = redis-0.redis ] || [ \"$master\" = \"$own\" ]; then\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replica-announce-ip \"$own\" --replica-announce-port 6379\nelse\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replicaof \"$master\" 6379 --replica-announce-ip \"$own\" --replica-announce-port 6379\nfi"
+                        ],
+                        "env": [
+                            {
+                                "name": "REDIS_PASSWORD",
+                                "value": "stress-redis-test-only"
+                            },
+                            {
+                                "name": "SENTINEL_PASSWORD",
+                                "value": "stress-sentinel-test-only"
+                            }
+                        ],
+                        "image": "redis:7.4-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "livenessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "name": "redis",
+                        "ports": [
+                            {
+                                "containerPort": 6379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-s5wwd",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostname": "redis-2",
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "subdomain": "redis",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "data-redis-2"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-s5wwd",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "64Mi"
+                        },
+                        "containerID": "docker://ee78c0778cc381532ba8ca8c6c69eebb4ef4e45609b519c633b1fe7221d6c019",
+                        "image": "redis:7.4-alpine",
+                        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+                        "lastState": {},
+                        "name": "redis",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "256Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "64Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:53Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-s5wwd",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.23",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.23"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:52Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:38:21Z",
+                "generateName": "schema-migration-",
+                "generation": 1,
+                "labels": {
+                    "batch.kubernetes.io/controller-uid": "ec38da56-ea05-462d-a562-85a728757ee3",
+                    "batch.kubernetes.io/job-name": "schema-migration",
+                    "controller-uid": "ec38da56-ea05-462d-a562-85a728757ee3",
+                    "job-name": "schema-migration"
+                },
+                "name": "schema-migration-h79v5",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "batch/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "Job",
+                        "name": "schema-migration",
+                        "uid": "ec38da56-ea05-462d-a562-85a728757ee3"
+                    }
+                ],
+                "resourceVersion": "1150",
+                "uid": "17a55201-27f0-4b55-a8c4-90f7750c770c"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "node",
+                            "-e",
+                            "const {readStorageConfig}=require(\"./server/storage/config.cjs\");const {PostgresConfigStore}=require(\"./server/storage/remote.cjs\");const s=new PostgresConfigStore(readStorageConfig().postgres);s.ready.then(async()=\u003e{console.log(\"schema migrated\");await s.pool.end()}).catch(e=\u003e{console.error(e.message);process.exit(1)})"
+                        ],
+                        "env": [
+                            {
+                                "name": "S2T_STORAGE_MIGRATIONS",
+                                "value": "auto"
+                            }
+                        ],
+                        "envFrom": [
+                            {
+                                "secretRef": {
+                                    "name": "s2t-stress-config"
+                                }
+                            }
+                        ],
+                        "image": "s2t-stress:20261005",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "migration",
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-s8kjr",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Never",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "kube-api-access-s8kjr",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:38:23Z",
+                        "observedGeneration": 1,
+                        "status": "False",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:38:21Z",
+                        "observedGeneration": 1,
+                        "reason": "PodCompleted",
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:38:21Z",
+                        "observedGeneration": 1,
+                        "reason": "PodCompleted",
+                        "status": "False",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:38:21Z",
+                        "observedGeneration": 1,
+                        "reason": "PodCompleted",
+                        "status": "False",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:38:21Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "containerID": "docker://22476cf8bea31b7d06f859c6857818eac2df497773f3cba0d30b7f2a4bbbddd9",
+                        "image": "s2t-stress:20261005",
+                        "imageID": "docker-pullable://s2t-stress@sha256:36db2c79018ae5aec030c6434d6d985d2be49ade21413a34b7997c594642d0f0",
+                        "lastState": {},
+                        "name": "migration",
+                        "ready": false,
+                        "resources": {},
+                        "restartCount": 0,
+                        "started": false,
+                        "state": {
+                            "terminated": {
+                                "containerID": "docker://22476cf8bea31b7d06f859c6857818eac2df497773f3cba0d30b7f2a4bbbddd9",
+                                "exitCode": 0,
+                                "finishedAt": "2026-10-05T14:38:21Z",
+                                "reason": "Completed",
+                                "startedAt": "2026-10-05T14:38:21Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-s8kjr",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Succeeded",
+                "podIP": "10.42.0.27",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.27"
+                    }
+                ],
+                "qosClass": "BestEffort",
+                "startTime": "2026-10-05T14:38:21Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "sentinel-",
+                "generation": 1,
+                "labels": {
+                    "app": "sentinel",
+                    "apps.kubernetes.io/pod-index": "0",
+                    "controller-revision-hash": "sentinel-94b5b6794",
+                    "statefulset.kubernetes.io/pod-name": "sentinel-0"
+                },
+                "name": "sentinel-0",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "sentinel",
+                        "uid": "9cca2495-f7a5-4bc5-84c4-a1691466828d"
+                    }
+                ],
+                "resourceVersion": "1027",
+                "uid": "dc02cf4c-6491-476b-8011-ef91a7eb6378"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "set -eu\nif [ ! -f /data/sentinel.conf ]; then\ncat \u003e /data/sentinel.conf \u003c\u003cCFG\nport 26379\nbind 0.0.0.0\nprotected-mode yes\nrequirepass $SENTINEL_PASSWORD\nsentinel resolve-hostnames yes\nsentinel announce-ip $(hostname -i | awk '{print $1}')\nsentinel monitor s2t-stress-master redis-0.redis 6379 2\nsentinel auth-pass s2t-stress-master $REDIS_PASSWORD\nsentinel sentinel-pass $SENTINEL_PASSWORD\nsentinel down-after-milliseconds s2t-stress-master 2000\nsentinel failover-timeout s2t-stress-master 15000\nsentinel parallel-syncs s2t-stress-master 1\nCFG\nfi\nexec redis-server /data/sentinel.conf --sentinel"
+                        ],
+                        "env": [
+                            {
+                                "name": "REDIS_PASSWORD",
+                                "value": "stress-redis-test-only"
+                            },
+                            {
+                                "name": "SENTINEL_PASSWORD",
+                                "value": "stress-sentinel-test-only"
+                            }
+                        ],
+                        "image": "redis:7.4-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "sentinel",
+                        "ports": [
+                            {
+                                "containerPort": 26379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "32Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-jfhk2",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostname": "sentinel-0",
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "subdomain": "sentinel",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "data-sentinel-0"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-jfhk2",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:51Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:51Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "32Mi"
+                        },
+                        "containerID": "docker://09fac40e718cd061d3b28e0dbf5de30738474e823960b09beb5dbe5806e6ff67",
+                        "image": "redis:7.4-alpine",
+                        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+                        "lastState": {},
+                        "name": "sentinel",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "32Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:51Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-jfhk2",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.22",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.22"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:51Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "sentinel-",
+                "generation": 1,
+                "labels": {
+                    "app": "sentinel",
+                    "apps.kubernetes.io/pod-index": "1",
+                    "controller-revision-hash": "sentinel-94b5b6794",
+                    "statefulset.kubernetes.io/pod-name": "sentinel-1"
+                },
+                "name": "sentinel-1",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "sentinel",
+                        "uid": "9cca2495-f7a5-4bc5-84c4-a1691466828d"
+                    }
+                ],
+                "resourceVersion": "1081",
+                "uid": "ef7e3e59-8b8f-4fbf-9d41-0111bfe167f7"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "set -eu\nif [ ! -f /data/sentinel.conf ]; then\ncat \u003e /data/sentinel.conf \u003c\u003cCFG\nport 26379\nbind 0.0.0.0\nprotected-mode yes\nrequirepass $SENTINEL_PASSWORD\nsentinel resolve-hostnames yes\nsentinel announce-ip $(hostname -i | awk '{print $1}')\nsentinel monitor s2t-stress-master redis-0.redis 6379 2\nsentinel auth-pass s2t-stress-master $REDIS_PASSWORD\nsentinel sentinel-pass $SENTINEL_PASSWORD\nsentinel down-after-milliseconds s2t-stress-master 2000\nsentinel failover-timeout s2t-stress-master 15000\nsentinel parallel-syncs s2t-stress-master 1\nCFG\nfi\nexec redis-server /data/sentinel.conf --sentinel"
+                        ],
+                        "env": [
+                            {
+                                "name": "REDIS_PASSWORD",
+                                "value": "stress-redis-test-only"
+                            },
+                            {
+                                "name": "SENTINEL_PASSWORD",
+                                "value": "stress-sentinel-test-only"
+                            }
+                        ],
+                        "image": "redis:7.4-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "sentinel",
+                        "ports": [
+                            {
+                                "containerPort": 26379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "32Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-2jrhw",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostname": "sentinel-1",
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "subdomain": "sentinel",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "data-sentinel-1"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-2jrhw",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:54Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:54Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:54Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "32Mi"
+                        },
+                        "containerID": "docker://94e44b29aab38c768e39af503366cef1c365e20c82cd35853218b50d90b26e16",
+                        "image": "redis:7.4-alpine",
+                        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+                        "lastState": {},
+                        "name": "sentinel",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "32Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:54Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-2jrhw",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.25",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.25"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:53Z"
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2026-10-05T14:37:37Z",
+                "generateName": "sentinel-",
+                "generation": 1,
+                "labels": {
+                    "app": "sentinel",
+                    "apps.kubernetes.io/pod-index": "2",
+                    "controller-revision-hash": "sentinel-94b5b6794",
+                    "statefulset.kubernetes.io/pod-name": "sentinel-2"
+                },
+                "name": "sentinel-2",
+                "namespace": "s2t-stress-20261005",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "sentinel",
+                        "uid": "9cca2495-f7a5-4bc5-84c4-a1691466828d"
+                    }
+                ],
+                "resourceVersion": "1064",
+                "uid": "2052c842-475e-47dc-9bf4-aaced1d7d0dd"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "sh",
+                            "-c",
+                            "set -eu\nif [ ! -f /data/sentinel.conf ]; then\ncat \u003e /data/sentinel.conf \u003c\u003cCFG\nport 26379\nbind 0.0.0.0\nprotected-mode yes\nrequirepass $SENTINEL_PASSWORD\nsentinel resolve-hostnames yes\nsentinel announce-ip $(hostname -i | awk '{print $1}')\nsentinel monitor s2t-stress-master redis-0.redis 6379 2\nsentinel auth-pass s2t-stress-master $REDIS_PASSWORD\nsentinel sentinel-pass $SENTINEL_PASSWORD\nsentinel down-after-milliseconds s2t-stress-master 2000\nsentinel failover-timeout s2t-stress-master 15000\nsentinel parallel-syncs s2t-stress-master 1\nCFG\nfi\nexec redis-server /data/sentinel.conf --sentinel"
+                        ],
+                        "env": [
+                            {
+                                "name": "REDIS_PASSWORD",
+                                "value": "stress-redis-test-only"
+                            },
+                            {
+                                "name": "SENTINEL_PASSWORD",
+                                "value": "stress-sentinel-test-only"
+                            }
+                        ],
+                        "image": "redis:7.4-alpine",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "sentinel",
+                        "ports": [
+                            {
+                                "containerPort": 26379,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "exec": {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG"
+                                ]
+                            },
+                            "failureThreshold": 3,
+                            "periodSeconds": 3,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "32Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-sz5gj",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostname": "sentinel-2",
+                "nodeName": "colima-s2t-stress",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "default",
+                "serviceAccountName": "default",
+                "subdomain": "sentinel",
+                "terminationGracePeriodSeconds": 45,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "data",
+                        "persistentVolumeClaim": {
+                            "claimName": "data-sentinel-2"
+                        }
+                    },
+                    {
+                        "name": "kube-api-access-sz5gj",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:53Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2026-10-05T14:37:52Z",
+                        "observedGeneration": 1,
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "allocatedResources": {
+                            "cpu": "250m",
+                            "memory": "32Mi"
+                        },
+                        "containerID": "docker://554f1546cf46c2afc339beb98955655a59ed7ad9f5b1e3a7d7d9a0d18d6a645c",
+                        "image": "redis:7.4-alpine",
+                        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+                        "lastState": {},
+                        "name": "sentinel",
+                        "ready": true,
+                        "resources": {
+                            "limits": {
+                                "memory": "128Mi"
+                            },
+                            "requests": {
+                                "cpu": "250m",
+                                "memory": "32Mi"
+                            }
+                        },
+                        "restartCount": 0,
+                        "started": true,
+                        "state": {
+                            "running": {
+                                "startedAt": "2026-10-05T14:37:53Z"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/data",
+                                "name": "data"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-sz5gj",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.5.3",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.5.3"
+                    }
+                ],
+                "observedGeneration": 1,
+                "phase": "Running",
+                "podIP": "10.42.0.24",
+                "podIPs": [
+                    {
+                        "ip": "10.42.0.24"
+                    }
+                ],
+                "qosClass": "Burstable",
+                "startTime": "2026-10-05T14:37:52Z"
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}

@@ -1,0 +1,389 @@
+LAST SEEN   TYPE      REASON              OBJECT                               MESSAGE
+18m         Warning   FailedScheduling    pod/gateway-65bc5f4d9b-c5jkg         0/1 nodes are available: 1 Insufficient cpu. no new claims to deallocate, preemption: 0/1 nodes are available: 1 No preemption victims found for incoming pod.
+3m51s       Normal    Scheduled           pod/gateway-67895dbcc4-r24vj         Successfully assigned s2t-stress-20261005/gateway-67895dbcc4-r24vj to colima-s2t-stress
+14m         Normal    Scheduled           pod/sentinel-0                       Successfully assigned s2t-stress-20261005/sentinel-0 to colima-s2t-stress
+3m43s       Normal    Scheduled           pod/gateway-67895dbcc4-4dgj4         Successfully assigned s2t-stress-20261005/gateway-67895dbcc4-4dgj4 to colima-s2t-stress
+3m27s       Normal    Scheduled           pod/gateway-67895dbcc4-qhn8b         Successfully assigned s2t-stress-20261005/gateway-67895dbcc4-qhn8b to colima-s2t-stress
+18m         Normal    Scheduled           pod/gateway-5d975df9cc-f77t7         Successfully assigned s2t-stress-20261005/gateway-5d975df9cc-f77t7 to colima-s2t-stress
+18m         Normal    Scheduled           pod/gateway-5d975df9cc-qcfbd         Successfully assigned s2t-stress-20261005/gateway-5d975df9cc-qcfbd to colima-s2t-stress
+50m         Normal    Scheduled           pod/gateway-5899b7dbd7-crlhq         Successfully assigned s2t-stress-20261005/gateway-5899b7dbd7-crlhq to colima-s2t-stress
+9m38s       Normal    Scheduled           pod/redis-2                          Successfully assigned s2t-stress-20261005/redis-2 to colima-s2t-stress
+89s         Normal    Scheduled           pod/gateway-8689985fc9-t5bnw         Successfully assigned s2t-stress-20261005/gateway-8689985fc9-t5bnw to colima-s2t-stress
+14m         Normal    Scheduled           pod/gateway-65bc5f4d9b-c5jkg         Successfully assigned s2t-stress-20261005/gateway-65bc5f4d9b-c5jkg to colima-s2t-stress
+14m         Normal    Scheduled           pod/redis-2                          Successfully assigned s2t-stress-20261005/redis-2 to colima-s2t-stress
+3m35s       Normal    Scheduled           pod/gateway-67895dbcc4-s7gqt         Successfully assigned s2t-stress-20261005/gateway-67895dbcc4-s7gqt to colima-s2t-stress
+51m         Normal    Scheduled           pod/gateway-5899b7dbd7-mh86r         Successfully assigned s2t-stress-20261005/gateway-5899b7dbd7-mh86r to colima-s2t-stress
+9m36s       Normal    Scheduled           pod/redis-1                          Successfully assigned s2t-stress-20261005/redis-1 to colima-s2t-stress
+49m         Normal    Scheduled           pod/gateway-5d975df9cc-r5qg2         Successfully assigned s2t-stress-20261005/gateway-5d975df9cc-r5qg2 to colima-s2t-stress
+14m         Normal    Scheduled           pod/gateway-65bc5f4d9b-n8hlq         Successfully assigned s2t-stress-20261005/gateway-65bc5f4d9b-n8hlq to colima-s2t-stress
+9m32s       Normal    Scheduled           pod/sentinel-0                       Successfully assigned s2t-stress-20261005/sentinel-0 to colima-s2t-stress
+8m7s        Normal    Scheduled           pod/gateway-76b844f6bf-wzwkb         Successfully assigned s2t-stress-20261005/gateway-76b844f6bf-wzwkb to colima-s2t-stress
+2m1s        Normal    Scheduled           pod/gateway-57cdf77bf4-4bb5j         Successfully assigned s2t-stress-20261005/gateway-57cdf77bf4-4bb5j to colima-s2t-stress
+14m         Normal    Scheduled           pod/redis-1                          Successfully assigned s2t-stress-20261005/redis-1 to colima-s2t-stress
+8m1s        Normal    Scheduled           pod/gateway-76b844f6bf-xcdhl         Successfully assigned s2t-stress-20261005/gateway-76b844f6bf-xcdhl to colima-s2t-stress
+57m         Normal    Scheduled           pod/audio-worker-dbcd7dcb6-k57mf     Successfully assigned s2t-stress-20261005/audio-worker-dbcd7dcb6-k57mf to colima-s2t-stress
+7m49s       Normal    Scheduled           pod/gateway-76b844f6bf-xdr2q         Successfully assigned s2t-stress-20261005/gateway-76b844f6bf-xdr2q to colima-s2t-stress
+10m         Normal    Scheduled           pod/gateway-65bc5f4d9b-qh7mc         Successfully assigned s2t-stress-20261005/gateway-65bc5f4d9b-qh7mc to colima-s2t-stress
+7m55s       Normal    Scheduled           pod/gateway-76b844f6bf-xx82j         Successfully assigned s2t-stress-20261005/gateway-76b844f6bf-xx82j to colima-s2t-stress
+4m54s       Normal    Scheduled           pod/gateway-77656544d8-zjrhc         Successfully assigned s2t-stress-20261005/gateway-77656544d8-zjrhc to colima-s2t-stress
+2m10s       Normal    Scheduled           pod/gateway-57cdf77bf4-8dl66         Successfully assigned s2t-stress-20261005/gateway-57cdf77bf4-8dl66 to colima-s2t-stress
+51m         Normal    Scheduled           pod/audio-worker-6c895c997d-kbdsh    Successfully assigned s2t-stress-20261005/audio-worker-6c895c997d-kbdsh to colima-s2t-stress
+9m32s       Normal    Scheduled           pod/redis-0                          Successfully assigned s2t-stress-20261005/redis-0 to colima-s2t-stress
+5m11s       Normal    Scheduled           pod/gateway-77656544d8-5mm8b         Successfully assigned s2t-stress-20261005/gateway-77656544d8-5mm8b to colima-s2t-stress
+10m         Normal    Scheduled           pod/gateway-65bc5f4d9b-2xqlf         Successfully assigned s2t-stress-20261005/gateway-65bc5f4d9b-2xqlf to colima-s2t-stress
+9m38s       Normal    Scheduled           pod/sentinel-2                       Successfully assigned s2t-stress-20261005/sentinel-2 to colima-s2t-stress
+14m         Normal    Scheduled           pod/redis-0                          Successfully assigned s2t-stress-20261005/redis-0 to colima-s2t-stress
+112s        Normal    Scheduled           pod/gateway-57cdf77bf4-qn22n         Successfully assigned s2t-stress-20261005/gateway-57cdf77bf4-qn22n to colima-s2t-stress
+56m         Normal    Scheduled           pod/gateway-7b7d8ccdc-p2cgt          Successfully assigned s2t-stress-20261005/gateway-7b7d8ccdc-p2cgt to colima-s2t-stress
+5m20s       Normal    Scheduled           pod/gateway-77656544d8-ckcsq         Successfully assigned s2t-stress-20261005/gateway-77656544d8-ckcsq to colima-s2t-stress
+5m20s       Normal    Scheduled           pod/mock-models-df9865c6b-mk6st      Successfully assigned s2t-stress-20261005/mock-models-df9865c6b-mk6st to colima-s2t-stress
+14m         Normal    Scheduled           pod/sentinel-2                       Successfully assigned s2t-stress-20261005/sentinel-2 to colima-s2t-stress
+49m         Normal    Scheduled           pod/gateway-5d975df9cc-xzkl9         Successfully assigned s2t-stress-20261005/gateway-5d975df9cc-xzkl9 to colima-s2t-stress
+2m19s       Normal    Scheduled           pod/gateway-57cdf77bf4-tkjjt         Successfully assigned s2t-stress-20261005/gateway-57cdf77bf4-tkjjt to colima-s2t-stress
+5m2s        Normal    Scheduled           pod/gateway-77656544d8-mdswk         Successfully assigned s2t-stress-20261005/gateway-77656544d8-mdswk to colima-s2t-stress
+14m         Normal    Scheduled           pod/sentinel-1                       Successfully assigned s2t-stress-20261005/sentinel-1 to colima-s2t-stress
+57m         Normal    Scheduled           pod/gateway-7b7d8ccdc-bg4b8          Successfully assigned s2t-stress-20261005/gateway-7b7d8ccdc-bg4b8 to colima-s2t-stress
+98s         Normal    Scheduled           pod/gateway-8689985fc9-2czzr         Successfully assigned s2t-stress-20261005/gateway-8689985fc9-2czzr to colima-s2t-stress
+9m34s       Normal    Scheduled           pod/sentinel-1                       Successfully assigned s2t-stress-20261005/sentinel-1 to colima-s2t-stress
+72s         Normal    Scheduled           pod/gateway-8689985fc9-gpd27         Successfully assigned s2t-stress-20261005/gateway-8689985fc9-gpd27 to colima-s2t-stress
+80s         Normal    Scheduled           pod/gateway-8689985fc9-h82ls         Successfully assigned s2t-stress-20261005/gateway-8689985fc9-h82ls to colima-s2t-stress
+57m         Normal    SuccessfulCreate    replicaset/audio-worker-dbcd7dcb6    Created pod: audio-worker-dbcd7dcb6-k57mf
+57m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-7b7d8ccdc from 0 to 1
+57m         Normal    SuccessfulCreate    replicaset/gateway-7b7d8ccdc         Created pod: gateway-7b7d8ccdc-bg4b8
+57m         Normal    ScalingReplicaSet   deployment/audio-worker              Scaled up replica set audio-worker-dbcd7dcb6 from 0 to 1
+56m         Normal    Pulled              pod/gateway-7b7d8ccdc-bg4b8          Container image "s2t-stress:20261005-fixed" already present on machine and can be accessed by the pod
+56m         Normal    Created             pod/gateway-7b7d8ccdc-bg4b8          Container created
+56m         Normal    Started             pod/gateway-7b7d8ccdc-bg4b8          Container started
+56m         Normal    Started             pod/audio-worker-dbcd7dcb6-k57mf     Container started
+56m         Normal    Created             pod/audio-worker-dbcd7dcb6-k57mf     Container created
+56m         Normal    Pulled              pod/audio-worker-dbcd7dcb6-k57mf     Container image "s2t-stress:20261005-fixed" already present on machine and can be accessed by the pod
+56m         Normal    Created             pod/gateway-7b7d8ccdc-p2cgt          Container created
+56m         Normal    SuccessfulCreate    replicaset/gateway-7b7d8ccdc         Created pod: gateway-7b7d8ccdc-p2cgt
+56m         Normal    Killing             pod/audio-worker-d76f954bc-n56fh     Stopping container audio-worker
+56m         Normal    SuccessfulDelete    replicaset/audio-worker-d76f954bc    Deleted pod: audio-worker-d76f954bc-n56fh
+56m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-7b7d8ccdc from 1 to 2
+56m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-7d77cf5fc6 from 2 to 1
+56m         Normal    ScalingReplicaSet   deployment/audio-worker              Scaled down replica set audio-worker-d76f954bc from 1 to 0
+56m         Normal    SuccessfulDelete    replicaset/gateway-7d77cf5fc6        Deleted pod: gateway-7d77cf5fc6-m5sch
+56m         Normal    Killing             pod/gateway-7d77cf5fc6-m5sch         Stopping container gateway
+56m         Normal    Pulled              pod/gateway-7b7d8ccdc-p2cgt          Container image "s2t-stress:20261005-fixed" already present on machine and can be accessed by the pod
+56m         Normal    Started             pod/gateway-7b7d8ccdc-p2cgt          Container started
+56m         Normal    Killing             pod/gateway-7d77cf5fc6-94vkc         Stopping container gateway
+56m         Normal    SuccessfulDelete    replicaset/gateway-7d77cf5fc6        Deleted pod: gateway-7d77cf5fc6-94vkc
+56m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-7d77cf5fc6 from 1 to 0
+55m         Warning   Unhealthy           pod/redis-0                          Liveness probe errored and resulted in unknown state: rpc error: code = Unknown desc = failed to exec in container - Exec setup failed - Error response from daemon: Container 44d5a36cece11e6e07e31a41c6fb68e4f44adec8e2969c92f1150cf94299d946 is paused, unpause the container before exec
+55m         Warning   Unhealthy           pod/redis-0                          Readiness probe errored and resulted in unknown state: rpc error: code = Unknown desc = failed to exec in container - Exec setup failed - Error response from daemon: Container 44d5a36cece11e6e07e31a41c6fb68e4f44adec8e2969c92f1150cf94299d946 is paused, unpause the container before exec
+52m         Warning   Unhealthy           pod/redis-2                          Readiness probe errored and resulted in unknown state: rpc error: code = Unknown desc = failed to exec in container - Exec setup failed - Error response from daemon: Container ee78c0778cc381532ba8ca8c6c69eebb4ef4e45609b519c633b1fe7221d6c019 is paused, unpause the container before exec
+52m         Warning   Unhealthy           pod/redis-2                          Liveness probe errored and resulted in unknown state: rpc error: code = Unknown desc = failed to exec in container - Exec setup failed - Error response from daemon: Container ee78c0778cc381532ba8ca8c6c69eebb4ef4e45609b519c633b1fe7221d6c019 is paused, unpause the container before exec
+52m         Warning   Unhealthy           pod/gateway-7b7d8ccdc-bg4b8          Readiness probe failed: Get "http://10.42.0.32:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+52m         Warning   Unhealthy           pod/gateway-7b7d8ccdc-p2cgt          Readiness probe failed: Get "http://10.42.0.34:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+52m         Warning   Unhealthy           pod/audio-worker-dbcd7dcb6-k57mf     Readiness probe failed: Get "http://10.42.0.33:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+51m         Normal    SuccessfulCreate    replicaset/audio-worker-6c895c997d   Created pod: audio-worker-6c895c997d-kbdsh
+51m         Normal    SuccessfulCreate    replicaset/gateway-5899b7dbd7        Created pod: gateway-5899b7dbd7-mh86r
+51m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-5899b7dbd7 from 0 to 1
+51m         Normal    ScalingReplicaSet   deployment/audio-worker              Scaled up replica set audio-worker-6c895c997d from 0 to 1
+51m         Normal    Pulled              pod/gateway-5899b7dbd7-mh86r         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+51m         Normal    Created             pod/gateway-5899b7dbd7-mh86r         Container created
+51m         Normal    Pulled              pod/audio-worker-6c895c997d-kbdsh    Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+51m         Normal    Started             pod/gateway-5899b7dbd7-mh86r         Container started
+51m         Normal    Started             pod/audio-worker-6c895c997d-kbdsh    Container started
+51m         Normal    Created             pod/audio-worker-6c895c997d-kbdsh    Container created
+51m         Normal    ScalingReplicaSet   deployment/audio-worker              Scaled down replica set audio-worker-dbcd7dcb6 from 1 to 0
+51m         Normal    Killing             pod/audio-worker-dbcd7dcb6-k57mf     Stopping container audio-worker
+51m         Normal    SuccessfulDelete    replicaset/audio-worker-dbcd7dcb6    Deleted pod: audio-worker-dbcd7dcb6-k57mf
+50m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-5899b7dbd7 from 1 to 2
+50m         Normal    Created             pod/gateway-5899b7dbd7-crlhq         Container created
+50m         Normal    Pulled              pod/gateway-5899b7dbd7-crlhq         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+50m         Normal    Started             pod/gateway-5899b7dbd7-crlhq         Container started
+50m         Normal    Killing             pod/gateway-7b7d8ccdc-p2cgt          Stopping container gateway
+50m         Normal    SuccessfulCreate    replicaset/gateway-5899b7dbd7        Created pod: gateway-5899b7dbd7-crlhq
+50m         Normal    SuccessfulDelete    replicaset/gateway-7b7d8ccdc         Deleted pod: gateway-7b7d8ccdc-p2cgt
+50m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-7b7d8ccdc from 2 to 1
+50m         Normal    Killing             pod/gateway-7b7d8ccdc-bg4b8          Stopping container gateway
+50m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-7b7d8ccdc from 1 to 0
+50m         Normal    SuccessfulDelete    replicaset/gateway-7b7d8ccdc         Deleted pod: gateway-7b7d8ccdc-bg4b8
+49m         Normal    SuccessfulCreate    replicaset/gateway-5d975df9cc        Created pod: gateway-5d975df9cc-r5qg2
+49m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-5d975df9cc from 0 to 1
+49m         Normal    Started             pod/gateway-5d975df9cc-r5qg2         Container started
+49m         Normal    Created             pod/gateway-5d975df9cc-r5qg2         Container created
+49m         Normal    Pulled              pod/gateway-5d975df9cc-r5qg2         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+49m         Normal    Created             pod/gateway-5d975df9cc-xzkl9         Container created
+49m         Normal    SuccessfulDelete    replicaset/gateway-5899b7dbd7        Deleted pod: gateway-5899b7dbd7-mh86r
+49m         Normal    Pulled              pod/gateway-5d975df9cc-xzkl9         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+49m         Normal    Started             pod/gateway-5d975df9cc-xzkl9         Container started
+49m         Normal    SuccessfulCreate    replicaset/gateway-5d975df9cc        Created pod: gateway-5d975df9cc-xzkl9
+49m         Normal    Killing             pod/gateway-5899b7dbd7-mh86r         Stopping container gateway
+49m         Normal    SuccessfulDelete    replicaset/gateway-5899b7dbd7        Deleted pod: gateway-5899b7dbd7-crlhq
+49m         Normal    Killing             pod/gateway-5899b7dbd7-crlhq         Stopping container gateway
+18m         Normal    SuccessfulCreate    replicaset/gateway-5d975df9cc        Created pod: gateway-5d975df9cc-f77t7
+18m         Normal    SuccessfulCreate    replicaset/gateway-5d975df9cc        Created pod: gateway-5d975df9cc-qcfbd
+18m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-5d975df9cc from 2 to 4
+18m         Normal    Started             pod/gateway-5d975df9cc-f77t7         Container started
+18m         Normal    Created             pod/gateway-5d975df9cc-f77t7         Container created
+18m         Normal    Started             pod/gateway-5d975df9cc-qcfbd         Container started
+18m         Normal    Pulled              pod/gateway-5d975df9cc-f77t7         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+18m         Normal    Pulled              pod/gateway-5d975df9cc-qcfbd         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+18m         Normal    Created             pod/gateway-5d975df9cc-qcfbd         Container created
+18m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-65bc5f4d9b from 0 to 1
+18m         Normal    SuccessfulCreate    replicaset/gateway-65bc5f4d9b        Created pod: gateway-65bc5f4d9b-c5jkg
+17m         Warning   Unhealthy           pod/redis-1                          Liveness probe failed: command timed out: "sh -c redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG" timed out after 1s
+17m         Warning   Unhealthy           pod/redis-0                          Liveness probe failed: command timed out: "sh -c redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG" timed out after 1s
+17m         Warning   Unhealthy           pod/redis-1                          Readiness probe failed: command timed out: "sh -c redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG" timed out after 1s
+17m         Warning   Unhealthy           pod/redis-2                          Readiness probe failed: command timed out: "sh -c redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG" timed out after 1s
+17m         Warning   Unhealthy           pod/sentinel-2                       Readiness probe failed: command timed out: "sh -c redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG" timed out after 1s
+17m         Warning   Unhealthy           pod/redis-2                          Liveness probe failed: command timed out: "sh -c redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG" timed out after 1s
+14m         Normal    Killing             pod/sentinel-2                       Stopping container sentinel
+14m         Normal    Killing             pod/redis-2                          Stopping container redis
+14m         Normal    Pulled              pod/gateway-65bc5f4d9b-c5jkg         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+14m         Normal    Created             pod/gateway-65bc5f4d9b-c5jkg         Container created
+14m         Normal    Started             pod/gateway-65bc5f4d9b-c5jkg         Container started
+14m         Normal    Created             pod/sentinel-2                       Container created
+14m         Normal    Pulled              pod/sentinel-2                       Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+14m         Normal    Started             pod/redis-2                          Container started
+14m         Normal    Started             pod/sentinel-2                       Container started
+14m         Normal    Pulled              pod/redis-2                          Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+14m         Normal    Created             pod/redis-2                          Container created
+14m         Normal    Killing             pod/sentinel-1                       Stopping container sentinel
+14m         Normal    Killing             pod/redis-1                          Stopping container redis
+14m         Warning   Unhealthy           pod/redis-1                          Liveness probe errored and resulted in unknown state: rpc error: code = Canceled desc = context canceled
+14m         Normal    Pulled              pod/sentinel-1                       Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+14m         Normal    Created             pod/sentinel-1                       Container created
+14m         Normal    Started             pod/sentinel-1                       Container started
+14m         Normal    SuccessfulCreate    replicaset/gateway-65bc5f4d9b        Created pod: gateway-65bc5f4d9b-n8hlq
+14m         Normal    SuccessfulDelete    replicaset/gateway-5d975df9cc        Deleted pod: gateway-5d975df9cc-f77t7
+14m         Normal    Killing             pod/gateway-5d975df9cc-f77t7         Stopping container gateway
+14m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-65bc5f4d9b from 1 to 2
+14m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-5d975df9cc from 4 to 3
+14m         Normal    Started             pod/gateway-65bc5f4d9b-n8hlq         Container started
+14m         Normal    Created             pod/gateway-65bc5f4d9b-n8hlq         Container created
+14m         Normal    Pulled              pod/gateway-65bc5f4d9b-n8hlq         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+14m         Normal    Killing             pod/sentinel-0                       Stopping container sentinel
+14m         Warning   Unhealthy           pod/redis-1                          Readiness probe errored and resulted in unknown state: rpc error: code = Canceled desc = context canceled
+14m         Normal    Started             pod/redis-1                          Container started
+14m         Normal    Pulled              pod/redis-1                          Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+14m         Normal    Created             pod/redis-1                          Container created
+14m         Normal    Pulled              pod/sentinel-0                       Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+14m         Normal    Started             pod/sentinel-0                       Container started
+14m         Normal    Created             pod/sentinel-0                       Container created
+14m         Warning   Unhealthy           pod/redis-1                          Readiness probe failed:
+14m         Normal    Killing             pod/redis-0                          Stopping container redis
+14m         Normal    Pulled              pod/redis-0                          Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+14m         Normal    Started             pod/redis-0                          Container started
+14m         Normal    Created             pod/redis-0                          Container created
+13m         Warning   Unhealthy           pod/audio-worker-6c895c997d-kbdsh    Readiness probe failed: HTTP probe failed with statuscode: 503
+13m         Warning   Unhealthy           pod/gateway-5d975df9cc-qcfbd         Readiness probe failed: HTTP probe failed with statuscode: 503
+12m         Warning   Unhealthy           pod/gateway-5d975df9cc-xzkl9         Readiness probe failed: HTTP probe failed with statuscode: 503
+12m         Warning   Unhealthy           pod/gateway-65bc5f4d9b-n8hlq         Startup probe failed: HTTP probe failed with statuscode: 503
+12m         Warning   Unhealthy           pod/gateway-5d975df9cc-xzkl9         Readiness probe failed: Get "http://10.42.0.39:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+12m         Warning   Unhealthy           pod/gateway-5d975df9cc-r5qg2         Readiness probe failed: Get "http://10.42.0.38:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+12m         Warning   Unhealthy           pod/gateway-5d975df9cc-qcfbd         Readiness probe failed: Get "http://10.42.0.41:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+12m         Warning   Unhealthy           pod/audio-worker-6c895c997d-kbdsh    Readiness probe failed: Get "http://10.42.0.36:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+12m         Warning   Unhealthy           pod/gateway-65bc5f4d9b-c5jkg         Readiness probe failed: Get "http://10.42.0.42:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+12m         Warning   Unhealthy           pod/gateway-65bc5f4d9b-n8hlq         Startup probe failed: Get "http://10.42.0.46:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+10m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-5d975df9cc from 3 to 2
+10m         Normal    SuccessfulDelete    replicaset/gateway-5d975df9cc        Deleted pod: gateway-5d975df9cc-xzkl9
+10m         Normal    SuccessfulCreate    replicaset/gateway-65bc5f4d9b        Created pod: gateway-65bc5f4d9b-qh7mc
+10m         Normal    Killing             pod/gateway-5d975df9cc-xzkl9         Stopping container gateway
+10m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-65bc5f4d9b from 2 to 3
+10m         Normal    Pulled              pod/gateway-65bc5f4d9b-qh7mc         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+10m         Normal    Started             pod/gateway-65bc5f4d9b-qh7mc         Container started
+10m         Normal    Created             pod/gateway-65bc5f4d9b-qh7mc         Container created
+10m         Normal    Killing             pod/gateway-5d975df9cc-qcfbd         Stopping container gateway
+10m         Normal    SuccessfulCreate    replicaset/gateway-65bc5f4d9b        Created pod: gateway-65bc5f4d9b-2xqlf
+10m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-5d975df9cc from 2 to 1
+10m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled up replica set gateway-65bc5f4d9b from 3 to 4
+10m         Normal    SuccessfulDelete    replicaset/gateway-5d975df9cc        Deleted pod: gateway-5d975df9cc-qcfbd
+10m         Normal    Pulled              pod/gateway-65bc5f4d9b-2xqlf         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+10m         Normal    Started             pod/gateway-65bc5f4d9b-2xqlf         Container started
+10m         Normal    Created             pod/gateway-65bc5f4d9b-2xqlf         Container created
+10m         Normal    ScalingReplicaSet   deployment/gateway                   Scaled down replica set gateway-5d975df9cc from 1 to 0
+10m         Normal    Killing             pod/gateway-5d975df9cc-r5qg2         Stopping container gateway
+10m         Normal    SuccessfulDelete    replicaset/gateway-5d975df9cc        Deleted pod: gateway-5d975df9cc-r5qg2
+9m40s       Normal    Killing             pod/sentinel-2                       Stopping container sentinel
+9m40s       Normal    SuccessfulDelete    statefulset/sentinel                 Delete Pod sentinel-2 in StatefulSet sentinel successful
+9m40s       Normal    Killing             pod/redis-2                          Stopping container redis
+9m40s       Normal    SuccessfulDelete    statefulset/redis                    Delete Pod redis-2 in StatefulSet redis successful
+9m38s       Normal    SuccessfulCreate    statefulset/sentinel                 Create Pod sentinel-2 in StatefulSet sentinel successful
+9m38s       Normal    Pulled              pod/sentinel-2                       Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+9m38s       Normal    Pulled              pod/redis-2                          Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+9m38s       Normal    SuccessfulCreate    statefulset/redis                    Create Pod redis-2 in StatefulSet redis successful
+9m37s       Normal    Killing             pod/redis-1                          Stopping container redis
+9m37s       Normal    SuccessfulDelete    statefulset/redis                    Delete Pod redis-1 in StatefulSet redis successful
+9m37s       Normal    Created             pod/sentinel-2                       Container created
+9m37s       Normal    Started             pod/sentinel-2                       Container started
+9m37s       Normal    Started             pod/redis-2                          Container started
+9m37s       Normal    Created             pod/redis-2                          Container created
+9m36s       Normal    Killing             pod/sentinel-1                       Stopping container sentinel
+9m36s       Normal    SuccessfulDelete    statefulset/sentinel                 Delete Pod sentinel-1 in StatefulSet sentinel successful
+9m36s       Normal    SuccessfulCreate    statefulset/redis                    Create Pod redis-1 in StatefulSet redis successful
+9m35s       Warning   Unhealthy           pod/redis-1                          Readiness probe failed:
+9m35s       Normal    Created             pod/redis-1                          Container created
+9m35s       Normal    Pulled              pod/redis-1                          Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+9m35s       Normal    Started             pod/redis-1                          Container started
+9m35s       Normal    SuccessfulCreate    statefulset/sentinel                 Create Pod sentinel-1 in StatefulSet sentinel successful
+9m34s       Normal    SuccessfulDelete    statefulset/sentinel                 Delete Pod sentinel-0 in StatefulSet sentinel successful
+9m34s       Normal    Killing             pod/sentinel-0                       Stopping container sentinel
+9m34s       Normal    Started             pod/sentinel-1                       Container started
+9m34s       Normal    Created             pod/sentinel-1                       Container created
+9m34s       Normal    Pulled              pod/sentinel-1                       Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+9m33s       Normal    SuccessfulDelete    statefulset/redis                    Delete Pod redis-0 in StatefulSet redis successful
+9m33s       Normal    Killing             pod/redis-0                          Stopping container redis
+9m32s       Normal    Pulled              pod/sentinel-0                       Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+9m32s       Normal    SuccessfulCreate    statefulset/redis                    Create Pod redis-0 in StatefulSet redis successful
+9m32s       Normal    Pulled              pod/redis-0                          Container image "redis:7.4-alpine" already present on machine and can be accessed by the pod
+9m32s       Normal    Started             pod/sentinel-0                       Container started
+9m32s       Normal    Created             pod/sentinel-0                       Container created
+9m32s       Normal    SuccessfulCreate    statefulset/sentinel                 Create Pod sentinel-0 in StatefulSet sentinel successful
+9m32s       Normal    Started             pod/redis-0                          Container started
+9m32s       Normal    Created             pod/redis-0                          Container created
+9m30s       Warning   Unhealthy           pod/redis-0                          Readiness probe failed: Could not connect to Redis at 127.0.0.1:6379: Connection refused
+9m29s       Warning   Unhealthy           pod/redis-0                          Liveness probe failed: Could not connect to Redis at 127.0.0.1:6379: Connection refused
+9m19s       Warning   Unhealthy           pod/gateway-65bc5f4d9b-qh7mc         Readiness probe failed: Get "http://10.42.0.50:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+9m17s       Warning   Unhealthy           pod/gateway-65bc5f4d9b-2xqlf         Readiness probe failed: Get "http://10.42.0.51:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+8m7s        Normal    Pulled              pod/gateway-76b844f6bf-wzwkb         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+8m7s        Normal    SuccessfulCreate    replicaset/gateway-76b844f6bf        Created pod: gateway-76b844f6bf-wzwkb
+8m7s        Normal    Started             pod/gateway-76b844f6bf-wzwkb         Container started
+8m7s        Normal    Created             pod/gateway-76b844f6bf-wzwkb         Container created
+8m1s        Normal    Killing             pod/gateway-65bc5f4d9b-2xqlf         Stopping container gateway
+8m1s        Normal    SuccessfulCreate    replicaset/gateway-76b844f6bf        Created pod: gateway-76b844f6bf-xcdhl
+8m1s        Normal    SuccessfulDelete    replicaset/gateway-65bc5f4d9b        Deleted pod: gateway-65bc5f4d9b-2xqlf
+8m          Normal    Started             pod/gateway-76b844f6bf-xcdhl         Container started
+8m          Normal    Created             pod/gateway-76b844f6bf-xcdhl         Container created
+8m          Normal    Pulled              pod/gateway-76b844f6bf-xcdhl         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+7m55s       Normal    SuccessfulCreate    replicaset/gateway-76b844f6bf        Created pod: gateway-76b844f6bf-xx82j
+7m55s       Normal    Killing             pod/gateway-65bc5f4d9b-qh7mc         Stopping container gateway
+7m55s       Normal    SuccessfulDelete    replicaset/gateway-65bc5f4d9b        Deleted pod: gateway-65bc5f4d9b-qh7mc
+7m54s       Normal    Created             pod/gateway-76b844f6bf-xx82j         Container created
+7m54s       Normal    Pulled              pod/gateway-76b844f6bf-xx82j         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+7m54s       Normal    Started             pod/gateway-76b844f6bf-xx82j         Container started
+7m49s       Normal    SuccessfulCreate    replicaset/gateway-76b844f6bf        Created pod: gateway-76b844f6bf-xdr2q
+7m49s       Normal    SuccessfulDelete    replicaset/gateway-65bc5f4d9b        Deleted pod: gateway-65bc5f4d9b-n8hlq
+7m49s       Normal    Killing             pod/gateway-65bc5f4d9b-n8hlq         Stopping container gateway
+7m49s       Normal    Pulled              pod/gateway-76b844f6bf-xdr2q         Container image "s2t-stress:20261005-fixed2" already present on machine and can be accessed by the pod
+7m48s       Normal    Created             pod/gateway-76b844f6bf-xdr2q         Container created
+7m48s       Normal    Started             pod/gateway-76b844f6bf-xdr2q         Container started
+7m43s       Normal    SuccessfulDelete    replicaset/gateway-65bc5f4d9b        Deleted pod: gateway-65bc5f4d9b-c5jkg
+7m43s       Normal    Killing             pod/gateway-65bc5f4d9b-c5jkg         Stopping container gateway
+6m6s        Normal    ScalingReplicaSet   deployment/mock-models               Scaled down replica set mock-models-8658f56dd7 from 1 to 0
+6m6s        Normal    Killing             pod/mock-models-8658f56dd7-zddbw     Stopping container mock-models
+6m6s        Normal    SuccessfulDelete    replicaset/mock-models-8658f56dd7    Deleted pod: mock-models-8658f56dd7-zddbw
+5m20s       Normal    SuccessfulCreate    replicaset/mock-models-df9865c6b     Created pod: mock-models-df9865c6b-mk6st
+5m20s       Normal    Pulled              pod/mock-models-df9865c6b-mk6st      Container image "s2t-stress:20261005" already present on machine and can be accessed by the pod
+5m20s       Normal    Created             pod/gateway-77656544d8-ckcsq         Container created
+5m20s       Normal    ScalingReplicaSet   deployment/mock-models               Scaled up replica set mock-models-df9865c6b from 0 to 1
+5m20s       Normal    Pulled              pod/gateway-77656544d8-ckcsq         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+5m20s       Normal    Started             pod/gateway-77656544d8-ckcsq         Container started
+5m20s       Normal    Created             pod/mock-models-df9865c6b-mk6st      Container created
+5m20s       Normal    SuccessfulCreate    replicaset/gateway-77656544d8        Created pod: gateway-77656544d8-ckcsq
+5m20s       Normal    Started             pod/mock-models-df9865c6b-mk6st      Container started
+5m11s       Normal    SuccessfulCreate    replicaset/gateway-77656544d8        Created pod: gateway-77656544d8-5mm8b
+5m11s       Normal    Created             pod/gateway-77656544d8-5mm8b         Container created
+5m11s       Normal    Pulled              pod/gateway-77656544d8-5mm8b         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+5m11s       Normal    SuccessfulDelete    replicaset/gateway-76b844f6bf        Deleted pod: gateway-76b844f6bf-wzwkb
+5m11s       Normal    Killing             pod/gateway-76b844f6bf-wzwkb         Stopping container gateway
+5m11s       Normal    Started             pod/gateway-77656544d8-5mm8b         Container started
+5m8s        Warning   Unhealthy           pod/gateway-76b844f6bf-wzwkb         Readiness probe failed: Get "http://10.42.0.58:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+5m2s        Normal    Started             pod/gateway-77656544d8-mdswk         Container started
+5m2s        Normal    Created             pod/gateway-77656544d8-mdswk         Container created
+5m2s        Normal    Pulled              pod/gateway-77656544d8-mdswk         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+5m2s        Normal    SuccessfulDelete    replicaset/gateway-76b844f6bf        Deleted pod: gateway-76b844f6bf-xcdhl
+5m2s        Normal    SuccessfulCreate    replicaset/gateway-77656544d8        Created pod: gateway-77656544d8-mdswk
+5m2s        Normal    Killing             pod/gateway-76b844f6bf-xcdhl         Stopping container gateway
+4m54s       Normal    Killing             pod/gateway-76b844f6bf-xx82j         Stopping container gateway
+4m54s       Normal    Pulled              pod/gateway-77656544d8-zjrhc         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+4m54s       Normal    Created             pod/gateway-77656544d8-zjrhc         Container created
+4m54s       Normal    Started             pod/gateway-77656544d8-zjrhc         Container started
+4m54s       Normal    SuccessfulDelete    replicaset/gateway-76b844f6bf        Deleted pod: gateway-76b844f6bf-xx82j
+4m54s       Normal    SuccessfulCreate    replicaset/gateway-77656544d8        Created pod: gateway-77656544d8-zjrhc
+4m45s       Normal    Killing             pod/gateway-76b844f6bf-xdr2q         Stopping container gateway
+4m45s       Normal    SuccessfulDelete    replicaset/gateway-76b844f6bf        Deleted pod: gateway-76b844f6bf-xdr2q
+3m52s       Normal    SuccessfulCreate    replicaset/gateway-67895dbcc4        Created pod: gateway-67895dbcc4-r24vj
+3m51s       Normal    Pulled              pod/gateway-67895dbcc4-r24vj         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+3m51s       Normal    Started             pod/gateway-67895dbcc4-r24vj         Container started
+3m51s       Normal    Created             pod/gateway-67895dbcc4-r24vj         Container created
+3m43s       Normal    SuccessfulCreate    replicaset/gateway-67895dbcc4        Created pod: gateway-67895dbcc4-4dgj4
+3m43s       Normal    Killing             pod/gateway-77656544d8-zjrhc         Stopping container gateway
+3m43s       Normal    SuccessfulDelete    replicaset/gateway-77656544d8        Deleted pod: gateway-77656544d8-zjrhc
+3m43s       Normal    Started             pod/gateway-67895dbcc4-4dgj4         Container started
+3m43s       Normal    Created             pod/gateway-67895dbcc4-4dgj4         Container created
+3m43s       Normal    Pulled              pod/gateway-67895dbcc4-4dgj4         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+3m35s       Normal    Pulled              pod/gateway-67895dbcc4-s7gqt         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+3m35s       Normal    SuccessfulDelete    replicaset/gateway-77656544d8        Deleted pod: gateway-77656544d8-5mm8b
+3m35s       Normal    Created             pod/gateway-67895dbcc4-s7gqt         Container created
+3m35s       Normal    Killing             pod/gateway-77656544d8-5mm8b         Stopping container gateway
+3m35s       Normal    SuccessfulCreate    replicaset/gateway-67895dbcc4        Created pod: gateway-67895dbcc4-s7gqt
+3m35s       Normal    Started             pod/gateway-67895dbcc4-s7gqt         Container started
+3m33s       Warning   Unhealthy           pod/gateway-77656544d8-zjrhc         Readiness probe failed: HTTP probe failed with statuscode: 503
+3m27s       Normal    SuccessfulDelete    replicaset/gateway-77656544d8        Deleted pod: gateway-77656544d8-mdswk
+3m27s       Normal    SuccessfulCreate    replicaset/gateway-67895dbcc4        Created pod: gateway-67895dbcc4-qhn8b
+3m27s       Normal    Started             pod/gateway-67895dbcc4-qhn8b         Container started
+3m27s       Normal    Killing             pod/gateway-77656544d8-mdswk         Stopping container gateway
+3m27s       Normal    Pulled              pod/gateway-67895dbcc4-qhn8b         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+3m27s       Normal    Created             pod/gateway-67895dbcc4-qhn8b         Container created
+3m25s       Warning   Unhealthy           pod/gateway-77656544d8-5mm8b         Readiness probe failed: HTTP probe failed with statuscode: 503
+3m19s       Normal    SuccessfulDelete    replicaset/gateway-77656544d8        Deleted pod: gateway-77656544d8-ckcsq
+3m19s       Normal    Killing             pod/gateway-77656544d8-ckcsq         Stopping container gateway
+3m18s       Warning   Unhealthy           pod/gateway-77656544d8-mdswk         Readiness probe failed: HTTP probe failed with statuscode: 503
+3m10s       Warning   Unhealthy           pod/gateway-77656544d8-ckcsq         Readiness probe failed: HTTP probe failed with statuscode: 503
+2m19s       Normal    SuccessfulCreate    replicaset/gateway-57cdf77bf4        Created pod: gateway-57cdf77bf4-tkjjt
+2m18s       Normal    Started             pod/gateway-57cdf77bf4-tkjjt         Container started
+2m18s       Normal    Created             pod/gateway-57cdf77bf4-tkjjt         Container created
+2m18s       Normal    Pulled              pod/gateway-57cdf77bf4-tkjjt         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+2m10s       Normal    Killing             pod/gateway-67895dbcc4-s7gqt         Stopping container gateway
+2m10s       Normal    Created             pod/gateway-57cdf77bf4-8dl66         Container created
+2m10s       Normal    SuccessfulCreate    replicaset/gateway-57cdf77bf4        Created pod: gateway-57cdf77bf4-8dl66
+2m10s       Normal    Pulled              pod/gateway-57cdf77bf4-8dl66         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+2m10s       Normal    SuccessfulDelete    replicaset/gateway-67895dbcc4        Deleted pod: gateway-67895dbcc4-s7gqt
+2m9s        Normal    Started             pod/gateway-57cdf77bf4-8dl66         Container started
+2m1s        Normal    SuccessfulDelete    replicaset/gateway-67895dbcc4        Deleted pod: gateway-67895dbcc4-qhn8b
+2m1s        Normal    Pulled              pod/gateway-57cdf77bf4-4bb5j         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+2m1s        Normal    SuccessfulCreate    replicaset/gateway-57cdf77bf4        Created pod: gateway-57cdf77bf4-4bb5j
+2m1s        Normal    Created             pod/gateway-57cdf77bf4-4bb5j         Container created
+2m1s        Warning   Unhealthy           pod/gateway-67895dbcc4-s7gqt         Readiness probe failed: HTTP probe failed with statuscode: 503
+2m1s        Normal    Killing             pod/gateway-67895dbcc4-qhn8b         Stopping container gateway
+2m          Normal    Started             pod/gateway-57cdf77bf4-4bb5j         Container started
+119s        Warning   Unhealthy           pod/gateway-67895dbcc4-s7gqt         Readiness probe failed: Get "http://10.42.0.69:8787/readyz": dial tcp 10.42.0.69:8787: connect: connection refused
+112s        Normal    Created             pod/gateway-57cdf77bf4-qn22n         Container created
+112s        Warning   Unhealthy           pod/gateway-67895dbcc4-qhn8b         Readiness probe failed: HTTP probe failed with statuscode: 503
+112s        Normal    ScalingReplicaSet   deployment/gateway                   (combined from similar events): Scaled down replica set gateway-67895dbcc4 from 2 to 1
+112s        Normal    SuccessfulDelete    replicaset/gateway-67895dbcc4        Deleted pod: gateway-67895dbcc4-r24vj
+112s        Normal    Pulled              pod/gateway-57cdf77bf4-qn22n         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+112s        Normal    Killing             pod/gateway-67895dbcc4-r24vj         Stopping container gateway
+112s        Normal    SuccessfulCreate    replicaset/gateway-57cdf77bf4        Created pod: gateway-57cdf77bf4-qn22n
+111s        Normal    Started             pod/gateway-57cdf77bf4-qn22n         Container started
+110s        Warning   Unhealthy           pod/gateway-67895dbcc4-qhn8b         Readiness probe failed: Get "http://10.42.0.70:8787/readyz": dial tcp 10.42.0.70:8787: connect: connection refused
+103s        Warning   Unhealthy           pod/gateway-67895dbcc4-r24vj         Readiness probe failed: HTTP probe failed with statuscode: 503
+103s        Normal    SuccessfulDelete    replicaset/gateway-67895dbcc4        Deleted pod: gateway-67895dbcc4-4dgj4
+103s        Normal    Killing             pod/gateway-67895dbcc4-4dgj4         Stopping container gateway
+101s        Warning   Unhealthy           pod/gateway-67895dbcc4-r24vj         Readiness probe failed: Get "http://10.42.0.67:8787/readyz": dial tcp 10.42.0.67:8787: connect: connection refused
+98s         Normal    SuccessfulCreate    replicaset/gateway-8689985fc9        Created pod: gateway-8689985fc9-2czzr
+98s         Normal    Created             pod/gateway-8689985fc9-2czzr         Container created
+98s         Normal    Pulled              pod/gateway-8689985fc9-2czzr         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+97s         Normal    Started             pod/gateway-8689985fc9-2czzr         Container started
+94s         Warning   Unhealthy           pod/gateway-67895dbcc4-4dgj4         Readiness probe failed: HTTP probe failed with statuscode: 503
+89s         Normal    SuccessfulDelete    replicaset/gateway-57cdf77bf4        Deleted pod: gateway-57cdf77bf4-qn22n
+89s         Normal    Killing             pod/gateway-57cdf77bf4-qn22n         Stopping container gateway
+89s         Normal    Pulled              pod/gateway-8689985fc9-t5bnw         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+89s         Normal    SuccessfulCreate    replicaset/gateway-8689985fc9        Created pod: gateway-8689985fc9-t5bnw
+89s         Normal    Started             pod/gateway-8689985fc9-t5bnw         Container started
+89s         Normal    Created             pod/gateway-8689985fc9-t5bnw         Container created
+80s         Normal    Killing             pod/gateway-57cdf77bf4-8dl66         Stopping container gateway
+80s         Normal    SuccessfulCreate    replicaset/gateway-8689985fc9        Created pod: gateway-8689985fc9-h82ls
+80s         Normal    Started             pod/gateway-8689985fc9-h82ls         Container started
+80s         Normal    Pulled              pod/gateway-8689985fc9-h82ls         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+80s         Warning   Unhealthy           pod/gateway-57cdf77bf4-qn22n         Readiness probe failed: HTTP probe failed with statuscode: 503
+80s         Normal    SuccessfulDelete    replicaset/gateway-57cdf77bf4        Deleted pod: gateway-57cdf77bf4-8dl66
+80s         Normal    Created             pod/gateway-8689985fc9-h82ls         Container created
+72s         Normal    Started             pod/gateway-8689985fc9-gpd27         Container started
+72s         Normal    Pulled              pod/gateway-8689985fc9-gpd27         Container image "s2t-stress:20261005-rollout-fixed" already present on machine and can be accessed by the pod
+72s         Normal    Created             pod/gateway-8689985fc9-gpd27         Container created
+72s         Normal    Killing             pod/gateway-57cdf77bf4-4bb5j         Stopping container gateway
+72s         Normal    SuccessfulDelete    replicaset/gateway-57cdf77bf4        Deleted pod: gateway-57cdf77bf4-4bb5j
+72s         Normal    SuccessfulCreate    replicaset/gateway-8689985fc9        Created pod: gateway-8689985fc9-gpd27
+71s         Warning   Unhealthy           pod/gateway-57cdf77bf4-8dl66         Readiness probe failed: HTTP probe failed with statuscode: 503
+70s         Warning   Unhealthy           pod/gateway-57cdf77bf4-8dl66         Readiness probe failed: Get "http://10.42.0.72:8787/readyz": dial tcp 10.42.0.72:8787: connect: connection refused
+64s         Normal    Killing             pod/gateway-57cdf77bf4-tkjjt         Stopping container gateway
+64s         Normal    SuccessfulDelete    replicaset/gateway-57cdf77bf4        Deleted pod: gateway-57cdf77bf4-tkjjt
+63s         Warning   Unhealthy           pod/gateway-57cdf77bf4-4bb5j         Readiness probe failed: HTTP probe failed with statuscode: 503
+55s         Warning   Unhealthy           pod/gateway-57cdf77bf4-tkjjt         Readiness probe failed: HTTP probe failed with statuscode: 503
+51s         Warning   Unhealthy           pod/gateway-57cdf77bf4-tkjjt         Readiness probe failed: Get "http://10.42.0.71:8787/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)

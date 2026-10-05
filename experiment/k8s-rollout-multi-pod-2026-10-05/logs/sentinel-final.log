@@ -1,0 +1,90 @@
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.422 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.422 * Redis version=7.4.11, bits=64, commit=00000000, modified=0, pid=1, just started
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.422 * Configuration loaded
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.422 * Increased maximum number of open files to 10032 (it was originally set to 1024).
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.422 * monotonic clock: POSIX clock_gettime
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.423 * Running mode=sentinel, port=26379.
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.423 * Sentinel ID is 73a0cc2fd6049ed76d89256c7d2b789178ac9410
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:52.423 # +monitor master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 quorum 2
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.460 # +sdown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.487 * Sentinel new configuration saved on disk
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.487 # +new-epoch 3
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.550 # +odown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 #quorum 2/2
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.550 # +new-epoch 4
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.550 # +try-failover master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.553 * Sentinel new configuration saved on disk
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.553 # +vote-for-leader 73a0cc2fd6049ed76d89256c7d2b789178ac9410 4
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.562 * 47ae4d3625f811450377750de02c31e45a251a3c voted for 73a0cc2fd6049ed76d89256c7d2b789178ac9410 4
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.630 # +elected-leader master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.630 # +failover-state-select-slave master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.693 # +selected-slave slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.693 * +failover-state-send-slaveof-noone slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:54.748 * +failover-state-wait-promotion slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:55.458 # +sdown slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:55.458 # +sdown sentinel e90163d8cdfef254d59e7268598556c9960c8a0f sentinel-0.sentinel.s2t-stress-20261005.svc.cluster.local 26379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:55.606 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:55.707 # -sdown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:55.707 # -odown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:57.761 # -sdown sentinel e90163d8cdfef254d59e7268598556c9960c8a0f sentinel-0.sentinel.s2t-stress-20261005.svc.cluster.local 26379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:38:58.688 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:39:01.925 * +reboot slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:39:01.981 # -sdown slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-1/sentinel] 1:X 05 Oct 2026 15:39:09.767 # -failover-abort-slave-timeout master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.291 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.291 * Redis version=7.4.11, bits=64, commit=00000000, modified=0, pid=1, just started
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.291 * Configuration loaded
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.291 * Increased maximum number of open files to 10032 (it was originally set to 1024).
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.291 * monotonic clock: POSIX clock_gettime
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.292 * Running mode=sentinel, port=26379.
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.292 * Sentinel ID is 47ae4d3625f811450377750de02c31e45a251a3c
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:49.292 # +monitor master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 quorum 2
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:51.290 # +sdown slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.346 # +sdown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.413 # +odown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 #quorum 2/2
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.413 # +new-epoch 3
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.413 # +try-failover master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.417 * Sentinel new configuration saved on disk
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.417 # +vote-for-leader 47ae4d3625f811450377750de02c31e45a251a3c 3
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.427 * e90163d8cdfef254d59e7268598556c9960c8a0f voted for 47ae4d3625f811450377750de02c31e45a251a3c 3
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.511 # +elected-leader master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.512 # +failover-state-select-slave master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.512 # -sdown slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.578 # +selected-slave slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.578 * +failover-state-send-slaveof-noone slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.669 * +failover-state-wait-promotion slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:52.669 # +sdown sentinel 73a0cc2fd6049ed76d89256c7d2b789178ac9410 sentinel-1.sentinel.s2t-stress-20261005.svc.cluster.local 26379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:54.558 * Sentinel new configuration saved on disk
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:54.558 # +new-epoch 4
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:54.562 * Sentinel new configuration saved on disk
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:54.562 # +vote-for-leader 73a0cc2fd6049ed76d89256c7d2b789178ac9410 4
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:55.122 # +sdown sentinel e90163d8cdfef254d59e7268598556c9960c8a0f sentinel-0.sentinel.s2t-stress-20261005.svc.cluster.local 26379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:55.733 # -sdown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:55.733 # -odown master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:55.852 # +sdown slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:57.945 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:58.953 # -sdown sentinel 73a0cc2fd6049ed76d89256c7d2b789178ac9410 sentinel-1.sentinel.s2t-stress-20261005.svc.cluster.local 26379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:59.320 * +reboot master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:59.320 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:38:59.321 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:39:00.026 * +reboot slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:39:00.089 # -sdown slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:39:05.347 # -sdown sentinel e90163d8cdfef254d59e7268598556c9960c8a0f sentinel-0.sentinel.s2t-stress-20261005.svc.cluster.local 26379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-2/sentinel] 1:X 05 Oct 2026 15:39:07.740 # -failover-abort-slave-timeout master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.922 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.923 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.923 * Redis version=7.4.11, bits=64, commit=00000000, modified=0, pid=1, just started
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.923 * Configuration loaded
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.924 * Increased maximum number of open files to 10032 (it was originally set to 1024).
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.924 * monotonic clock: POSIX clock_gettime
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.924 * Running mode=sentinel, port=26379.
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.925 * Sentinel ID is e90163d8cdfef254d59e7268598556c9960c8a0f
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.925 # +monitor master s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 quorum 2
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:54.927 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:55.610 * Sentinel new configuration saved on disk
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:55.610 # +new-epoch 4
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:55.963 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:56.948 # +sdown slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:57.002 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:58.030 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:38:59.035 # Failed to resolve hostname 'redis-0.redis.s2t-stress-20261005.svc.cluster.local'
+[pod/sentinel-0/sentinel] 1:X 05 Oct 2026 15:39:00.143 # -sdown slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379

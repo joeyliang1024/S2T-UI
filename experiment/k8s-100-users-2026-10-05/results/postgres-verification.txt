@@ -1,0 +1,15 @@
+   state   | count | max_attempts | mean_completion_seconds | slowest_completion_seconds 
+-----------+-------+--------------+-------------------------+----------------------------
+ completed |   100 |            1 |                   97.91 |                     195.09
+(1 row)
+
+ users 
+-------
+   101
+(1 row)
+
+ voiceprints 
+-------------
+         100
+(1 row)
+

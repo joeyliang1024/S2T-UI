@@ -738,7 +738,7 @@ const handleHttpRequest = async (request, response) => {
     return send(response, 200, prometheusMetrics() + backlog, 'text/plain; version=0.0.4; charset=utf-8')
   }
   if (request.method === 'GET' && request.url === '/readyz') {
-    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (draining) throw new Error('服務正在排空'); await storage.ready; await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
+    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (quiescing || draining) throw new Error('服務正在排空'); await storage.ready; await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
     catch (error) { return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' }) }
   }
   // The worker has a probe-only HTTP surface. It deliberately cannot serve
@@ -1360,13 +1360,17 @@ const httpLogLevel = (status, probe) => {
   if (status >= 400) return probe || status === 401 || status === 403 ? 'info' : 'warn'
   return probe ? 'debug' : 'info'
 }
+let quiescing = false
 let draining = false
+const activeHttpResponses = new Set()
 let activeHttpRequests = 0
 let httpDrained
 const httpDrainedPromise = new Promise(resolve => { httpDrained = resolve })
 const httpServer = createServer((request, response) => {
   activeHttpRequests += 1
-  response.once('close', () => { activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() })
+  activeHttpResponses.add(response)
+  if (quiescing) response.setHeader('connection', 'close')
+  response.once('close', () => { activeHttpResponses.delete(response); activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() })
   const requestId = incomingRequestId(request)
   const path = requestPathOf(request)
   const startedAt = performance.now()
@@ -1398,8 +1402,21 @@ const httpServer = createServer((request, response) => {
   if (processRole === 'audio-worker') logger.info('audio-worker.started', { port, durableDiarizationJobs: true })
 })
 
+// Kubernetes withdraws endpoints asynchronously. During preStop, keep serving
+// traffic that still reaches us, but finish keep-alive connections normally so
+// clients move to another Pod before SIGTERM closes the listener.
+const prepareForShutdown = () => {
+  if (quiescing) return
+  quiescing = true
+  acceptingDiarizationJobs = false
+  for (const response of activeHttpResponses) {
+    if (!response.headersSent) response.setHeader('connection', 'close')
+  }
+  logger.info('gateway.quiescing', { role: processRole, activeRequests: activeHttpRequests })
+}
 const stopServer = () => {
   if (draining) return
+  prepareForShutdown()
   draining = true
   if (activeHttpRequests === 0) httpDrained()
   acceptingDiarizationJobs = false
@@ -1415,3 +1432,4 @@ const stopServer = () => {
 }
 process.once('SIGTERM', stopServer)
 process.once('SIGINT', stopServer)
+process.on('SIGUSR2', prepareForShutdown)

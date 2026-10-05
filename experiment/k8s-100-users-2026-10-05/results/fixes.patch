@@ -1,0 +1,49 @@
+diff --git a/server/storage/remote.cjs b/server/storage/remote.cjs
+index cbff861..7a63e0a 100644
+--- a/server/storage/remote.cjs
++++ b/server/storage/remote.cjs
+@@ -149,7 +149,10 @@ class PostgresConfigStore {
+       const version = stored && !Array.isArray(stored) && Number.isSafeInteger(stored.version) ? stored.version : 0
+       if (version !== expectedVersion) { await client.query('ROLLBACK'); return false }
+       if (current.rowCount) await client.query('UPDATE s2t_config_records SET value = $3::jsonb, updated_at = NOW() WHERE scope = $1 AND record_key = $2', [cleanScope, cleanKey, JSON.stringify(value)])
+-      else await client.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb)', [cleanScope, cleanKey, JSON.stringify(value)])
++      else {
++        const inserted = await client.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb) ON CONFLICT(scope, record_key) DO NOTHING', [cleanScope, cleanKey, JSON.stringify(value)])
++        if (!inserted.rowCount) { await client.query('ROLLBACK'); return false }
++      }
+       await client.query('COMMIT')
+       return true
+     } catch (error) {
+@@ -327,7 +330,10 @@ class PostgresConfigStore {
+       if (version !== expectedVersion) { await client.query('ROLLBACK'); return null }
+       const result = current.rowCount
+         ? await client.query('UPDATE s2t_glossaries SET content = $2, version = version + 1, updated_at = NOW() WHERE user_id = $1 RETURNING version, updated_at AS "updatedAt"', [safePart(userId, 'user id'), String(content).slice(0, 20_000)])
+-        : await client.query('INSERT INTO s2t_glossaries(user_id, content, version) VALUES($1, $2, 1) RETURNING version, updated_at AS "updatedAt"', [safePart(userId, 'user id'), String(content).slice(0, 20_000)])
++        : await client.query('INSERT INTO s2t_glossaries(user_id, content, version) VALUES($1, $2, 1) ON CONFLICT(user_id) DO NOTHING RETURNING version, updated_at AS "updatedAt"', [safePart(userId, 'user id'), String(content).slice(0, 20_000)])
++      // FOR UPDATE cannot lock a row that does not exist. Another gateway may
++      // create it after our SELECT; report that lost first-write CAS normally.
++      if (!result.rowCount) { await client.query('ROLLBACK'); return null }
+       await client.query('COMMIT')
+       return result.rows[0]
+     } catch (error) {
+diff --git a/tests/integration/scale-safety-integration.cjs b/tests/integration/scale-safety-integration.cjs
+index 9eaf2a5..7d67258 100644
+--- a/tests/integration/scale-safety-integration.cjs
++++ b/tests/integration/scale-safety-integration.cjs
+@@ -19,6 +19,16 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+   try {
+     await Promise.all([a.ready, b.ready])
+     await a.pool.query('INSERT INTO s2t_users(id, username, password_hash, nt, department) VALUES($1,$1,$2,$1,$2)', [userId, 'test'])
++    for (let index = 0; index < 20; index++) {
++      const initialCas = await Promise.all([a.compareAndSwap(userId, `initial-cas-${index}`, 0, { version: 1, writer: 'a' }), b.compareAndSwap(userId, `initial-cas-${index}`, 0, { version: 1, writer: 'b' })])
++      assert.equal(initialCas.filter(Boolean).length, 1, 'first config write has exactly one CAS winner')
++      await a.pool.query('DELETE FROM s2t_glossaries WHERE user_id = $1', [userId])
++      const writes = await Promise.all([a.putGlossary(userId, 'pod-a', 0), b.putGlossary(userId, 'pod-b', 0)])
++      assert.equal(writes.filter(Boolean).length, 1, 'first glossary write has exactly one CAS winner')
++      assert.equal(writes.find(Boolean).version, 1)
++      assert.equal(await b.putGlossary(userId, 'stale', 0), null)
++      assert.equal((await a.getGlossary(userId)).version, 1)
++    }
+     await a.put(userId, 'sessions', { version: 1, sessions: [] })
+     const input = { id: jobId, userId, sessionId: run, audioKey: run, payload: { processingToken: 'intent-1' } }
+     await a.enqueueDiarizationJob(input)

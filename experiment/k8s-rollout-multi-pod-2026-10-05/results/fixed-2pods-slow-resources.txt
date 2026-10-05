@@ -1,0 +1,16 @@
+NAME                            CPU(cores)   MEMORY(bytes)   
+audio-worker-6c895c997d-kbdsh   2m           61Mi            
+etcd-9cf796568-ltvpl            5m           14Mi            
+gateway-b7d9575b9-c659p         31m          58Mi            
+gateway-b7d9575b9-xb8l7         42m          97Mi            
+load-client                     18m          44Mi            
+milvus-6448ff498f-6x4v5         27m          119Mi           
+minio-76786f845d-jfz9r          1m           132Mi           
+mock-models-df9865c6b-mk6st     6m           40Mi            
+postgres-669f66469b-vc2rg       18m          245Mi           
+redis-0                         9m           7Mi             
+redis-1                         11m          7Mi             
+redis-2                         9m           7Mi             
+sentinel-0                      9m           3Mi             
+sentinel-1                      8m           3Mi             
+sentinel-2                      8m           3Mi             

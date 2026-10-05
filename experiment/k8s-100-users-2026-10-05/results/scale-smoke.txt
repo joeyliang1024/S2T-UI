@@ -1,0 +1,5 @@
+
+> s2t-ui@0.1.0 scale:smoke
+> node tests/smoke/scale-safety-smoke-test.cjs
+
+PASS: standalone defaults, atomic task commit, generation fencing, deduplication, durable chunks, gap detection and failed-write ACK safety

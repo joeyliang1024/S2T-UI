@@ -149,7 +149,10 @@ class PostgresConfigStore {
       const version = stored && !Array.isArray(stored) && Number.isSafeInteger(stored.version) ? stored.version : 0
       if (version !== expectedVersion) { await client.query('ROLLBACK'); return false }
       if (current.rowCount) await client.query('UPDATE s2t_config_records SET value = $3::jsonb, updated_at = NOW() WHERE scope = $1 AND record_key = $2', [cleanScope, cleanKey, JSON.stringify(value)])
-      else await client.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb)', [cleanScope, cleanKey, JSON.stringify(value)])
+      else {
+        const inserted = await client.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb) ON CONFLICT(scope, record_key) DO NOTHING', [cleanScope, cleanKey, JSON.stringify(value)])
+        if (!inserted.rowCount) { await client.query('ROLLBACK'); return false }
+      }
       await client.query('COMMIT')
       return true
     } catch (error) {
@@ -327,7 +330,10 @@ class PostgresConfigStore {
       if (version !== expectedVersion) { await client.query('ROLLBACK'); return null }
       const result = current.rowCount
         ? await client.query('UPDATE s2t_glossaries SET content = $2, version = version + 1, updated_at = NOW() WHERE user_id = $1 RETURNING version, updated_at AS "updatedAt"', [safePart(userId, 'user id'), String(content).slice(0, 20_000)])
-        : await client.query('INSERT INTO s2t_glossaries(user_id, content, version) VALUES($1, $2, 1) RETURNING version, updated_at AS "updatedAt"', [safePart(userId, 'user id'), String(content).slice(0, 20_000)])
+        : await client.query('INSERT INTO s2t_glossaries(user_id, content, version) VALUES($1, $2, 1) ON CONFLICT(user_id) DO NOTHING RETURNING version, updated_at AS "updatedAt"', [safePart(userId, 'user id'), String(content).slice(0, 20_000)])
+      // FOR UPDATE cannot lock a row that does not exist. Another gateway may
+      // create it after our SELECT; report that lost first-write CAS normally.
+      if (!result.rowCount) { await client.query('ROLLBACK'); return null }
       await client.query('COMMIT')
       return result.rows[0]
     } catch (error) {

@@ -1,0 +1,154 @@
+diff --git a/deploy/k8s/workloads.yaml b/deploy/k8s/workloads.yaml
+index 1c2588a..7fb5554 100644
+--- a/deploy/k8s/workloads.yaml
++++ b/deploy/k8s/workloads.yaml
+@@ -38,6 +38,10 @@ spec:
+         - name: app
+           image: s2t-ui
+           ports: [{containerPort: 8787, name: http}]
++          lifecycle:
++            preStop:
++              exec:
++                command: [node, -e, 'process.kill(1, "SIGUSR2"); setTimeout(() => {}, 10000)']
+           envFrom:
+             - configMapRef: {name: s2t-runtime}
+             - secretRef: {name: s2t-secrets}
+@@ -102,6 +106,10 @@ spec:
+         - name: app
+           image: s2t-ui
+           ports: [{containerPort: 8787, name: http}]
++          lifecycle:
++            preStop:
++              exec:
++                command: [node, -e, 'process.kill(1, "SIGUSR2"); setTimeout(() => {}, 10000)']
+           envFrom:
+             - configMapRef: {name: s2t-runtime}
+             - secretRef: {name: s2t-secrets}
+diff --git a/docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md b/docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md
+index 580b638..5761709 100644
+--- a/docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md
++++ b/docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md
+@@ -30,7 +30,7 @@ S2T_REDIS_TLS=false
+ 
+ NODES 為逗號分隔 host:port，IPv6 使用 [address]:port；可設定三個 Sentinel 種子，client 發現其他節點並追蹤 primary 切換。master name 必須符合 `sentinel monitor`，不是 Pod／Service 名稱。Sentinel 與 Redis 密碼分開；只有密碼認證時 username 留空。TLS 兩側獨立啟用，使用系統信任 CA，未提供自訂 CA 環境變數。密鑰、URL 與 provider credentials 使用 Secret，禁止放在公開 frontend。
+ 
+-限流讀寫皆送 primary，不讀 replica。命令整體最多等待三秒，切換期間可能回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。
++限流讀寫皆送 primary，不讀 replica。命令整體最多等待三秒，切換期間可能回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。Kubernetes 自行部署 Redis／Sentinel 時，所有公告位址應使用 StatefulSet 的固定 DNS 名稱，並啟用 Sentinel resolve-hostnames／announce-hostnames；只啟用 resolve-hostnames 仍可能把舊 Pod IP 寫入持久化配置，重建後失聯。
+ 
+ S2T_AUDIO_WARMUP 可設 silero、nemotron、diarization 的逗號列表。silero 載入模型；nemotron 驗證 runtime／權重；diarization 實際推論一秒靜音以預熱。失敗使 readiness 不通過。Docker 預設空白。Nemotron CLI 每次工作仍會載入權重，預熱不是持續模型駐留承諾。ASR／翻譯模型服務自行配置完成推論暖機才 Ready。
+ 
+@@ -75,7 +75,7 @@ Gateway HPA 使用 CPU／進行中請求，音訊服務使用 CPU，背景 worke
+ 
+ S2T_ASR_MAX_INFLIGHT、S2T_TRANSLATION_MAX_INFLIGHT 在多副本預設各 64；單機預設不增加全域上限。它們依用途保護共用模型容量，可能使不同 provider 共用較保守上限。不是 64 使用者限制，須依實測模型吞吐調整。
+ 
+-Gateway 至少兩副本，更新 maxUnavailable=0／maxSurge=1，節點分散、PDB 保留一個。SIGTERM 排空 HTTP／背景任務，應用 45 秒、Pod 60 秒。長任務強制終止後由租約接手。PDB 不保障非自願故障，也不代替更新策略。節點須容納新副本及更新 surge。
++Gateway 至少兩副本，更新 maxUnavailable=0／maxSurge=1，節點分散、PDB 保留一個。Gateway／audio-service 的 preStop 先以 SIGUSR2 切掉 readiness，繼續服務 endpoint 傳播期間的請求，並以 Connection: close 將 keep-alive 客戶端移到其他 Pod；等待 10 秒後 Kubernetes 才送 SIGTERM。SIGTERM 排空 HTTP／背景任務，應用 45 秒、Pod 60 秒，包含 preStop 的 10 秒。長任務強制終止後由租約接手。PDB 不保障非自願故障，也不代替更新策略。節點須容納新副本及更新 surge。
+ 
+ 連線預算為各角色 (最大副本 + surge) × 每 Pod pool max，加 migration、監控及其他客戶端。S2T_POSTGRES_MAX_CONNECTIONS 已實際傳入 pool；範例每 Pod 為 4。避免將本機 Compose 的 max_connections=24 直接當作正式容量。
+ 
+diff --git a/server/index.cjs b/server/index.cjs
+index 9c170b0..0d82672 100644
+--- a/server/index.cjs
++++ b/server/index.cjs
+@@ -738,7 +738,7 @@ const handleHttpRequest = async (request, response) => {
+     return send(response, 200, prometheusMetrics() + backlog, 'text/plain; version=0.0.4; charset=utf-8')
+   }
+   if (request.method === 'GET' && request.url === '/readyz') {
+-    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (draining) throw new Error('服務正在排空'); await storage.ready; await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
++    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (quiescing || draining) throw new Error('服務正在排空'); await storage.ready; await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
+     catch (error) { return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' }) }
+   }
+   // The worker has a probe-only HTTP surface. It deliberately cannot serve
+@@ -1360,13 +1360,17 @@ const httpLogLevel = (status, probe) => {
+   if (status >= 400) return probe || status === 401 || status === 403 ? 'info' : 'warn'
+   return probe ? 'debug' : 'info'
+ }
++let quiescing = false
+ let draining = false
++const activeHttpResponses = new Set()
+ let activeHttpRequests = 0
+ let httpDrained
+ const httpDrainedPromise = new Promise(resolve => { httpDrained = resolve })
+ const httpServer = createServer((request, response) => {
+   activeHttpRequests += 1
+-  response.once('close', () => { activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() })
++  activeHttpResponses.add(response)
++  if (quiescing) response.setHeader('connection', 'close')
++  response.once('close', () => { activeHttpResponses.delete(response); activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() })
+   const requestId = incomingRequestId(request)
+   const path = requestPathOf(request)
+   const startedAt = performance.now()
+@@ -1398,8 +1402,21 @@ const httpServer = createServer((request, response) => {
+   if (processRole === 'audio-worker') logger.info('audio-worker.started', { port, durableDiarizationJobs: true })
+ })
+ 
++// Kubernetes withdraws endpoints asynchronously. During preStop, keep serving
++// traffic that still reaches us, but finish keep-alive connections normally so
++// clients move to another Pod before SIGTERM closes the listener.
++const prepareForShutdown = () => {
++  if (quiescing) return
++  quiescing = true
++  acceptingDiarizationJobs = false
++  for (const response of activeHttpResponses) {
++    if (!response.headersSent) response.setHeader('connection', 'close')
++  }
++  logger.info('gateway.quiescing', { role: processRole, activeRequests: activeHttpRequests })
++}
+ const stopServer = () => {
+   if (draining) return
++  prepareForShutdown()
+   draining = true
+   if (activeHttpRequests === 0) httpDrained()
+   acceptingDiarizationJobs = false
+@@ -1415,3 +1432,4 @@ const stopServer = () => {
+ }
+ process.once('SIGTERM', stopServer)
+ process.once('SIGINT', stopServer)
++process.on('SIGUSR2', prepareForShutdown)
+diff --git a/tests/smoke/gateway-scale-http-smoke-test.cjs b/tests/smoke/gateway-scale-http-smoke-test.cjs
+index 1b65b3d..20e3f05 100644
+--- a/tests/smoke/gateway-scale-http-smoke-test.cjs
++++ b/tests/smoke/gateway-scale-http-smoke-test.cjs
+@@ -80,9 +80,32 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+     upstreamStarted = started
+     const pending = fetch(`${one.base}/api/transcriptions`, { method: 'POST', headers: { ...headers, 'x-s2t-idempotency-key': 'drain-segment' }, body: Buffer.from(audio) })
+     await waiting
++    one.child.kill('SIGUSR2')
++    let unready = false
++    for (let attempt = 0; attempt < 40; attempt++) {
++      const probe = await fetch(`${one.base}/readyz`)
++      await probe.arrayBuffer()
++      if (probe.status === 503) { unready = true; break }
++      await delay(20)
++    }
++    assert.equal(unready, true, 'preStop preparation must withdraw readiness')
++    const preparedResponse = await pending
++    assert.equal(preparedResponse.status, 200, 'preStop must finish existing model requests')
++    assert.equal(preparedResponse.headers.get('connection'), 'close', 'clients must retire the old Pod connection')
++    await preparedResponse.arrayBuffer()
++    const propagatedRequest = await fetch(`${one.base}/api/transcriptions`, { method: 'POST', headers: { ...headers, 'x-s2t-idempotency-key': 'prestop-propagation' }, body: Buffer.from(audio) })
++    assert.equal(propagatedRequest.status, 200, 'preStop must serve traffic during endpoint propagation')
++    assert.equal(propagatedRequest.headers.get('connection'), 'close')
++    await propagatedRequest.arrayBuffer()
++    assert.equal((await fetch(`${one.base}/livez`)).status, 200)
++    let termStarted
++    const termWaiting = new Promise(resolve => { termStarted = resolve })
++    upstreamStarted = termStarted
++    const termPending = fetch(`${one.base}/api/transcriptions`, { method: 'POST', headers: { ...headers, 'x-s2t-idempotency-key': 'sigterm-segment' }, body: Buffer.from(audio) })
++    await termWaiting
+     const exit = once(one.child, 'exit')
+     one.child.kill('SIGTERM')
+-    const drainedResponse = await pending
++    const drainedResponse = await termPending
+     assert.equal(drainedResponse.status, 200, 'SIGTERM must allow active HTTP work to complete')
+     assert.equal((await drainedResponse.json()).text, 'caption')
+     const [code] = await exit; assert.equal(code, 0)
+@@ -97,7 +120,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+     assert.ok(Buffer.isBuffer(output)); assert.ok(output.length > 0)
+     const publicApi = await fetch(`${service.base}/api/config`)
+     assert.equal(publicApi.status, 401)
+-    console.log('PASS: unchanged standalone startup, two gateway processes, durable chunk handoff, HTTP replay, content conflict and SIGTERM request drain. No external model calls.')
++    console.log('PASS: standalone startup, two gateway processes, durable chunk handoff, HTTP replay, content conflict, preStop readiness/connection handoff and SIGTERM request drain. No external model calls.')
+   } finally {
+     for (const child of children) if (child.exitCode === null) child.kill('SIGKILL')
+     await new Promise(resolve => upstream.close(resolve))
