@@ -1,3 +1,4 @@
+import { applyEnvironmentSettings } from '../services/environment-settings'
 import { importExtensions } from '../../transcript/import-formats'
 import { openCaptionPopout, type CaptionPopout } from '../services/caption-popout'
 import { type CaptureState, type AudioDevice, type View, type SavedSession, type Settings, type ModelProfile, type ModelCapabilities, type TextModelProfile, type AudioVersion, type CaptureModelSnapshot } from '../../../shared/types'
@@ -20,7 +21,7 @@ import { encodeM4a, type AudioDownloadFormat } from '../services/audio-export'
 import { mergeSessions, recoverStaleProcessing } from '../services/session-merge'
 import { resolveTranslationTarget, shouldSkipTranslation, throttledTranslationDelayMs, translationAggregationDelayMs } from '../services/translation-policy'
 import { TranslationQueue, type TranslateCaption } from '../services/translation-queue'
-import { upsertLiveCaption, renderedLiveCaptionWindow, editCaptionContent, completedCaptionGroups, freezeCaptionGroups, captionGroupSignature } from '../services/live-caption'
+import { groupLiveCaptions, upsertLiveCaption, renderedLiveCaptionWindow, editCaptionContent, completedCaptionGroups, freezeCaptionGroups, captionGroupSignature } from '../services/live-caption'
 import { summaryBatches, summaryChunks, transcriptSignature } from '../services/summary-plan'
 import { authFetch, retryableAuthFetch } from '../../auth/services/auth-client'
 import { activeTranslate, interfaceTranslate, resolveUiLanguage } from '../../../shared/i18n'
@@ -212,6 +213,8 @@ const remoteSettingsVersionRef = useRef<number | null>(null)
 // The model catalog is deliberately separate from general UI settings.  It is
 // account-scoped on the gateway and can be updated by another browser tab.
 const modelRegistryVersionRef = useRef<number | null>(null)
+const environmentConfigRef = useRef<EnvironmentModels>({})
+const accountServiceModelsRef = useRef<Array<{ id: string; name: string; endpoint: string; model: string; purpose: string; requiresApiKey?: boolean; capabilities?: ModelCapabilities }>>([])
 const modelRegistrySignatureRef = useRef<string | null>(null)
 
 const [settings, setSettings] = useState<Settings>(() => initialSettings())
@@ -558,8 +561,12 @@ translationTransportRef.current = translateCaption
 
 const requestTranslation = useCallback((entry: TranscriptEvent): Promise<void> => {
     if (!translationReady) return Promise.resolve()
-    return translationQueueRef.current!.request(entry, translateCaption, settings.targetLanguage)
-  }, [translationReady, translateCaption, settings.targetLanguage])
+    const group = settings.translationStrategy === 'sentence'
+      ? groupLiveCaptions(transcriptsRef.current).find(group => group.members.some(member => member.id === entry.id))
+      : undefined
+    const requested = group && group.members.every(member => !member.translatedText && member.translationStatus !== 'completed') ? group : entry
+    return translationQueueRef.current!.request(requested, translateCaption, settings.targetLanguage)
+  }, [translationReady, translateCaption, settings.targetLanguage, settings.translationStrategy])
 
 const cancelPendingTranslations = (): void => {
     translationQueueRef.current!.reset(true)
@@ -665,6 +672,7 @@ useEffect(() => {
           // managed remote model never does — so one of these headers, never both.
           const customEndpoint = Boolean(settings.diarizationEndpoint.trim()) && !['/api/diarizations', 's2t-local://diarization'].includes(settings.diarizationEndpoint)
           const previewHeaders: Record<string, string> = {
+            'x-s2t-diarization-model': settings.diarizationProfiles?.some(profile => profile.model === settings.diarizationModel && profile.endpoint === settings.diarizationEndpoint) ? settings.diarizationModel : '',
             'content-type': 'audio/wav',
             ...(customEndpoint ? { 'x-s2t-model-id': 'managed-diarization' } : { 'x-s2t-speaker-embeddings': '1' })
           }
@@ -915,6 +923,7 @@ useEffect(() => {
       const payload = await response.json() as { models?: Array<{ id: string; name: string; endpoint: string; model: string; purpose: string; requiresApiKey?: boolean; capabilities?: ModelCapabilities }>; version?: unknown }
       if (!Array.isArray(payload.models)) return
       modelRegistryVersionRef.current = Number.isSafeInteger(payload.version) && Number(payload.version) >= 0 ? Number(payload.version) : 0
+      accountServiceModelsRef.current = payload.models.filter(item => ['summary', 'diarization', 'embedding'].includes(item.purpose))
       modelRegistrySignatureRef.current = JSON.stringify(payload.models)
       // The initial health request can finish before this asynchronous catalog
       // load, leaving every user-managed model card at "未確認" until the
@@ -926,7 +935,7 @@ useEffect(() => {
         const summaryModel = payload.models!.find((item) => item.purpose === 'summary')
         const diarizationModel = payload.models!.find((item) => item.purpose === 'diarization')
         const embeddingModel = payload.models!.find((item) => item.purpose === 'embedding')
-        return normalizeSettings({ ...current, modelProfiles: [...current.modelProfiles.filter((item) => item.id === 'none' || item.id.startsWith('web-')), ...asr], translationProfiles: [...current.translationProfiles.filter((item) => item.id.startsWith('web-')), ...translation], ...(summaryModel ? { summaryEndpoint: summaryModel.endpoint, summaryModel: summaryModel.model, summaryRequiresApiKey: summaryModel.requiresApiKey !== false } : {}), ...(diarizationModel ? { diarizationEndpoint: diarizationModel.endpoint, diarizationModel: diarizationModel.model, diarizationRequiresApiKey: diarizationModel.requiresApiKey !== false } : {}), ...(embeddingModel ? { embeddingEndpoint: embeddingModel.endpoint, embeddingModel: embeddingModel.model, embeddingRequiresApiKey: embeddingModel.requiresApiKey !== false } : {}) })
+        return applyEnvironmentSettings({ ...current, modelProfiles: [...current.modelProfiles.filter((item) => item.id === 'none' || item.id.startsWith('web-')), ...asr], translationProfiles: [...current.translationProfiles.filter((item) => item.id.startsWith('web-')), ...translation], ...(summaryModel ? { summaryEndpoint: summaryModel.endpoint, summaryModel: summaryModel.model, summaryRequiresApiKey: summaryModel.requiresApiKey !== false } : {}), ...(diarizationModel ? { diarizationEndpoint: diarizationModel.endpoint, diarizationModel: diarizationModel.model, diarizationRequiresApiKey: diarizationModel.requiresApiKey !== false } : {}), ...(embeddingModel ? { embeddingEndpoint: embeddingModel.endpoint, embeddingModel: embeddingModel.model, embeddingRequiresApiKey: embeddingModel.requiresApiKey !== false } : {}) }, environmentConfigRef.current, false)
       })
     }).catch(() => undefined)
   }, [userId, environmentModelsHydrated])
@@ -963,8 +972,8 @@ useEffect(() => {
     const models = [
       ...settings.modelProfiles.filter((item) => item.id !== 'none' && !item.id.startsWith('web-')).map((item) => ({ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, purpose: 'asr', requiresApiKey: item.requiresApiKey !== false, capabilities: item.capabilities })),
       ...settings.translationProfiles.filter((item) => !item.id.startsWith('web-')).map((item) => ({ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, purpose: 'translation', requiresApiKey: item.requiresApiKey !== false, capabilities: {} })),
-      ...(settings.summaryEndpoint.trim() && settings.summaryModel.trim() ? [{ id: 'managed-summary', name: activeTranslate('summaryTitle'), endpoint: settings.summaryEndpoint, model: settings.summaryModel, purpose: 'summary', requiresApiKey: settings.summaryRequiresApiKey, capabilities: {} }] : []),
-      ...(settings.diarizationEndpoint.trim() && settings.diarizationModel.trim() ? [{ id: 'managed-diarization', name: activeTranslate('speakerDiarization'), endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, purpose: 'diarization', requiresApiKey: settings.diarizationRequiresApiKey, capabilities: {} }] : []),
+      ...(environmentConfigRef.current.summary?.configured ? accountServiceModelsRef.current.filter(item => item.purpose === 'summary') : settings.summaryEndpoint.trim() && settings.summaryModel.trim() ? [{ id: 'managed-summary', name: activeTranslate('summaryTitle'), endpoint: settings.summaryEndpoint, model: settings.summaryModel, purpose: 'summary', requiresApiKey: settings.summaryRequiresApiKey, capabilities: {} }] : []),
+      ...(environmentConfigRef.current.diarization?.configured ? accountServiceModelsRef.current.filter(item => item.purpose === 'diarization') : settings.diarizationEndpoint.trim() && settings.diarizationModel.trim() ? [{ id: 'managed-diarization', name: activeTranslate('speakerDiarization'), endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, purpose: 'diarization', requiresApiKey: settings.diarizationRequiresApiKey, capabilities: {} }] : []),
       ...(settings.embeddingEndpoint.trim() && settings.embeddingModel.trim() ? [{ id: 'managed-embedding', name: activeTranslate('embedding'), endpoint: settings.embeddingEndpoint, model: settings.embeddingModel, purpose: 'embedding', requiresApiKey: settings.embeddingRequiresApiKey, capabilities: {} }] : [])
     ]
     const signature = JSON.stringify(models)
@@ -1051,7 +1060,7 @@ useEffect(() => {
   }, [sessions, sessionsHydrated])
 
 useEffect(() => {
-    if (window.s2t || !remoteSettingsHydrated || remoteSettingsVersionRef.current === null) return
+    if (window.s2t || !remoteSettingsHydrated || !environmentModelsHydrated || remoteSettingsVersionRef.current === null) return
     const timer = window.setTimeout(() => {
       const version = remoteSettingsVersionRef.current
       if (version === null) return
@@ -1063,7 +1072,7 @@ useEffect(() => {
       }).catch((error: unknown) => setStatus(error instanceof Error ? activeTranslate('stRemoteSettingsSaveFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stRemoteSettingsSaveFailed')))
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [remoteSettingsHydrated, settings])
+  }, [remoteSettingsHydrated, environmentModelsHydrated, settings])
 
 useEffect(() => {
     if (window.s2t || !summaryTemplatesHydrated || summaryTemplateVersionRef.current === null) return
@@ -1118,6 +1127,7 @@ useEffect(() => {
   }, [])
 
 useEffect(() => {
+    if (!window.s2t && !remoteSettingsHydrated) return
     let canceled = false
     void (async () => {
       const [saved, config]: [Partial<Settings> | null, EnvironmentModels] = window.s2t
@@ -1127,38 +1137,14 @@ useEffect(() => {
         ])
         : [null, await readJsonResponse<EnvironmentModels>(await authFetch('/api/config'), activeTranslate('stModelSettings'))]
       if (canceled) return
+      environmentConfigRef.current = config
       setProductTitleImage(config.branding?.titleImage || '')
       setSettings((previous) => {
-        const current = normalizeSettings({ ...previous, ...saved })
-        const translationId = window.s2t ? 'environment-translation' : 'web-environment-translation'
-        const asr = config.asr
-        const translation = config.translation
-        const profiles = current.modelProfiles.filter((profile) => profile.id !== 'environment-asr' && profile.id !== 'web-environment-asr' && !profile.id.startsWith('web-gateway-asr-'))
-        const gatewayProfiles = window.s2t
-          ? asr?.endpoint && asr.model ? [{ id: 'environment-asr', name: activeTranslate('stEnvironmentProfile').replace('{model}', String(asr.model)), endpoint: asr.endpoint, model: asr.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }] : []
-          : (config.asrProfiles?.filter((profile) => profile.configured) ?? (asr?.endpoint && asr.model ? [{ id: 'default', name: asr.model, endpoint: asr.sourceEndpoint || asr.endpoint, model: asr.model, configured: true }] : [])).map((profile) => ({ id: profile.id === 'default' ? 'web-environment-asr' : `web-gateway-asr-${profile.id}`, name: profile.name, endpoint: profile.sourceEndpoint || profile.endpoint, model: profile.model, kind: 'openai-http' as const, capabilities: defaultHttpCapabilities }))
-        profiles.unshift(...gatewayProfiles)
-        const translations = current.translationProfiles.filter((profile) => !['environment-translation', 'web-environment-translation'].includes(profile.id)).map((profile) => ({ ...profile, endpoint: textEndpoint(profile.endpoint) }))
-        if (translation?.endpoint && translation.model) translations.push({ id: translationId, name: activeTranslate('stEnvironmentProfile').replace('{model}', String(translation.model)), endpoint: translation.sourceEndpoint || translation.endpoint, model: translation.model })
-        // Load disk settings first, then apply the environment-provided models as
-        // the default only when the saved selection is missing or no longer valid,
-        // so models registered later can still be selected and kept.
-        const selectedModelId = current.selectedModelId !== 'none' && profiles.some((profile) => profile.id === current.selectedModelId)
-          ? current.selectedModelId
-          : gatewayProfiles[0]?.id ?? 'none'
-        const selectedTranslationModelId = current.selectedTranslationModelId !== 'none' && translations.some((profile) => profile.id === current.selectedTranslationModelId)
-          ? current.selectedTranslationModelId
-          : translation?.model ? translationId : 'none'
-        const activeTranslation = translations.find((profile) => profile.id === selectedTranslationModelId)
-        return { ...current, modelProfiles: profiles, selectedModelId,
-          translationProfiles: translations, selectedTranslationModelId,
-          translationEndpoint: activeTranslation?.endpoint ?? translation?.endpoint ?? textEndpoint(current.translationEndpoint), translationModel: activeTranslation?.model ?? translation?.model ?? current.translationModel,
-          summaryEndpoint: config.summary?.endpoint || textEndpoint(current.summaryEndpoint), summaryModel: config.summary?.model || current.summaryModel,
-          diarizationEndpoint: config.diarization?.endpoint || current.diarizationEndpoint, diarizationModel: config.diarization?.model || current.diarizationModel }
+        return applyEnvironmentSettings({ ...previous, ...saved }, config, Boolean(window.s2t))
       })
     })().catch((error: unknown) => setStatus(error instanceof Error ? error.message : activeTranslate('stModelSettingsLoadFailed'))).finally(() => { if (!canceled) setEnvironmentModelsHydrated(true) })
     return () => { canceled = true }
-  }, [])
+  }, [remoteSettingsHydrated, userId])
 
 const cleanUpCapture = useCallback(() => {
     if (meterFrameRef.current) cancelAnimationFrame(meterFrameRef.current)
@@ -1725,7 +1711,7 @@ const stopCapture = async (): Promise<void> => {
       console.info('s2t.capture.diagnostics', {
         asr: modelRef.current instanceof OpenAiChunkedModelAdapter ? modelRef.current.diagnostics : undefined,
         translation: translationQueueRef.current!.diagnostics,
-        untranslated: transcriptsRef.current.filter((entry) => entry.status === 'final' && entry.sourceText.trim() && !entry.translatedText && !shouldSkipTranslation(entry.detectedLanguage, resolveTranslationTarget(entry.detectedLanguage, settings.targetLanguage))).length
+        untranslated: transcriptsRef.current.filter((entry) => entry.status === 'final' && entry.sourceText.trim() && !entry.translatedText && entry.translationStatus !== 'completed' && !shouldSkipTranslation(entry.detectedLanguage, resolveTranslationTarget(entry.detectedLanguage, settings.targetLanguage))).length
       })
       patchProcessing({ processingStage: 'saving' })
       const recordingId = electronRecordingIdRef.current
@@ -1821,7 +1807,7 @@ const stopCapture = async (): Promise<void> => {
           // final tail after the last preview tick.
           void (async () => {
             try {
-              const queued = await readJsonResponse<{ job?: { id?: string } }>(await authFetch('/api/data/diarization-jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, audioKey, processingToken }) }), activeTranslate('stDiarizationJobScheduleLabel'))
+              const queued = await readJsonResponse<{ job?: { id?: string } }>(await authFetch('/api/data/diarization-jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, audioKey, processingToken, ...(settings.diarizationProfiles?.some(profile => profile.model === settings.diarizationModel && profile.endpoint === settings.diarizationEndpoint) ? { localModel: settings.diarizationModel } : {}) }) }), activeTranslate('stDiarizationJobScheduleLabel'))
               const jobId = queued.job?.id
               if (!jobId) throw new Error(activeTranslate('stGatewayMissingJobId'))
               if (!sessionsRef.current.some((entry) => entry.id === sessionId && entry.processingToken === processingToken)) {
@@ -1844,7 +1830,7 @@ const stopCapture = async (): Promise<void> => {
             const endpoint = window.s2t ? (settings.diarizationEndpoint.trim() || '/api/diarizations') : '/api/diarizations'
             const payload = window.s2t
               ? await window.s2t.diarizeAudio({ endpoint, model: settings.diarizationModel, audio: await finalAudio.arrayBuffer() })
-              : await readJsonResponse<unknown>(await authFetch(endpoint, { method: 'POST', headers: { 'content-type': 'audio/wav', ...(settings.diarizationEndpoint.trim() && settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: finalAudio }), activeTranslate('stDiarizationServiceLabel'))
+              : await readJsonResponse<unknown>(await authFetch(endpoint, { method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-diarization-model': settings.diarizationProfiles?.some(profile => profile.model === settings.diarizationModel && profile.endpoint === settings.diarizationEndpoint) ? settings.diarizationModel : '', ...(settings.diarizationEndpoint.trim() && settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: finalAudio }), activeTranslate('stDiarizationServiceLabel'))
             const turns = parseSpeakerTurns(payload)
             if (!turns.length) throw new Error(activeTranslate('stDiarizationNoSegments'))
             setSessions((current) => current.map((currentEntry) => {
@@ -2567,7 +2553,7 @@ const diarizeSession = async (entry: SavedSession): Promise<void> => {
       setStatus(activeTranslate('stIdentifyingSpeakers'))
       const payload = window.s2t
         ? await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio })
-        : await readJsonResponse<unknown>(await authFetch('/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(settings.diarizationEndpoint.trim() && settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: audio }), activeTranslate('stLocalSherpaService'))
+        : await readJsonResponse<unknown>(await authFetch('/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-diarization-model': settings.diarizationProfiles?.some(profile => profile.model === settings.diarizationModel && profile.endpoint === settings.diarizationEndpoint) ? settings.diarizationModel : '', ...(settings.diarizationEndpoint.trim() && settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: audio }), activeTranslate('stLocalSherpaService'))
       const turns = parseSpeakerTurns(payload)
       if (!turns.length) throw new Error(activeTranslate('stDiarizationNoSpeakerSegments'))
       setSessions((current) => current.map((currentEntry) => {

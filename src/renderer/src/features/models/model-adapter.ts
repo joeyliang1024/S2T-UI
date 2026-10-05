@@ -17,7 +17,7 @@ export type TranscriptEvent = {
   speaker?: string
   /** User-provided speaker names are authoritative over later diarization passes. */
   speakerManuallyEdited?: boolean
-  translationStatus?: 'failed'
+  translationStatus?: 'failed' | 'completed'
   /** Failed automatic translation attempts for this exact caption revision. */
   translationAttempts?: number
   /** Changes only when translation input or a manual translation changes. */
@@ -301,7 +301,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     const adaptiveMaximumMs = Math.min(6_000, configuredMaximumMs * (this.queuedChunks >= 2 ? 2 : 1))
     const maximumChunkSamples = Math.floor(this.sampleRate * adaptiveMaximumMs / 1000)
     this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || vadFrame?.speaking)
-    const reachedNaturalBoundary = this.pendingSamples >= minimumChunkSamples && Boolean(vadFrame?.speechEnded)
+    const reachedNaturalBoundary = this.pendingContainsSpeech && Boolean(vadFrame?.speechEnded)
     // Keep 300 ms of room tone before a voice onset, but avoid sending empty
     // requests while nobody is speaking.
     if (!this.pendingContainsSpeech && this.pendingSamples > maximumChunkSamples) {

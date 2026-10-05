@@ -58,6 +58,7 @@
     "import-audio:smoke": "node tests/smoke/import-audio-smoke-test.cjs",
     "caption:display:smoke": "node tests/smoke/caption-display-group-smoke-test.cjs",
     "model-paths:smoke": "node tests/smoke/model-paths-smoke-test.cjs",
+    "settings:environment:smoke": "node tests/smoke/environment-settings-smoke-test.cjs",
     "gateway:env-smoke": "node tests/smoke/gateway-env-smoke-test.cjs",
     "nemotron:smoke": "node tests/smoke/nemotron-diarization-smoke-test.cjs",
     "storage:migrate:schema": "node scripts/storage/migrate-schema.cjs",

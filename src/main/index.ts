@@ -308,8 +308,9 @@ app.whenReady().then(() => {
       const endpoint = process.env[`S2T_${kind}_ENDPOINT`] || ''
       const model = process.env[`S2T_${kind}_MODEL`] || ''
       const apiKey = process.env[`S2T_${kind}_API_KEY`] || ''
-      if (kind === 'DIARIZATION' && !endpoint && ['nemotron-3-diarization', 'nvidia/Nemotron-3-Diarization'].includes(model)) {
-        return { endpoint: 's2t-local://diarization', model: 'nemotron-3-diarization', configured: true }
+      if (kind === 'DIARIZATION' && !endpoint) {
+        const selected = localModels.localModelName()
+        return { endpoint: 's2t-local://diarization', model: selected, configured: localModels.localDiarizationProfiles().some((profile: { model: string }) => profile.model === selected) }
       }
       return { endpoint, model, configured: Boolean(endpoint && model && (apiKey || kind === 'DIARIZATION')) }
     }
@@ -321,7 +322,9 @@ app.whenReady().then(() => {
         if (image.length <= 2 * 1024 * 1024) titleImage = `data:image/png;base64,${image.toString('base64')}`
       } catch { /* Keep the text title when an optional branding asset is missing. */ }
     }
-    return { branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
+    const localRequire = createRequire(join(process.cwd(), 'package.json'))
+    const localModels = localRequire(join(process.cwd(), 'server', 'local-diarization.cjs'))
+    return { diarizationProfiles: localModels.localDiarizationProfiles(), branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
   })
   ipcMain.handle('models:load-config', async (event) => {
     try { return JSON.parse(await readFile(modelConfigPath(requireDesktopUser(event)), 'utf8')) } catch { return null }
@@ -400,13 +403,15 @@ app.whenReady().then(() => {
     if (!(input.audio instanceof ArrayBuffer) || !input.audio.byteLength || input.audio.byteLength > 500 * 1024 * 1024) throw new Error('無效的講者分離音檔')
     if (input.endpoint === 's2t-local://diarization') {
       requireDesktopUser(event)
-      if (process.env.S2T_DIARIZATION_ENDPOINT?.trim() || !['nemotron-3-diarization', 'nvidia/Nemotron-3-Diarization'].includes(process.env.S2T_DIARIZATION_MODEL?.trim() || '')) throw new Error('本機 Nemotron 未啟用')
+
       // Load the installed gateway worker module; audio never leaves this machine.
       const localRequire = createRequire(join(process.cwd(), 'package.json'))
       const worker = localRequire(join(process.cwd(), 'server', 'sherpa-worker-pool.cjs'))
       const audio = Buffer.from(input.audio)
-      const turns = await worker.diarizeWav(audio)
-      return { model: 'nemotron-3-diarization', runtime: 'cpu', speaker_capacity: 8, speaker_cache_frames: 528,
+      const localModels = localRequire(join(process.cwd(), 'server', 'local-diarization.cjs'))
+      const model = localModels.resolveLocalDiarizationModel(input.model)
+      const turns = await worker.diarizeWav(audio, model)
+      return { model, ...(model === 'nemotron-3-diarization' ? { runtime: 'cpu', speaker_capacity: 8, speaker_cache_frames: 528 } : {}),
         exclusive_diarization: turns, ...(input.embeddings ? { speaker_embeddings: await worker.extractSpeakerLabelEmbeddings(audio, turns) } : {}) }
     }
     let endpoint: URL

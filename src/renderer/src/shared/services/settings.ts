@@ -40,6 +40,16 @@ export const languageName = (value: string): string => (value in languageNameKey
 export const asrLanguage = (value: string): string => ({ 'zh-TW': 'zh', 'en-US': 'en', 'ja-JP': 'ja', 'de-DE': 'de' }[value] ?? '')
 
 export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: string }): Settings => {
+  // Older or damaged account payloads must not prevent deployment defaults loading.
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const validProfile = (profile: unknown): profile is ModelProfile & TextModelProfile => Boolean(profile && typeof profile === 'object' && typeof (profile as ModelProfile).id === 'string' && typeof (profile as ModelProfile).name === 'string' && typeof (profile as ModelProfile).endpoint === 'string' && typeof (profile as ModelProfile).model === 'string')
+  value = { ...raw,
+    modelProfiles: Array.isArray(raw.modelProfiles) ? raw.modelProfiles.filter(validProfile) : [],
+    translationProfiles: Array.isArray(raw.translationProfiles) ? raw.translationProfiles.filter(validProfile) : [],
+    summaryTemplates: Array.isArray(raw.summaryTemplates) ? raw.summaryTemplates : [],
+    ...Object.fromEntries(['modelEndpoint', 'translationEndpoint', 'translationModel', 'summaryEndpoint', 'summaryModel', 'diarizationEndpoint', 'diarizationModel', 'embeddingEndpoint', 'embeddingModel', 'summaryTemplate'].map(key => [key, typeof raw[key as keyof typeof raw] === 'string' ? raw[key as keyof typeof raw] : '']))
+  }
+
   const fallbackTranslationProfile: TextModelProfile[] = value.translationEndpoint && value.translationModel
     ? [{ id: 'translation-default', name: activeTranslate('svcTranslationProfileName').replace('{model}', value.translationModel), endpoint: value.translationEndpoint, model: value.translationModel }]
     : []
@@ -48,6 +58,8 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   const templates = summaryTemplates.length ? summaryTemplates : [{ id: 'default-summary', name: activeTranslate('summaryTitle'), content: value.summaryTemplate?.trim() || defaultSummaryTemplate }]
   const selectedSummaryTemplateId = templates.some((template) => template.id === value.selectedSummaryTemplateId) ? value.selectedSummaryTemplateId! : templates[0].id
   const selectedSummaryTemplate = templates.find((template) => template.id === selectedSummaryTemplateId)!
+  const activeTranslation = translationProfiles.find(profile => profile.id === value.selectedTranslationModelId) ?? translationProfiles[0]
+  const modelProfiles = value.modelProfiles?.length ? value.modelProfiles.map((profile) => { const fallback = profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities; return { ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', requiresApiKey: profile.requiresApiKey !== false, capabilities: { ...fallback, ...profile.capabilities } } }) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }]
   return {
   theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : 'system',
   // Display language defaults to following the OS/browser language; an
@@ -59,12 +71,12 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   translationEnabled: value.translationEnabled ?? true,
   translationStrategy: value.translationStrategy === 'sentence' ? 'sentence' : 'realtime',
   translationLoadStrategy: value.translationLoadStrategy === 'manual' || value.translationLoadStrategy === 'throttled' ? value.translationLoadStrategy : 'automatic',
-  modelProfiles: value.modelProfiles?.length ? value.modelProfiles.map((profile) => { const fallback = profile.kind === 'openai-http' ? defaultHttpCapabilities : defaultWebSocketCapabilities; return { ...profile, model: profile.model ?? '', kind: profile.kind ?? 'websocket', requiresApiKey: profile.requiresApiKey !== false, capabilities: { ...fallback, ...profile.capabilities } } }) : [{ ...defaultModelProfile, endpoint: value.modelEndpoint ?? '' }],
-  selectedModelId: value.selectedModelId ?? value.modelProfiles?.[0]?.id ?? 'none',
-  translationEndpoint: value.translationEndpoint ?? '',
-  translationModel: value.translationModel ?? '',
+  modelProfiles,
+  selectedModelId: modelProfiles.some(profile => profile.id === value.selectedModelId) ? value.selectedModelId! : modelProfiles.find(profile => profile.id !== 'none')?.id ?? 'none',
+  translationEndpoint: activeTranslation?.endpoint ?? value.translationEndpoint ?? '',
+  translationModel: activeTranslation?.model ?? value.translationModel ?? '',
   translationProfiles,
-  selectedTranslationModelId: value.selectedTranslationModelId ?? translationProfiles[0]?.id ?? 'none',
+  selectedTranslationModelId: translationProfiles.some(profile => profile.id === value.selectedTranslationModelId) ? value.selectedTranslationModelId! : translationProfiles[0]?.id ?? 'none',
   summaryEndpoint: value.summaryEndpoint ?? '',
   summaryModel: value.summaryModel ?? '',
   summaryRequiresApiKey: value.summaryRequiresApiKey !== false,
@@ -73,6 +85,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   selectedSummaryTemplateId,
   summaryOutputLanguage: supportedTargetLanguages.includes(value.summaryOutputLanguage as typeof supportedTargetLanguages[number]) ? value.summaryOutputLanguage! : 'zh-TW',
   summaryIncludeTranslation: value.summaryIncludeTranslation === true,
+  diarizationProfiles: Array.isArray(value.diarizationProfiles) ? value.diarizationProfiles.filter(validProfile) : [],
   diarizationEndpoint: value.diarizationEndpoint ?? '',
   diarizationModel: value.diarizationModel ?? '',
   diarizationRequiresApiKey: value.diarizationRequiresApiKey !== false,

@@ -1,7 +1,8 @@
+import { groupLiveCaptions } from './live-caption'
 import type { TranscriptEvent } from '../../models/model-adapter'
 import { HttpServiceError } from '../../../shared/services/http'
 import { activeTranslate } from '../../../shared/i18n'
-import { maximumAutomaticTranslationQueue, resolveTranslationTarget, shouldAutoTranslate, shouldSkipTranslation } from './translation-policy'
+import { maximumAutomaticTranslationQueue, maximumSentenceWaitMs, resolveTranslationTarget, shouldAutoTranslate, shouldSkipTranslation } from './translation-policy'
 
 export type TranslateCaption = (entry: TranscriptEvent, signal: AbortSignal) => Promise<string>
 type ActiveRequest = { promise: Promise<void>; controller: AbortController; generation: number }
@@ -48,7 +49,13 @@ export class TranslationQueue {
       if (!entry || entry.translatedText || entry.translationStatus || (entry.translationContentRevision ?? 0) !== retry.revision) this.retryAt.delete(id)
     }
     if (this.now() < this.blockedUntil) return []
-    return entries.filter((entry) => this.eligible(entry, options) && !this.active.has(entry.id) && this.now() >= (this.retryAt.get(entry.id)?.at ?? 0))
+    const pending = options.strategy === 'sentence'
+      ? groupLiveCaptions(entries).flatMap((group, index, groups) => {
+        if (group.members.some(member => member.translatedText || member.translationStatus)) return group.members.filter(member => this.eligible(member, options))
+        const complete = group.isSentenceBoundary || index < groups.length - 1 || options.elapsedMs - group.endMs >= maximumSentenceWaitMs
+        return complete && group.members.every(member => member.status === 'final') ? [group] : []
+      }) : entries
+    return pending.filter((entry) => this.eligible(entry, { ...options, strategy: 'realtime' }) && !this.active.has(entry.id) && this.now() >= (this.retryAt.get(entry.id)?.at ?? 0))
   }
 
   tick(options: QueueOptions, translate: TranslateCaption, throttled = false): void {
@@ -59,11 +66,14 @@ export class TranslationQueue {
   }
 
   request(entry: TranscriptEvent, translate: TranslateCaption, targetLanguage: string): Promise<void> {
+    const members = 'members' in entry ? (entry as TranscriptEvent & { members: TranscriptEvent[] }).members : [entry]
+    const matchesMembers = (entries: TranscriptEvent[]): boolean => members.every(member => matchesTranslationContent(entries.find(current => current.id === member.id), member))
     const existing = this.active.get(entry.id)
     if (existing) return existing.promise
     if (this.active.size >= maximumAutomaticTranslationQueue || this.now() < this.blockedUntil ||
       shouldSkipTranslation(entry.detectedLanguage, resolveTranslationTarget(entry.detectedLanguage, targetLanguage)) ||
-      !entry.sourceText.trim() || !matchesTranslationContent(this.getEntries().find((current) => current.id === entry.id), entry)) return Promise.resolve()
+      !entry.sourceText.trim() || !matchesMembers(this.getEntries())) return Promise.resolve()
+    if (members.length > 1) this.updateEntries(entries => entries.map(current => members.some(member => member.id === current.id) ? { ...current, captionGroupId: entry.id } : current))
     const controller = new AbortController()
     const generation = this.generation
     const startedAt = this.now()
@@ -80,11 +90,13 @@ export class TranslationQueue {
         if (!text) throw new Error(activeTranslate('svcTranslationEmptyResult'))
         if (generation !== this.generation || controller.signal.aborted) return
         let applied = false
-        this.updateEntries((entries) => entries.map((current) => {
-          if (!matchesTranslationContent(current, entry)) return current
+        this.updateEntries((entries) => {
+          if (!matchesMembers(entries)) return entries
           applied = true
-          return { ...current, translatedText: text, translationStatus: undefined, translationAttempts: undefined, revision: current.revision + 1 }
-        }))
+          return entries.map(current => members.some(member => member.id === current.id)
+            ? { ...current, captionGroupId: entry.id, translatedText: current.id === entry.id ? text : undefined, translationStatus: 'completed' as const, translationAttempts: undefined, revision: current.revision + 1 }
+            : current)
+        })
         if (applied) this.diagnostics.completed += 1
         else this.diagnostics.staleResults += 1
         this.retryAt.delete(entry.id)
@@ -97,7 +109,7 @@ export class TranslationQueue {
           return
         }
         this.updateEntries((entries) => entries.map((current) => {
-          if (!matchesTranslationContent(current, entry)) return current
+          if (!matchesMembers(entries) || !members.some(member => member.id === current.id)) return current
           const attempts = (current.translationAttempts ?? 0) + 1
           this.diagnostics.failedAttempts += 1
           const terminal = error instanceof HttpServiceError && [400, 401, 403, 404, 422].includes(error.status)
@@ -152,7 +164,7 @@ export class TranslationQueue {
     this.paused = true
     const deadline = this.now() + timeoutMs
     const generation = this.generation
-    const finalOptions = { ...options, strategy: 'realtime' as const }
+    const finalOptions = { ...options, elapsedMs: Number.POSITIVE_INFINITY }
     while (generation === this.generation && this.now() < deadline) {
       // Fill all free workers without bypassing cooldowns or retries.
       if (includePending) this.candidates(finalOptions).slice(0, Math.max(0, maximumAutomaticTranslationQueue - this.active.size))
