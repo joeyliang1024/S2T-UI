@@ -120,6 +120,7 @@ export type Settings = {
   summaryOutputLanguage: string
   summaryIncludeTranslation: boolean
   diarizationEndpoint: string
+  diarizationProfiles?: TextModelProfile[]
   diarizationModel: string
   diarizationRequiresApiKey: boolean
   /** The embedding service is separate from speaker diarization. */

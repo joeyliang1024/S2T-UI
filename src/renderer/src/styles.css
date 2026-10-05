@@ -830,7 +830,7 @@ button.session-processing-state:focus-visible { outline: 2px solid currentColor;
 .caption-popout-error { background: rgb(20 20 20 / 75%); border-radius: 6px; bottom: 64px; color: #fff !important; font-size: 13px; left: 12px; margin: 0; max-width: calc(100% - 24px); padding: 8px 12px; position: absolute; box-sizing: border-box; overflow-wrap: anywhere; z-index: 3; }
 
 .sidebar-product-title { display: flex; align-items: center; min-width: 0; flex: 1; }
-.sidebar-product-title img { display: block; width: 100%; max-width: 170px; height: 36px; object-fit: contain; object-position: left center; }
+.sidebar-product-title img { display: block; width: 100%; max-width: 200px; height: 48px; object-fit: contain; object-position: left center; }
 .caption-actions .caption-icon-action.active { background: #314563; color: #f3f7ff; }
 
 /* Theme-local navigation colors keep SVG strokes, hover and focus in one palette. */
@@ -876,4 +876,60 @@ button.session-processing-state:focus-visible { outline: 2px solid currentColor;
 }
 @media (prefers-reduced-motion: reduce) {
   :root .history-sidebar .sidebar-nav button, .sidebar-nav-icon { transition: none; }
+}
+
+/* Place content explicitly so action buttons cannot advance grid auto-placement. */
+.live-workspace .transcript > article > p:not(.translation),
+.transcript-modal .record-transcript > article > p:not(.translation) { grid-row: 1; }
+.live-workspace .transcript > article > .translation,
+.transcript-modal .record-transcript > article > .translation { grid-row: 2; }
+.transcript > article > .transcript-edit,
+.record-transcript > article > .transcript-edit { grid-column: 2 / -1; grid-row: 1 / span 2; min-width: 0; }
+.transcript-edit textarea, .timing-inputs input { box-sizing: border-box; }
+@media (max-width: 680px) {
+  .live-workspace .transcript > article > .edit-button { grid-column: 2; grid-row: auto; }
+  .live-workspace .transcript > article > .speaker-row input,
+  .transcript-modal .record-transcript > article > .speaker-row input { width: 100%; max-width: 100%; }
+}
+
+.live-workspace .transcript > article > details,
+.transcript-modal .record-transcript > article > details { grid-column: 3; grid-row: 1 / span 2; min-width: 0; align-self: start; }
+.live-workspace .transcript > article > details > summary,
+.transcript-modal .record-transcript > article > details > summary { cursor: pointer; color: #9fc1ff; font-size: .78rem; padding: 4px 6px; }
+.live-workspace .transcript > article > details[open],
+.transcript-modal .record-transcript > article > details[open] { grid-column: 2 / -1; grid-row: 3; }
+.transcript > article > details > article,
+.record-transcript > article > details > article { grid-template-columns: 64px minmax(0, 1fr); min-width: 0; }
+.transcript > article > details > article > .transcript-edit,
+.record-transcript > article > details > article > .transcript-edit { grid-column: 2; min-width: 0; }
+@media (max-width: 680px) {
+  .live-workspace .transcript > article > details,
+  .transcript-modal .record-transcript > article > details { grid-column: 2; grid-row: 3; }
+}
+
+/* Expanded member editors use their own explicit grid, including rerecord actions. */
+.live-workspace .transcript > article > details[open],
+.transcript-modal .record-transcript > article > details[open] { grid-column: 1 / -1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised); }
+.transcript > article > details > .transcript-segment,
+.record-transcript > article > details > .transcript-segment { grid-template-columns: 112px minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 0; }
+.transcript-segment > time { grid-column: 1; grid-row: 1; }
+.transcript-segment > .speaker-row { grid-column: 1; grid-row: 2; min-width: 0; }
+.transcript-segment > .speaker-row input { box-sizing: border-box; width: 100%; max-width: 112px; }
+.transcript-segment > p:not(.translation) { grid-column: 2; grid-row: 1; }
+.transcript-segment > p.translation { grid-column: 2; grid-row: 2; }
+.transcript-segment > .edit-button { grid-column: 3; grid-row: 1 / span 2; align-self: start; padding: 4px 6px; }
+.transcript-segment > .segment-actions { grid-column: 2 / -1; grid-row: 3; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.transcript-segment > .segment-actions > .text-button { display: inline-flex; align-items: center; justify-content: center; flex: 0 1 auto; min-width: 0; margin: 0; padding: 7px 10px; font: inherit; font-size: .78rem; line-height: 1.4; cursor: pointer; }
+.transcript > article > details > .transcript-segment > .transcript-edit,
+.record-transcript > article > details > .transcript-segment > .transcript-edit { grid-column: 2 / -1; grid-row: 1 / span 3; }
+@media (max-width: 680px) {
+  .transcript > article > details > .transcript-segment,
+  .record-transcript > article > details > .transcript-segment { grid-template-columns: 80px minmax(0, 1fr); }
+  .transcript-segment > .edit-button { grid-column: 2; grid-row: 3; }
+  .transcript-segment > .segment-actions { grid-column: 2; grid-row: 4; }
+}
+@media (max-width: 680px) {
+  .live-workspace .transcript > article,
+  .transcript-modal .record-transcript > article { grid-template-columns: 96px minmax(0, 1fr); }
+  .speaker-labels { min-width: 0; overflow-wrap: anywhere; font-size: .78rem; }
 }

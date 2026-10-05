@@ -1,3 +1,4 @@
+const { existsSync } = require('node:fs')
 const { join } = require('node:path')
 const { modelsRoot } = require('./model-paths.cjs')
 const NEMOTRON_MODEL = 'nemotron-3-diarization'
@@ -12,4 +13,18 @@ const nemotronPaths = (root = process.cwd()) => {
   return { model: join(directory, 'Nemotron-3-Diarization.q8_0.gguf'),
     runtime: join(directory, 'runtime', `${process.platform}-${process.arch}`, 'bin', process.platform === 'win32' ? 'nemo-speech.exe' : 'nemo-speech') }
 }
-module.exports = { NEMOTRON_MODEL, localModelName, nemotronPaths }
+const localDiarizationProfiles = () => {
+  const { modelPaths } = require('./sherpa-diarization.cjs')
+  const sherpa = modelPaths()
+  const nemo = nemotronPaths()
+  return [
+    { model: 'sherpa-onnx-speaker-diarization', available: existsSync(sherpa.segmentation) && existsSync(sherpa.embedding) },
+    { model: NEMOTRON_MODEL, available: existsSync(nemo.model) && existsSync(nemo.runtime) }
+  ].filter(profile => profile.available).map(profile => ({ id: `local-${profile.model}`, name: profile.model, model: profile.model, endpoint: '/api/diarizations', configured: true }))
+}
+const resolveLocalDiarizationModel = (requested) => {
+  const model = requested || localModelName()
+  if (!localDiarizationProfiles().some(profile => profile.model === model)) throw new Error('本機講者分離模型不存在或 runtime 不完整')
+  return model
+}
+module.exports = { NEMOTRON_MODEL, localModelName, nemotronPaths, localDiarizationProfiles, resolveLocalDiarizationModel }

@@ -2,10 +2,10 @@ const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 const { readFileSync, writeFileSync, mkdirSync } = require('node:fs')
 const { requestLimits, createRequestLimiter, upstreamRateLimit } = require('../../server/request-limits.cjs')
-const exportsCode = `export * from './src/renderer/src/features/app/services/translation-queue'; export * from './src/renderer/src/features/app/services/translation-policy'; export * from './src/renderer/src/features/app/services/live-caption'; export * from './src/renderer/src/features/models/model-adapter'; export * from './src/renderer/src/features/capture/vad'; export * from './src/renderer/src/shared/services/http'; export * from './src/renderer/src/features/speakers/diarization';`
+const exportsCode = `export * from './src/renderer/src/shared/services/settings'; export * from './src/renderer/src/features/app/services/translation-queue'; export * from './src/renderer/src/features/app/services/translation-policy'; export * from './src/renderer/src/features/app/services/live-caption'; export * from './src/renderer/src/features/models/model-adapter'; export * from './src/renderer/src/features/capture/vad'; export * from './src/renderer/src/shared/services/http'; export * from './src/renderer/src/features/speakers/diarization';`
 const code = buildSync({ stdin: { contents: exportsCode, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }; new Function('module','exports','require',code)(m,m.exports,require)
-const { TranslationQueue, HttpServiceError, readJsonResponse, upsertLiveCaption, editCaptionContent, renderedLiveCaptionWindow, OpenAiChunkedModelAdapter, speedToVadConfig, assignSpeakersByOverlap } = m.exports
+const { normalizeSettings, TranslationQueue, HttpServiceError, readJsonResponse, upsertLiveCaption, editCaptionContent, renderedLiveCaptionWindow, OpenAiChunkedModelAdapter, speedToVadConfig, assignSpeakersByOverlap } = m.exports
 const flush = async () => { for(let i=0;i<40;i++) await Promise.resolve() }
 class Clock {
  constructor(){this.now=0;this.id=0;this.tasks=new Map()}
@@ -19,6 +19,12 @@ const options={targetLanguage:'en',strategy:'realtime',elapsedMs:1000000}
 const setup=(initial=[])=>{const clock=new Clock();let entries=initial;const queue=new TranslationQueue(()=>entries,u=>{entries=u(entries)},()=>{},()=>clock.now,ms=>clock.wait(ms));return {clock,queue,get entries(){return entries},update:u=>{entries=u(entries)}}}
 const response=(status,payload,headers={})=>({status,ok:status<400,headers:new Headers(headers),text:async()=>JSON.stringify(payload)})
 async function regressions(){
+ const migrated=normalizeSettings({selectedModelId:'removed-asr',modelProfiles:[{id:'new-asr',name:'ASR',kind:'openai-http',endpoint:'/api/transcriptions',model:'new'}],selectedTranslationModelId:'removed-translation',translationProfiles:[{id:'new-translation',name:'Translation',endpoint:'/api/translations',model:'new-model'}],translationEndpoint:'http://obsolete-host',translationModel:'obsolete-model'})
+ assert.equal(migrated.selectedModelId,'new-asr','old account selects an available ASR')
+ assert.equal(migrated.selectedTranslationModelId,'new-translation')
+ assert.equal(migrated.translationEndpoint,'/api/translations','old endpoint follows the selected current model')
+ assert.equal(migrated.translationModel,'new-model')
+ assert.equal(normalizeSettings(migrated).selectedModelId,'new-asr','normalization is stable')
  assert.equal(requestLimits({}).translations,180)
  for(const value of ['0','-1','2.5','invalid','Infinity',''])assert.equal(requestLimits({S2T_ASR_REQUESTS_PER_MINUTE:value}).transcriptions,180)
  assert.equal(requestLimits({S2T_TRANSLATION_REQUESTS_PER_MINUTE:'60'}).translations,60)
@@ -50,6 +56,18 @@ async function regressions(){
  const cancel=setup([entry(1),entry(2)]);cancel.queue.tick(options,async()=>{await cancel.clock.wait(2000);return 'late'});await flush();cancel.queue.reset(true);await flush();assert.equal(cancel.queue.inFlight,0);assert.ok(cancel.entries.every(e=>e.translationStatus==='failed'));await cancel.clock.advance(2000);assert.ok(cancel.entries.every(e=>!e.translatedText))
  cancel.queue.reset();cancel.update(()=>[entry(1,{sourceText:'新會話'})]);cancel.queue.tick(options,async()=> 'new');await flush();assert.equal(cancel.entries[0].translatedText,'new')
   const untouched=setup([entry(1)]);untouched.queue.tick({...options,targetLanguage:'zh-TW'},async()=>'不該被呼叫');await flush();assert.equal(untouched.queue.inFlight,0,'same-language captions are never dispatched');untouched.queue.reset(true);await flush();assert.equal(untouched.entries[0].translationStatus,undefined,'cancel must not report an attempt nothing made')
+ const sentence=setup([entry('a',{sourceText:'我們今天',endMs:1200}),entry('b',{sourceText:'討論計畫',startMs:1200,endMs:2400})]);let sentenceTexts=[]
+ const sentenceOptions={...options,strategy:'sentence',elapsedMs:2500}
+ sentence.queue.tick(sentenceOptions,async e=>{sentenceTexts.push(e.sourceText);return 'whole segment'});await flush();assert.equal(sentenceTexts.length,0,'open merged segment waits')
+ sentence.update(es=>es.map(e=>e.id==='http-b'?{...e,isSentenceBoundary:true}:e))
+ sentence.queue.tick(sentenceOptions,async e=>{sentenceTexts.push(e.sourceText);return 'whole segment'});await flush()
+ assert.deepEqual(sentenceTexts,['我們今天討論計畫'],'translate merged segment in one request')
+ assert.equal(sentence.entries[0].translatedText,'whole segment');assert.equal(sentence.entries[1].translationStatus,'completed')
+ sentence.queue.tick(options,async()=>{throw Error('duplicate translation')});await flush();assert.equal(sentence.queue.diagnostics.requests,1)
+ const staleGroup=setup([entry('a'),entry('b',{startMs:1200,endMs:2400,isSentenceBoundary:true})])
+ staleGroup.queue.tick(sentenceOptions,async()=>{await staleGroup.clock.wait(1000);return 'stale group'})
+ await flush();staleGroup.update(es=>es.map(e=>e.id==='http-b'?editCaptionContent(e,'edited'):e));await staleGroup.clock.advance(1000)
+ assert.ok(staleGroup.entries.every(e=>!e.translatedText),'editing any member invalidates whole translation')
  const drain=setup([entry(1,{isSentenceBoundary:false})]);const draining=drain.queue.drain(options,async()=>{await drain.clock.wait(1000);return '尾句'});await drain.clock.advance(1200);assert.equal(await draining,true);assert.equal(drain.entries[0].translatedText,'尾句');assert.equal(drain.queue.inFlight,0)
  const manual=setup([entry(1),entry(2)]);const manualTransport=async()=>{await manual.clock.wait(1000);return '人工啟動的翻譯'};void manual.queue.request(manual.entries[0],manualTransport,'en');await flush();const manualDrain=manual.queue.drain(options,manualTransport,60000,false);await manual.clock.advance(1200);assert.equal(await manualDrain,true);assert.equal(manual.entries[0].translatedText,'人工啟動的翻譯');assert.equal(manual.entries[1].translatedText,undefined);assert.equal(manual.queue.diagnostics.requests,1)
  const settingsChange=setup([entry(1)]);settingsChange.queue.tick(options,async()=>{await settingsChange.clock.wait(2000);return 'old target'});await flush();settingsChange.queue.reset();await flush();settingsChange.queue.tick({...options,targetLanguage:'ja'},async()=> 'new target');await flush();await settingsChange.clock.advance(2000);assert.equal(settingsChange.entries[0].translatedText,'new target')

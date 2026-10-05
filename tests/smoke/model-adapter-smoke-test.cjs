@@ -34,6 +34,15 @@ const main = async () => {
   await live.stop()
   assert.ok(requests.length >= 2, 'the final flush must send the remaining pending audio')
   assert.ok(String(requests[1].prompt || '').includes('測試即時字幕'), 'later chunks must carry the previous caption as rolling prompt')
+  const shortEvents = []
+  const short = new OpenAiChunkedModelAdapter({ id: 'short-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false, vadConfig: { minSpeechMs:120, minSilenceMs:250, preRollMs:300, noiseFloorOffsetDb:12, chunkMinMs:700, chunkMaxMs:1500 } })
+  short.onTranscript(e=>shortEvents.push(e))
+  await short.start({ sampleRate:16000, language:'zh-TW', targetLanguage:'en' })
+  for(let offset=0;offset<8000;offset+=160) short.pushAudio(new Float32Array(160).fill(offset<3200?.1:0),offset)
+  await new Promise(resolve=>setImmediate(resolve))
+  assert.equal(shortEvents.length,1,'a 200ms utterance is sent at its silence boundary without waiting for stop')
+  assert.equal(shortEvents[0].isSentenceBoundary,true)
+  await short.stop()
   const webRequests = []
   const webTranscripts = []
   const webErrors = []

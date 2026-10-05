@@ -13,7 +13,7 @@ const { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } 
 const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav } = require('./sherpa-worker-pool.cjs')
-const { localModelName, NEMOTRON_MODEL } = require('./local-diarization.cjs')
+const { localModelName, NEMOTRON_MODEL, localDiarizationProfiles, resolveLocalDiarizationModel } = require('./local-diarization.cjs')
 const { nemotronStatus } = require('./sherpa-worker-pool.cjs')
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
 const { findIdentityCandidates, findMatches, identityCandidates, identityKey, decideIdentity, fastMatch } = require('./voiceprint-matching.cjs')
@@ -239,7 +239,7 @@ const sherpaHealth = async (model) => {
   const checkedAt = Date.now()
   try {
     const paths = modelPaths()
-    if (model.purpose === 'diarization' && localModelName() === NEMOTRON_MODEL) {
+    if (model.purpose === 'diarization' && model.model === NEMOTRON_MODEL) {
       if (!existsSync(paths.embedding)) throw new Error('找不到姓名辨識所需的 sherpa embedding 模型')
       await nemotronStatus()
       return { id: model.id, state: 'healthy', reason: 'Nemotron CPU runtime、權重校驗與 embedding 已就緒（最多 8 人）', checkedAt }
@@ -588,7 +588,8 @@ const runDurableDiarizationJob = async (auth, owner) => {
 
     const audio = await storage.blob.get(user.id, `audio/${job.audioKey}`)
     if (!audio) throw new Error('找不到講者分離工作對應的音檔')
-    const selected = await accountModelService(auth, user, job.payload?.modelId || 'managed-diarization', 'diarization')
+    // Background jobs use the deployment service before account defaults.
+    const selected = job.payload?.localModel ? null : diarization.model ? diarization : await accountModelService(auth, user, job.payload?.modelId || 'managed-diarization', 'diarization')
     let rawTurns
     if (selected?.endpoint && selected.model) {
       const headers = selected.apiKey ? { authorization: `Bearer ${selected.apiKey}` } : {}
@@ -597,7 +598,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
       const payload = await remote.json().catch(() => null)
       if (!remote.ok || !payload) throw new Error(`講者分離服務 HTTP ${remote.status}`)
       rawTurns = diarizationTurns(payload)
-    } else rawTurns = await diarizeWav(audio)
+    } else rawTurns = await diarizeWav(audio, resolveLocalDiarizationModel(job.payload?.localModel))
     const turns = await labelDiarizationTurns(user, audio, rawTurns)
     if (!turns.length) throw new Error('講者分離服務沒有回傳有效區段')
     const stored = await storage.config.get(user.id, 'sessions')
@@ -684,7 +685,7 @@ const handleHttpRequest = async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after') }
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent', 'access-control-allow-credentials': 'true' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
   // failed schema migration). Answer 503 instead of letting that rejection
   // escape the request listener: an unhandled rejection would crash the whole
@@ -702,6 +703,7 @@ const handleHttpRequest = async (request, response) => {
     asrProfiles: configuredAsrProfiles.map(publicAsrProfile),
     translation: publicService(translation, '/api/translations'),
     summary: publicService(summary, '/api/summaries'),
+    diarizationProfiles: localDiarizationProfiles(),
     diarization: diarization.endpoint && diarization.model
       ? publicService(diarization, '/api/diarizations')
       : { endpoint: '/api/diarizations', model: localModelName(), configured: true }
@@ -860,6 +862,7 @@ const handleHttpRequest = async (request, response) => {
       add({ id: 'managed-silero-vad', name: 'Silero VAD', endpoint: '/api/audio-processing/silero-vad', model: 'silero-vad', purpose: 'asr' })
       add({ id: 'web-environment-translation', name: translation.model, endpoint: translation.endpoint, model: translation.model, purpose: 'translation', service: { endpoint: translation.endpoint, model: translation.model, apiKey: translation.apiKey } })
       add({ id: 'managed-summary', name: summary.model, endpoint: summary.endpoint, model: summary.model, purpose: 'summary', service: { endpoint: summary.endpoint, model: summary.model, apiKey: summary.apiKey } })
+      for (const profile of localDiarizationProfiles()) add({ ...profile, purpose: 'diarization' })
       add({ id: 'managed-diarization', name: diarization.model || localModelName(), endpoint: diarization.endpoint || '/api/diarizations', model: diarization.model || localModelName(), purpose: 'diarization', service: { endpoint: diarization.endpoint, model: diarization.model, apiKey: diarization.apiKey } })
       const health = await Promise.all(checks.map((model) => modelHealth(auth, user, model)))
       return send(response, 200, { health })
@@ -935,7 +938,7 @@ const handleHttpRequest = async (request, response) => {
       }
       const body = JSON.parse((await readBody(request, 32 * 1024)).toString('utf8'))
       if (typeof body.sessionId !== 'string' || typeof body.audioKey !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(body.audioKey)) return send(response, 400, { error: 'sessionId 與 audioKey 必須有效' })
-      const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization', ...(typeof body.processingToken === 'string' ? { processingToken: body.processingToken } : {}) } })
+      const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization', ...(body.localModel ? { localModel: resolveLocalDiarizationModel(body.localModel) } : {}), ...(typeof body.processingToken === 'string' ? { processingToken: body.processingToken } : {}) } })
       return send(response, 202, { job })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法建立講者分離工作' }) }
   }
@@ -1174,7 +1177,7 @@ const handleHttpRequest = async (request, response) => {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
       const profileId = String(request.headers['x-s2t-model-id'] || '')
-      const selectedDiarization = profileId ? await accountModelService(auth, user, profileId, 'diarization') : diarization
+      const selectedDiarization = request.headers['x-s2t-diarization-model'] ? null : profileId ? await accountModelService(auth, user, profileId, 'diarization') : diarization
       if (profileId && !selectedDiarization) return send(response, 400, { error: 'The requested diarization model is not registered on this gateway.' })
       if (selectedDiarization?.endpoint && selectedDiarization.model) {
         if (!profileId && !selectedDiarization.apiKey) return send(response, 503, { error: 'Web diarization gateway has not been configured.' })
@@ -1192,9 +1195,10 @@ const handleHttpRequest = async (request, response) => {
         const labeledTurns = await labelDiarizationTurns(user, audio, turns)
         return send(response, 200, { ...payload, exclusive_diarization: labeledTurns })
       }
-      const segments = await diarizeWav(audio)
+      const localModel = resolveLocalDiarizationModel(String(request.headers['x-s2t-diarization-model'] || ''))
+      const segments = await diarizeWav(audio, localModel)
       const labeledSegments = await labelDiarizationTurns(user, audio, segments)
-      const payload = { model: localModelName(), ...(localModelName() === NEMOTRON_MODEL ? { speaker_capacity: 8, runtime: 'cpu', preset: 'v3-offline', speaker_cache_frames: 528 } : {}), threshold: voiceprintThreshold, exclusive_diarization: labeledSegments }
+      const payload = { model: localModel, ...(localModel === NEMOTRON_MODEL ? { speaker_capacity: 8, runtime: 'cpu', preset: 'v3-offline', speaker_cache_frames: 528 } : {}), threshold: voiceprintThreshold, exclusive_diarization: labeledSegments }
       // Only the sliding-window preview asks for these. The full-track pass
       // would pay the same RTF across the entire recording for a signal only
       // the stabilizer reads, so the cost stays opt-in per request.
