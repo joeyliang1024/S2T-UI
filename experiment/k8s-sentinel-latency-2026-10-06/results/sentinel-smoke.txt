@@ -1,0 +1,3 @@
+PASS Sentinel configuration, separate auth/TLS, invalid groups, URL and standalone compatibility
+PASS whole-command timeout and abort during topology waits
+PASS FIFO admission, bounded Sentinel failover wait, completed lease reconciliation and one model execution

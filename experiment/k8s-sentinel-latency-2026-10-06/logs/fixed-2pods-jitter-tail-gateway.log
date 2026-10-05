@@ -1,0 +1,600 @@
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.913+00:00 WARN  http.request requestId=b0f7cb4b-30b4-4822-9951-b10ddf02855c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10124
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.914+00:00 INFO  http.request requestId=f7dbb124-ada5-445c-8fdb-cfc6af4ff681 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9014
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.915+00:00 ERROR asr.failed requestId=d19475a4-10d2-4624-bb39-d614fd9c7f7b role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10138 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.915+00:00 WARN  http.request requestId=d19475a4-10d2-4624-bb39-d614fd9c7f7b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10140
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.929+00:00 ERROR asr.failed requestId=2c71c001-6060-4d66-adec-b471e871a079 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10198 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.929+00:00 WARN  http.request requestId=2c71c001-6060-4d66-adec-b471e871a079 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10200
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.937+00:00 INFO  http.request requestId=75f55276-bb08-4532-8f27-1b3c7b1b4a79 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10117
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.950+00:00 ERROR asr.failed requestId=89f77310-5d1f-40aa-8ed9-30493a8e6e57 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10054 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.951+00:00 WARN  http.request requestId=89f77310-5d1f-40aa-8ed9-30493a8e6e57 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10056
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.954+00:00 ERROR asr.failed requestId=ba2c87b0-9589-46eb-96d3-61ec0ad7aa26 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10192 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.954+00:00 WARN  http.request requestId=ba2c87b0-9589-46eb-96d3-61ec0ad7aa26 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10194
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.956+00:00 INFO  http.request requestId=aa551a14-5973-412f-8a05-ab026b0571d7 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=672
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.962+00:00 INFO  http.request requestId=e3894df4-93d7-438e-a1c3-f5c67f8ee1ee role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10803
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:38.983+00:00 INFO  http.request requestId=68a4a7d8-1e15-46a1-bbac-e36301640408 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9938
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.049+00:00 INFO  http.request requestId=714dc777-c249-44a5-b92e-36bce7728e2a role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=7933
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.077+00:00 ERROR asr.failed requestId=3d842032-7c2f-4236-83d0-ee38501f3be6 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10045 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.078+00:00 WARN  http.request requestId=3d842032-7c2f-4236-83d0-ee38501f3be6 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10048
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.081+00:00 INFO  http.request requestId=bfadd8db-87ff-4837-9f6e-5571beb9cf3f role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=6346
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.143+00:00 ERROR asr.failed requestId=22925f3c-2d3c-4350-b540-2914f6958b60 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10022 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.144+00:00 WARN  http.request requestId=22925f3c-2d3c-4350-b540-2914f6958b60 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10024
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.179+00:00 INFO  http.request requestId=abe027c1-3ef8-4aa4-8305-edbfae756a7d role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=6788
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.211+00:00 INFO  http.request requestId=52192841-18a9-41f0-8219-d194b0a0a269 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=297
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.219+00:00 INFO  http.request requestId=a4946c94-dc5c-4712-94d4-d772bd2a2ce9 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=303
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.240+00:00 INFO  http.request requestId=4b23c3ae-70cd-44e8-b520-c37ba9873a8c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=644
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.324+00:00 INFO  http.request requestId=047e3f6a-e178-4ed3-8c2f-8c6e5114a19a role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=287
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.350+00:00 INFO  http.request requestId=e4165cd2-35f1-4f5d-b680-15518faee7bb role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=366
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.359+00:00 INFO  http.request requestId=381c05bd-8041-4d62-b319-69805872f9d9 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=309
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.412+00:00 ERROR asr.failed requestId=c88e0da1-d1ac-4d75-bac3-d9472c8621e9 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10065 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.412+00:00 WARN  http.request requestId=c88e0da1-d1ac-4d75-bac3-d9472c8621e9 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10068
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.415+00:00 ERROR asr.failed requestId=1c4c8de8-19a4-4017-9a69-f1b479e65b2f role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10083 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.415+00:00 WARN  http.request requestId=1c4c8de8-19a4-4017-9a69-f1b479e65b2f role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10084
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.439+00:00 ERROR asr.failed requestId=78f88f39-38c2-41b9-ab63-98862ea97360 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10048 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.440+00:00 WARN  http.request requestId=78f88f39-38c2-41b9-ab63-98862ea97360 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10050
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.458+00:00 INFO  http.request requestId=07a3512e-0834-4248-8439-94a1052a02e5 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8193
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.462+00:00 ERROR asr.failed requestId=758e3efa-3899-4900-985f-c63172d0d987 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10011 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.462+00:00 WARN  http.request requestId=758e3efa-3899-4900-985f-c63172d0d987 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10012
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.470+00:00 INFO  http.request requestId=189e837e-1cca-405c-b039-38a74ec36532 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8430
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.515+00:00 INFO  http.request requestId=5f35d891-a736-416d-bd9d-36e049fdd4a8 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8340
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.518+00:00 INFO  http.request requestId=7ff4e661-b373-44f9-9495-692b2db29ff2 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8268
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.527+00:00 ERROR asr.failed requestId=9c1f8bd6-3dc1-47ec-a46f-b89ceab0af17 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10030 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.527+00:00 WARN  http.request requestId=9c1f8bd6-3dc1-47ec-a46f-b89ceab0af17 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10032
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.549+00:00 INFO  http.request requestId=242f79a1-c50e-47f5-b30a-63567779a5a3 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8689
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.591+00:00 INFO  http.request requestId=987f7461-9130-46a4-9956-8055aa9b83ff role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=232
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.595+00:00 ERROR asr.failed requestId=3ae57706-49d6-4318-a7dc-338244498074 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10008 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.595+00:00 WARN  http.request requestId=3ae57706-49d6-4318-a7dc-338244498074 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10010
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.632+00:00 ERROR asr.failed requestId=e7daa68b-6fbe-49af-9589-698430a5c663 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10059 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.632+00:00 WARN  http.request requestId=e7daa68b-6fbe-49af-9589-698430a5c663 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10062
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.677+00:00 INFO  http.request requestId=2166c083-a654-47de-a59f-54ae65c501d3 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10587
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.681+00:00 INFO  http.request requestId=9bf8281d-5c92-4b12-a356-cd44aac3eb6b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=7607
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.700+00:00 INFO  http.request requestId=7cb47cd9-10d7-4042-b9d3-18cb9c7a496c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=241
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.727+00:00 ERROR asr.failed requestId=cc8da1b7-a90a-432c-81b3-75822a6906db role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10020 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.727+00:00 WARN  http.request requestId=cc8da1b7-a90a-432c-81b3-75822a6906db role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10022
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.741+00:00 INFO  http.request requestId=43594d19-4afe-40d4-a54f-6fdcde33e15f role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10261
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.754+00:00 INFO  http.request requestId=6df50e94-1f13-4760-aa6c-cf9d33fd2ffa role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=7349
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.759+00:00 INFO  http.request requestId=21b205c1-4d2e-4def-881b-e88fc7379bd5 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=240
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.827+00:00 INFO  http.request requestId=d80dffe9-53cc-413c-ad6b-935a5236db1c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=312
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.833+00:00 INFO  http.request requestId=a7509c2d-4050-43d1-b8dd-8f4b5b37599d role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10053
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.871+00:00 INFO  http.request requestId=089b407d-ead8-4ed3-9d64-170a3f1e641e role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8154
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.875+00:00 INFO  http.request requestId=9cc32bb9-07b8-4688-ad7d-1e8ef9a9e29f role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=20056
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.959+00:00 ERROR asr.failed requestId=7cd697ee-9961-4c85-bb06-5a16fc51a899 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10072 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:39.959+00:00 WARN  http.request requestId=7cd697ee-9961-4c85-bb06-5a16fc51a899 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10073
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.051+00:00 INFO  http.request requestId=58fd8636-20e3-470b-a701-b3de8c0c140a role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=369
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.071+00:00 ERROR asr.failed requestId=004e19ef-a614-465b-800c-8ed23dd365c4 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10019 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.071+00:00 WARN  http.request requestId=004e19ef-a614-465b-800c-8ed23dd365c4 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10021
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.071+00:00 ERROR asr.failed requestId=dcb5751b-d22d-4c21-ad8e-f12fbfc176dc role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10004 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.072+00:00 WARN  http.request requestId=dcb5751b-d22d-4c21-ad8e-f12fbfc176dc role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10006
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.081+00:00 INFO  http.request requestId=4b7bd41c-3f9d-43f3-b261-c65add39f5c5 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=340
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.108+00:00 ERROR asr.failed requestId=33faaa11-b38e-41a4-aa96-7b0f7921e842 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10012 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.108+00:00 WARN  http.request requestId=33faaa11-b38e-41a4-aa96-7b0f7921e842 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10013
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.144+00:00 INFO  http.request requestId=5d571387-0f48-45f2-be39-eec2d897a6be role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=267
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.149+00:00 ERROR asr.failed requestId=535faa17-77df-49c4-97e3-475ef1acef3c role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10067 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.149+00:00 WARN  http.request requestId=535faa17-77df-49c4-97e3-475ef1acef3c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10069
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.192+00:00 INFO  http.request requestId=b2441e6e-566f-4dbd-a5ff-7b9bf03bfea3 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8852
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.211+00:00 INFO  http.request requestId=632aaf4a-87b6-49d0-947d-2e360a4f0f2e role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=254
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.280+00:00 INFO  http.request requestId=6b0c8ce1-52ff-495f-81e5-30d0bc42c4d0 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9780
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.335+00:00 INFO  http.request requestId=7783d3b9-c234-4161-992e-0859f197f3b7 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8080
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.370+00:00 INFO  http.request requestId=70978ff0-048c-466b-b0d4-3351d0cfd6e7 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=8281
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.387+00:00 INFO  http.request requestId=0af3bb4b-9fde-47ea-a6b4-9192c3d1d0d2 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=239
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.413+00:00 INFO  http.request requestId=e2839da4-1792-4f01-8702-12e5c8081845 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=278
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.500+00:00 ERROR asr.failed requestId=7484f1bf-9f8d-4cbd-a8eb-0ea52db950ec role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10012 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.500+00:00 WARN  http.request requestId=7484f1bf-9f8d-4cbd-a8eb-0ea52db950ec role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10014
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.555+00:00 INFO  http.request requestId=f0197ce1-bc30-4d04-8ea7-218435ff38ea role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10444
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.584+00:00 INFO  http.request requestId=c41b8d60-b92c-486a-afdd-f2fa40eccbfc role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=248
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.649+00:00 ERROR asr.failed requestId=a0ac4326-69c2-4d61-9404-34a2d8853b3c role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10022 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.649+00:00 WARN  http.request requestId=a0ac4326-69c2-4d61-9404-34a2d8853b3c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10029
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.652+00:00 INFO  http.request requestId=cb646ba8-1d1f-49c5-b816-88237a316adb role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=295
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.671+00:00 INFO  http.request requestId=4ec1ae4f-fcbc-439f-82b5-73180f9ab547 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9872
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.734+00:00 INFO  http.request requestId=99b43236-674c-465d-abe1-11f14e148742 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=220
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.775+00:00 ERROR asr.failed requestId=dd50fabc-e705-4412-a6cd-0c4f048d1ded role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10050 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.775+00:00 WARN  http.request requestId=dd50fabc-e705-4412-a6cd-0c4f048d1ded role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10051
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.801+00:00 INFO  http.request requestId=6bbc91b1-7523-4052-ae22-2107aca166ee role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=245
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.844+00:00 INFO  http.request requestId=d7e7f249-ca56-452a-89b3-be9c95e43958 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10149
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.878+00:00 ERROR asr.failed requestId=e16f8ec5-0a80-4c74-b56d-12a44e025064 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10061 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.878+00:00 WARN  http.request requestId=e16f8ec5-0a80-4c74-b56d-12a44e025064 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10062
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.915+00:00 ERROR asr.failed requestId=8d6307f0-e3ba-49cd-b373-f8a8361f2123 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10039 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.915+00:00 WARN  http.request requestId=8d6307f0-e3ba-49cd-b373-f8a8361f2123 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10040
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.943+00:00 INFO  http.request requestId=6394421b-00e1-4487-8871-ffcf03f865b5 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=254
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:40.989+00:00 INFO  http.request requestId=9b9e2fff-5fdc-4f81-afde-86c4b0a27449 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10624
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.008+00:00 ERROR asr.failed requestId=2c965407-5c68-4c4a-b449-df0d5cad8d48 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10009 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.008+00:00 WARN  http.request requestId=2c965407-5c68-4c4a-b449-df0d5cad8d48 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10010
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.070+00:00 INFO  http.request requestId=bd555004-1693-4a5c-ada2-5a97b2e6cd2e role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=360
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.099+00:00 ERROR asr.failed requestId=ed826a92-b260-49bb-8748-a41f7c5ea4dd role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10027 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.100+00:00 WARN  http.request requestId=ed826a92-b260-49bb-8748-a41f7c5ea4dd role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10029
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.115+00:00 INFO  http.request requestId=530dfc37-4752-4e79-8bb9-9e96f8e1bb93 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10645
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.153+00:00 ERROR asr.failed requestId=dcc491b1-ff7c-48a6-8233-eff41178622e role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10022 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.154+00:00 WARN  http.request requestId=dcc491b1-ff7c-48a6-8233-eff41178622e role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10024
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.166+00:00 INFO  http.request requestId=ccde1319-1611-4541-8353-ad2b98fd5a9f role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=319
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.176+00:00 INFO  http.request requestId=e54e214a-7c9c-4752-b3c0-55cd429de0cd role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9881
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.187+00:00 INFO  http.request requestId=44ed0ac0-45a0-4509-b772-823354c9c488 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=336
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.227+00:00 INFO  http.request requestId=cb702ec5-7f64-4e38-bede-351c078cff03 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=238
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.233+00:00 INFO  http.request requestId=0d5baf5f-53dc-45a4-8d12-968c5646c4d3 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10029
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.333+00:00 INFO  http.request requestId=c109497d-a8ba-43e9-a18d-a686b0a76f10 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=217
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.363+00:00 INFO  http.request requestId=bb42ccd4-ecab-43f9-96c9-960b4e43dc9c role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9739
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.405+00:00 INFO  http.request requestId=7ed165db-2e6f-412d-a42d-999aec1eea40 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9210
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.464+00:00 INFO  http.request requestId=77b4725b-ee05-44b7-80fd-c9d93ba089db role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9195
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.496+00:00 INFO  http.request requestId=a02850ee-f458-4490-aa99-e7545752ffb8 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=235
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.533+00:00 ERROR asr.failed requestId=da73db5d-3d6d-43b7-8096-4145471be8fe role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10043 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.534+00:00 WARN  http.request requestId=da73db5d-3d6d-43b7-8096-4145471be8fe role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10044
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.559+00:00 INFO  http.request requestId=7a65f4fe-abe0-45c9-b817-159e67e04a20 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=348
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.567+00:00 INFO  http.request requestId=e99ae7d6-efde-4cc8-846c-5ebf974211c6 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9193
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.607+00:00 INFO  http.request requestId=9300eb06-0eb4-4ded-9d84-46e15f351e8e role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=373
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.641+00:00 INFO  http.request requestId=b01c7856-d7e8-4bc8-b15c-f1503923e40f role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=275
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.717+00:00 INFO  http.request requestId=61f00a07-2efb-4201-a4b6-c61077bbc7d2 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=215
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.770+00:00 ERROR asr.failed requestId=fc77e616-bfda-4321-9e16-34ea27b8b1a7 role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10039 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.770+00:00 WARN  http.request requestId=fc77e616-bfda-4321-9e16-34ea27b8b1a7 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10041
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.787+00:00 INFO  http.request requestId=23bc0133-8580-425d-972d-cd18ff44b10b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=381
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.787+00:00 INFO  http.request requestId=d57385fe-97f8-487f-88cd-506442c9f891 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=267
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.791+00:00 ERROR asr.failed requestId=68e3c7ee-a4da-4b27-a1d7-45c30f760e7b role=api pod=gateway-866f6b7d45-j7n4c profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10030 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-j7n4c/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-j7n4c/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.791+00:00 WARN  http.request requestId=68e3c7ee-a4da-4b27-a1d7-45c30f760e7b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=503 durationMs=10032
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.852+00:00 INFO  http.request requestId=0a2d9cfe-34ec-4624-9970-357ae9ac71c9 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9912
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:41.918+00:00 INFO  http.request requestId=bf2a0989-3e4e-48b5-a3b3-3b45c8e08e0b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10384
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.028+00:00 INFO  http.request requestId=c1b6b9bf-6615-4098-890d-a869e5d308a2 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=286
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.070+00:00 INFO  http.request requestId=63f07916-0572-4af7-a36b-300c4be629e3 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=364
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.125+00:00 INFO  http.request requestId=ccdd6f40-ac57-498a-811b-6c1934636b18 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=304
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.163+00:00 INFO  http.request requestId=c2e3bd9a-d7c0-4f52-9efc-37fde1ccbd09 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=237
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.231+00:00 INFO  http.request requestId=2a2e0285-8be0-488e-b3b1-3152afca7ad2 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10245
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.245+00:00 INFO  http.request requestId=6de1a440-6865-4a11-875d-13f279e87022 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10575
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.245+00:00 INFO  http.request requestId=1da6c6f7-7ae3-45f9-88b4-ad901a5b2c4b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=315
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.310+00:00 INFO  http.request requestId=2c1bf9c0-a2b1-4176-ba2f-6ef024a62de3 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=251
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.406+00:00 INFO  http.request requestId=ff0a510a-54e3-489e-97f5-a1179b27b1b5 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=320
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.408+00:00 INFO  http.request requestId=ee97ea42-88ce-422a-83d1-7ef1edf83c52 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=10271
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.480+00:00 INFO  http.request requestId=1bbf8312-321f-405f-8363-844c9114eebf role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=247
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.500+00:00 INFO  http.request requestId=c39417d7-5c10-4950-b53e-d6dd80ef0b29 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=9689
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.572+00:00 INFO  http.request requestId=465bff0b-8b7e-4d26-97a0-95628892c56e role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=253
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.656+00:00 INFO  http.request requestId=b3398ea8-7062-4d68-9e9a-076bda36a433 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=248
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:42.884+00:00 INFO  http.request requestId=d30e8a8b-0ab9-4260-8c75-0e83afa92b63 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=401
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:43.769+00:00 INFO  http.request requestId=c3a2d3c1-bdde-4a5c-a9bf-5d68beaf8a03 role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/transcriptions status=200 durationMs=13105
+[pod/gateway-866f6b7d45-j7n4c/gateway] 2026-10-05T23:38:47.839+00:00 INFO  http.request requestId=cf2cb1ce-bb4c-409c-a2a6-ac95783bd88b role=api pod=gateway-866f6b7d45-j7n4c method=POST path=/api/translations status=200 durationMs=247
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.356+00:00 INFO  http.request requestId=11c95d3c-015d-4236-abe7-a77032bb53d3 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=389
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.359+00:00 INFO  http.request requestId=cf96eb9a-a9c5-4147-97ba-826cbd30fe9c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=7119
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.392+00:00 INFO  http.request requestId=f4e9d49e-c29a-4705-8c90-6a86ca06b00c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=310
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.393+00:00 ERROR asr.failed requestId=e86fa50a-f029-4e49-b9a8-c5568c077bae role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10017 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.393+00:00 WARN  http.request requestId=e86fa50a-f029-4e49-b9a8-c5568c077bae role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10019
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.431+00:00 INFO  http.request requestId=337294cb-17dd-4509-b4db-63c24667516c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=251
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.459+00:00 INFO  http.request requestId=687709a6-0d6c-4d72-8c66-dc3d86312c23 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9108
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.475+00:00 INFO  http.request requestId=707cf7b9-1091-4c84-a03e-7da0fd092063 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8465
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.562+00:00 ERROR asr.failed requestId=2083bd2c-f2e0-467e-87ae-53843ef25220 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10006 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.562+00:00 WARN  http.request requestId=2083bd2c-f2e0-467e-87ae-53843ef25220 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10007
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.567+00:00 INFO  http.request requestId=1eec381e-95f5-4653-9968-2aa2322259e9 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=346
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.568+00:00 INFO  http.request requestId=24faf110-5aa6-43fc-81c8-0a182bdea800 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=261
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.665+00:00 ERROR asr.failed requestId=0add1297-3018-4034-ac08-3f9c1c153e81 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10003 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.665+00:00 WARN  http.request requestId=0add1297-3018-4034-ac08-3f9c1c153e81 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10005
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.724+00:00 INFO  http.request requestId=9298d046-efe0-4765-82c8-126f8743ad72 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10751
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.750+00:00 ERROR asr.failed requestId=f07883cc-7209-4161-b805-2505dbd3929b role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10059 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.750+00:00 WARN  http.request requestId=f07883cc-7209-4161-b805-2505dbd3929b role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10060
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.771+00:00 ERROR asr.failed requestId=82297696-2123-450e-bf5f-71d4427b5202 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10029 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.771+00:00 WARN  http.request requestId=82297696-2123-450e-bf5f-71d4427b5202 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10036
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.799+00:00 INFO  http.request requestId=a836d86a-2c86-4b5a-a46f-40c0313d731d role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=339
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.806+00:00 INFO  http.request requestId=b51fffca-02e8-42c0-b4b0-f1a0a177e62e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=335
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.864+00:00 ERROR asr.failed requestId=208ed4b0-5fb3-4fba-93fc-549c0e19d86d role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10068 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.864+00:00 WARN  http.request requestId=208ed4b0-5fb3-4fba-93fc-549c0e19d86d role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10069
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.877+00:00 INFO  http.request requestId=abe68dd3-50a7-4c8e-9e21-0b609d5dd341 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=401
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.879+00:00 INFO  http.request requestId=f6c04d7a-6fa5-4666-9a9e-f980a8abdd08 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=330
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.912+00:00 INFO  http.request requestId=c1f85fb0-c1d5-4035-9d60-3a88abe32c72 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9473
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.956+00:00 INFO  http.request requestId=49c1762a-4120-4cbe-b633-0ef1d9e15722 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8391
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.959+00:00 INFO  http.request requestId=31b298d7-d6f3-4dcc-8f51-18c7636a2773 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=282
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.963+00:00 ERROR asr.failed requestId=b439bda0-9973-4dfc-8939-dbf26a3066a5 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10032 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.963+00:00 WARN  http.request requestId=b439bda0-9973-4dfc-8939-dbf26a3066a5 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10033
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.971+00:00 ERROR asr.failed requestId=2a39a466-9b50-474e-b257-368188c1d8b7 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10007 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.971+00:00 WARN  http.request requestId=2a39a466-9b50-474e-b257-368188c1d8b7 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10011
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.979+00:00 ERROR asr.failed requestId=510929fd-3358-4e1e-98a6-6c820775bc85 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10033 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:39.979+00:00 WARN  http.request requestId=510929fd-3358-4e1e-98a6-6c820775bc85 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10034
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.011+00:00 INFO  http.request requestId=5ceb9499-7baf-43e7-b87b-06d4d4298350 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=286
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.063+00:00 ERROR asr.failed requestId=dc55e667-2d01-4d5a-9319-41cd53201d44 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10088 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.063+00:00 WARN  http.request requestId=dc55e667-2d01-4d5a-9319-41cd53201d44 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10089
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.063+00:00 ERROR asr.failed requestId=e2491beb-6920-40bc-a55a-c35dd101c3fb role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10028 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.063+00:00 WARN  http.request requestId=e2491beb-6920-40bc-a55a-c35dd101c3fb role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10029
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.077+00:00 ERROR asr.failed requestId=c2c86726-bea4-4d0c-b119-100dbeef1afb role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10071 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.077+00:00 WARN  http.request requestId=c2c86726-bea4-4d0c-b119-100dbeef1afb role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10072
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.078+00:00 ERROR asr.failed requestId=9f679bd3-21f1-46ea-b954-c7ab9053e13e role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10054 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.078+00:00 WARN  http.request requestId=9f679bd3-21f1-46ea-b954-c7ab9053e13e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10058
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.089+00:00 INFO  http.request requestId=b8905a81-5d3d-4fec-afdf-7408ffb37bc4 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8764
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.093+00:00 INFO  http.request requestId=fd2ce077-0420-4f18-a927-a406daa80530 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=337
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.096+00:00 INFO  http.request requestId=b7839cdd-fcf3-4ee3-b024-010f8fb2529a role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=263
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.125+00:00 INFO  http.request requestId=801e1e35-9b86-4d8c-8855-b1f50bff676d role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=211
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.135+00:00 INFO  http.request requestId=17453c4e-9c00-491b-af95-6e2797ff6f8f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=7595
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.146+00:00 INFO  http.request requestId=ca17af98-fd3c-424f-b13c-f8603ad68f07 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8191
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.146+00:00 INFO  http.request requestId=bd5235ab-8114-4acc-ae54-b5547db4f0b0 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=7532
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.152+00:00 INFO  http.request requestId=f02b81ba-ccf4-4ad2-b3d2-fd4c4636779f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=280
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.272+00:00 ERROR asr.failed requestId=87b5552b-7859-4c3d-9dcc-7b8cfbc4497c role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10056 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.273+00:00 WARN  http.request requestId=87b5552b-7859-4c3d-9dcc-7b8cfbc4497c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10058
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.331+00:00 INFO  http.request requestId=06f6c727-c57a-447c-ac66-760a22f8da0b role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9142
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.357+00:00 INFO  http.request requestId=6ee88024-f07e-4523-8eda-6c30820b11b3 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9782
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.361+00:00 INFO  http.request requestId=81f05d8b-91d7-44fe-9266-a5d8c41ad1fc role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9200
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.381+00:00 ERROR asr.failed requestId=3e0c99f1-c1e9-4970-93c9-6d0289c3c83a role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10045 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.381+00:00 WARN  http.request requestId=3e0c99f1-c1e9-4970-93c9-6d0289c3c83a role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10047
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.396+00:00 ERROR asr.failed requestId=b7d72758-c4f9-4b79-9c59-ea7e3079c3a0 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10076 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.396+00:00 WARN  http.request requestId=b7d72758-c4f9-4b79-9c59-ea7e3079c3a0 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10076
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.422+00:00 INFO  http.request requestId=6a33143a-ff92-45ae-b7b9-f5089af40f26 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=333
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.440+00:00 ERROR asr.failed requestId=47253b62-018a-4034-8ca7-e52af294d915 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10029 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.440+00:00 WARN  http.request requestId=47253b62-018a-4034-8ca7-e52af294d915 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10030
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.485+00:00 INFO  http.request requestId=ac9695a1-2584-406b-b025-205b99d3e24f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=7899
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.513+00:00 INFO  http.request requestId=0ab76377-cd7f-41d4-8f8b-8c79f3b90023 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10659
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.572+00:00 ERROR asr.failed requestId=d9fe9a65-ce67-4f6c-a827-5e65fdf80487 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10009 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.572+00:00 WARN  http.request requestId=d9fe9a65-ce67-4f6c-a827-5e65fdf80487 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10012
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.585+00:00 INFO  http.request requestId=16c43e15-394a-4a32-9516-99a0b1bd686f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=393
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.628+00:00 INFO  http.request requestId=144c72b8-1d5e-48fd-b898-f2daa3cc29e0 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=346
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.653+00:00 ERROR asr.failed requestId=86c9b839-2651-432e-80e5-0ce3c3cbad57 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10017 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.653+00:00 WARN  http.request requestId=86c9b839-2651-432e-80e5-0ce3c3cbad57 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10018
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.660+00:00 ERROR asr.failed requestId=91015688-5d65-4647-a071-4ff84a44f69e role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10049 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.661+00:00 WARN  http.request requestId=91015688-5d65-4647-a071-4ff84a44f69e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10061
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.661+00:00 INFO  http.request requestId=164e6b5c-cadc-4b41-8a35-3be5a1c42154 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10282
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.672+00:00 INFO  http.request requestId=b7467360-1eb8-442b-8777-d047fbaccb33 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=340
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.682+00:00 INFO  http.request requestId=c414618a-b156-4dfa-b88c-f0d1ba9f399e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8036
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.688+00:00 ERROR asr.failed requestId=f63ca41f-fbbc-489c-a1fe-6f068cc4e4ec role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10008 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.688+00:00 WARN  http.request requestId=f63ca41f-fbbc-489c-a1fe-6f068cc4e4ec role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10009
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.689+00:00 INFO  http.request requestId=ca269b47-7cc9-4f67-8fdc-88c44737b73b role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9799
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.693+00:00 INFO  http.request requestId=496cad51-3046-431c-abf6-0fcf16535e35 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=331
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.710+00:00 INFO  http.request requestId=e94e9908-f8ed-43d1-99a6-622e22474778 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8650
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.714+00:00 INFO  http.request requestId=20adf949-89b2-4855-b323-0368c4f11fbd role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9359
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.773+00:00 INFO  http.request requestId=a09eab8c-10cc-4647-b29b-dafe9107bb3a role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=402
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.824+00:00 INFO  http.request requestId=f1c926e8-c2ef-4b36-9c80-30b4ff187413 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=338
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.846+00:00 INFO  http.request requestId=ae7d664b-e447-4483-b214-6291fb8a16c0 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8081
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.850+00:00 INFO  http.request requestId=99da77cf-6c03-421e-9848-4e22cf9f0a23 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8353
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.886+00:00 INFO  http.request requestId=f70a3e1e-1811-4104-acde-ea681595ad63 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=224
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.896+00:00 ERROR asr.failed requestId=e6016e13-b21b-4635-bf8a-512967168b6f role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10050 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.896+00:00 WARN  http.request requestId=e6016e13-b21b-4635-bf8a-512967168b6f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10051
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.901+00:00 INFO  http.request requestId=10c2dbba-d10d-4da9-b447-80f2915ea468 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=218
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.925+00:00 INFO  http.request requestId=acf170a0-14bb-4ead-b174-3574302a9b1c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8776
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.955+00:00 INFO  http.request requestId=be4347d0-0639-478f-b7b2-2309c900040b role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8294
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:40.957+00:00 INFO  http.request requestId=e08f938c-a8c2-41db-8340-0ba6d731a646 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=243
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.006+00:00 ERROR asr.failed requestId=83af0b05-0f26-46bd-9948-e72e61b199de role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10041 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.006+00:00 WARN  http.request requestId=83af0b05-0f26-46bd-9948-e72e61b199de role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10042
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.007+00:00 INFO  http.request requestId=ff78c9f9-b312-4fec-88df-91eea48fab33 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=335
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.020+00:00 ERROR asr.failed requestId=64f3ee8b-dc86-48cb-aef3-e9c1cb2d784f role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10084 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.020+00:00 WARN  http.request requestId=64f3ee8b-dc86-48cb-aef3-e9c1cb2d784f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10086
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.034+00:00 INFO  http.request requestId=ca4fecd9-192b-4b37-a9d3-5d381492a429 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8674
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.065+00:00 ERROR asr.failed requestId=71fca998-2430-42ff-97d1-9d2e70c9aea1 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10008 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.066+00:00 WARN  http.request requestId=71fca998-2430-42ff-97d1-9d2e70c9aea1 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10011
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.121+00:00 INFO  http.request requestId=4371059d-bb34-4b21-8630-026f9d2663d9 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=276
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.210+00:00 INFO  http.request requestId=ff3924e1-513f-48fa-9f17-366af650d30c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8324
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.210+00:00 INFO  http.request requestId=e64e75c1-3b88-40f4-bfc6-3645d3a77bfc role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=254
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.260+00:00 INFO  http.request requestId=33566781-5350-4927-8fe2-af39cf5ab208 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9619
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.274+00:00 INFO  http.request requestId=15b875da-276a-4235-8df3-a070369f817b role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=348
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.318+00:00 INFO  http.request requestId=069bb858-2d3b-4980-97be-762066954ecf role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10099
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.364+00:00 INFO  http.request requestId=2611661e-7e6e-4d01-9664-27a3ace28d86 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8794
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.388+00:00 ERROR asr.failed requestId=45fb639d-f9d8-4b7f-83c5-297c2337f567 role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10017 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.388+00:00 WARN  http.request requestId=45fb639d-f9d8-4b7f-83c5-297c2337f567 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10019
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.421+00:00 INFO  http.request requestId=ef47d126-9103-437e-9b1f-027358273598 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=386
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.422+00:00 INFO  http.request requestId=f7a255ae-6857-4a7f-b1e9-3abd8f6b3120 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=8793
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.493+00:00 INFO  http.request requestId=3b045199-205d-4bb6-9626-8889eb0080bf role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9973
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.501+00:00 INFO  http.request requestId=eee21f10-97cd-4b27-8176-f65b4c00209c role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10581
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.508+00:00 INFO  http.request requestId=4abbdc48-2ad4-424e-a4a6-79ef37fc0764 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9674
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.520+00:00 INFO  http.request requestId=71b3c379-b1c8-404c-9550-e20470129458 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9205
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.525+00:00 INFO  http.request requestId=b1bb3ff7-b402-4f13-be83-bec7ad83bc20 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=349
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.557+00:00 ERROR asr.failed requestId=d1fe608b-ff08-4fab-8ad0-5e0f9a48b8ed role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10007 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.557+00:00 WARN  http.request requestId=d1fe608b-ff08-4fab-8ad0-5e0f9a48b8ed role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10008
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.645+00:00 ERROR asr.failed requestId=0066046b-0637-420f-bb6e-2fc2383f4dac role=api pod=gateway-866f6b7d45-p9k5h profileId=default model=mock-asr audioBytes=48044 status=503 durationMs=10065 error="Error: 模型併發容量已滿或協調服務不可用" status=503
+[pod/gateway-866f6b7d45-p9k5h/gateway]     Error: 模型併發容量已滿或協調服務不可用
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at Object.withCapacity (/app/server/shared-limits.cjs:113:72)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async executeIdempotent (/app/server/idempotency.cjs:39:20)
+[pod/gateway-866f6b7d45-p9k5h/gateway]         at async handleHttpRequest (/app/server/index.cjs:1215:22)
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.645+00:00 WARN  http.request requestId=0066046b-0637-420f-bb6e-2fc2383f4dac role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=503 durationMs=10066
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.663+00:00 INFO  http.request requestId=7af56ccb-e877-4cd9-83c2-4984a3481054 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=240
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.675+00:00 INFO  http.request requestId=9e0dfc85-23ae-4360-8dab-efbbd8540929 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=355
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.706+00:00 INFO  http.request requestId=7418cd18-63dc-48ba-997e-685c249ca12f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9886
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.731+00:00 INFO  http.request requestId=22ceda33-54e3-4db4-9c89-7ee051851606 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=367
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.734+00:00 INFO  http.request requestId=bdfceb08-5a65-44d9-bea7-ce8f68a0641b role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=225
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.741+00:00 INFO  http.request requestId=27c96d14-3333-4ab0-b018-9ccb0a35194e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9397
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.744+00:00 INFO  http.request requestId=3c301399-6e0b-4248-a1a2-b9c75fb01452 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=280
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.772+00:00 INFO  http.request requestId=5fa747b3-f6aa-413d-b5a0-0968ef8a4a81 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=278
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.807+00:00 INFO  http.request requestId=46ac8182-fc36-4b6a-acc3-4196bdc88a99 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9297
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.819+00:00 INFO  http.request requestId=a0bb244b-7497-43f7-8682-e08f875165e2 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9700
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.876+00:00 INFO  http.request requestId=89460070-4744-48a0-9933-8ec724ecdcfb role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=307
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.891+00:00 INFO  http.request requestId=ab5a79df-ee44-4f4d-bcc0-696d39e1c670 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10386
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.925+00:00 INFO  http.request requestId=bd4bfffc-4918-499a-bedb-674051e5abbb role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9055
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.929+00:00 INFO  http.request requestId=1e0de0a8-7106-4e3a-b422-459f31657984 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9929
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:41.999+00:00 INFO  http.request requestId=10e3c78f-f751-4a7b-b0cc-f45ba4344bd8 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10720
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.043+00:00 INFO  http.request requestId=4d8331d5-e775-4fb8-908f-76f05b97a9e9 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=236
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.058+00:00 INFO  http.request requestId=96ae0a1a-b783-4ef7-bb7c-4ddf85ee8a65 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10178
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.084+00:00 INFO  http.request requestId=2585f74a-f18e-44c9-8b92-bfc07b13f7e6 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9560
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.087+00:00 INFO  http.request requestId=0f4ab344-8c8e-4f02-8321-2f0fbc5055b3 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10402
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.111+00:00 INFO  http.request requestId=78c38b10-b581-433d-bb0f-a2fc173cacb3 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9404
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.127+00:00 INFO  http.request requestId=120219a4-c3a4-466c-bd7a-e7d3115f903a role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=235
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.195+00:00 INFO  http.request requestId=cc29285f-adad-44bd-94de-e356b80c43ad role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9896
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.205+00:00 INFO  http.request requestId=e241f865-877e-4bdc-85c7-dc87b0b98575 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=351
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.214+00:00 INFO  http.request requestId=1f3e00f8-d77e-423f-9df2-bb8bfcfb6885 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=214
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.215+00:00 INFO  http.request requestId=92560db8-df6f-4a0f-baf8-20ab3f446f51 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=295
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.313+00:00 INFO  http.request requestId=03253aa4-ce41-4db4-a173-f3e6a5fecda0 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=225
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.318+00:00 INFO  http.request requestId=0bd3fe67-7212-4b7c-8430-7edafe94fed6 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=9418
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.445+00:00 INFO  http.request requestId=24d9346f-0a06-47c4-a202-00502e55c479 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10746
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.481+00:00 INFO  http.request requestId=3d4a192b-1c5a-4ea7-8db2-c2b2c2997753 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=10450
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.484+00:00 INFO  http.request requestId=8603fbe5-0909-46f4-bee9-a4f495f88a23 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=287
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.513+00:00 INFO  http.request requestId=e99cf9cb-a950-4174-ad04-9fab2b31b0af role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=402
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.589+00:00 INFO  http.request requestId=27f512d7-ea94-40c2-a197-d3bfaa68f7b4 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=343
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.790+00:00 INFO  http.request requestId=0c472304-5b25-48fc-9baa-fb14eac0ade5 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=343
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:42.891+00:00 INFO  http.request requestId=cfaa3575-a33f-49f4-853d-16ae9770719e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=388
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:43.160+00:00 INFO  http.request requestId=e865f4fc-be6e-41f8-ac71-fab405e690e1 role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=3013
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:44.085+00:00 INFO  http.request requestId=604dc3cf-9071-4b1c-a6ab-ddb335a08d6e role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=315
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:47.582+00:00 INFO  http.request requestId=63577533-2d64-48da-9605-18b65df2c78a role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=17833
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:51.365+00:00 INFO  http.request requestId=7349d3e8-0af6-4749-b023-740f1165941f role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/transcriptions status=200 durationMs=19949
+[pod/gateway-866f6b7d45-p9k5h/gateway] 2026-10-05T23:38:51.652+00:00 INFO  http.request requestId=683dea6b-e333-4d23-8aaa-776c067119ea role=api pod=gateway-866f6b7d45-p9k5h method=POST path=/api/translations status=200 durationMs=285

@@ -30,7 +30,7 @@ S2T_REDIS_TLS=false
 
 NODES 為逗號分隔 host:port，IPv6 使用 [address]:port；可設定三個 Sentinel 種子，client 發現其他節點並追蹤 primary 切換。master name 必須符合 `sentinel monitor`，不是 Pod／Service 名稱。Sentinel 與 Redis 密碼分開；只有密碼認證時 username 留空。TLS 兩側獨立啟用，使用系統信任 CA，未提供自訂 CA 環境變數。密鑰、URL 與 provider credentials 使用 Secret，禁止放在公開 frontend。
 
-限流讀寫皆送 primary，不讀 replica。命令整體最多等待三秒，切換期間可能回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。Kubernetes 自行部署 Redis／Sentinel 時，所有公告位址應使用 StatefulSet 的固定 DNS 名稱，並啟用 Sentinel resolve-hostnames／announce-hostnames；只啟用 resolve-hostnames 仍可能把舊 Pod IP 寫入持久化配置，重建後失聯。
+限流讀寫皆送 primary，不讀 replica。Sentinel 命令整體最多等待十秒，容許短暫 primary 切換；單一 Redis URL 仍為三秒。Rediscovery 重送共用同一 UUID，Lua 限流與容量取得皆去重，模型呼叫不重試。已完成租約保留二十秒清理紀錄，每秒對目前 primary 重送刪除，避免非同步切換復活已完成的容量租約；只清理本 Pod 已完成的 UUID，不移除其他在途租約。容量等待佇列每 Pod 最多 1,000 筆，Sentinel 模式最多等待十秒取得容量，每 Pod 的每個模型依到達順序取得容量，避免切換後的積壓瞬間失敗及後來請求插隊；超過等待預算仍回 503；服務恢復後 readiness 與請求恢復。Sentinel 公告的 Redis／其他 Sentinel 位址必須可被應用 Pod 解析與連線；只讓三個初始位址可連並不足夠。本實作不改 Sentinel quorum、伺服器間 auth-pass/auth-user 或 TLS 部署。Kubernetes 自行部署 Redis／Sentinel 時，所有公告位址應使用 StatefulSet 的固定 DNS 名稱，並啟用 Sentinel resolve-hostnames／announce-hostnames；只啟用 resolve-hostnames 仍可能把舊 Pod IP 寫入持久化配置，重建後失聯。
 
 S2T_AUDIO_WARMUP 可設 silero、nemotron、diarization 的逗號列表。silero 載入模型；nemotron 驗證 runtime／權重；diarization 實際推論一秒靜音以預熱。失敗使 readiness 不通過。Docker 預設空白。Nemotron CLI 每次工作仍會載入權重，預熱不是持續模型駐留承諾。ASR／翻譯模型服務自行配置完成推論暖機才 Ready。
 

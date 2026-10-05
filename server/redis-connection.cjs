@@ -32,7 +32,7 @@ const redisConnection = env => {
       name, sentinelRootNodes: roots,
       sentinelClientOptions: { ...clientOptions(env, 'S2T_REDIS_SENTINEL'), socket: { ...clientOptions(env, 'S2T_REDIS_SENTINEL').socket, reconnectStrategy: false } },
       nodeClientOptions: { ...clientOptions(env, 'S2T_REDIS'), socket: { ...clientOptions(env, 'S2T_REDIS').socket, reconnectStrategy: false }, database: Number(database) },
-      masterPoolSize: 1, replicaPoolSize: 0, scanInterval: 1000, maxCommandRediscovers: 0
+      masterPoolSize: 1, replicaPoolSize: 0, scanInterval: 1000, maxCommandRediscovers: 16
     } }
   }
   if (!env.S2T_REDIS_URL?.trim()) throw new Error('Kubernetes 模式必須設定 S2T_REDIS_URL 或 Sentinel 節點與 master name')

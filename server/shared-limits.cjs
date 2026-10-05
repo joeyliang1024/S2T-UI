@@ -8,6 +8,8 @@ local now = redis.call('TIME'); now = now[1] * 1000 + math.floor(now[2] / 1000)
 redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - tonumber(ARGV[1]))
 local count = redis.call('ZCARD', KEYS[1])
 if ARGV[3] == 'clear' then redis.call('DEL', KEYS[1]); return {1, 0, 0} end
+-- Rediscovery may replay a command whose response was lost. Count its UUID once.
+if ARGV[3] == 'take' and redis.call('ZSCORE', KEYS[1], ARGV[4]) then return {1, 0, count} end
 if count >= tonumber(ARGV[2]) then
  local oldest = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
  return {0, math.max(1, math.ceil((tonumber(oldest[2]) + tonumber(ARGV[1]) - now) / 1000)), count}
@@ -20,6 +22,7 @@ return {1, 0, count}`
 const ACQUIRE = `
 local now = redis.call('TIME'); now = now[1] * 1000 + math.floor(now[2] / 1000)
 redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now)
+if redis.call('ZSCORE', KEYS[1], ARGV[2]) then return 1 end
 if redis.call('ZCARD', KEYS[1]) >= tonumber(ARGV[1]) then return 0 end
 redis.call('ZADD', KEYS[1], now + 120000, ARGV[2]); redis.call('PEXPIRE', KEYS[1], 120000); return 1`
 
@@ -60,8 +63,10 @@ const createSharedLimits = (env, limits, suppliedClient) => {
   }
   ready.catch(() => undefined)
   let pending = 0
-  const command = async (name, ...args) => {
-    if (closing || !client?.isReady || pending >= 1000) throw new Error('共享限流服務暫時不可用')
+  let waitingCapacity = 0
+  const admissions = new Map()
+  const commandWithTimeout = async (timeoutMs, name, ...args) => {
+    if (closing || !client?.isReady || pending >= 1000) throw Object.assign(new Error('共享限流服務暫時不可用'), { status: 503 })
     pending++
     const controller = new AbortController()
     let timer
@@ -70,10 +75,32 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     try {
       return await Promise.race([
         operation,
-        new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('共享限流服務命令逾時')) }, 3000) })
+        new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(Object.assign(new Error('共享限流服務命令逾時'), { status: 503 })) }, timeoutMs) })
       ])
+    } catch (error) {
+      throw Object.assign(new Error(error?.message === '共享限流服務命令逾時' ? error.message : '共享限流服務暫時不可用'), { status: 503 })
     } finally { clearTimeout(timer) }
   }
+  const command = (name, ...args) => commandWithTimeout(sentinelMode ? 10000 : 3000, name, ...args)
+  // An asynchronous primary switch can resurrect a lease whose ZREM was
+  // acknowledged only by the former primary. Reconcile only our completed
+  // operations against the current primary; never remove another live lease.
+  const released = new Map()
+  let reconciling = false
+  const releaseCleanup = distributed && sentinelMode ? setInterval(async () => {
+    if (closing || reconciling) return
+    const now = Date.now(), groups = new Map()
+    for (const [token, record] of released) {
+      if (record.expiresAt <= now) { released.delete(token); continue }
+      if (!groups.has(record.key)) groups.set(record.key, [])
+      groups.get(record.key).push(token)
+    }
+    if (!client?.isReady) return
+    reconciling = true
+    try { for (const [key, tokens] of groups) await command('zRem', key, tokens).catch(() => undefined) }
+    finally { reconciling = false }
+  }, 1000) : null
+  releaseCleanup?.unref()
   const window = async (identity, bucket, maximum, duration, action) => {
     if (configurationError) throw configurationError
     if (!client?.isReady) throw new Error('共享限流服務暫時不可用')
@@ -99,7 +126,33 @@ const createSharedLimits = (env, limits, suppliedClient) => {
       if (!configured) return operation() // Preserve standalone default behavior.
       const token = randomUUID(), key = `s2t:capacity:${bucket}`
       if (distributed) {
-        if (!client?.isReady || !await command('eval', ACQUIRE, { keys: [key], arguments: [String(configured), token] })) throw Object.assign(new Error('模型併發容量已滿或協調服務不可用'), { status: 503 })
+        if (waitingCapacity >= 1000) throw Object.assign(new Error('模型容量等待佇列已滿'), { status: 503 })
+        waitingCapacity++
+        const deadline = Date.now() + 10000
+        // Serialize admission, not inference. The oldest request probes for the
+        // next slot; younger requests cannot repeatedly jump ahead after failover.
+        const previous = sentinelMode ? admissions.get(key) : null
+        let finishAdmission
+        const ticket = sentinelMode ? new Promise(resolve => { finishAdmission = resolve }) : null
+        if (ticket) admissions.set(key, ticket)
+        try {
+          await previous
+          while (true) {
+            if (closing || (sentinelMode && Date.now() >= deadline)) throw Object.assign(new Error('模型容量等待逾時'), { status: 503 })
+            if (!client?.isReady) throw Object.assign(new Error('協調服務不可用'), { status: 503 })
+            const args = { keys: [key], arguments: [String(configured), token] }
+            const acquired = sentinelMode
+              ? await commandWithTimeout(Math.max(1, deadline - Date.now()), 'eval', ACQUIRE, args)
+              : await command('eval', ACQUIRE, args)
+            if (acquired) break
+            if (!sentinelMode) throw Object.assign(new Error('模型併發容量已滿或協調服務不可用'), { status: 503 })
+            await new Promise(resolve => setTimeout(resolve, 15))
+          }
+        } finally {
+          finishAdmission?.()
+          if (ticket && admissions.get(key) === ticket) admissions.delete(key)
+          waitingCapacity--
+        }
       } else {
         if ((active.get(bucket) || 0) >= configured) throw Object.assign(new Error('模型併發容量已滿'), { status: 503 })
         active.set(bucket, (active.get(bucket) || 0) + 1)
@@ -112,12 +165,18 @@ const createSharedLimits = (env, limits, suppliedClient) => {
       }, 30000) : null
       timer?.unref()
       try { const result = await operation(); if (lost) throw Object.assign(new Error('模型容量租約失效'), { status: 503 }); return result }
-      finally { if (timer) clearInterval(timer); if (distributed) { if (client.isReady) await command('zRem', key, token).catch(() => undefined) } else active.set(bucket, active.get(bucket) - 1) }
+      finally {
+        if (timer) clearInterval(timer)
+        if (distributed) {
+          if (sentinelMode) released.set(token, { key, expiresAt: Date.now() + 20000 })
+          if (client.isReady) await command('zRem', key, token).catch(() => undefined)
+        } else active.set(bucket, active.get(bucket) - 1)
+      }
     },
     async loginAllowed(key) { return distributed ? window(key, 'login', 8, 900000, 'peek') : { accepted: localFailures(key).length < 8, retryAfterSeconds: 900 } },
     async loginFailed(key) { if (distributed) return window(key, 'login', 8, 900000, 'take'); const times = localFailures(key); times.push(Date.now()); return { count: times.length } },
     async loginSucceeded(key) { if (distributed) return window(key, 'login', 8, 900000, 'clear'); failures.delete(key) },
-    async close() { closing = true; clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
+    async close() { closing = true; if (releaseCleanup) clearInterval(releaseCleanup); released.clear(); clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
   }
 }
-module.exports = { createSharedLimits, WINDOW }
+module.exports = { createSharedLimits, WINDOW, ACQUIRE }
