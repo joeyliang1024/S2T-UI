@@ -1,3 +1,4 @@
+const { loadSessionSnapshot } = require('./session-snapshot.cjs')
 const { readSessionPayload, createSessionWriteGate } = require('./session-payload.cjs')
 const withSessionWrite = createSessionWriteGate()
 const { matchesJob, finalizeDiarizationSession } = require('./diarization-session.cjs')
@@ -631,7 +632,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
   try {
     const user = job.payload?.user
     if (!user?.id || user.id !== job.userId) throw new Error('工作使用者資料無效')
-    const initial = await storage.config.get(user.id, 'sessions')
+    const initial = await loadSessionSnapshot(storage.config, user.id)
     const target = initial?.sessions?.find(session => session.id === job.sessionId)
     if (!target) throw new Error('retry:紀錄尚未同步完成')
     if (job.payload?.processingToken && target.processingToken === job.payload.processingToken && target.processingStage !== 'diarization' && target.processingState === 'running') throw new Error('retry:紀錄尚未完成尾段處理')
@@ -658,7 +659,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
     } else rawTurns = await diarizeWav(audio, resolveLocalDiarizationModel(job.payload?.localModel))
     const turns = await labelDiarizationTurns(user, audio, rawTurns)
     if (!turns.length) throw new Error('講者分離服務沒有回傳有效區段')
-    const stored = await storage.config.get(user.id, 'sessions')
+    const stored = await loadSessionSnapshot(storage.config, user.id)
     const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []
     const version = Number.isSafeInteger(stored?.version) ? stored.version : 0
     let matched = false
@@ -833,7 +834,7 @@ const handleHttpRequest = async (request, response) => {
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
       await reconcileVoiceprintCompensations(user)
-      const stored = await storage.config.get(user.id, 'sessions')
+      const stored = await loadSessionSnapshot(storage.config, user.id)
       const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []
       await reconcileAudioCompensations(user, sessions)
       return send(response, 200, { retried: true, audioPending: (await pendingAudioCompensations(user)).length, voiceprintPending: (await pendingVoiceprintCompensations(user)).length })
@@ -843,7 +844,7 @@ const handleHttpRequest = async (request, response) => {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
-      const stored = await storage.config.get(user.id, 'sessions')
+      const stored = await loadSessionSnapshot(storage.config, user.id)
       const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []
       const orphans = await orphanAudioKeys(user, sessions)
       if (request.method === 'POST') await Promise.all(orphans.map((id) => storage.blob.remove(user.id, `audio/${id}`)))
@@ -855,15 +856,13 @@ const handleHttpRequest = async (request, response) => {
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
       if (request.method === 'GET') {
-        const stored = await storage.config.get(user.id, 'sessions')
-        const value = Array.isArray(stored) ? { sessions: stored, version: 0 } : stored
-        return send(response, 200, value && Array.isArray(value.sessions) && Number.isSafeInteger(value.version) ? value : { sessions: [], version: 0 })
+        return send(response, 200, await loadSessionSnapshot(storage.config, user.id))
       }
       return await withSessionWrite(async () => {
       if (request.destroyed) throw Object.assign(new Error('紀錄同步傳輸中斷'), { status: 400 })
       const body = await readSessionPayload(request)
       if (!body || typeof body !== 'object' || !Array.isArray(body.sessions) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'sessions 與 version 必須有效' })
-      const stored = await storage.config.get(user.id, 'sessions')
+      const stored = await loadSessionSnapshot(storage.config, user.id)
       const previousSessions = Array.isArray(stored?.sessions) ? stored.sessions : Array.isArray(stored) ? stored : []
       const sessions = canonicalSessions(body.sessions)
       const previousAudioKeys = audioKeysInSessions(previousSessions)
@@ -1054,7 +1053,7 @@ const handleHttpRequest = async (request, response) => {
       }
       const body = JSON.parse((await readBody(request, 32 * 1024)).toString('utf8'))
       if (typeof body.sessionId !== 'string' || typeof body.audioKey !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(body.audioKey)) return send(response, 400, { error: 'sessionId 與 audioKey 必須有效' })
-      const sessionMetadata = await storage.config.get(user.id, 'sessions')
+      const sessionMetadata = await loadSessionSnapshot(storage.config, user.id)
       const sessionDuration = sessionMetadata?.sessions?.find(session => session.id === body.sessionId)?.durationMs
       const audioSeconds = Number.isFinite(sessionDuration) && sessionDuration > 0 ? sessionDuration / 1000 : 60
       const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization', audioSeconds, ...(body.localModel ? { localModel: resolveLocalDiarizationModel(body.localModel) } : {}), ...(typeof body.processingToken === 'string' ? { processingToken: body.processingToken } : {}) } })

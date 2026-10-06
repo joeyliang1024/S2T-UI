@@ -5,3 +5,4 @@
 - [2026-10-06：Redis Sentinel、慢 API 與 FIFO 容量等待](k8s-sentinel-latency-2026-10-06/README.zh-TW.md)
 - [2026-10-06：一般操作回應與長篇紀錄瀏覽效能](k8s-responsiveness-2026-10-06/README.zh-TW.md)
 - [2026-10-06：大型歷史紀錄同步與壓縮傳輸](k8s-large-history-2026-10-06/README.zh-TW.md)
+- [2026-10-06：舊格式紀錄修復與音訊保護](k8s-legacy-history-2026-10-06/README.zh-TW.md)

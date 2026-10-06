@@ -1,0 +1,1 @@
+PASS: standalone startup, two gateway processes, durable chunk handoff, HTTP replay, content conflict, preStop readiness/connection handoff and SIGTERM request drain. No external model calls.
