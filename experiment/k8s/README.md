@@ -34,3 +34,7 @@ Verified result: 6,000/6,000 chains, zero failures or drops, Gateway minimum Rea
 ## Controlled Sentinel failover
 
 During 100-user ingress load with mock model latency, an authenticated `SENTINEL failover` switched the Redis master from redis-2 to redis-0. All 6,000 chains completed without failures or dropped arrivals. Original 100-account recording/session integrity passed after the switch. See [summary](current-2026-10-06/results/ingress-sentinel-failover-summary.json) and associated load/Pod observations. This proves controlled failover under this load; abrupt crashes and network partitions remain separate scenarios.
+
+### Failover latency fix
+
+The original controlled switch retained a five-second Redis diskless-sync batching delay while Sentinel waited for replica reconfiguration. The test deployment now starts Redis with `--repl-diskless-sync-delay 0`. Under the same 100-user delayed-mock load, chain P95 improved from 6.096 to 1.460 seconds, P99 from 8.619 to 2.641 seconds, and maximum from 9.881 to 4.460 seconds, with 6,000/6,000 successful chains. These sequential tests promote different replicas, so the result supports improvement in this scenario, not a general SLA. See [comparison](current-2026-10-06/results/sentinel-fast-sync-summary.json) and Sentinel/Redis logs. The tradeoff is less batching of full syncs; this tuning is for the small isolated three-node topology. Residual switch latency remains.
