@@ -1,0 +1,214 @@
+{
+  "samples": [
+    {
+      "stage": "speech_to_first_paint",
+      "seconds": 9.574400000095368
+    },
+    {
+      "stage": "vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "chunk_wait",
+      "seconds": 1.3702000002861023
+    },
+    {
+      "stage": "first_word_vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "first_word_chunk_wait",
+      "seconds": 1.3702000002861023
+    },
+    {
+      "stage": "first_word_browser_queue",
+      "seconds": 0
+    },
+    {
+      "stage": "first_word_browser_preprocess",
+      "seconds": 0.003699999809265137
+    },
+    {
+      "stage": "first_word_asr_roundtrip_with_retries",
+      "seconds": 8.043700000286103
+    },
+    {
+      "stage": "first_word_response_to_paint",
+      "seconds": 0.036799999713897705
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 0
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.003699999809265137
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 8.043700000286103
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.036799999713897705
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 7.348099999904632
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0014000000953674316
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 3.058
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.04309999990463257
+    },
+    {
+      "stage": "speech_to_first_paint",
+      "seconds": 14.376900000095368
+    },
+    {
+      "stage": "vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "chunk_wait",
+      "seconds": 2.1620999999046324
+    },
+    {
+      "stage": "first_word_vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "first_word_chunk_wait",
+      "seconds": 2.1620999999046324
+    },
+    {
+      "stage": "first_word_browser_queue",
+      "seconds": 6.385900000095368
+    },
+    {
+      "stage": "first_word_browser_preprocess",
+      "seconds": 0.0035
+    },
+    {
+      "stage": "first_word_asr_roundtrip_with_retries",
+      "seconds": 5.661099999904633
+    },
+    {
+      "stage": "first_word_response_to_paint",
+      "seconds": 0.044300000190734865
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 6.385900000095368
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0035
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 5.661099999904633
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.044300000190734865
+    },
+    {
+      "stage": "speech_to_first_paint",
+      "seconds": 15.476299999713898
+    },
+    {
+      "stage": "vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "chunk_wait",
+      "seconds": 4.547699999809265
+    },
+    {
+      "stage": "first_word_vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "first_word_chunk_wait",
+      "seconds": 4.547699999809265
+    },
+    {
+      "stage": "first_word_browser_queue",
+      "seconds": 5.664699999809265
+    },
+    {
+      "stage": "first_word_browser_preprocess",
+      "seconds": 0.0021000003814697268
+    },
+    {
+      "stage": "first_word_asr_roundtrip_with_retries",
+      "seconds": 5.110199999809265
+    },
+    {
+      "stage": "first_word_response_to_paint",
+      "seconds": 0.03159999990463257
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 5.664699999809265
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0021000003814697268
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 5.110199999809265
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.03159999990463257
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 4.005099999904632
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0021000003814697268
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 2.468
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.045299999713897705
+    }
+  ],
+  "events": [
+    {
+      "speech_detected": 1
+    },
+    {
+      "telemetry_dropped": 1,
+      "speech_detected": 1
+    },
+    {
+      "telemetry_dropped": 2,
+      "speech_detected": 1
+    },
+    {
+      "telemetry_dropped": 3
+    },
+    {
+      "telemetry_dropped": 4,
+      "speech_detected": 2
+    }
+  ],
+  "errors": [],
+  "text": "S2T UI\n‹\n麥克風\n系統預設麥克風\n不使用\nFake Audio Input 1\nFake Audio Input 2\n麥克風音量\n-57 dBFS\n電腦音訊\n不使用\n選擇電腦音訊\n電腦音訊音量\n未連接\n來源語言\n自動偵測\n繁體中文\nEnglish\n日本語\nDeutsch\n啟用翻譯\n目標語言\n繁體中文\nEnglish\n日本語\nDeutsch\n\nApp VAD 與字幕切段\n\n啟用即時講者預覽\n回應速度：正常\n快\n正常\n慢\n收音中：設定從下一段音訊生效。\n重新整理音源\n完整設定\nME\nmetricsbrowser17912912558374\nLab\n00:00\nSPEAKER_00\n\nIsolated simulated speech for capacity testing.\n\n編輯\n00:01\n\nIsolated simulated speech for capacity testing.\n\n編輯\n00:03\n\nIsolated simulated speech for capacity testing.\n\n編輯\n00:07\n\nIsolated simulated speech for capacity testing.\n\n編輯\n00:08\n\nIsolated simulated speech for capacity testing.\n\n編輯\n00:10\n\nIsolated simulated speech for capacity testing.\n\n編輯\n繼續\n結束收音\n6 段\n00:20"
+}

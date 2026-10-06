@@ -1,0 +1,234 @@
+{
+  "browser": 3,
+  "samples": [
+    {
+      "stage": "speech_to_first_paint",
+      "seconds": 2.3955999999046327
+    },
+    {
+      "stage": "vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "chunk_wait",
+      "seconds": 1.371300000190735
+    },
+    {
+      "stage": "first_word_vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "first_word_chunk_wait",
+      "seconds": 1.371300000190735
+    },
+    {
+      "stage": "first_word_browser_queue",
+      "seconds": 0
+    },
+    {
+      "stage": "first_word_browser_preprocess",
+      "seconds": 0.0039000000953674317
+    },
+    {
+      "stage": "first_word_asr_roundtrip_with_retries",
+      "seconds": 0.8531999998092651
+    },
+    {
+      "stage": "first_word_response_to_paint",
+      "seconds": 0.047199999809265133
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 0
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0039000000953674317
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 0.8531999998092651
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.047199999809265133
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 0.39930000019073486
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0025
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 0.9162999997138978
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.028200000286102294
+    },
+    {
+      "stage": "speech_to_first_paint",
+      "seconds": 4.040400000095367
+    },
+    {
+      "stage": "vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "chunk_wait",
+      "seconds": 0.8398000001907349
+    },
+    {
+      "stage": "first_word_vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "first_word_chunk_wait",
+      "seconds": 0.8398000001907349
+    },
+    {
+      "stage": "first_word_browser_queue",
+      "seconds": 0
+    },
+    {
+      "stage": "first_word_browser_preprocess",
+      "seconds": 0.001
+    },
+    {
+      "stage": "first_word_asr_roundtrip_with_retries",
+      "seconds": 3.0375
+    },
+    {
+      "stage": "first_word_response_to_paint",
+      "seconds": 0.04209999990463257
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 0
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.001
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 3.0375
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.04209999990463257
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 1.7179000000953675
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0025999999046325685
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 1.671
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.03390000009536743
+    },
+    {
+      "stage": "speech_to_first_paint",
+      "seconds": 3.256199999809265
+    },
+    {
+      "stage": "vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "chunk_wait",
+      "seconds": 0.8604000000953674
+    },
+    {
+      "stage": "first_word_vad_onset",
+      "seconds": 0.12
+    },
+    {
+      "stage": "first_word_chunk_wait",
+      "seconds": 0.8604000000953674
+    },
+    {
+      "stage": "first_word_browser_queue",
+      "seconds": 0.6924000000953674
+    },
+    {
+      "stage": "first_word_browser_preprocess",
+      "seconds": 0.002299999713897705
+    },
+    {
+      "stage": "first_word_asr_roundtrip_with_retries",
+      "seconds": 1.5405999999046325
+    },
+    {
+      "stage": "first_word_response_to_paint",
+      "seconds": 0.0405
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 0.6924000000953674
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.002299999713897705
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 1.5405999999046325
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.0405
+    },
+    {
+      "stage": "browser_queue",
+      "seconds": 0.9358000001907348
+    },
+    {
+      "stage": "browser_preprocess",
+      "seconds": 0.0030999999046325685
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "seconds": 1.5989000000953675
+    },
+    {
+      "stage": "response_to_paint",
+      "seconds": 0.0385
+    }
+  ],
+  "events": [
+    {
+      "speech_detected": 1
+    },
+    {},
+    {
+      "speech_detected": 1,
+      "telemetry_dropped": 1
+    },
+    {
+      "speech_detected": 1
+    },
+    {}
+  ],
+  "errors": [],
+  "statuses": [
+    200,
+    200,
+    200,
+    200,
+    200
+  ],
+  "telemetryPeak": 2,
+  "telemetryRequests": 5,
+  "interceptorPeak": 1
+}
