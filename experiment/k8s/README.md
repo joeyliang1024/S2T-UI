@@ -30,3 +30,7 @@ Earlier load results, including `canonical-ingress-load.json`, sent requests dir
 The `ingress-end-to-end` run sends 100 users through nginx while the four Gateway replicas roll. Raw load results and Pod observations remain in the current results directory.
 
 Verified result: 6,000/6,000 chains, zero failures or drops, Gateway minimum Ready 4, workers 2, ingress 2. Pod observations captured the rollout in progress. See [summary](current-2026-10-06/results/ingress-end-to-end-summary.json).
+
+## Controlled Sentinel failover
+
+During 100-user ingress load with mock model latency, an authenticated `SENTINEL failover` switched the Redis master from redis-2 to redis-0. All 6,000 chains completed without failures or dropped arrivals. Original 100-account recording/session integrity passed after the switch. See [summary](current-2026-10-06/results/ingress-sentinel-failover-summary.json) and associated load/Pod observations. This proves controlled failover under this load; abrupt crashes and network partitions remain separate scenarios.
