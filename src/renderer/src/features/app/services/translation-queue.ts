@@ -1,3 +1,4 @@
+import { registerTranslationTiming } from '../../../shared/services/caption-metrics'
 import { groupLiveCaptions } from './live-caption'
 import type { TranscriptEvent } from '../../models/model-adapter'
 import { HttpServiceError } from '../../../shared/services/http'
@@ -85,14 +86,17 @@ export class TranslationQueue {
     request.promise = Promise.resolve().then(async () => {
       if (generation !== this.generation || controller.signal.aborted) return
       this.diagnostics.requests += 1
+      const transportStartedAt = performance.now()
       try {
         const text = (await this.abortable(translate(entry, controller.signal), controller.signal)).trim()
         if (!text) throw new Error(activeTranslate('svcTranslationEmptyResult'))
         if (generation !== this.generation || controller.signal.aborted) return
+        const responseAt = performance.now()
         let applied = false
         this.updateEntries((entries) => {
           if (!matchesMembers(entries)) return entries
           applied = true
+          registerTranslationTiming(entry.id, transportStartedAt, responseAt)
           return entries.map(current => members.some(member => member.id === current.id)
             ? { ...current, captionGroupId: entry.id, translatedText: current.id === entry.id ? text : undefined, translationStatus: 'completed' as const, translationAttempts: undefined, revision: current.revision + 1 }
             : current)

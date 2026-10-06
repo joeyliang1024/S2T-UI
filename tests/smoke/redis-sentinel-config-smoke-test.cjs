@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { redisConnection } = require('../../server/redis-connection.cjs')
 const { createSharedLimits } = require('../../server/shared-limits.cjs')
-const env = { S2T_REDIS_SENTINEL_NODES: 'one:26379,two:26379,[::1]:26379', S2T_REDIS_SENTINEL_MASTER_NAME: 'mymaster', S2T_REDIS_SENTINEL_PASSWORD: 'sentinel-secret', S2T_REDIS_PASSWORD: 'data-secret', S2T_REDIS_SENTINEL_TLS: 'true', S2T_REDIS_TLS: 'false', S2T_REDIS_DATABASE: '2' }
+const env = { REDIS_SENTINEL_NODES: 'one:26379,two:26379,[::1]:26379', REDIS_SERVICE_NAME: 'mymaster', REDIS_SENTINEL_PASSWARD: 'sentinel-secret', REDIS_PASSWARD: 'data-secret', REDIS_SENTINEL_TLS: 'true', REDIS_TLS: 'false', REDIS_DATABASE: '2' }
 const { options } = redisConnection(env)
 assert.equal(options.sentinelRootNodes.length, 3)
 assert.equal(options.sentinelRootNodes[2].host, '::1')
@@ -12,15 +12,21 @@ assert.equal(options.nodeClientOptions.socket.tls, undefined)
 assert.equal(options.nodeClientOptions.database, 2)
 assert.equal(options.replicaPoolSize, 0)
 assert.equal(options.maxCommandRediscovers, 16)
-for (const change of [{ S2T_REDIS_URL: 'redis://localhost' }, { S2T_REDIS_SENTINEL_MASTER_NAME: '' }, { S2T_REDIS_SENTINEL_NODES: 'one:notport' }, { S2T_REDIS_SENTINEL_NODES: 'one:26379,' }, { S2T_REDIS_DATABASE: '-1' }, { S2T_REDIS_TLS: 'yes' }]) assert.throws(() => redisConnection({ ...env, ...change }))
-assert.equal(redisConnection({ S2T_REDIS_URL: 'redis://localhost' }).mode, 'url')
-assert.equal(createSharedLimits({ ...env, S2T_REDIS_SENTINEL_NODES: 'invalid' }, {}).configurationError, null) // Standalone ignores Sentinel settings.
-console.log('PASS Sentinel configuration, separate auth/TLS, invalid groups, URL and standalone compatibility')
+for (const change of [{ REDIS_URL: 'redis://localhost' }, { REDIS_SERVICE_NAME: '' }, { REDIS_SENTINEL_NODES: 'one:notport' }, { REDIS_SENTINEL_NODES: 'one:26379,' }, { REDIS_DATABASE: '-1' }, { REDIS_TLS: 'yes' }]) assert.throws(() => redisConnection({ ...env, ...change }))
+assert.equal(redisConnection({ REDIS_URL: 'redis://localhost' }).mode, 'url')
+assert.equal(createSharedLimits({ ...env, REDIS_SENTINEL_NODES: 'invalid' }, {}).configurationError, null) // Standalone ignores Sentinel settings.
+assert.equal(redisConnection({ REDIS_SENTINEL_NODES: 'redis-node1,redis-node2:26380', REDIS_SERVICE_NAME: 'mymaster', REDIS_SENTINEL_USERNAME: 'default', REDIS_PASSWARD: 'node-secret', REDIS_SENTINEL_PASSWARD: 'sentinel-secret' }).options.sentinelRootNodes[0].port, 26379)
+assert.throws(() => redisConnection({ S2T_REDIS_URL: 'redis://localhost' }))
+assert.throws(() => redisConnection({ S2T_REDIS_SENTINEL_NODES: 'old:26379', S2T_REDIS_SENTINEL_MASTER_NAME: 'old' }))
+const noAliases = redisConnection({ REDIS_SENTINEL_NODES: 'node', REDIS_SERVICE_NAME: 'mymaster', REDIS_PASSWORD: 'unsupported', REDIS_SENTINEL_PASSWORD: 'unsupported' }).options
+assert.equal(noAliases.nodeClientOptions.password, undefined)
+assert.equal(noAliases.sentinelClientOptions.password, undefined)
+console.log('PASS new Sentinel names, separate auth/TLS, invalid groups, old names rejected and standalone mode')
 
 ;(async () => {
  let signal
  const stalled = { isOpen: true, isReady: true, on() {}, destroy() {}, withCommandOptions(options) { signal = options.abortSignal; return { eval: () => new Promise(() => {}) } } }
- const limiter = createSharedLimits({ S2T_KUBERNETES_MODE: 'true', S2T_REDIS_URL: 'redis://localhost' }, {}, stalled)
+ const limiter = createSharedLimits({ S2T_KUBERNETES_MODE: 'true', REDIS_URL: 'redis://localhost' }, {}, stalled)
  const start = Date.now()
  await assert.rejects(() => limiter.accept('timeout', 'asr'), /逾時/)
  assert.ok(Date.now() - start < 4500)

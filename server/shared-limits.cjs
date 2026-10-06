@@ -1,3 +1,4 @@
+const metrics = require('./metrics.cjs')
 const { createHash, randomUUID } = require('node:crypto')
 const { redisConnection } = require('./redis-connection.cjs')
 const { createRequestLimiter } = require('./request-limits.cjs')
@@ -120,6 +121,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     async health() { if (distributed) { if (configurationError) throw configurationError; if (!client?.isReady) throw new Error('共享限流服務暫時不可用'); await command('ping') } },
     async accept(identity, bucket) { return distributed ? window(identity, bucket, limits[bucket] ?? 30, 60000, 'take') : local(identity, bucket) },
     async withCapacity(bucket, operation) {
+      const admissionStart = performance.now()
       const setting = bucket === 'asr' ? 'S2T_ASR_MAX_INFLIGHT' : 'S2T_TRANSLATION_MAX_INFLIGHT'
       const configured = Number(env[setting] || (distributed ? 64 : 0))
       if (!Number.isSafeInteger(configured) || configured < 0 || (distributed && configured === 0)) throw new Error(`${setting} 必須為有效的正整數`)
@@ -157,6 +159,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
         if ((active.get(bucket) || 0) >= configured) throw Object.assign(new Error('模型併發容量已滿'), { status: 503 })
         active.set(bucket, (active.get(bucket) || 0) + 1)
       }
+      metrics.observe('s2t_server_stage_duration_seconds', { stage: `${bucket}_capacity_wait` }, (performance.now() - admissionStart) / 1000)
       // Model calls have a <= 30s timeout; the lease also covers preprocessing.
       let lost = false
       const timer = distributed ? setInterval(() => {

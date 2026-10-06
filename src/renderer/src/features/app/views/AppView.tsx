@@ -1,3 +1,4 @@
+import { CaptionPaintMetric } from './CaptionPaintMetric'
 import { NavigationGlyph } from './NavigationGlyph'
 import { importFileAccept } from '../../transcript/import-formats'
 import { CaptionPopout } from './CaptionPopout'
@@ -349,8 +350,8 @@ const liveWorkspace = (
           <article key={group.id} className={group.status}>
             <time>{timestamp(group.startMs)}</time>
             {group.speaker && <div className="speaker-row speaker-labels">{Array.from(new Set(group.members.map(member => member.speaker).filter(Boolean))).map(speaker => <span key={speaker}>{speaker}</span>)}</div>}
-            <p>{group.sourceText}</p>
-            {group.translatedText && <p className="translation">{group.translatedText}</p>}
+            <CaptionPaintMetric members={group.members} text={group.sourceText} />
+            {group.translatedText && <CaptionPaintMetric members={group.members} text={group.translatedText} translation />}
             {group.members.filter(member => member.status === 'final' && !member.translatedText && (member.translationStatus === 'failed' || ((settings.translationLoadStrategy === 'manual' || captureState === 'idle') && !member.translationStatus))).map(member => <button key={member.id} className="text-button translation-retry" onClick={() => {
               const retry = { ...member, translationStatus: undefined, translationAttempts: undefined }
               if (member.translationStatus === 'failed') setTranscripts(current => current.map(entry => entry.id === member.id ? retry : entry))

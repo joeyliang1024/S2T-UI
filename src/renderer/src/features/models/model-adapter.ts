@@ -1,3 +1,4 @@
+import { attachCaptionTiming, recordCaptionEvent, type CaptionTiming } from '../../shared/services/caption-metrics'
 import { EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
 import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
@@ -242,6 +243,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private language = 'zh'
   private pendingChunks: Float32Array[] = []
   private pendingSamples = 0
+  private speechOnsets: Array<{ sample: number; at: number; detected: number }> = []
   private pendingStart = 0
   private queued = Promise.resolve()
   private sequence = 0
@@ -281,6 +283,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingChunks = []
     this.pendingSamples = 0
     this.pendingStart = 0
+    this.speechOnsets = []
     this.queued = Promise.resolve()
     this.sequence = 0
     this.stopped = false
@@ -301,6 +304,12 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   pushAudio(chunk: Float32Array, startSample: number): void {
     if (this.stopped) return
     const vadFrame = this.vad?.process(chunk)
+    if (vadFrame?.speechStarted) {
+      recordCaptionEvent('speech_detected')
+      const now = performance.now()
+      this.speechOnsets.push({ sample: startSample + chunk.length - vadFrame.onsetSamples, at: now - vadFrame.onsetSamples / this.sampleRate * 1000, detected: now })
+      this.speechOnsets = this.speechOnsets.slice(-256)
+    }
     if (this.pendingSamples === 0) this.pendingStart = startSample
     this.pendingChunks.push(chunk)
     this.pendingSamples += chunk.length
@@ -422,24 +431,36 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.queuedChunks += 1
     this.diagnostics.maximumQueued = Math.max(this.diagnostics.maximumQueued, this.queuedChunks)
     const enqueuedAt = Date.now()
+    const queuedAt = performance.now()
     this.queued = this.queued.catch(() => undefined).then(async () => {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
+      const dequeuedAt = performance.now()
       const wav = wavFromFloat32(audio, this.sampleRate)
       if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) {
         if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
         return
       }
+      const requestAt = performance.now()
       const response = await this.transcribeWithRetry(wav)
+      const responseAt = performance.now()
       const sourceText = sanitizeAsrText(response.text)
       if (!sourceText) {
+        recordCaptionEvent('asr_empty')
+        this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
         if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
         return
       }
       this.rollingContext = sourceText
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary: isSentenceBoundary || this.explicitBoundaries.has(endSample) }
+      const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
+      this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
+      const timing: CaptionTiming = { queuedAt, dequeuedAt, requestAt, responseAt, ...(onsets[0] ? { speechAt: onsets[0].at, detectedAt: onsets[0].detected } : {}) }
+      attachCaptionTiming(event, timing)
       this.lastTranscript = event
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
+      recordCaptionEvent('asr_failed')
+      this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
       this.emitError(error instanceof Error ? error.message : activeTranslate('svcModelTranscribeFailed'))
       this.emitGap(sequence, startMs, endMs, 'request-failed')
     }).finally(() => {
@@ -450,6 +471,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   }
 
   private recordOverflow(startMs: number, endMs: number): void {
+    recordCaptionEvent('audio_gap')
+    this.speechOnsets = this.speechOnsets.filter(onset => onset.sample / this.sampleRate * 1000 >= endMs)
     if (!this.overflowGap || this.overflowGap.endMs !== startMs) {
       this.flushOverflow()
       this.emitError(activeTranslate('svcModelTooSlow'))
@@ -511,6 +534,9 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         // A hung gateway must release the live-caption queue immediately;
         // retrying the same timed-out request would leave the screen stalled.
         if (error instanceof Error && error.name === 'TimeoutError') throw error
+        // Authentication, validation and unsupported-model errors cannot be
+        // repaired by resending the same audio. Keep retries for transient errors.
+        if (error instanceof HttpServiceError && error.status >= 400 && error.status < 500 && ![408, 409, 425, 429].includes(error.status)) throw error
         if (error instanceof HttpServiceError && error.status === 429) {
           this.diagnostics.rateLimited += 1
           // Do not rapidly spend retries inside the same rate-limit window.

@@ -1,0 +1,2477 @@
+{
+  "uid": "s2t-overview",
+  "title": "S2T · 一張總覽 / 首字延遲與服務健康",
+  "schemaVersion": 41,
+  "version": 1,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "tags": [
+    "S2T",
+    "isolated-mock"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "01 · 使用者首字延遲 — Web 實際可見字幕；VAD 語音起點估計",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "title": "首字 p50",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "legendFormat": ""
+        }
+      ],
+      "description": "每次 VAD 語音開頭到第一個非空字幕段首次可見呈現；兩次 requestAnimationFrame 估計 paint。不是第一個 ASR token，也不包含 Grafana 抓取時間。只量測 Web。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "首字 p95",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "legendFormat": ""
+        }
+      ],
+      "description": "每次 VAD 語音開頭到第一個非空字幕段首次可見呈現；兩次 requestAnimationFrame 估計 paint。不是第一個 ASR token，也不包含 Grafana 抓取時間。只量測 Web。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "首字 p99",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "legendFormat": ""
+        }
+      ],
+      "description": "每次 VAD 語音開頭到第一個非空字幕段首次可見呈現；兩次 requestAnimationFrame 估計 paint。不是第一個 ASR token，也不包含 Grafana 抓取時間。只量測 Web。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "成功首字樣本（目前 Pods 累計）",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(s2t_caption_stage_duration_seconds_count{stage=\"speech_to_first_paint\"})",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "首字延遲分布 p50 / p95 / p99",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "0",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "1",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "2",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Web 階段 p95（字幕 / 翻譯）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~\"speech_to_first_paint|speech_to_translation_paint\"}[5m])) by (stage,le))",
+          "legendFormat": "{{stage}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Gateway 階段 p95（與 Web roundtrip 重疊，勿加總）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket[5m])) by (stage,le))",
+          "legendFormat": "{{stage}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "可見字幕段樣本 / 秒",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_caption_stage_duration_seconds_count{stage=\"response_to_paint\"}[5m]))",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "語音偵測 / 無文字 / 失敗 / 音訊缺口",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(s2t_caption_events_total[5m])) by (event)",
+          "legendFormat": "{{event}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "已偵測語音（目前 Pods 累計）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(s2t_caption_events_total{event=\"speech_detected\"})",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "02 · Gateway / Audio worker / 模擬模型",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 13,
+      "title": "HTTP 路由 p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket[5m])) by (route,le))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "HTTP 吞吐 / 秒",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_gateway_request_duration_seconds_count[2m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "HTTP 失敗 / 秒",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_gateway_request_errors_total[2m])) by (route)",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "服務進行中請求",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_gateway_inflight_requests",
+          "legendFormat": "{{service}} {{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 17,
+      "title": "程序 RSS",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_process_resident_memory_bytes",
+          "legendFormat": "{{service}} {{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 18,
+      "title": "Event loop p99",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 41,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_event_loop_p99_seconds",
+          "legendFormat": "{{service}} {{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 19,
+      "title": "Diarization 待處理工作 / 最老秒數",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(s2t_diarization_pending_jobs)",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 20,
+      "title": "Diarization 最老等待",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(s2t_diarization_oldest_seconds)",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Mock 模型進行中 / 明確是模擬 API",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_mock_active_requests",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Mock 注入延遲 / 長尾",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_mock_configured_delay_seconds",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 23,
+      "title": "03 · 所有服務可用性與儲存操作",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 62,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 24,
+      "title": "所有 scrape targets（1=成功）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up",
+          "legendFormat": "{{job}} {{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 25,
+      "title": "應用儲存操作 p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 63,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket[5m])) by (service,operation,le))",
+          "legendFormat": "{{service}} {{operation}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 26,
+      "title": "儲存操作失敗 / 秒",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_storage_operation_duration_seconds_errors_total[5m])) by (service,operation)",
+          "legendFormat": "{{service}} {{operation}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 27,
+      "title": "PostgreSQL 連線",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 70,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(pg_stat_database_numbackends) by (datname)",
+          "legendFormat": "{{datname}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 28,
+      "title": "PostgreSQL commits / rollback 每秒",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 77,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(pg_stat_database_xact_commit[5m])) by (datname)",
+          "legendFormat": "{{datname}} commits"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 29,
+      "title": "PostgreSQL rollback / deadlock 每秒",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 77,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(pg_stat_database_xact_rollback[5m])) by (datname)",
+          "legendFormat": "{{datname}} rollback"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 30,
+      "title": "Redis 記憶體",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 84,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_memory_used_bytes{job=\"redis\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Redis clients / blocked",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 84,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_connected_clients{job=\"redis\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 32,
+      "title": "Redis replication offset",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 91,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_master_repl_offset{job=\"redis\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 33,
+      "title": "Sentinel quorum status / TILT",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 91,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_sentinel_master_ckquorum_status",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 34,
+      "title": "Sentinel TILT（應為 0）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 98,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_sentinel_tilt",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 35,
+      "title": "Redis 可用性（含密碼登入）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 98,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_up",
+          "legendFormat": "{{job}} {{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 36,
+      "title": "MinIO 儲存用量",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 105,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "minio_cluster_usage_total_bytes",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 37,
+      "title": "MinIO 磁碟可用量",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 105,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "minio_cluster_capacity_usable_free_bytes",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 38,
+      "title": "Milvus process RSS",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 112,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "process_resident_memory_bytes{job=\"milvus\"}",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 39,
+      "title": "Milvus 載入向量數量",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 112,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "milvus_querynode_entity_num",
+          "legendFormat": "{{collection_id}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 40,
+      "title": "etcd leader（1=有 leader）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 119,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "etcd_server_has_leader",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 41,
+      "title": "etcd WAL fsync p95",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 119,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 42,
+      "title": "04 · Kubernetes Pods / 容量 / 資源",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 126,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 43,
+      "title": "VM node CPU cores",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 127,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/\"}[2m]))",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 44,
+      "title": "VM node memory",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 127,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "container_memory_working_set_bytes{id=\"/\"}",
+          "legendFormat": ""
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 45,
+      "title": "Pod CPU 使用量（cores）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 134,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"s2t-stress-20261005\",pod!=\"\"}[2m])) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 46,
+      "title": "Pod memory working set",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 134,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"s2t-stress-20261005\",pod!=\"\"}) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 47,
+      "title": "Pod ready（1=就緒）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 141,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kube_pod_status_ready{condition=\"true\"}",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 48,
+      "title": "Pod 重啟",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 141,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_pod_container_status_restarts_total) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 49,
+      "title": "Deployment 可用 / 期望副本",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 148,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kube_deployment_status_replicas_available",
+          "legendFormat": "{{deployment}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 50,
+      "title": "CPU throttled 比例",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 148,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_cgroup_cpu_throttled_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace=\"s2t-stress-20261005\"}) by (pod) / clamp_min(sum(rate(s2t_cgroup_cpu_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace=\"s2t-stress-20261005\"}) by (pod), 0.000001)",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 51,
+      "title": "Pod CPU requests",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 155,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 52,
+      "title": "PVC 請求容量",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 155,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+          "legendFormat": "{{persistentvolumeclaim}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    }
+  ],
+  "editable": false
+}

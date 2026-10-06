@@ -1,3 +1,4 @@
+const metrics = require('./metrics.cjs')
 const { loadSessionSnapshot } = require('./session-snapshot.cjs')
 const { readSessionPayload, createSessionWriteGate } = require('./session-payload.cjs')
 const withSessionWrite = createSessionWriteGate()
@@ -92,6 +93,7 @@ try { storage = createStorage(process.env) } catch (error) {
   storageStartupError = error instanceof Error ? error : new Error('storage 設定無效')
   storage = { mode: { blob: 'unavailable', config: 'unavailable', vector: 'unavailable' }, config: {}, ready: Promise.reject(storageStartupError) }
 }
+metrics.instrumentStorage(storage)
 const kubernetesConfigError = process.env.S2T_KUBERNETES_MODE === 'true' && Object.values(storage.mode).some((mode) => mode === 'local')
   ? new Error('Kubernetes 模式必須設定共享 MinIO、PostgreSQL 與 Milvus，不能使用 Pod 本地 storage')
   : null
@@ -131,9 +133,12 @@ const modelHealthChecks = new Map()
 const acceptLimitedRequest = sharedLimits.accept
 const requestLatency = new Map()
 const modelHealthLastState = new Map()
-const latencyBuckets = [.25, .5, 1, 2.5, 5, 10]
+const latencyBuckets = [.025, .05, .1, .25, .5, .8, 1, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120]
 const observeRequest = (path, status, startedAt) => {
-  if (!['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/audio-processing/silero-vad'].includes(path)) return
+  if (!path.startsWith('/api/')) return
+  // IDs and object keys must never become metric labels.
+  path = path.replace(/\/api\/data\/model-credentials\/[^/]+/, '/api/data/model-credentials/id').replace(/\/api\/audio\/.*/, '/api/audio/object')
+  if (!new Set(['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/summaries', '/api/config', '/api/storage', '/api/telemetry/captions', '/api/audio/object', '/api/data/sessions', '/api/data/settings', '/api/data/glossary', '/api/data/voiceprints', '/api/data/diarization-jobs', '/api/data/storage-status', '/api/data/storage-audit', '/api/data/storage-retry', '/api/data/model-registry', '/api/data/model-health', '/api/data/model-credentials/id', '/api/data/summary-templates', '/api/auth/login', '/api/auth/register', '/api/auth/session', '/api/auth/logout', '/api/audio-processing/silero-vad', '/api/audio-processing/status', '/api/audio-processing/import-wav']).has(path)) path = '/api/other'
   const metric = requestLatency.get(path) || { count: 0, errors: 0, sum: 0, buckets: latencyBuckets.map(() => 0) }
   const seconds = Math.max(0, (performance.now() - startedAt) / 1000)
   metric.count += 1; metric.sum += seconds; if (status >= 400) metric.errors += 1
@@ -178,7 +183,7 @@ const prometheusMetrics = () => {
     lines.push(`s2t_sherpa_op_rtf{op="${op}"} ${value.rtf ?? 0}`)
   }
   lines.push('# TYPE s2t_gateway_inflight_requests gauge', `s2t_gateway_inflight_requests ${activeHttpRequests}`)
-  return `${lines.join('\n')}\n`
+  return `${lines.join('\n')}\n` + metrics.render()
 }
 const languageNames = { auto: '自动检测（中文、英语、日语或德语）', 'zh-TW': '繁体中文', 'en-US': '英语', en: '英语', 'ja-JP': '日语', ja: '日语', 'de-DE': '德语', de: '德语' }
 const supportedTranslationSourceLanguages = new Set(['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-DE'])
@@ -770,6 +775,17 @@ const handleHttpRequest = async (request, response) => {
   const startedAt = performance.now()
   response.once('finish', () => observeRequest(requestPath, response.statusCode, startedAt))
   if (await auth.handle(request, response, send)) return
+  if (request.method === 'POST' && request.url === '/api/telemetry/captions') {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    const limit = await acceptsRequest(request, 'telemetry', user.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Telemetry rate limited')
+    try {
+      const payload = JSON.parse((await readBody(request, 16384)).toString('utf8'))
+      if (!metrics.acceptCaptionSamples(payload)) return send(response, 400, { error: 'Invalid caption measurements' })
+      return send(response, 200, { accepted: true })
+    } catch (error) { return send(response, error.status || 400, { error: 'Invalid caption measurements' }) }
+  }
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
     capabilities: { durableRecordingChunks: true, distributed: process.env.S2T_KUBERNETES_MODE === 'true' },
     branding: { titleImage: productTitleImage },
@@ -1217,20 +1233,20 @@ const handleHttpRequest = async (request, response) => {
       if (!contentType) return send(response, 415, { error: 'Unsupported audio content type. Use WAV, MP3, M4A/AAC, OGG, WebM, FLAC, MP4, or MOV.' })
       const requestedLanguage = String(request.headers['x-s2t-language'] || '')
       if (requestedLanguage && !['zh', 'en', 'ja', 'de'].includes(requestedLanguage)) return send(response, 400, { error: 'Unsupported ASR language. Use zh, en, ja, de, or omit it for automatic detection.' })
-      let audio = await readBody(request, maxAsrAudioBytes)
+      let audio = await metrics.measure('asr_upload_read', () => readBody(request, maxAsrAudioBytes))
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
       asrAudioBytes = audio.length
       const fingerprint = requestHash(Buffer.concat([audio, Buffer.from(JSON.stringify({ contentType, requestedLanguage, prompt: request.headers['x-s2t-prompt'] || '', filename: request.headers['x-s2t-filename'] || '', dynaudnorm: request.headers['x-s2t-dynaudnorm'] || '', model: selectedAsr.model, endpoint: selectedAsr.endpoint, credential: requestHash(selectedAsr.apiKey || '') }))]))
       const output = await executeIdempotent(storage.config, user.id, '/api/transcriptions', request.headers['x-s2t-idempotency-key'], fingerprint, () => sharedLimits.withCapacity('asr', async () => {
-      if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await dynaudnormWav(audio)
+      if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await metrics.measure('audio_preprocess', () => dynaudnormWav(audio))
       // Never the prompt itself, the audio or the transcript — only sizes.
       logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
       const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
-      const result = await client.audio.transcriptions.create({
+      const result = await metrics.measure('asr_model', async () => client.audio.transcriptions.create({
         file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
         ...(requestedLanguage ? { language: requestedLanguage } : {}),
         ...(request.headers['x-s2t-prompt'] ? { prompt: decodedHeaderValue(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
-      })
+      }))
       logger.debug('asr.completed', { profileId, model: selectedAsr.model, durationMs: Date.now() - asrStartedAt, audioBytes: asrAudioBytes, chars: (result.text || '').length })
       return { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) }
       }))
@@ -1271,7 +1287,7 @@ const handleHttpRequest = async (request, response) => {
       // language pair are enough to follow a slow or failing translation.
       logger.debug('translation.request', { profileId, sourceLanguage, targetLanguage, glossary: glossary ? 'provided' : 'none', chars: text.length })
       const translationStartedAt = Date.now()
-      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0)))
+      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0))))
       logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
       return send(response, 200, { text: textResult })
     } catch (error) {

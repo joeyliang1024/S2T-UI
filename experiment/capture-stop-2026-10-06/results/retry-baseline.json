@@ -1,0 +1,7 @@
+{
+  "phase": "baseline",
+  "status": 400,
+  "calls": 4,
+  "retryDelayMs": 2750,
+  "error": "Web ASR gateway failed: invalid model selection"
+}

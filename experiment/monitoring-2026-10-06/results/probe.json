@@ -1,0 +1,3941 @@
+{
+  "at": "2026-10-06T10:39:10.054Z",
+  "targets": [
+    {
+      "labels": {
+        "instance": "etcd:2379",
+        "job": "etcd"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "grafana:3000",
+        "job": "grafana"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "kube-state-metrics:8080",
+        "job": "kube-state"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "colima-s2t-stress",
+        "job": "kubelet",
+        "node": "colima-s2t-stress"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "colima-s2t-stress",
+        "job": "kubelet-cadvisor",
+        "node": "colima-s2t-stress"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "milvus:9091",
+        "job": "milvus"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "minio:9000",
+        "job": "minio"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "mock-models:9090",
+        "job": "mock-models"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "postgres-exporter:9187",
+        "job": "postgres"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "localhost:9090",
+        "job": "prometheus"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "redis-0.redis:6379",
+        "job": "redis"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "redis-1.redis:6379",
+        "job": "redis"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "redis-2.redis:6379",
+        "job": "redis"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "10.42.0.197:8787",
+        "job": "s2t",
+        "pod": "gateway-5fd7b6455c-frf6c",
+        "service": "gateway"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "10.42.0.195:8787",
+        "job": "s2t",
+        "pod": "gateway-5fd7b6455c-xq2jh",
+        "service": "gateway"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "10.42.0.196:8787",
+        "job": "s2t",
+        "pod": "gateway-5fd7b6455c-mxppw",
+        "service": "gateway"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "10.42.0.193:8787",
+        "job": "s2t",
+        "pod": "audio-worker-648995d89d-b6ksc",
+        "service": "audio-worker"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "10.42.0.192:8787",
+        "job": "s2t",
+        "pod": "gateway-5fd7b6455c-hqk64",
+        "service": "gateway"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "sentinel-0.sentinel:26379",
+        "job": "sentinel"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "sentinel-1.sentinel:26379",
+        "job": "sentinel"
+      },
+      "health": "up",
+      "error": ""
+    },
+    {
+      "labels": {
+        "instance": "sentinel-2.sentinel:26379",
+        "job": "sentinel"
+      },
+      "health": "up",
+      "error": ""
+    }
+  ],
+  "panels": [
+    {
+      "id": 2,
+      "title": "首字 p50",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.621,
+                "1.6964806851615823"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "首字 p95",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.638,
+                "2.3791001249826413"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "首字 p99",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.647,
+                "2.4758080506533"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "語音開頭成功顯示樣本（5m）",
+      "queries": [
+        {
+          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{stage=\"speech_to_first_paint\"}[5m]))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.65,
+                "34.8528"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "首字延遲分布 p50 / p95 / p99",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.688,
+                "1.6959843638948116"
+              ]
+            }
+          ]
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.705,
+                "2.3786547719799658"
+              ]
+            }
+          ]
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"speech_to_first_paint\"}[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.749,
+                "2.475672550297417"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Web 階段 p95（字幕 / 翻譯）",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~\"speech_to_first_paint|speech_to_translation_paint\"}[5m])) by (stage,le))",
+          "status": "success",
+          "series": 6,
+          "result": [
+            {
+              "metric": {
+                "stage": "vad_onset"
+              },
+              "value": [
+                1791283149.777,
+                "0.1475"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "chunk_wait"
+              },
+              "value": [
+                1791283149.777,
+                "1.4121059999999999"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "browser_queue"
+              },
+              "value": [
+                1791283149.777,
+                "0.0883570364350533"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "browser_preprocess"
+              },
+              "value": [
+                1791283149.777,
+                "0.02375"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "asr_roundtrip_with_retries"
+              },
+              "value": [
+                1791283149.777,
+                "0.7850164997494803"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "response_to_paint"
+              },
+              "value": [
+                1791283149.777,
+                "0.048890155204883434"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Gateway 階段 p95（與 Web roundtrip 重疊，勿加總）",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket[5m])) by (stage,le))",
+          "status": "success",
+          "series": 5,
+          "result": [
+            {
+              "metric": {
+                "stage": "asr_upload_read"
+              },
+              "value": [
+                1791283149.801,
+                "0.023877741656060453"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "asr_capacity_wait"
+              },
+              "value": [
+                1791283149.801,
+                "0.03230823141795003"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "asr_model"
+              },
+              "value": [
+                1791283149.801,
+                "0.9128052715009721"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "translation_capacity_wait"
+              },
+              "value": [
+                1791283149.801,
+                "0.02495577967819758"
+              ]
+            },
+            {
+              "metric": {
+                "stage": "translation_model"
+              },
+              "value": [
+                1791283149.801,
+                "0.3903692656352737"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "可見字幕段樣本 / 秒",
+      "queries": [
+        {
+          "expr": "sum(rate(s2t_caption_stage_duration_seconds_count{stage=\"response_to_paint\"}[5m]))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.826,
+                "0.23516800000000002"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "語音偵測 / 無文字 / 失敗 / 音訊缺口",
+      "queries": [
+        {
+          "expr": "sum(increase(s2t_caption_events_total[5m])) by (event)",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {
+                "event": "speech_detected"
+              },
+              "value": [
+                1791283149.834,
+                "23.5296"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "成功首字 / 已偵測語音（5m，可能跨視窗）",
+      "queries": [
+        {
+          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{stage=\"speech_to_first_paint\"}[5m])) / sum(increase(s2t_caption_events_total{event=\"speech_detected\"}[5m]))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.843,
+                "1.5"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "HTTP 路由 p95",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket[5m])) by (route,le))",
+          "status": "success",
+          "series": 18,
+          "result": [
+            {
+              "metric": {
+                "route": "other"
+              },
+              "value": [
+                1791283149.85,
+                "0.3572919314844639"
+              ]
+            },
+            {
+              "metric": {
+                "route": "transcriptions"
+              },
+              "value": [
+                1791283149.85,
+                "1.0705786062886558"
+              ]
+            },
+            {
+              "metric": {
+                "route": "auth_register"
+              },
+              "value": [
+                1791283149.85,
+                "1.75278"
+              ]
+            },
+            {
+              "metric": {
+                "route": "audio_processing_status"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_settings"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_summary_templates"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "telemetry_captions"
+              },
+              "value": [
+                1791283149.85,
+                "0.04083333333333332"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_sessions"
+              },
+              "value": [
+                1791283149.85,
+                "0.2425"
+              ]
+            },
+            {
+              "metric": {
+                "route": "translations"
+              },
+              "value": [
+                1791283149.85,
+                "0.7455266180070301"
+              ]
+            },
+            {
+              "metric": {
+                "route": "storage"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_model_health"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_glossary"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_model_registry"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_storage_status"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_storage_audit"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "config"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "auth_session"
+              },
+              "value": [
+                1791283149.85,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "route": "diarizations"
+              },
+              "value": [
+                1791283149.85,
+                "0.970066499222581"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "HTTP 吞吐 / 秒",
+      "queries": [
+        {
+          "expr": "sum(rate(s2t_gateway_request_duration_seconds_count[2m])) by (route)",
+          "status": "success",
+          "series": 18,
+          "result": [
+            {
+              "metric": {
+                "route": "transcriptions"
+              },
+              "value": [
+                1791283149.857,
+                "17.983938333333334"
+              ]
+            },
+            {
+              "metric": {
+                "route": "translations"
+              },
+              "value": [
+                1791283149.857,
+                "16.812170000000002"
+              ]
+            },
+            {
+              "metric": {
+                "route": "auth_register"
+              },
+              "value": [
+                1791283149.857,
+                "0.03091125"
+              ]
+            },
+            {
+              "metric": {
+                "route": "auth_session"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_sessions"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "other"
+              },
+              "value": [
+                1791283149.857,
+                "1.2053877442155096"
+              ]
+            },
+            {
+              "metric": {
+                "route": "storage"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_model_health"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "audio_processing_status"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_settings"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_glossary"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "config"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_summary_templates"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_model_registry"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_storage_status"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_storage_audit"
+              },
+              "value": [
+                1791283149.857,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "telemetry_captions"
+              },
+              "value": [
+                1791283149.857,
+                "0.7855466666666666"
+              ]
+            },
+            {
+              "metric": {
+                "route": "diarizations"
+              },
+              "value": [
+                1791283149.857,
+                "0.20866083333333332"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "HTTP 失敗 / 秒",
+      "queries": [
+        {
+          "expr": "sum(rate(s2t_gateway_request_errors_total[2m])) by (route)",
+          "status": "success",
+          "series": 18,
+          "result": [
+            {
+              "metric": {
+                "route": "transcriptions"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "translations"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "auth_register"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "auth_session"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_sessions"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "other"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "storage"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_model_health"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "audio_processing_status"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_settings"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_glossary"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "config"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_summary_templates"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_model_registry"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_storage_status"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "data_storage_audit"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "telemetry_captions"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "route": "diarizations"
+              },
+              "value": [
+                1791283149.863,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "服務進行中請求",
+      "queries": [
+        {
+          "expr": "s2t_gateway_inflight_requests",
+          "status": "success",
+          "series": 6,
+          "result": [
+            {
+              "metric": {
+                "__name__": "s2t_gateway_inflight_requests",
+                "instance": "10.42.0.188:8787",
+                "job": "s2t",
+                "pod": "audio-worker-d6c6d67fb-f7cmc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.871,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_gateway_inflight_requests",
+                "instance": "10.42.0.193:8787",
+                "job": "s2t",
+                "pod": "audio-worker-648995d89d-b6ksc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.871,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_gateway_inflight_requests",
+                "instance": "10.42.0.192:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-hqk64",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.871,
+                "15"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_gateway_inflight_requests",
+                "instance": "10.42.0.195:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-xq2jh",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.871,
+                "8"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_gateway_inflight_requests",
+                "instance": "10.42.0.196:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-mxppw",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.871,
+                "10"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_gateway_inflight_requests",
+                "instance": "10.42.0.197:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-frf6c",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.871,
+                "13"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "程序 RSS",
+      "queries": [
+        {
+          "expr": "s2t_process_resident_memory_bytes",
+          "status": "success",
+          "series": 6,
+          "result": [
+            {
+              "metric": {
+                "__name__": "s2t_process_resident_memory_bytes",
+                "instance": "10.42.0.188:8787",
+                "job": "s2t",
+                "pod": "audio-worker-d6c6d67fb-f7cmc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.881,
+                "87154688"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_process_resident_memory_bytes",
+                "instance": "10.42.0.193:8787",
+                "job": "s2t",
+                "pod": "audio-worker-648995d89d-b6ksc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.881,
+                "88432640"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_process_resident_memory_bytes",
+                "instance": "10.42.0.192:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-hqk64",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.881,
+                "144031744"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_process_resident_memory_bytes",
+                "instance": "10.42.0.195:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-xq2jh",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.881,
+                "117153792"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_process_resident_memory_bytes",
+                "instance": "10.42.0.196:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-mxppw",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.881,
+                "119681024"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_process_resident_memory_bytes",
+                "instance": "10.42.0.197:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-frf6c",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.881,
+                "121982976"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Event loop p99",
+      "queries": [
+        {
+          "expr": "s2t_event_loop_p99_seconds",
+          "status": "success",
+          "series": 6,
+          "result": [
+            {
+              "metric": {
+                "__name__": "s2t_event_loop_p99_seconds",
+                "instance": "10.42.0.188:8787",
+                "job": "s2t",
+                "pod": "audio-worker-d6c6d67fb-f7cmc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.9,
+                "0.022642687"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_event_loop_p99_seconds",
+                "instance": "10.42.0.193:8787",
+                "job": "s2t",
+                "pod": "audio-worker-648995d89d-b6ksc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.9,
+                "0.027295743"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_event_loop_p99_seconds",
+                "instance": "10.42.0.192:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-hqk64",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.9,
+                "0.030703615"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_event_loop_p99_seconds",
+                "instance": "10.42.0.195:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-xq2jh",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.9,
+                "0.031686655"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_event_loop_p99_seconds",
+                "instance": "10.42.0.196:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-mxppw",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.9,
+                "0.030818303"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_event_loop_p99_seconds",
+                "instance": "10.42.0.197:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-frf6c",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.9,
+                "0.035061759"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Diarization 待處理工作 / 最老秒數",
+      "queries": [
+        {
+          "expr": "max(s2t_diarization_pending_jobs)",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.912,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Diarization 最老等待",
+      "queries": [
+        {
+          "expr": "max(s2t_diarization_oldest_seconds)",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283149.919,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Mock 模型進行中 / 明確是模擬 API",
+      "queries": [
+        {
+          "expr": "s2t_mock_active_requests",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "s2t_mock_active_requests",
+                "instance": "mock-models:9090",
+                "job": "mock-models",
+                "operation": "asr"
+              },
+              "value": [
+                1791283149.925,
+                "29"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_mock_active_requests",
+                "instance": "mock-models:9090",
+                "job": "mock-models",
+                "operation": "translation"
+              },
+              "value": [
+                1791283149.925,
+                "17"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_mock_active_requests",
+                "instance": "mock-models:9090",
+                "job": "mock-models",
+                "operation": "diarization"
+              },
+              "value": [
+                1791283149.925,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Mock 注入延遲 / 長尾",
+      "queries": [
+        {
+          "expr": "s2t_mock_configured_delay_seconds",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "s2t_mock_configured_delay_seconds",
+                "instance": "mock-models:9090",
+                "job": "mock-models",
+                "operation": "asr"
+              },
+              "value": [
+                1791283149.931,
+                "0.4"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_mock_configured_delay_seconds",
+                "instance": "mock-models:9090",
+                "job": "mock-models",
+                "operation": "translation"
+              },
+              "value": [
+                1791283149.931,
+                "0.18"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "s2t_mock_configured_delay_seconds",
+                "instance": "mock-models:9090",
+                "job": "mock-models",
+                "operation": "diarization"
+              },
+              "value": [
+                1791283149.931,
+                "0.75"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "所有 scrape targets（1=成功）",
+      "queries": [
+        {
+          "expr": "up",
+          "status": "success",
+          "series": 22,
+          "result": [
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "localhost:9090",
+                "job": "prometheus"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "sentinel-2.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "sentinel-1.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "grafana:3000",
+                "job": "grafana"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "redis-0.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "postgres-exporter:9187",
+                "job": "postgres"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "minio:9000",
+                "job": "minio"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "colima-s2t-stress",
+                "job": "kubelet-cadvisor",
+                "node": "colima-s2t-stress"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "sentinel-0.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "redis-2.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "milvus:9091",
+                "job": "milvus"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "etcd:2379",
+                "job": "etcd"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "redis-1.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "mock-models:9090",
+                "job": "mock-models"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "10.42.0.188:8787",
+                "job": "s2t",
+                "pod": "audio-worker-d6c6d67fb-f7cmc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "10.42.0.193:8787",
+                "job": "s2t",
+                "pod": "audio-worker-648995d89d-b6ksc",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "colima-s2t-stress",
+                "job": "kubelet",
+                "node": "colima-s2t-stress"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "10.42.0.192:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-hqk64",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "10.42.0.195:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-xq2jh",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "10.42.0.196:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-mxppw",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "up",
+                "instance": "10.42.0.197:8787",
+                "job": "s2t",
+                "pod": "gateway-5fd7b6455c-frf6c",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.938,
+                "1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "應用儲存操作 p95",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket[5m])) by (service,operation,le))",
+          "status": "success",
+          "series": 13,
+          "result": [
+            {
+              "metric": {
+                "operation": "pruneExpiredRequests",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.944,
+                "0.02375"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "readStream",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.02375"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "update",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.07108545521577533"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "compareAndSwap",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "put",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.09000000000000001"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "claimDiarizationJob",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.944,
+                "0.02409435728251358"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "get",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.041777981146111386"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "getGlossary",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "list",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "NaN"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "findVisibleVoiceprintIds",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.023749999999999997"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "diarizationBacklog",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.944,
+                "0.02375"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "diarizationBacklog",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.02414357729280278"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "pruneExpiredRequests",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.944,
+                "0.03347105527359906"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "儲存操作失敗 / 秒",
+      "queries": [
+        {
+          "expr": "sum(rate(s2t_storage_operation_duration_seconds_errors_total[5m])) by (service,operation)",
+          "status": "success",
+          "series": 13,
+          "result": [
+            {
+              "metric": {
+                "operation": "claimDiarizationJob",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "diarizationBacklog",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "diarizationBacklog",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "pruneExpiredRequests",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "pruneExpiredRequests",
+                "service": "audio-worker"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "get",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "readStream",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "update",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "getGlossary",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "list",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "compareAndSwap",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "put",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "operation": "findVisibleVoiceprintIds",
+                "service": "gateway"
+              },
+              "value": [
+                1791283149.955,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "title": "PostgreSQL 連線",
+      "queries": [
+        {
+          "expr": "sum(pg_stat_database_numbackends) by (datname)",
+          "status": "success",
+          "series": 4,
+          "result": [
+            {
+              "metric": {
+                "datname": "template1"
+              },
+              "value": [
+                1791283149.958,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "s2t"
+              },
+              "value": [
+                1791283149.958,
+                "35"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "template0"
+              },
+              "value": [
+                1791283149.958,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "postgres"
+              },
+              "value": [
+                1791283149.958,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "title": "PostgreSQL commits / rollback 每秒",
+      "queries": [
+        {
+          "expr": "sum(rate(pg_stat_database_xact_commit[5m])) by (datname)",
+          "status": "success",
+          "series": 4,
+          "result": [
+            {
+              "metric": {
+                "datname": "template1"
+              },
+              "value": [
+                1791283149.971,
+                "0.03367275470071655"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "s2t"
+              },
+              "value": [
+                1791283149.971,
+                "71.38287269004903"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "template0"
+              },
+              "value": [
+                1791283149.971,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "postgres"
+              },
+              "value": [
+                1791283149.971,
+                "0.03367275470071655"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "title": "PostgreSQL rollback / deadlock 每秒",
+      "queries": [
+        {
+          "expr": "sum(rate(pg_stat_database_xact_rollback[5m])) by (datname)",
+          "status": "success",
+          "series": 4,
+          "result": [
+            {
+              "metric": {
+                "datname": "template1"
+              },
+              "value": [
+                1791283149.974,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "s2t"
+              },
+              "value": [
+                1791283149.974,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "template0"
+              },
+              "value": [
+                1791283149.974,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "datname": "postgres"
+              },
+              "value": [
+                1791283149.974,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Redis 記憶體",
+      "queries": [
+        {
+          "expr": "redis_memory_used_bytes{job=\"redis\"}",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "redis_memory_used_bytes",
+                "instance": "redis-0.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.979,
+                "3349456"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_memory_used_bytes",
+                "instance": "redis-2.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.979,
+                "3519896"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_memory_used_bytes",
+                "instance": "redis-1.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.979,
+                "3369912"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Redis clients / blocked",
+      "queries": [
+        {
+          "expr": "redis_connected_clients{job=\"redis\"}",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "redis_connected_clients",
+                "instance": "redis-0.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.982,
+                "8"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_connected_clients",
+                "instance": "redis-2.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.982,
+                "12"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_connected_clients",
+                "instance": "redis-1.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.982,
+                "8"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Redis replication offset",
+      "queries": [
+        {
+          "expr": "redis_master_repl_offset{job=\"redis\"}",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "redis_master_repl_offset",
+                "instance": "redis-0.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.985,
+                "115078073"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_master_repl_offset",
+                "instance": "redis-2.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.985,
+                "115317950"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_master_repl_offset",
+                "instance": "redis-1.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283149.985,
+                "115121052"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Sentinel quorum status / TILT",
+      "queries": [
+        {
+          "expr": "redis_sentinel_master_ckquorum_status",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "redis_sentinel_master_ckquorum_status",
+                "instance": "sentinel-2.sentinel:26379",
+                "job": "sentinel",
+                "master_name": "s2t-stress-master",
+                "message": "OK 3 usable Sentinels. Quorum and failover authorization can be reached"
+              },
+              "value": [
+                1791283149.988,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_sentinel_master_ckquorum_status",
+                "instance": "sentinel-1.sentinel:26379",
+                "job": "sentinel",
+                "master_name": "s2t-stress-master",
+                "message": "OK 3 usable Sentinels. Quorum and failover authorization can be reached"
+              },
+              "value": [
+                1791283149.988,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_sentinel_master_ckquorum_status",
+                "instance": "sentinel-0.sentinel:26379",
+                "job": "sentinel",
+                "master_name": "s2t-stress-master",
+                "message": "OK 3 usable Sentinels. Quorum and failover authorization can be reached"
+              },
+              "value": [
+                1791283149.988,
+                "1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Sentinel TILT（應為 0）",
+      "queries": [
+        {
+          "expr": "redis_sentinel_tilt",
+          "status": "success",
+          "series": 3,
+          "result": [
+            {
+              "metric": {
+                "__name__": "redis_sentinel_tilt",
+                "instance": "sentinel-2.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283149.995,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_sentinel_tilt",
+                "instance": "sentinel-1.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283149.995,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_sentinel_tilt",
+                "instance": "sentinel-0.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283149.995,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Redis 可用性（含密碼登入）",
+      "queries": [
+        {
+          "expr": "redis_up",
+          "status": "success",
+          "series": 6,
+          "result": [
+            {
+              "metric": {
+                "__name__": "redis_up",
+                "instance": "sentinel-2.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283150.001,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_up",
+                "instance": "sentinel-1.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283150.001,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_up",
+                "instance": "redis-0.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283150.001,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_up",
+                "instance": "sentinel-0.sentinel:26379",
+                "job": "sentinel"
+              },
+              "value": [
+                1791283150.001,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_up",
+                "instance": "redis-2.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283150.001,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "redis_up",
+                "instance": "redis-1.redis:6379",
+                "job": "redis"
+              },
+              "value": [
+                1791283150.001,
+                "1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "title": "MinIO 儲存用量",
+      "queries": [
+        {
+          "expr": "minio_cluster_usage_total_bytes",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {
+                "__name__": "minio_cluster_usage_total_bytes",
+                "instance": "minio:9000",
+                "job": "minio",
+                "server": "127.0.0.1:9000"
+              },
+              "value": [
+                1791283150.006,
+                "43343797"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "title": "MinIO 磁碟可用量",
+      "queries": [
+        {
+          "expr": "minio_cluster_capacity_usable_free_bytes",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {
+                "__name__": "minio_cluster_capacity_usable_free_bytes",
+                "instance": "minio:9000",
+                "job": "minio",
+                "server": "127.0.0.1:9000"
+              },
+              "value": [
+                1791283150.008,
+                "23764451328"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Milvus process RSS",
+      "queries": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"milvus\"}",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {
+                "__name__": "process_resident_memory_bytes",
+                "instance": "milvus:9091",
+                "job": "milvus"
+              },
+              "value": [
+                1791283150.011,
+                "336347136"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Milvus 載入向量數量",
+      "queries": [
+        {
+          "expr": "milvus_querynode_entity_num",
+          "status": "success",
+          "series": 2,
+          "result": [
+            {
+              "metric": {
+                "__name__": "milvus_querynode_entity_num",
+                "collection_id": "469555234390673545",
+                "collection_name": "s2t_stress_voiceprints",
+                "db_name": "default",
+                "instance": "milvus:9091",
+                "job": "milvus",
+                "node_id": "1",
+                "partition_id": "469555234390673546",
+                "segment_state": "Growing"
+              },
+              "value": [
+                1791283150.014,
+                "100"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "milvus_querynode_entity_num",
+                "collection_id": "469555234390673545",
+                "collection_name": "s2t_stress_voiceprints",
+                "db_name": "default",
+                "instance": "milvus:9091",
+                "job": "milvus",
+                "node_id": "1",
+                "partition_id": "469555234390673546",
+                "segment_state": "Sealed"
+              },
+              "value": [
+                1791283150.014,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "title": "etcd leader（1=有 leader）",
+      "queries": [
+        {
+          "expr": "etcd_server_has_leader",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {
+                "__name__": "etcd_server_has_leader",
+                "instance": "etcd:2379",
+                "job": "etcd"
+              },
+              "value": [
+                1791283150.017,
+                "1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "title": "etcd WAL fsync p95",
+      "queries": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m])) by (le))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283150.021,
+                "0.002566666666666664"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "title": "VM node CPU cores",
+      "queries": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/\"}[2m]))",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1791283150.023,
+                "2.3389516490785676"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "title": "VM node memory",
+      "queries": [
+        {
+          "expr": "container_memory_working_set_bytes{id=\"/\"}",
+          "status": "success",
+          "series": 1,
+          "result": [
+            {
+              "metric": {
+                "__name__": "container_memory_working_set_bytes",
+                "id": "/",
+                "instance": "colima-s2t-stress",
+                "job": "kubelet-cadvisor",
+                "node": "colima-s2t-stress"
+              },
+              "value": [
+                1791283150.025,
+                "5077889024"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "title": "Pod CPU 使用量（cores）",
+      "queries": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"s2t-stress-20261005\",container!=\"\",container!=\"POD\"}[2m])) by (pod)",
+          "status": "success",
+          "series": 0,
+          "result": []
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "title": "Pod memory working set",
+      "queries": [
+        {
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"s2t-stress-20261005\",container!=\"\",container!=\"POD\"}) by (pod)",
+          "status": "success",
+          "series": 0,
+          "result": []
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "title": "Pod ready（1=就緒）",
+      "queries": [
+        {
+          "expr": "kube_pod_status_ready{condition=\"true\"}",
+          "status": "success",
+          "series": 26,
+          "result": [
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "sentinel-0",
+                "uid": "39b2f47f-80c4-4704-bf46-9b798d21da41"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "load-client",
+                "uid": "dd86be66-83d9-4710-a5ef-d10447bc5af3"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "grafana-5dd98d654d-2z2kr",
+                "uid": "fa3f96db-65df-4bf7-aaae-1618a3cac6e0"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "redis-0",
+                "uid": "fc30b0da-9541-4ffa-b86c-74958aa0f2a8"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "etcd-9cf796568-ltvpl",
+                "uid": "1b2eda79-27e4-49c9-b790-6a12b9d633f4"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "sentinel-exporter-76b8487466-7fq4k",
+                "uid": "7e8c0931-6798-4977-8693-c002d6700a4b"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "milvus-6448ff498f-6x4v5",
+                "uid": "f01b7395-e5dc-4599-89d4-c0a9ce3d4d49"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "postgres-669f66469b-vc2rg",
+                "uid": "964eae37-f7e0-4b6c-a99f-cae6f9c25cee"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "redis-2",
+                "uid": "346f5cd9-48e4-4733-adee-84a060e42f22"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "prometheus-5468f85489-zltvz",
+                "uid": "699be5ac-3f55-4517-b4c0-67f148cfb65e"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "redis-exporter-548bf55c97-t7sf2",
+                "uid": "dcf33fc7-62a4-44f1-af52-797d631b5631"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "redis-1",
+                "uid": "f43359be-87d2-4fd4-8807-46fe5325de7f"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "sentinel-2",
+                "uid": "342d0531-9a04-48af-a54b-647a69d86218"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "sentinel-1",
+                "uid": "998ef7d8-1278-4699-a8f1-59867301c128"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "minio-66dfd7465-8l2lw",
+                "uid": "24dd2fb5-7bca-47d6-8188-01e958c0aab0"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "kube-state-metrics-646b6fcd99-8xtr2",
+                "uid": "e736c5df-b888-427b-968e-707bb67611a7"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "schema-migration-h79v5",
+                "uid": "17a55201-27f0-4b55-a8c4-90f7750c770c"
+              },
+              "value": [
+                1791283150.031,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "postgres-exporter-65d8c8bf8c-gsfmx",
+                "uid": "eed69c86-83ac-4db5-82f2-2de93f48ea37"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "mock-models-6f4b7d9dcb-bjp6v",
+                "uid": "a508ee25-e71f-4e2c-b05f-113ccf49a6ab"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "audio-worker-d6c6d67fb-f7cmc",
+                "uid": "edb78964-b7ad-4c85-a9a7-f6d009d1a4e2"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "gateway-5fd7b6455c-xq2jh",
+                "uid": "628896a0-538d-41b4-a894-3be2ef80e475"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "gateway-5fd7b6455c-hqk64",
+                "uid": "dbdacfcc-885e-4b60-992e-0eb8e58eee4f"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "prometheus-bc8b7fbc9-5cwf6",
+                "uid": "844ce39f-75b0-4abf-912d-95017cf1da0b"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "audio-worker-648995d89d-b6ksc",
+                "uid": "6c8d8682-1113-426f-9e2b-b4333c288c77"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "gateway-5fd7b6455c-mxppw",
+                "uid": "13bd9338-cdd0-423f-a62a-66b5cf2361be"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_pod_status_ready",
+                "condition": "true",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "pod": "gateway-5fd7b6455c-frf6c",
+                "uid": "cbed051f-6157-4f47-8ec5-7864a0e7dbef"
+              },
+              "value": [
+                1791283150.031,
+                "1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "title": "Pod 重啟",
+      "queries": [
+        {
+          "expr": "sum(kube_pod_container_status_restarts_total) by (pod)",
+          "status": "success",
+          "series": 26,
+          "result": [
+            {
+              "metric": {
+                "pod": "sentinel-0"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "load-client"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "grafana-5dd98d654d-2z2kr"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-0"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "etcd-9cf796568-ltvpl"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "sentinel-exporter-76b8487466-7fq4k"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "milvus-6448ff498f-6x4v5"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "postgres-669f66469b-vc2rg"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-2"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "prometheus-5468f85489-zltvz"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-exporter-548bf55c97-t7sf2"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-1"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "sentinel-2"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "sentinel-1"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "minio-66dfd7465-8l2lw"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "kube-state-metrics-646b6fcd99-8xtr2"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "schema-migration-h79v5"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "postgres-exporter-65d8c8bf8c-gsfmx"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "mock-models-6f4b7d9dcb-bjp6v"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "audio-worker-d6c6d67fb-f7cmc"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-xq2jh"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-hqk64"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "prometheus-bc8b7fbc9-5cwf6"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "audio-worker-648995d89d-b6ksc"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-mxppw"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-frf6c"
+              },
+              "value": [
+                1791283150.036,
+                "0"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "title": "Deployment 可用 / 期望副本",
+      "queries": [
+        {
+          "expr": "kube_deployment_status_replicas_available",
+          "status": "success",
+          "series": 13,
+          "result": [
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "etcd",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "grafana",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "milvus",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "gateway",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "postgres-exporter",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "audio-worker",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "postgres",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "mock-models",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "redis-exporter",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "sentinel-exporter",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "prometheus",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "kube-state-metrics",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_deployment_status_replicas_available",
+                "deployment": "minio",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005"
+              },
+              "value": [
+                1791283150.04,
+                "1"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "title": "CPU throttled 比例",
+      "queries": [
+        {
+          "expr": "sum(rate(container_cpu_cfs_throttled_periods_total{namespace=\"s2t-stress-20261005\"}[2m])) by (pod) / sum(rate(container_cpu_cfs_periods_total{namespace=\"s2t-stress-20261005\"}[2m])) by (pod)",
+          "status": "success",
+          "series": 0,
+          "result": []
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "title": "Pod CPU requests",
+      "queries": [
+        {
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (pod)",
+          "status": "success",
+          "series": 25,
+          "result": [
+            {
+              "metric": {
+                "pod": "sentinel-0"
+              },
+              "value": [
+                1791283150.048,
+                "0.025"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "load-client"
+              },
+              "value": [
+                1791283150.048,
+                "0.25"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "grafana-5dd98d654d-2z2kr"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-0"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "etcd-9cf796568-ltvpl"
+              },
+              "value": [
+                1791283150.048,
+                "0.25"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "sentinel-exporter-76b8487466-7fq4k"
+              },
+              "value": [
+                1791283150.048,
+                "0.01"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "milvus-6448ff498f-6x4v5"
+              },
+              "value": [
+                1791283150.048,
+                "0.5"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "postgres-669f66469b-vc2rg"
+              },
+              "value": [
+                1791283150.048,
+                "0.25"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-2"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "prometheus-5468f85489-zltvz"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-exporter-548bf55c97-t7sf2"
+              },
+              "value": [
+                1791283150.048,
+                "0.01"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "redis-1"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "sentinel-2"
+              },
+              "value": [
+                1791283150.048,
+                "0.025"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "sentinel-1"
+              },
+              "value": [
+                1791283150.048,
+                "0.025"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "minio-66dfd7465-8l2lw"
+              },
+              "value": [
+                1791283150.048,
+                "0.25"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "kube-state-metrics-646b6fcd99-8xtr2"
+              },
+              "value": [
+                1791283150.048,
+                "0.02"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "postgres-exporter-65d8c8bf8c-gsfmx"
+              },
+              "value": [
+                1791283150.048,
+                "0.02"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "mock-models-6f4b7d9dcb-bjp6v"
+              },
+              "value": [
+                1791283150.048,
+                "0.25"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "audio-worker-d6c6d67fb-f7cmc"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-xq2jh"
+              },
+              "value": [
+                1791283150.048,
+                "0.5"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-hqk64"
+              },
+              "value": [
+                1791283150.048,
+                "0.5"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "prometheus-bc8b7fbc9-5cwf6"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "audio-worker-648995d89d-b6ksc"
+              },
+              "value": [
+                1791283150.048,
+                "0.1"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-mxppw"
+              },
+              "value": [
+                1791283150.048,
+                "0.5"
+              ]
+            },
+            {
+              "metric": {
+                "pod": "gateway-5fd7b6455c-frf6c"
+              },
+              "value": [
+                1791283150.048,
+                "0.5"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "title": "PVC 請求容量",
+      "queries": [
+        {
+          "expr": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+          "status": "success",
+          "series": 12,
+          "result": [
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "data-redis-0"
+              },
+              "value": [
+                1791283150.051,
+                "536870912"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "minio-data"
+              },
+              "value": [
+                1791283150.051,
+                "8589934592"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "etcd-data"
+              },
+              "value": [
+                1791283150.051,
+                "1073741824"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "data-sentinel-0"
+              },
+              "value": [
+                1791283150.051,
+                "67108864"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "data-sentinel-1"
+              },
+              "value": [
+                1791283150.051,
+                "67108864"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "data-sentinel-2"
+              },
+              "value": [
+                1791283150.051,
+                "67108864"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "data-redis-2"
+              },
+              "value": [
+                1791283150.051,
+                "536870912"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "milvus-data"
+              },
+              "value": [
+                1791283150.051,
+                "6442450944"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "prometheus-data"
+              },
+              "value": [
+                1791283150.051,
+                "2147483648"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "grafana-data"
+              },
+              "value": [
+                1791283150.051,
+                "2147483648"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "postgres-data"
+              },
+              "value": [
+                1791283150.051,
+                "4294967296"
+              ]
+            },
+            {
+              "metric": {
+                "__name__": "kube_persistentvolumeclaim_resource_requests_storage_bytes",
+                "instance": "kube-state-metrics:8080",
+                "job": "kube-state",
+                "namespace": "s2t-stress-20261005",
+                "persistentvolumeclaim": "data-redis-1"
+              },
+              "value": [
+                1791283150.051,
+                "536870912"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

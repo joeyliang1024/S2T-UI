@@ -5,6 +5,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 const send = (res, status, value) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(value)) }
 createServer(async (req, res) => {
   if (req.url === '/healthz') return send(res, 200, { mock: true })
+  if (req.url === '/metrics') {
+    const lines = ['# TYPE s2t_mock_active_requests gauge', '# TYPE s2t_mock_requests_total counter', '# TYPE s2t_mock_configured_delay_seconds gauge']
+    for (const operation of ['asr', 'translation', 'diarization']) {
+      lines.push(`s2t_mock_active_requests{operation="${operation}"} ${stats.active[operation] || 0}`, `s2t_mock_requests_total{operation="${operation}"} ${stats.counts[operation] || 0}`, `s2t_mock_configured_delay_seconds{operation="${operation}"} ${(controls[`${operation}Ms`] || 0) / 1000}`)
+      lines.push(`s2t_mock_tail_requests_total{operation="${operation}"} ${stats.latency[operation]?.tailRequests || 0}`)
+    }
+    res.writeHead(200, { 'content-type': 'text/plain; version=0.0.4' }); return res.end(lines.join('\n') + '\n')
+  }
   if (req.url === '/stats') return send(res, 200, { mock: true, controls, ...stats })
   const parts = []; for await (const part of req) parts.push(part)
   if (req.url === '/control') { Object.assign(controls, JSON.parse(Buffer.concat(parts))); return send(res, 200, controls) }

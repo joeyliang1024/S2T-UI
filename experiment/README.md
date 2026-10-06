@@ -8,3 +8,5 @@
 - [2026-10-06：舊格式紀錄修復與音訊保護](k8s-legacy-history-2026-10-06/README.zh-TW.md)
 - [2026-10-06：VAD 切段、慢 API 佇列與字幕收尾](vad-latency-2026-10-06/README.zh-TW.md)
 - [2026-10-06：暫停收音的字幕尾段](capture-pause-2026-10-06/README.zh-TW.md)
+- [2026-10-06：停止收音與 ASR 永久錯誤](capture-stop-2026-10-06/README.zh-TW.md)
+- [2026-10-06：Prometheus / Grafana 單張總覽、首字與階段延遲](monitoring-2026-10-06/README.zh-TW.md)

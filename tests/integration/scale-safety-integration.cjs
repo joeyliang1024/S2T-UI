@@ -14,7 +14,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
   const redisA = createClient({ url: process.env.S2T_TEST_REDIS_URL, disableOfflineQueue: true }), redisB = createClient({ url: process.env.S2T_TEST_REDIS_URL, disableOfflineQueue: true })
   redisA.on('error', () => {}); redisB.on('error', () => {})
   await Promise.all([redisA.connect(), redisB.connect()])
-  const env = { S2T_KUBERNETES_MODE: 'true', S2T_REDIS_URL: process.env.S2T_TEST_REDIS_URL, S2T_ASR_MAX_INFLIGHT: '1' }
+  const env = { S2T_KUBERNETES_MODE: 'true', REDIS_URL: process.env.S2T_TEST_REDIS_URL, S2T_ASR_MAX_INFLIGHT: '1' }
   const limitA = createSharedLimits(env, { asr: 8 }, redisA), limitB = createSharedLimits(env, { asr: 8 }, redisB)
   try {
     await Promise.all([a.ready, b.ready])

@@ -1,3 +1,4 @@
+import { registerCaptionTiming } from '../../../shared/services/caption-metrics'
 import { applyEnvironmentSettings } from '../services/environment-settings'
 import { importExtensions } from '../../transcript/import-formats'
 import { openCaptionPopout, type CaptionPopout } from '../services/caption-popout'
@@ -508,6 +509,7 @@ useEffect(() => {
   }, [])
 
 const receiveTranscript = useCallback((event: TranscriptEvent): void => {
+    const timedEvent = event
     // Prefer the language returned by ASR. The local character heuristic is
     // only a fallback for providers that do not expose detection metadata.
     if (settings.sourceLanguage === 'auto' && event.sourceText.trim() && !event.detectedLanguage) event = { ...event, detectedLanguage: detectTranscriptLanguage(event.sourceText) }
@@ -517,6 +519,7 @@ const receiveTranscript = useCallback((event: TranscriptEvent): void => {
       continuationEventIdsRef.current.set(event.id, id)
       event = { ...event, id, startMs: event.startMs + continuation.baseDurationMs, endMs: event.endMs + continuation.baseDurationMs }
     }
+    registerCaptionTiming(event.id, timedEvent)
     setTranscripts((current) => {
       const next = upsertLiveCaption(current, event, clearBoundaryRef.current, (id) => translationQueueRef.current!.isActive(id))
       return next
