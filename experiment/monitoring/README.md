@@ -8,3 +8,5 @@
 - [六步驟時間守恆及占比](history/stage-share-2026-10-06/README.zh-TW.md)
 
 JSON／截图不再在 docs 中另存一份。沒有樣本時不填虛構值；選取包含最近實驗的時間範圍即可查看已有資料。
+
+[Environment connection verification](connection-2026-10-06/README.md).

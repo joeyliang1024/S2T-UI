@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import json, subprocess, secrets, os
-from urllib.parse import urlparse
+import json, subprocess, secrets
+from connection import ROOT, resolve_url, configure_stack
 from pathlib import Path
 K=['kubectl','--context','colima-s2t-stress','-n','s2t-stress-20261005']
 def run(args,data=None):return subprocess.check_output(K+args,input=data,text=True)
+prometheus_url = resolve_url()  # Validate before changing any service.
 # Read isolated service credentials without emitting them or placing them in manifests.
 redis=json.loads(run(['get','statefulset','redis','-o','json']))
 env={}
@@ -26,30 +27,7 @@ run(['exec','-i','deploy/postgres','--','psql','-U','s2t','-d','s2t'],sql)
 values['postgres-dsn']=f"postgresql://s2t_monitor:{password}@postgres:5432/s2t?sslmode=disable&connect_timeout=3"
 secret={'apiVersion':'v1','kind':'Secret','metadata':{'name':'monitoring-credentials','namespace':'s2t-stress-20261005'},'type':'Opaque','stringData':{k:v for k,v in values.items() if k!='postgres-password'}}
 run(['apply','-f','-'],json.dumps(secret))
-# Exported environment overrides .env; only read this non-secret setting.
-prometheus_url = os.environ.get('PROMETHEUS_URL')
-if prometheus_url is None and Path('.env').exists():
-    for line in Path('.env').read_text().splitlines():
-        key, separator, value = line.strip().removeprefix('export ').partition('=')
-        if separator and key.strip() == 'PROMETHEUS_URL':
-            value = value.strip()
-            if value.startswith(('"', "'")) and value.endswith(value[0]):
-                value = value[1:-1]
-            else:
-                value = value.split(' #', 1)[0].strip()
-            prometheus_url = value
-prometheus_url = prometheus_url or 'http://prometheus:9090'
-parsed = urlparse(prometheus_url)
-if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password:
-    raise ValueError('PROMETHEUS_URL must be an HTTP(S) URL without embedded credentials')
-stack=json.loads(Path('deploy/monitoring/stack.json').read_text())
-for item in stack['items']:
-    if item['kind'] == 'ConfigMap' and item['metadata']['name'] == 'monitoring-connection':
-        item['data']['PROMETHEUS_URL'] = prometheus_url
-    if item['kind'] == 'Deployment' and item['metadata']['name'] == 'grafana':
-        # A ConfigMap change must restart Grafana to reload datasource provisioning.
-        import hashlib
-        item['spec']['template']['metadata']['annotations'] = {'s2t/prometheus-url-sha256': hashlib.sha256(prometheus_url.encode()).hexdigest()}
+stack=configure_stack(json.loads((ROOT / 'deploy/monitoring/stack.json').read_text()), prometheus_url)
 api=json.loads(subprocess.check_output(['kubectl','--context','colima-s2t-stress','-n','default','get','endpointslices','-l','kubernetes.io/service-name=kubernetes','-o','json'],text=True))['items'][0]
 for item in stack['items']:
     if item['kind']=='NetworkPolicy':
