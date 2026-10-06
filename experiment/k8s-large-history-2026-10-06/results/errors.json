@@ -1,0 +1,1 @@
+{"passed":true,"unchanged":true,"results":[{"name":"null","status":400,"error":"sessions 與 version 必須有效"},{"name":"plain-limit","status":413,"error":"紀錄同步資料超過大小上限"},{"name":"gzip-expansion","status":413,"error":"紀錄解壓縮後超過大小上限"},{"name":"broken-gzip","status":400,"error":"紀錄壓縮資料無效"},{"name":"unsupported","status":415,"error":"紀錄同步不支援此壓縮格式"}]}

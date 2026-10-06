@@ -144,9 +144,10 @@ class PostgresConfigStore {
     const client = await this.pool.connect()
     try {
       await client.query('BEGIN')
-      const current = await client.query('SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = $2 FOR UPDATE', [cleanScope, cleanKey])
-      const stored = current.rows[0]?.value
-      const version = stored && !Array.isArray(stored) && Number.isSafeInteger(stored.version) ? stored.version : 0
+      // CAS only needs the version. Avoid transferring and parsing an entire
+      // transcript snapshot a second time merely to check that scalar.
+      const current = await client.query("SELECT CASE WHEN jsonb_typeof(value->'version') = 'number' THEN value->'version' END AS version FROM s2t_config_records WHERE scope = $1 AND record_key = $2 FOR UPDATE", [cleanScope, cleanKey])
+      const version = Number.isSafeInteger(current.rows[0]?.version) ? current.rows[0].version : 0
       if (version !== expectedVersion) { await client.query('ROLLBACK'); return false }
       if (current.rowCount) await client.query('UPDATE s2t_config_records SET value = $3::jsonb, updated_at = NOW() WHERE scope = $1 AND record_key = $2', [cleanScope, cleanKey, JSON.stringify(value)])
       else {

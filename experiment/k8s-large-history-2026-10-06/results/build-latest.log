@@ -1,0 +1,95 @@
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  117.6MB
+Step 1/22 : FROM node:22-bookworm-slim AS build
+ ---> 43ac6c60b8f8
+Step 2/22 : WORKDIR /app
+ ---> Using cache
+ ---> 1d6dfc56a002
+Step 3/22 : ARG NPM_REGISTRY
+ ---> Using cache
+ ---> 055bbdb1fd85
+Step 4/22 : COPY package.json package-lock.json ./
+ ---> Using cache
+ ---> 6d44719b95a7
+Step 5/22 : COPY dependencies/npm ./dependencies/npm
+ ---> Using cache
+ ---> 76f065a48fb7
+Step 6/22 : RUN test -n "$NPM_REGISTRY"     && npm ci --ignore-scripts --no-audit --no-fund        --registry="$NPM_REGISTRY" --replace-registry-host=npmjs
+ ---> Using cache
+ ---> 53156516ac9c
+Step 7/22 : COPY . .
+ ---> e109c3176872
+Step 8/22 : RUN npm run build
+ ---> Running in 1be84b591b98
+
+> s2t-ui@0.1.0 build
+> electron-vite build
+
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 1 modules transformed.
+rendering chunks...
+out/main/index.js  41.73 kB
+✓ built in 100ms
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 1 modules transformed.
+rendering chunks...
+out/preload/index.js  3.19 kB
+✓ built in 17ms
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 79 modules transformed.
+rendering chunks...
+../../out/renderer/assets/favicon-FhZgbRE8.svg      0.31 kB
+../../out/renderer/index.html                       0.48 kB
+../../out/renderer/assets/index-ZH3L4o2k.css      102.44 kB
+../../out/renderer/assets/index-C8bc4Z7R.js     2,609.79 kB
+✓ built in 1.77s
+ ---> Removed intermediate container 1be84b591b98
+ ---> c597661652ea
+Step 9/22 : FROM node:22-bookworm-slim
+ ---> 43ac6c60b8f8
+Step 10/22 : WORKDIR /app
+ ---> Using cache
+ ---> 1d6dfc56a002
+Step 11/22 : ARG NPM_REGISTRY
+ ---> Using cache
+ ---> 055bbdb1fd85
+Step 12/22 : ENV NODE_ENV=production     S2T_WEB_PORT=8787     S2T_MODELS_DIR=/models
+ ---> Using cache
+ ---> 9335c075d7f3
+Step 13/22 : COPY package.json package-lock.json ./
+ ---> Using cache
+ ---> 529d5ca20227
+Step 14/22 : COPY dependencies/npm ./dependencies/npm
+ ---> Using cache
+ ---> b44b830a7f59
+Step 15/22 : COPY dependencies/ffmpeg-static /opt/s2t-dependencies/ffmpeg-static
+ ---> Using cache
+ ---> e4c5c7391bbc
+Step 16/22 : RUN test -n "$NPM_REGISTRY"     && npm ci --omit=dev --ignore-scripts --no-audit --no-fund        --registry="$NPM_REGISTRY" --replace-registry-host=npmjs     && install -m 0755 /opt/s2t-dependencies/ffmpeg-static/ffmpeg-linux-$(node -p process.arch) node_modules/ffmpeg-static/ffmpeg
+ ---> Using cache
+ ---> b5f1b30c8415
+Step 17/22 : COPY --from=build /app/out ./out
+ ---> Using cache
+ ---> d7d53c4b0d1c
+Step 18/22 : COPY server ./server
+ ---> f059d8ee122c
+Step 19/22 : COPY scripts/storage/migrate-schema.cjs ./scripts/storage/migrate-schema.cjs
+ ---> 4764c0b9bdf2
+Step 20/22 : COPY icon ./icon
+ ---> 24628498a7eb
+Step 21/22 : EXPOSE 8787
+ ---> Running in 7351f9005454
+ ---> Removed intermediate container 7351f9005454
+ ---> 77e51c89615e
+Step 22/22 : CMD ["node", "server/index.cjs"]
+ ---> Running in 95c90da024ce
+ ---> Removed intermediate container 95c90da024ce
+ ---> 5e1cdd818d2f
+Successfully built 5e1cdd818d2f
+Successfully tagged s2t-stress:20261006-large-history4

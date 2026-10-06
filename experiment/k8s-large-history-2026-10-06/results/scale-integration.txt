@@ -1,0 +1,6 @@
+2026-10-06T00:20:59.145+00:00 INFO  storage.migration.started role=api pod=gateway-84bdffdfbd-bdl67 schemaVersion=001-core-storage
+2026-10-06T00:20:59.146+00:00 INFO  storage.migration.started role=api pod=gateway-84bdffdfbd-bdl67 schemaVersion=001-core-storage
+2026-10-06T00:20:59.178+00:00 INFO  storage.migration.applied role=api pod=gateway-84bdffdfbd-bdl67 schemaVersion=001-core-storage durationMs=33
+2026-10-06T00:20:59.179+00:00 INFO  storage.migration.applied role=api pod=gateway-84bdffdfbd-bdl67 schemaVersion=001-core-storage durationMs=33
+PASS: real PostgreSQL + MinIO cross-adapter chunk ACK, streaming assembly/read and cleanup
+PASS: PostgreSQL concurrent claim/commit, duplicate intent, stale owner, lock-wait expiry, cross-replica Redis quotas/login/capacity, durable response dedup and coordinator outage

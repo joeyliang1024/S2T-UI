@@ -105,3 +105,9 @@ integration 僅對專用測試 PostgreSQL／Redis 執行，會建立 schema 與�
 - Redis rate limiter：https://redis.io/docs/latest/develop/use-cases/rate-limiter/
 - Retry/idempotency：https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
 - Load model：https://grafana.com/docs/k6/latest/using-k6/scenarios/concepts/open-vs-closed/
+
+## 大型歷史紀錄同步
+
+紀錄 POST 接受 plain JSON（最多 32 MiB），或 Content-Encoding: gzip（傳輸最多 8 MiB、解壓最多 32 MiB）。較大的瀏覽器 snapshot 使用 CompressionStream；壓縮無益或超過傳輸上限時改送 plain JSON。舊 gateway 的 400／415 可回退同一版本的 plain payload；409 仍交由現有 CAS rebase，不重複覆寫。CORS 允許 content-encoding。
+
+每個 Pod 最多同時處理兩個完整紀錄寫入，等待佇列最多 32 筆、最長十秒；範圍包含讀取、解壓縮、JSON parsing 及資料庫保存。超量為 413、無效 JSON／gzip 為 400、不支援編碼為 415、忙碌為 503 + Retry-After；不再直接斷開過大的同步請求。PostgreSQL CAS 只讀取版本 scalar，保留 FOR UPDATE 及 first-write 唯一勝者，避免再次傳輸解析整份逐字稿。

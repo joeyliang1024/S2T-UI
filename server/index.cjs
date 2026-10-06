@@ -1,3 +1,5 @@
+const { readSessionPayload, createSessionWriteGate } = require('./session-payload.cjs')
+const withSessionWrite = createSessionWriteGate()
 const { matchesJob, finalizeDiarizationSession } = require('./diarization-session.cjs')
 const { createServer } = require('node:http')
 const { readFile, stat } = require('node:fs/promises')
@@ -341,7 +343,7 @@ const send = (response, status, body, type = 'application/json; charset=utf-8') 
 // The access log records the status; this line carries the reason, which is
 // what an operator needs (Postgres down vs. MinIO down vs. Milvus down).
 const storageFailure = (response, error, fallback) => {
-  const status = error instanceof SyntaxError ? 400 : 503
+  const status = [400, 413, 415, 503].includes(error?.status) ? error.status : error instanceof SyntaxError ? 400 : 503
   if (status >= 500) logger.warn('storage.request.failed', { status, error })
   return send(response, status, { error: error instanceof Error ? error.message : fallback })
 }
@@ -755,7 +757,7 @@ const handleHttpRequest = async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after') }
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate', 'access-control-allow-credentials': 'true' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, content-encoding, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
   // failed schema migration). Answer 503 instead of letting that rejection
   // escape the request listener: an unhandled rejection would crash the whole
@@ -857,8 +859,10 @@ const handleHttpRequest = async (request, response) => {
         const value = Array.isArray(stored) ? { sessions: stored, version: 0 } : stored
         return send(response, 200, value && Array.isArray(value.sessions) && Number.isSafeInteger(value.version) ? value : { sessions: [], version: 0 })
       }
-      const body = JSON.parse((await readBody(request, 5 * 1024 * 1024)).toString('utf8'))
-      if (!Array.isArray(body.sessions) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'sessions 與 version 必須有效' })
+      return await withSessionWrite(async () => {
+      if (request.destroyed) throw Object.assign(new Error('紀錄同步傳輸中斷'), { status: 400 })
+      const body = await readSessionPayload(request)
+      if (!body || typeof body !== 'object' || !Array.isArray(body.sessions) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'sessions 與 version 必須有效' })
       const stored = await storage.config.get(user.id, 'sessions')
       const previousSessions = Array.isArray(stored?.sessions) ? stored.sessions : Array.isArray(stored) ? stored : []
       const sessions = canonicalSessions(body.sessions)
@@ -881,7 +885,13 @@ const handleHttpRequest = async (request, response) => {
       }
       await reconcileAudioCompensations(user, sessions).catch(() => undefined)
       return send(response, 200, { saved: true, version })
-    } catch (error) { return storageFailure(response, error, '無法保存紀錄') }
+      })
+    } catch (error) {
+      // Finish the structured error before closing an unread/oversized body.
+      if (!request.complete) { response.setHeader('connection', 'close'); response.once('finish', () => request.destroy()) }
+      if (error?.status === 503) response.setHeader('retry-after', '1')
+      return storageFailure(response, error, '無法保存紀錄')
+    }
   }
   if (storagePath === '/api/data/glossary' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
