@@ -1,0 +1,1 @@
+{"type":"panel","name":"S2T Latency Donut","id":"s2t-latencydonut-panel","info":{"description":"First-word stage shares with a percentile in seconds at the center","author":{"name":"S2T"},"keywords":["latency"],"version":"1.0.0","updated":"2026-10-06"},"dependencies":{"grafanaDependency":">=12.2.0","plugins":[]}}
