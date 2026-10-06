@@ -219,6 +219,11 @@ useEffect(() => {
   if (!status || status === lastStatusRef.current) return
   lastStatusRef.current = status
   setStatusToast(status)
+  // When the recording auto-pauses (staging backpressure, write failure,
+  // memory limit), the pause reason is the only clue the user has for why
+  // recording stopped. Keep it visible until recording resumes — a 4-second
+  // toast is gone before they can read it.
+  if (captureState === 'paused') return
   const timer = window.setTimeout(() => setStatusToast((current) => (current === status ? null : current)), 4000)
   return () => window.clearTimeout(timer)
 }, [status])

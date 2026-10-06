@@ -34,11 +34,25 @@ ASR P95 分別為 5.672 與 6.981 秒、翻譯 P95 為 5.015 與 5.289 秒，來
 
 因此本輪沒有新的 UI 首字延遲通過數據，最近一次通過仍是四 Pod 的 P95 2.909 秒。4/8 頁面提前進入暫停狀態是待查問題，暫停原因沒有在頁面上留下錯誤訊息。
 
+**根因已確認（2026-10-06 晚間分析）**：分散式錄音模式下 `BufferedPcmWriter` 的背壓門檻為 `sampleRate * 8`（約 8 秒音訊）。`RemotePcmRecording.append` 做串行網路 PUT，8 頁並發時網路上傳比即時慢，緩衝區滿後觸發 `onPressure(true)` → 自動暫停。暫停原因透過 `stBrowserStagingWriteSlowPaused` 設定，但 `statusToast` 4 秒後自動清除（`AppView.tsx:222`），測試在 `S2T_CAPTURE_MS`（10–20 秒）後才檢查，早已看不到。
+
+**修正已套用**：
+- `AppView.tsx`：`captureState === 'paused'` 時 status toast 不自動清除，暫停原因持續顯示直到錄音恢復。
+- `browser.cjs`：頁面自動暫停時立即捕捉 `.status-toast` 文字並存入 `pre-pause-N.json` 的 `statusToast` 欄位，然後點擊「繼續」恢復錄音再走正常暫停/停止流程，不再直接崩潰。診斷檔新增 `autoPaused` 與 `pauseReason` 欄位。
+
+尚未重跑驗證；下次執行時應確認暫停原因能被完整記錄。
+
 ### 字幕慢速檢查 `subtitle-slow-check`：未通過
 
 22:00 的 8 頁面檢查沒有對應的 load 檔，在「單頁 telemetry 上傳最多一個 in-flight」斷言失敗：頁面 0 與 3 的併發峰值為 2，其餘輸出正常——各 5 次回應全為 200、無 page error、攔截器延遲峰值為 1，另有 `telemetry_dropped` 各 1 次。見 [failure-0](current-2026-10-06/results/subtitle-slow-check-failure-0.json)、[failure-3](current-2026-10-06/results/subtitle-slow-check-failure-3.json)，`subtitle-slow-check-summary.json` 為 0 位元組，本輪沒有通過結論。
 
 失敗頁各錄到 3 個語音開頭的首字時間：頁 0 為 2.263／3.949／3.350 秒，頁 3 為 2.396／4.040／3.256 秒，主要落在 `asr_roundtrip_with_retries`（0.778–3.038 秒）與 `chunk_wait`（0.839–1.371 秒），與模擬長尾一致。需注意本輪計數改為從 request 發出算到 `requestfinished` 才遞減，量測窗口比先前以 fulfill 為準的版本長，峰值 2 有可能是口徑差異；要判定是否為真實併發回歸，須以同一口徑重跑對照。
+
+**根因已確認（2026-10-06 晚間分析）**：`CaptionMetricTransport` 本身是 single-flight（`sending` 標記 + `arm()` 檢查），`interceptorPeak: 1` 也證實攔截器每次只處理一個請求。峰值 2 是量測口徑差異：Playwright 的 `requestfinished` 事件在 `fetch()` promise resolve 之後才觸發，負載高時事件處理延遲可能超過 transport 的 500ms 重試間隔，導致下一個請求已被發出但前一個的 `requestfinished` 還沒來，計數暫時為 2。
+
+**修正已套用**：`browser.cjs` 改用 `response` 事件遞減計數（`response.request()` 取回對應 request），量測窗口縮小到「請求發出 → 回應標頭收到」，與 transport 實際的 in-flight 窗口更接近。斷言維持 `telemetryPeak === 1`。
+
+尚未重跑驗證；下次執行時應確認峰值為 1。
 
 ## Fixes and limits
 

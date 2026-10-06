@@ -16,16 +16,25 @@ let browser,tempDir
    try{const response=await route.fetch();statuses.push(response.status());await new Promise(r=>setTimeout(r,2000));await route.fulfill({response})}finally{interceptorActive--}
   })
   page.on('request',request=>{if(request.url().endsWith('/api/telemetry/captions')){outstanding.add(request);telemetryActive++;telemetryPeak=Math.max(telemetryPeak,telemetryActive);telemetryRequests++;const body=request.postDataJSON();samples.push(...body.samples);events.push(body.events)}})
-  const completed=request=>{if(outstanding.delete(request))telemetryActive--}
-  page.on('requestfinished',completed);page.on('requestfailed',completed)
+  const completed=response=>{if(outstanding.delete(response.request()))telemetryActive--}
+  page.on('response',completed);page.on('requestfailed',completed)
   page.on('pageerror',e=>errors.push(e.message))
   await page.goto(origin+'/',{waitUntil:'networkidle'});await page.locator('.live-controls-trigger').click()
   await page.locator('#live-sidebar-capture label').filter({hasText:/麥克風|Microphone/}).locator('select').first().selectOption('default')
   await page.getByRole('button',{name:/開始收音|Start recording/}).click();await page.getByRole('button',{name:/暫停|Pause/}).waitFor();await page.waitForTimeout(Number(process.env.S2T_CAPTURE_MS||10000))
-  if (!await page.getByRole('button',{name:/暫停|Pause/}).isVisible()) fs.writeFileSync(path.join(__dirname,'results/pre-pause-'+i+'.json'),JSON.stringify({samples,events,errors,text:(await page.locator('body').innerText()).slice(-8000)},null,2))
-  await page.getByRole('button',{name:/暫停|Pause/}).click();await page.waitForTimeout(4000)
+  // If the page auto-paused (e.g., staging backpressure under load), capture
+  // the status toast before it can fade, then resume recording before the
+  // normal pause/stop sequence.
+  const autoPaused=!await page.getByRole('button',{name:/暫停|Pause/}).isVisible()
+  let pauseReason=null
+  if(autoPaused){
+   pauseReason=await page.locator('.status-toast').textContent().catch(()=>null)
+   fs.writeFileSync(path.join(__dirname,'results/pre-pause-'+i+'.json'),JSON.stringify({samples,events,errors,statusToast:pauseReason,text:(await page.locator('body').innerText()).slice(-8000)},null,2))
+   await page.getByRole('button',{name:/繼續|Resume/}).click({timeout:5000}).catch(()=>{});await page.waitForTimeout(2000)
+  }
+  await page.getByRole('button',{name:/暫停|Pause/}).click({timeout:10000}).catch(()=>{});await page.waitForTimeout(4000)
   await page.getByRole('button',{name:/停止|結束|Stop recording/}).click();await page.waitForTimeout(8000)
-  const diagnostics={browser:i, samples,events,errors,statuses,telemetryPeak,telemetryRequests,interceptorPeak}
+  const diagnostics={browser:i, samples,events,errors,statuses,telemetryPeak,telemetryRequests,interceptorPeak,autoPaused,pauseReason}
   if(errors.length||telemetryPeak!==1||statuses.some(status=>status!==200)) fs.writeFileSync(path.join(__dirname,'results/'+(process.env.S2T_TEST_PHASE||'browser')+'-failure-'+i+'.json'),JSON.stringify(diagnostics,null,2)+'\n')
   const first=samples.filter(s=>s.stage==='speech_to_first_paint');assert.ok(first.length>=2,'at least two detected speech onsets must actually paint');assert.ok(first.every(s=>s.seconds>0.12&&s.seconds<20))
   const stages=['vad_onset','chunk_wait','browser_queue','browser_preprocess','asr_roundtrip_with_retries','response_to_paint']
@@ -40,7 +49,7 @@ let browser,tempDir
   assert.equal(telemetryPeak,1,'slow monitoring must never create concurrent upload requests')
   assert.ok(statuses.every(status=>status===200))
   assert.equal(errors.length,0)
-  const result={browser:i,samples,events,errors,statuses,telemetryPeak,telemetryRequests,interceptorPeak};await context.close();return result
+  const result={browser:i,samples,events,errors,statuses,telemetryPeak,telemetryRequests,interceptorPeak,autoPaused,pauseReason};await context.close();return result
  }))
  fs.writeFileSync(path.join(__dirname,'results/'+(process.env.S2T_TEST_PHASE||'browser')+'.json'),JSON.stringify(results,null,2)+'\n')
  const first=results.flatMap(r=>r.samples.filter(s=>s.stage==='speech_to_first_paint').map(s=>s.seconds)).sort((a,b)=>a-b),quantile=q=>first[Math.ceil(first.length*q)-1]
