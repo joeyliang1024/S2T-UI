@@ -7,3 +7,4 @@
 - [2026-10-06：大型歷史紀錄同步與壓縮傳輸](k8s-large-history-2026-10-06/README.zh-TW.md)
 - [2026-10-06：舊格式紀錄修復與音訊保護](k8s-legacy-history-2026-10-06/README.zh-TW.md)
 - [2026-10-06：VAD 切段、慢 API 佇列與字幕收尾](vad-latency-2026-10-06/README.zh-TW.md)
+- [2026-10-06：暫停收音的字幕尾段](capture-pause-2026-10-06/README.zh-TW.md)

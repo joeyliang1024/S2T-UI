@@ -39,6 +39,8 @@ export interface ModelAdapter {
   start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void>
   pushAudio(chunk: Float32Array, startSample: number): void
   stop(): Promise<void>
+  /** Mark a pause boundary without ending the capture session. */
+  flush?(): void
   onTranscript(listener: (event: TranscriptEvent) => void): () => void
   onError(listener: (message: string) => void): () => void
   /** Applies settings to audio received after this call; it never restarts capture. */
@@ -249,6 +251,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private vad: EnergyVad | null = null
   private pendingContainsSpeech = false
   private pendingBoundaries: number[] = []
+  private explicitBoundaries = new Set<number>()
   private vadSpeaking = false
   private lastSpeechSample = 0
   private readonly maximumPendingSeconds = 30
@@ -285,6 +288,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
     this.pendingContainsSpeech = false
     this.pendingBoundaries = []
+    this.explicitBoundaries.clear()
     this.vadSpeaking = false
     this.lastSpeechSample = 0
     this.rollingContext = ''
@@ -346,6 +350,20 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     }
   }
 
+  flush(): void {
+    if (this.stopped) return
+    const end = this.pendingStart + this.pendingSamples
+    if (this.pendingContainsSpeech && (this.pendingSamples || this.queuedChunks)) {
+      this.explicitBoundaries.add(end)
+      if (this.pendingSamples && this.pendingBoundaries[this.pendingBoundaries.length - 1] !== end) this.pendingBoundaries.push(end)
+    }
+    // Pause has no incoming silence frames; reset onset detection for resume.
+    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    this.vadSpeaking = false
+    this.flushPending()
+    this.closePreviousCaption(Math.round(end / this.sampleRate * 1000))
+  }
+
   async stop(): Promise<void> {
     if (this.stopped) return
     this.stopped = true
@@ -394,7 +412,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private enqueue(audio: Float32Array, startSample: number, isSentenceBoundary = false): void {
     const sequence = this.sequence++
     const startMs = Math.round(startSample / this.sampleRate * 1000)
-    const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
+    const endSample = startSample + audio.length
+    const endMs = Math.round(endSample / this.sampleRate * 1000)
     if (this.queuedChunks >= this.maximumQueuedChunks) {
       this.emitError(activeTranslate('svcModelTooSlow'))
       this.emitGap(sequence, startMs, endMs, 'queue-overflow')
@@ -407,17 +426,17 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const wav = wavFromFloat32(audio, this.sampleRate)
       if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) {
-        if (isSentenceBoundary) this.closePreviousCaption(startMs)
+        if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
         return
       }
       const response = await this.transcribeWithRetry(wav)
       const sourceText = sanitizeAsrText(response.text)
       if (!sourceText) {
-        if (isSentenceBoundary) this.closePreviousCaption(startMs)
+        if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
         return
       }
       this.rollingContext = sourceText
-      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary }
+      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary: isSentenceBoundary || this.explicitBoundaries.has(endSample) }
       this.lastTranscript = event
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
@@ -425,6 +444,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       this.emitGap(sequence, startMs, endMs, 'request-failed')
     }).finally(() => {
       this.queuedChunks -= 1
+      this.explicitBoundaries.delete(endSample)
       if (!this.stopped) this.flushPending()
     })
   }

@@ -1641,6 +1641,7 @@ const togglePause = async (): Promise<void> => {
       pauseStartedAtRef.current = Date.now()
       setCaptureState('paused')
       setStatus(activeTranslate('stPaused'))
+      modelRef.current.flush?.()
     } else if (captureState === 'paused') {
       recorder.resume()
       pausedRef.current = false
