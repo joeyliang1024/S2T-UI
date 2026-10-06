@@ -12,6 +12,8 @@ python3 deploy/monitoring/install-test.py
 
 bootstrap 先啟動 Storage、跑 migration，再啟動應用；已存在的 Secret／PVC 不輪替或清除。新環境生成的密碼只在 Secret，備份在 ignored `experiment/k8s/private/`。現有 load-client Pod 不重建，避免遺失 /tmp 測試帳號。已有帳號時重用其測試檔，首次初始化才註冊新帳號。
 
-測試入口 test-ingress 的模板及重跑操作見 [目前實驗](../../experiment/k8s/README.md)。模型 API 只在 namespace 內 mock，不送真實外部 API；不同 Storage 不可以單純 scale 出多個共用 writer 當高可用。此模板仍只有一個 Colima node，沒有驗證跨 node／Storage 叢集故障。
+`ingress.json` 保存雙副本測試入口，bootstrap 會一併部署。啟動瀏覽器測試前執行 `kubectl --context colima-s2t-stress -n s2t-stress-20261005 port-forward svc/test-ingress 8790:8080 --address 127.0.0.1`。重跑操作見 [目前實驗](../../experiment/k8s/README.md)。模型 API 只在 namespace 內 mock，不送真實外部 API；不同 Storage 不可以單純 scale 出多個共用 writer 當高可用。此模板仍只有一個 Colima node，沒有驗證跨 node／Storage 叢集故障。
 
-舊實驗的 manifests／stack-final 快照已移除，避免重套舊 Redis 名稱、1 秒 liveness 或過期映像。Git 歷史保留原始版本。
+舊實驗中的 manifests／stack-final 是歷史快照，可能含舊 Redis 名稱、1 秒 liveness 或過期映像，請勿當作目前部署來源。目前模板集中於 deploy/test。
+
+目前已驗證模板的 Kubernetes server dry-run 與既有叢集相容；尚未完成空白叢集的完整 bootstrap 驗證。

@@ -48,6 +48,9 @@ if not exists('job','s2t-test-schema-migration'):
 print(run(['wait','--for=condition=complete','job/s2t-test-schema-migration','--timeout=60s']))
 apply({'apiVersion':'v1','kind':'List','items':[i for i in core['items'] if i['metadata']['name'] in ['gateway','audio-worker']]})
 for name in ['gateway','audio-worker']:print(run(['rollout','status','deployment/'+name,'--timeout=60s']))
+# Stable two-Pod browser ingress survives Gateway rollouts.
+apply(json.loads(Path('deploy/test/ingress.json').read_text()))
+print(run(['rollout','status','deployment/test-ingress','--timeout=60s']))
 # Backup only current Secrets, under the ignored canonical private directory.
 private=Path('experiment/k8s/private');private.mkdir(parents=True,exist_ok=True)
 for name in ['s2t-stress-config','s2t-test-services']:
