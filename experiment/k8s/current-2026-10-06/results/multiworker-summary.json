@@ -1,0 +1,8 @@
+{
+  "sampledLogCompletionsPerPod": {
+    "audio-worker-745fd54c98-7488x": 5,
+    "audio-worker-745fd54c98-c9s2q": 5
+  },
+  "totalCompletedFromJobVerification": 20,
+  "logIsPartial": true
+}

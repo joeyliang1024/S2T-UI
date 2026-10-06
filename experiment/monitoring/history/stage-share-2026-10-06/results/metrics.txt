@@ -1,0 +1,1 @@
+PASS finite bounded telemetry, unknown labels rejected, async storage errors preserved and synchronous methods unchanged

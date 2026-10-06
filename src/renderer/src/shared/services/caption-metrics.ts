@@ -1,3 +1,4 @@
+import { CaptionMetricTransport, type CaptionMetricSample } from './caption-metric-transport'
 import { authFetch } from '../../features/auth/services/auth-client'
 export type CaptionTiming = { speechAt?: number; detectedAt?: number; queuedAt: number; dequeuedAt: number; requestAt: number; responseAt: number }
 const timings = new WeakMap<object, CaptionTiming>()
@@ -22,28 +23,13 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
   }
   if (samples.length) enqueue(samples.filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
 }
-type Sample = { stage: string; seconds: number }
-let queuedBatches: Sample[][] = []
-let queuedSampleCount = 0
-let queuedEvents: Record<string, number> = {}
-let timer: ReturnType<typeof setTimeout> | undefined
-const enqueue = (samples: Sample[] = [], event?: string): void => {
-  if (window.s2t) return
-  if (samples.length) { queuedBatches.push(samples); queuedSampleCount += samples.length }
-  while (queuedSampleCount > 128) {
-    queuedSampleCount -= queuedBatches.shift()!.length
-    queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1
-  }
-  if (event) queuedEvents[event] = (queuedEvents[event] || 0) + 1
-  if (timer !== undefined) return
-  timer = setTimeout(() => {
-    timer = undefined
-    const body = JSON.stringify({ samples: queuedBatches.flat(), events: queuedEvents })
-    queuedBatches = []; queuedSampleCount = 0; queuedEvents = {}
-    void authFetch('/api/telemetry/captions', { method: 'POST', headers: { 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(3000) }).then(response => {
-      if (!response.ok) queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1
-    }).catch(() => { queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1 })
-  }, 500)
+type Sample = CaptionMetricSample
+const transport = new CaptionMetricTransport(async payload => {
+  const response = await authFetch('/api/telemetry/captions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(3000) })
+  return response.ok
+})
+const enqueue = (samples: Sample[] = [], event?: 'speech_detected' | 'asr_empty' | 'asr_failed' | 'audio_gap'): void => {
+  if (!window.s2t) transport.enqueue(samples, event)
 }
 export const recordCaptionEvent = (event: 'speech_detected' | 'asr_empty' | 'asr_failed' | 'audio_gap'): void => enqueue([], event)
 export const attachCaptionTiming = (event: object, timing: CaptionTiming): void => { timings.set(event, timing) }

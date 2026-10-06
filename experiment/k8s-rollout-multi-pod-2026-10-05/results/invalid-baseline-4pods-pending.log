@@ -1,4 +1,0 @@
-rollout-start 2026-10-05T15:30:18Z
-deployment.apps/gateway restarted
-Waiting for deployment "gateway" rollout to finish: 1 out of 4 new replicas have been updated...
-error: timed out waiting for the condition

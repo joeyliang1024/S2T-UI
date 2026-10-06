@@ -1,14 +1,13 @@
-# 實驗紀錄
+# 實驗入口
 
-- [2026-10-05：本機 Kubernetes 100 人模擬壓測](k8s-100-users-2026-10-05/README.zh-TW.md)
-- [2026-10-05：多 Pod、模擬 API 延遲與滾動更新修正驗證](k8s-rollout-multi-pod-2026-10-05/README.zh-TW.md)
-- [2026-10-06：Redis Sentinel、慢 API 與 FIFO 容量等待](k8s-sentinel-latency-2026-10-06/README.zh-TW.md)
-- [2026-10-06：一般操作回應與長篇紀錄瀏覽效能](k8s-responsiveness-2026-10-06/README.zh-TW.md)
-- [2026-10-06：大型歷史紀錄同步與壓縮傳輸](k8s-large-history-2026-10-06/README.zh-TW.md)
-- [2026-10-06：舊格式紀錄修復與音訊保護](k8s-legacy-history-2026-10-06/README.zh-TW.md)
-- [2026-10-06：VAD 切段、慢 API 佇列與字幕收尾](vad-latency-2026-10-06/README.zh-TW.md)
-- [2026-10-06：暫停收音的字幕尾段](capture-pause-2026-10-06/README.zh-TW.md)
-- [2026-10-06：停止收音與 ASR 永久錯誤](capture-stop-2026-10-06/README.zh-TW.md)
-- [2026-10-06：Prometheus / Grafana 單張總覽、首字與階段延遲](monitoring-2026-10-06/README.zh-TW.md)
+| 類別 | 入口 | 內容 |
+| --- | --- | --- |
+| 多 Pod／儲存／滾動更新 | [Kubernetes](k8s/README.md) | 現行至少 2 Pod 測試及必要歷史修正證據 |
+| 首字延遲／監控 | [Monitoring](monitoring/README.md) | 單張 Grafana、階段占比與採樣限制 |
+| 字幕／VAD／停止暫停 | [Captions](captions/README.md) | 音訊保留、字幕延遲與模型比較 |
+| 講者分離 | [Diarization](diarization/README.md) | 最終比較、參考音訊與回放 |
+| 小型歷史評測 | [Evaluation](evaluation-reports/README.md) | 已記錄的參數比較，非現行操作入口 |
 
-- [2026-10-06：首字延遲各階段耗時百分比](stage-share-2026-10-06/README.zh-TW.md)
+每輪只保留摘要、可重現腳本與能證明結果的資料。已被取代的部署快照、重複資料、build 日誌、無效試跑已移除；更早版本可由 Git 歷史找回。
+
+現行操作請看 [文件入口](../docs/README.md)。private/ 為本機憑證與帳號資料，不納入版本控制。

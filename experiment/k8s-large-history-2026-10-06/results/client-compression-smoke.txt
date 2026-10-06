@@ -1,1 +1,0 @@
-PASS gzip storage payload, original content/version, native-path omission, old-gateway fallback, no conflict retry, and plain-browser compatibility

@@ -1,6 +1,0 @@
-
-> s2t-ui@0.1.0 redis:sentinel:smoke
-> node tests/smoke/redis-sentinel-config-smoke-test.cjs
-
-PASS Sentinel configuration, separate auth/TLS, invalid groups, URL and standalone compatibility
-PASS whole-command timeout and abort during topology waits

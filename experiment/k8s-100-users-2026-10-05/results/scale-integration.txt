@@ -1,6 +1,0 @@
-2026-10-05T14:52:15.377+00:00 INFO  storage.migration.started role=all pod=load-client schemaVersion=001-core-storage
-2026-10-05T14:52:15.383+00:00 INFO  storage.migration.started role=all pod=load-client schemaVersion=001-core-storage
-2026-10-05T14:52:15.434+00:00 INFO  storage.migration.applied role=all pod=load-client schemaVersion=001-core-storage durationMs=58
-2026-10-05T14:52:15.436+00:00 INFO  storage.migration.applied role=all pod=load-client schemaVersion=001-core-storage durationMs=53
-PASS: real PostgreSQL + MinIO cross-adapter chunk ACK, streaming assembly/read and cleanup
-PASS: PostgreSQL concurrent claim/commit, duplicate intent, stale owner, lock-wait expiry, cross-replica Redis quotas/login/capacity, durable response dedup and coordinator outage

@@ -97,7 +97,7 @@
 
 - 打開 `subtitle-replay.html`，兩側先選同一實驗，再比較「現況字幕列」與「獨立顯示合句」；也可選不同實驗比較實際到達時間。音訊文件要留在相同文件夾。
 - 開頭 00:00–00:20、中段 02:20–02:40、尾段 04:40–05:00，以及姓名／邊界短音訊均已附上。機參考草稿可疑姓名和斷詞應與音訊一起核對。
-- [comparison.csv](caption-comparison-2026-10-04/comparison.csv)、[comparison-data.json](caption-comparison-2026-10-04/comparison-data.json)、`raw-events.json`（保留於實驗 outputs） 提供數值與原始文本；[speed-acceptance.json](caption-comparison-2026-10-04/speed-acceptance.json) 保留速度門檻計算。
+- [comparison.csv](../../experiment/captions/comparison-2026-10-04/comparison.csv)、[comparison-data.json](../../experiment/captions/comparison-2026-10-04/comparison-data.json)、`raw-events.json`（保留於實驗 outputs） 提供數值與原始文本；[speed-acceptance.json](../../experiment/captions/comparison-2026-10-04/speed-acceptance.json) 保留速度門檻計算。
 
 適用範圍僅限這支五分鐘旁白，不代表多人會議、多語對話或其他背景噪音均有效。
 

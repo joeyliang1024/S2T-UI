@@ -1,1 +1,0 @@
-PASS: standalone defaults, atomic task commit, generation fencing, deduplication, durable chunks, gap detection and failed-write ACK safety

@@ -107,4 +107,4 @@ npm run dev
 - 60 分鐘穩定性、睡眠喚醒、低磁碟。
 - 自動說話者分離、批次大檔、MP3/M4A、打包簽署與 Windows 實機。
 
-全部待辦、原始需求對照與唯一優先順序請見 [Enhancement.md](../../Enhancement.md)；本文件只維護驗收操作與證據，模型傳輸協定見 [MODEL_ADAPTER.md](../reference/MODEL_ADAPTER.md)。
+全部待辦、原始需求對照與唯一優先順序請見 [Enhancement.md](../Enhancement.md)；本文件只維護驗收操作與證據，模型傳輸協定見 [MODEL_ADAPTER.md](../reference/MODEL_ADAPTER.md)。

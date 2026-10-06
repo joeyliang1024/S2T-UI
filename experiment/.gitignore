@@ -1,2 +1,4 @@
-
-monitoring-2026-10-06/private/
+# Local credentials, account tokens and scratch output are never experiment evidence.
+**/private/
+**/__pycache__/
+**/*.pyc

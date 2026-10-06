@@ -854,11 +854,22 @@
       "apiVersion": "v1",
       "kind": "ConfigMap",
       "metadata": {
+        "name": "monitoring-connection",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "PROMETHEUS_URL": "http://prometheus:9090"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
         "name": "grafana-provisioning",
         "namespace": "s2t-stress-20261005"
       },
       "data": {
-        "datasources.yaml": "apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: http://prometheus:9090\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n",
+        "datasources.yaml": "apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: ${PROMETHEUS_URL}\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n",
         "dashboards.yaml": "apiVersion: 1\nproviders:\n  - name: S2T\n    type: file\n    updateIntervalSeconds: 10\n    options: {path: /var/lib/grafana/dashboards}\n"
       }
     },
@@ -903,6 +914,15 @@
                 "image": "grafana/grafana:12.2.0",
                 "args": [],
                 "env": [
+                  {
+                    "name": "PROMETHEUS_URL",
+                    "valueFrom": {
+                      "configMapKeyRef": {
+                        "name": "monitoring-connection",
+                        "key": "PROMETHEUS_URL"
+                      }
+                    }
+                  },
                   {
                     "name": "GF_SECURITY_ADMIN_PASSWORD",
                     "valueFrom": {

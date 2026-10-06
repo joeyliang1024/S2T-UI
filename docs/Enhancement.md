@@ -6,7 +6,7 @@
 
 **目前急迫需求只有：語者分離系統、斷句速度、翻譯模式。** 舊文件的 P0／P1、先做 storage、先做語系等排序不再沿用。先處理這三項需要的直接依賴，其餘按本檔分類追蹤；本次只整理文件，不代表已完成下列開發。
 
-狀態規則：**部分完成**＝有實作但仍有明確缺口；**未完成**＝未見完整功能路徑；**待驗收**＝已有路徑、缺情境證據；**不確定**＝規格衝突、候選方案或外部契約未定。工程改善建議會明示，不把建議當成新增的使用者承諾。完成項目應移除待辦，保留版本、平台、步驟與結果於 [驗收手冊](docs/guide/VALIDATION.zh-TW.md)。
+狀態規則：**部分完成**＝有實作但仍有明確缺口；**未完成**＝未見完整功能路徑；**待驗收**＝已有路徑、缺情境證據；**不確定**＝規格衝突、候選方案或外部契約未定。工程改善建議會明示，不把建議當成新增的使用者承諾。完成項目應移除待辦，保留版本、平台、步驟與結果於 [驗收手冊](guide/VALIDATION.zh-TW.md)。
 
 已確認的共同規則：
 
@@ -206,7 +206,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 **目標：斷句快慢可調、字幕及時出現，又不切掉句首／句尾或把連續語句切得過碎。**
 
-現況（2026-10-01）：逐項 VAD 滑桿已移除，收音控制側欄只保留單一「回應速度」滑桿（快／正常／慢），內部對應 `responseSpeedVadConfig` 三組預設（快 700/1200/150、正常 700/1500/250、慢 1000/2400/800）；滾動上下文 prompt 與 ASR 輸出清洗已進產品碼，Settings schema 由 `vadConfig` 收斂為 `responseSpeed`。`npm run caption:eval` 以真實收音節奏實測 Breeze-ASR-25：對話素材（前 300 秒、32 句）正常檔首筆字幕 P50 1029 ms／P95 1701 ms，「≤2500 ms」目標達成率 100%。第二輪以同場六組（BGM）＋九組（無 BGM 旁白）矩陣按「快＝延遲、慢＝CER、正常＝穩定」定案：快維持 700/1200/150（chunkMin 500 無可測收益、chunkMax 1000 漏 4/32 句）、正常維持 250（250 vs 350 產生相同 chunk 流）、慢的 `minSilence` 500→800（無 BGM 語料 CER 10.27%→8.35% 重跑同值、BGM 不回歸）。三速與各輪對照數據、淘汰依據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。UI 連續 final 合併上限維持約 12 秒。
+現況（2026-10-01）：逐項 VAD 滑桿已移除，收音控制側欄只保留單一「回應速度」滑桿（快／正常／慢），內部對應 `responseSpeedVadConfig` 三組預設（快 700/1200/150、正常 700/1500/250、慢 1000/2400/800）；滾動上下文 prompt 與 ASR 輸出清洗已進產品碼，Settings schema 由 `vadConfig` 收斂為 `responseSpeed`。`npm run caption:eval` 以真實收音節奏實測 Breeze-ASR-25：對話素材（前 300 秒、32 句）正常檔首筆字幕 P50 1029 ms／P95 1701 ms，「≤2500 ms」目標達成率 100%。第二輪以同場六組（BGM）＋九組（無 BGM 旁白）矩陣按「快＝延遲、慢＝CER、正常＝穩定」定案：快維持 700/1200/150（chunkMin 500 無可測收益、chunkMax 1000 漏 4/32 句）、正常維持 250（250 vs 350 產生相同 chunk 流）、慢的 `minSilence` 500→800（無 BGM 語料 CER 10.27%→8.35% 重跑同值、BGM 不回歸）。三速與各輪對照數據、淘汰依據見[字幕延遲調校報告](reports/CAPTION_LATENCY.zh-TW.md)。UI 連續 final 合併上限維持約 12 秒。
 
 - [x] 斷句參數收斂為三速：移除設定頁 VAD 卡片 6 支滑桿與收音面板 3 支 inline 滑桿，改為收音控制面板單一「回應速度」滑桿（快／正常／慢，i18n 五語系＋無障礙標註）；`responseSpeed` 隨設定持久化，舊存檔逐項參數自動丟棄正規化。
 - [x] 快速設定保留即時講者預覽、音源、語言、翻譯開關與目標語言；收音中變更於下一段音訊生效。
@@ -240,7 +240,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### 已有基線與證據邊界
 
-2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `experiment/evaluation-reports/`。以下為更早一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
+2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `experiment/evaluation-reports/`。以下為更早一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
 
 既有文件另記錄 gateway 授權 smoke、Breeze 中文 WAV、HY-MT 英／日翻譯、本機 sherpa 靜音 WAV／原生 addon 成功；本輪未重新驗證。模型 API 有回應不代表麥克風端到端或多人辨識品質完成。字典測試只涵蓋已登錄 key；storage smoke 只涵蓋本機 adapter。每筆實機結果記版本／dirty diff、平台、模型版本、素材、設定、步驟及量測，憑證不得寫入。
 
@@ -296,4 +296,4 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 | Q08 | 研究性延伸 | 獨立降噪模型／更換 VAD、字幕同步回放／變速、MP3／M4A／Word／Excel 匯出、逐字稿優化／問答、視覺摘要、語音口譯、會後第二輪重轉錄僅早期研究／候選功能，不當成已承諾需求；需確認用途與模型能力後再排。 |
 | Q09 | 品質與資源門檻 | 舊文 partial P95≤2 秒、譯文≤4 秒是初始工程目標，HTTP 無 partial 不套該指標；CER／WER、講者誤配／漏配、可接受斷句延遲、heap／RSS／queue 上限與 2 小時 soak 門檻需依指定硬體及模型基線定案。驗收需提供數據，不用空白 WAV 或單句成功代替。 |
 
-技術參考保留：[文件索引](docs/README.md)、[架構](docs/reference/ARCHITECTURE.zh-TW.md)、[模型契約](docs/reference/MODEL_ADAPTER.md)、[Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質](docs/reference/AUDIO_QUALITY.zh-TW.md)、[sherpa 操作](docs/guide/SHERPA_ONNX.zh-TW.md)、[部署備份](docs/guide/DEPLOYMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)。[早期研究](docs/research/PLAN.zh-TW.md) 與 [後端方案研究](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md) 的歷史假設不覆蓋本檔決策；[K8s 擴充計畫](docs/research/K8S_SCALE_PLAN.zh-TW.md) 屬未來規劃，不代表已交付。
+技術參考保留：[文件索引](README.md)、[架構](reference/ARCHITECTURE.zh-TW.md)、[模型契約](reference/MODEL_ADAPTER.md)、[Gateway](reference/WEB_GATEWAY.zh-TW.md)、[分離 API](reference/DIARIZATION_API.zh-TW.md)、[音訊品質](reference/AUDIO_QUALITY.zh-TW.md)、[sherpa 操作](guide/SHERPA_ONNX.zh-TW.md)、[部署備份](guide/DEPLOYMENT.zh-TW.md)、[驗收手冊](guide/VALIDATION.zh-TW.md)。[早期研究](research/PLAN.zh-TW.md) 與 [後端方案研究](research/OPEN_SOURCE_BACKENDS.zh-TW.md) 的歷史假設不覆蓋本檔決策；[K8s 擴充計畫](research/K8S_SCALE_PLAN.zh-TW.md) 屬未來規劃，不代表已交付。

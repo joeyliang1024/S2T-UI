@@ -153,10 +153,10 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 五分鐘旁白的獨立實驗中，正常檔顯示列由 200 降為 34，短列比例由 40% 降為 0%；這是顯示投影的結果，不是辨識準確率提升或正式畫面延遲保證。參考 TSV 尚未人工校對，報告的差異率不是正式 CER。300 ms 重疊、長上下文與 LocalAgreement 均未套用到正式辨識流程。完整方法、反例及限制見[比較報告](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)。
 
-並排回放、五分鐘音訊、核對案例與 CSV／JSON 保存在 [experiment/caption-comparison-2026-10-04](experiment/caption-comparison-2026-10-04/README.md)。從專案根目錄啟動：
+並排回放、五分鐘音訊、核對案例與 CSV／JSON 保存在 [experiment/captions/comparison-2026-10-04](experiment/captions/comparison-2026-10-04/README.md)。從專案根目錄啟動：
 
 ```sh
-python3 -m http.server 58755 --bind 127.0.0.1 --directory experiment/caption-comparison-2026-10-04
+python3 -m http.server 58755 --bind 127.0.0.1 --directory experiment/captions/comparison-2026-10-04
 ```
 
 開啟 <http://127.0.0.1:58755/subtitle-replay.html?results=final>；兩側選相同實驗可比較原始列與顯示分組，選不同實驗可比較事件到達時間。回放使用已保存資料，不呼叫模型端點。
@@ -181,7 +181,7 @@ node tests/smoke/caption-regression-test.cjs
 | `server/` | Web gateway：登入、模型 key、Storage 與 ASR／翻譯代理 |
 | `scripts/` | smoke 測試與量測腳本（`package.json` 可見完整對應） |
 | `docs/` | 分類文件（[索引](docs/README.md)） |
-| `experiment/` | 獨立實驗回放與素材（[字幕比較回放](experiment/caption-comparison-2026-10-04/README.md)） |
+| `experiment/` | 獨立實驗回放與素材（[字幕比較回放](experiment/captions/comparison-2026-10-04/README.md)） |
 | `experiment/evaluation-reports/` | 量測原始數據（字幕延遲、聲紋、分離時間軸） |
 
 目錄責任細節見[程式目錄與責任](docs/reference/ARCHITECTURE.zh-TW.md)。
