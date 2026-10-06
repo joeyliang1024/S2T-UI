@@ -20,4 +20,8 @@
 
 [字幕延遲](reports/CAPTION_LATENCY.zh-TW.md)、[字幕穩定性](reports/CAPTION_STABILITY.zh-TW.md)、[字幕比較](reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)、[聲紋準確率](reports/VOICEPRINT_ACCURACY.zh-TW.md)。研究資料與回放各保留一份在 experiment，避免文件再複製 JSON／CSV。
 
+## 修正與盤點記錄
+
+一次性的已套用修正與環境盤點，保留當時的根因、步驟與驗證結果，不再列入待辦：[完成列才辨識講者](reports/COMPLETED_CAPTION_SPEAKERS_2026-10-04.zh-TW.md)、[講者標註第一階段](reports/SPEAKER_LABEL_FIX_2026-10-04.zh-TW.md)、[Nemotron timeout 修正](reports/NEMOTRON_TIMEOUT_FIX_2026-10-04.zh-TW.md)、[Docker 連外盤點與 Nemotron 映像](reports/DOCKER_NETWORK_NEMOTRON_2026-10-04.zh-TW.md)。
+
 research 中的規劃是歷史設計背景，不能取代現行部署指南或當成已驗證的功能。需要追蹤的缺口以 Enhancement.md 為準。
