@@ -1,0 +1,12 @@
+**
+!models/
+!models/nemotron-3-diarization/
+!models/nemotron-3-diarization/Nemotron-3-Diarization.q8_0.gguf
+!models/nemotron-3-diarization/runtime/
+!models/nemotron-3-diarization/runtime/linux-arm64/
+!models/nemotron-3-diarization/runtime/linux-arm64/**
+!docker/
+!docker/nemotron/
+!docker/nemotron/**
+!models/nemotron-3-diarization/runtime/linux-x64/
+!models/nemotron-3-diarization/runtime/linux-x64/**
