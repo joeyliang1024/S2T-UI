@@ -26,7 +26,7 @@ for name in ['gateway','audio-worker']:
  for c in obj['spec']['template']['spec']['containers']:
   for env in c.get('env',[]):env['name']=mapping.get(env['name'],env['name'])
   if c['name']==name:
-   c['image']='s2t-stress:20261006-monitoring-redis-baseline'
+   c['image']='s2t-stress:20261006-stage-share-v2'
    if not any(e['name']=='REDIS_SENTINEL_USERNAME' for e in c['env']):c['env'].append({'name':'REDIS_SENTINEL_USERNAME','value':'default'})
  patch={'spec':{'template':{'spec':{'containers':obj['spec']['template']['spec']['containers']}}}}
  # Patch content includes credentials and is sent via stdin, never a command argument.

@@ -1,0 +1,56 @@
+{
+  "passed": true,
+  "percentages": [
+    {
+      "stage": "vad_onset",
+      "percent": 6.621009290016566
+    },
+    {
+      "stage": "chunk_wait",
+      "percent": 61.007772787735334
+    },
+    {
+      "stage": "browser_queue",
+      "percent": 0.0031035959670461855
+    },
+    {
+      "stage": "browser_preprocess",
+      "percent": 0.09224583666708398
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "percent": 30.49871372748225
+    },
+    {
+      "stage": "response_to_paint",
+      "percent": 1.7771547621317152
+    }
+  ],
+  "counts": [
+    {
+      "stage": "vad_onset",
+      "count": 32
+    },
+    {
+      "stage": "chunk_wait",
+      "count": 32
+    },
+    {
+      "stage": "browser_queue",
+      "count": 32
+    },
+    {
+      "stage": "browser_preprocess",
+      "count": 32
+    },
+    {
+      "stage": "asr_roundtrip_with_retries",
+      "count": 32
+    },
+    {
+      "stage": "response_to_paint",
+      "count": 32
+    }
+  ],
+  "targets": 22
+}

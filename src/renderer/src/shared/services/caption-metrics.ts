@@ -23,19 +23,23 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
   if (samples.length) enqueue(samples.filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
 }
 type Sample = { stage: string; seconds: number }
-let queuedSamples: Sample[] = []
+let queuedBatches: Sample[][] = []
+let queuedSampleCount = 0
 let queuedEvents: Record<string, number> = {}
 let timer: ReturnType<typeof setTimeout> | undefined
 const enqueue = (samples: Sample[] = [], event?: string): void => {
   if (window.s2t) return
-  queuedSamples.push(...samples)
-  if (queuedSamples.length > 128) { queuedSamples = queuedSamples.slice(-128); queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1 }
+  if (samples.length) { queuedBatches.push(samples); queuedSampleCount += samples.length }
+  while (queuedSampleCount > 128) {
+    queuedSampleCount -= queuedBatches.shift()!.length
+    queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1
+  }
   if (event) queuedEvents[event] = (queuedEvents[event] || 0) + 1
   if (timer !== undefined) return
   timer = setTimeout(() => {
     timer = undefined
-    const body = JSON.stringify({ samples: queuedSamples, events: queuedEvents })
-    queuedSamples = []; queuedEvents = {}
+    const body = JSON.stringify({ samples: queuedBatches.flat(), events: queuedEvents })
+    queuedBatches = []; queuedSampleCount = 0; queuedEvents = {}
     void authFetch('/api/telemetry/captions', { method: 'POST', headers: { 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(3000) }).then(response => {
       if (!response.ok) queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1
     }).catch(() => { queuedEvents.telemetry_dropped = (queuedEvents.telemetry_dropped || 0) + 1 })
@@ -50,6 +54,16 @@ export const registerCaptionTiming = (id: string, event: object): void => {
   translationOrigins.set(id, timing)
   if (translationOrigins.size > 1000) translationOrigins.delete(translationOrigins.keys().next().value!)
   if (pending.size > 1000) pending.delete(pending.keys().next().value!)
+}
+// All six slices must come from the same first-word observation. Other
+// chunks and overlapping server timings must not change the denominator.
+export const buildFirstWordBreakdown = (timing: CaptionTiming, paintedAt: number): Sample[] => {
+  const points = [timing.speechAt, timing.detectedAt, timing.queuedAt, timing.dequeuedAt, timing.requestAt, timing.responseAt, paintedAt]
+  if (points.some(point => point === undefined || !Number.isFinite(point))) return []
+  const times = points as number[]
+  if (times.some((time, index) => index > 0 && time < times[index - 1]) || times[6] - times[0] > 300_000) return []
+  const stages = ['vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint']
+  return stages.map((stage, index) => ({ stage: `first_word_${stage}`, seconds: (times[index + 1] - times[index]) / 1000 }))
 }
 // Measurements are ephemeral: no transcript, user ID, model name or trace ID
 // is sent or used as a Prometheus label. Missing/hidden paints are not zeroes.
@@ -69,6 +83,7 @@ export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
       add('vad_onset', timing.speechAt, timing.detectedAt)
       add('chunk_wait', timing.detectedAt, timing.queuedAt)
     }
+    samples.push(...buildFirstWordBreakdown(timing, paintedAt))
     add('browser_queue', timing.queuedAt, timing.dequeuedAt)
     add('browser_preprocess', timing.dequeuedAt, timing.requestAt)
     add('asr_roundtrip_with_retries', timing.requestAt, timing.responseAt)

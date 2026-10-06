@@ -10,3 +10,5 @@
 - [2026-10-06：暫停收音的字幕尾段](capture-pause-2026-10-06/README.zh-TW.md)
 - [2026-10-06：停止收音與 ASR 永久錯誤](capture-stop-2026-10-06/README.zh-TW.md)
 - [2026-10-06：Prometheus / Grafana 單張總覽、首字與階段延遲](monitoring-2026-10-06/README.zh-TW.md)
+
+- [2026-10-06：首字延遲各階段耗時百分比](stage-share-2026-10-06/README.zh-TW.md)

@@ -28,7 +28,7 @@ Redis 主要變數直接改為 REDIS_SENTINEL_NODES、REDIS_SERVICE_NAME、REDIS
 
 ## 重現
 
-python3 deploy/monitoring/generate.py 生成 stack / dashboard。建置 Dockerfile.web 的 s2t-stress:20261006-monitoring-redis-baseline 映像後，python3 deploy/monitoring/install-test.py 安裝監控，python3 deploy/monitoring/rename-app-redis.py 將既有隔離應用設定及映像原子切換到新名稱。監控 Secret 不納入版本控制。kubectl port-forward svc/grafana 13000:3000、svc/gateway 8790:8787 都要指定本測試 context / namespace。瀏覽器檔案使用本機 Chrome 與 Codex bundled Playwright；probe.cjs 在 load-client 執行逐一核對所有 PromQL 與 targets。
+python3 deploy/monitoring/generate.py 生成 stack / dashboard。建置 Dockerfile.web 的最新 s2t-stress:20261006-stage-share-v2 映像後（含後續階段占比增補），python3 deploy/monitoring/install-test.py 安裝監控，python3 deploy/monitoring/rename-app-redis.py 將既有隔離應用設定及映像原子切換到新名稱。監控 Secret 不納入版本控制。kubectl port-forward svc/grafana 13000:3000、svc/gateway 8790:8787 都要指定本測試 context / namespace。瀏覽器檔案使用本機 Chrome 與 Codex bundled Playwright；probe.cjs 在 load-client 執行逐一核對所有 PromQL 與 targets。
 
 參考：[Prometheus Kubernetes SD](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)、[Grafana provisioning](https://grafana.com/docs/grafana/latest/administration/provisioning/)、[Redis exporter Sentinel](https://github.com/oliver006/redis_exporter)。
 

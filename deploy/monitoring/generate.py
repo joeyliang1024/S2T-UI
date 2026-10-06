@@ -119,6 +119,14 @@ def pair(a,b):
 row('01 · 使用者首字延遲 — Web 實際可見字幕；VAD 語音起點估計')
 for x,q in enumerate([.5,.95,.99]):panel(f'首字 p{int(q*100)}',f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="speech_to_first_paint"}}[5m])) by (le))','s',width=6,height=4,x=x*6,typ='stat',description='每次 VAD 語音開頭到第一個非空字幕段首次可見呈現；兩次 requestAnimationFrame 估計 paint。不是第一個 ASR token，也不包含 Grafana 抓取時間。只量測 Web。')
 panel('成功首字樣本（目前 Pods 累計）','sum(s2t_caption_stage_duration_seconds_count{stage="speech_to_first_paint"})',width=6,height=4,x=18,typ='stat');y+=4
+panel('首字延遲時間占比（所選時間範圍）', 'sum(increase(s2t_first_word_stage_duration_seconds_sum[$__range])) by (stage) / scalar(sum(increase(s2t_first_word_stage_duration_seconds_sum[$__range])))', 'percentunit', '{{stage}}', width=24, height=8, typ='piechart', description='依上方時間選擇器，同一批已成功顯示首字的樣本，各步驟累計耗時 / 六個步驟累計耗時。不是請求數量占比；不使用 p95 相加，排除後續字幕、翻譯及與 ASR roundtrip 重疊的 server 指標。沒有有效樣本時顯示 No data。')
+panels[-1]['targets'][0]['instant'] = True
+panels[-1]['targets'][0]['range'] = False
+panels[-1]['options'] = {'pieType':'donut','displayLabels':['percent'],'reduceOptions':{'calcs':['lastNotNull'],'fields':'','values':False},'legend':{'displayMode':'table','placement':'right','values':['value'],'showLegend':True},'tooltip':{'mode':'single'}}
+panels[-1]['fieldConfig']['defaults'].update({'decimals':2,'color':{'mode':'palette-classic'}})
+for name, label in [('vad_onset','VAD 語音確認'),('chunk_wait','音訊累積 / 切段'),('browser_queue','瀏覽器排隊'),('browser_preprocess','音訊前處理'),('asr_roundtrip_with_retries','ASR 往返（含 server 排隊與重試）'),('response_to_paint','字幕畫面呈現')]:
+    panels[-1]['fieldConfig']['overrides'].append({'matcher':{'id':'byName','options':name},'properties':[{'id':'displayName','value':label}]})
+y += 8
 pair(('首字延遲分布 p50 / p95 / p99','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage="speech_to_first_paint"}[5m])) by (le))','s'),('Web 階段 p95（字幕 / 翻譯）','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~"speech_to_first_paint|speech_to_translation_paint"}[5m])) by (stage,le))','s','{{stage}}'))
 # Add parallel quantiles to the first timeseries.
 panels[-2]['targets']=[{'refId':str(i),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="speech_to_first_paint"}}[5m])) by (le))','legendFormat':f'p{int(q*100)}'} for i,q in enumerate([.5,.95,.99])]

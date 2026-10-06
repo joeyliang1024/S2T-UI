@@ -228,11 +228,144 @@
     },
     {
       "id": 6,
+      "title": "首字延遲時間占比（所選時間範圍）",
+      "type": "piechart",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(s2t_first_word_stage_duration_seconds_sum[$__range])) by (stage) / scalar(sum(increase(s2t_first_word_stage_duration_seconds_sum[$__range])))",
+          "legendFormat": "{{stage}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "依上方時間選擇器，同一批已成功顯示首字的樣本，各步驟累計耗時 / 六個步驟累計耗時。不是請求數量占比；不使用 p95 相加，排除後續字幕、翻譯及與 ASR roundtrip 重疊的 server 指標。沒有有效樣本時顯示 No data。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "decimals": 2,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vad_onset"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "VAD 語音確認"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "chunk_wait"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "音訊累積 / 切段"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "browser_queue"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "瀏覽器排隊"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "browser_preprocess"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "音訊前處理"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "asr_roundtrip_with_retries"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ASR 往返（含 server 排隊與重試）"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "response_to_paint"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "字幕畫面呈現"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": [
+          "percent"
+        ],
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value"
+          ],
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 7,
       "title": "首字延遲分布 p50 / p95 / p99",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 13,
         "w": 12,
         "h": 7
       },
@@ -287,12 +420,12 @@
       }
     },
     {
-      "id": 7,
+      "id": 8,
       "title": "Web 階段 p95（字幕 / 翻譯）",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 5,
+        "y": 13,
         "w": 12,
         "h": 7
       },
@@ -337,12 +470,12 @@
       }
     },
     {
-      "id": 8,
+      "id": 9,
       "title": "Gateway 階段 p95（與 Web roundtrip 重疊，勿加總）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 20,
         "w": 12,
         "h": 7
       },
@@ -387,12 +520,12 @@
       }
     },
     {
-      "id": 9,
+      "id": 10,
       "title": "可見字幕段樣本 / 秒",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 20,
         "w": 12,
         "h": 7
       },
@@ -437,12 +570,12 @@
       }
     },
     {
-      "id": 10,
+      "id": 11,
       "title": "語音偵測 / 無文字 / 失敗 / 音訊缺口",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 19,
+        "y": 27,
         "w": 12,
         "h": 7
       },
@@ -487,12 +620,12 @@
       }
     },
     {
-      "id": 11,
+      "id": 12,
       "title": "已偵測語音（目前 Pods 累計）",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 19,
+        "y": 27,
         "w": 12,
         "h": 7
       },
@@ -537,24 +670,24 @@
       }
     },
     {
-      "id": 12,
+      "id": 13,
       "title": "02 · Gateway / Audio worker / 模擬模型",
       "type": "row",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 34,
         "w": 24,
         "h": 1
       }
     },
     {
-      "id": 13,
+      "id": 14,
       "title": "HTTP 路由 p95",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 35,
         "w": 12,
         "h": 7
       },
@@ -599,12 +732,12 @@
       }
     },
     {
-      "id": 14,
+      "id": 15,
       "title": "HTTP 吞吐 / 秒",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 27,
+        "y": 35,
         "w": 12,
         "h": 7
       },
@@ -649,12 +782,12 @@
       }
     },
     {
-      "id": 15,
+      "id": 16,
       "title": "HTTP 失敗 / 秒",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 42,
         "w": 12,
         "h": 7
       },
@@ -699,12 +832,12 @@
       }
     },
     {
-      "id": 16,
+      "id": 17,
       "title": "服務進行中請求",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 34,
+        "y": 42,
         "w": 12,
         "h": 7
       },
@@ -749,12 +882,12 @@
       }
     },
     {
-      "id": 17,
+      "id": 18,
       "title": "程序 RSS",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 49,
         "w": 12,
         "h": 7
       },
@@ -799,12 +932,12 @@
       }
     },
     {
-      "id": 18,
+      "id": 19,
       "title": "Event loop p99",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 41,
+        "y": 49,
         "w": 12,
         "h": 7
       },
@@ -849,12 +982,12 @@
       }
     },
     {
-      "id": 19,
+      "id": 20,
       "title": "Diarization 待處理工作 / 最老秒數",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 48,
+        "y": 56,
         "w": 12,
         "h": 7
       },
@@ -899,12 +1032,12 @@
       }
     },
     {
-      "id": 20,
+      "id": 21,
       "title": "Diarization 最老等待",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 48,
+        "y": 56,
         "w": 12,
         "h": 7
       },
@@ -949,12 +1082,12 @@
       }
     },
     {
-      "id": 21,
+      "id": 22,
       "title": "Mock 模型進行中 / 明確是模擬 API",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 55,
+        "y": 63,
         "w": 12,
         "h": 7
       },
@@ -999,12 +1132,12 @@
       }
     },
     {
-      "id": 22,
+      "id": 23,
       "title": "Mock 注入延遲 / 長尾",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 55,
+        "y": 63,
         "w": 12,
         "h": 7
       },
@@ -1049,24 +1182,24 @@
       }
     },
     {
-      "id": 23,
+      "id": 24,
       "title": "03 · 所有服務可用性與儲存操作",
       "type": "row",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 62,
+        "y": 70,
         "w": 24,
         "h": 1
       }
     },
     {
-      "id": 24,
+      "id": 25,
       "title": "所有 scrape targets（1=成功）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 63,
+        "y": 71,
         "w": 12,
         "h": 7
       },
@@ -1111,12 +1244,12 @@
       }
     },
     {
-      "id": 25,
+      "id": 26,
       "title": "應用儲存操作 p95",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 63,
+        "y": 71,
         "w": 12,
         "h": 7
       },
@@ -1161,12 +1294,12 @@
       }
     },
     {
-      "id": 26,
+      "id": 27,
       "title": "儲存操作失敗 / 秒",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 70,
+        "y": 78,
         "w": 12,
         "h": 7
       },
@@ -1211,12 +1344,12 @@
       }
     },
     {
-      "id": 27,
+      "id": 28,
       "title": "PostgreSQL 連線",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 70,
+        "y": 78,
         "w": 12,
         "h": 7
       },
@@ -1261,12 +1394,12 @@
       }
     },
     {
-      "id": 28,
+      "id": 29,
       "title": "PostgreSQL commits / rollback 每秒",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 77,
+        "y": 85,
         "w": 12,
         "h": 7
       },
@@ -1311,12 +1444,12 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "title": "PostgreSQL rollback / deadlock 每秒",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 77,
+        "y": 85,
         "w": 12,
         "h": 7
       },
@@ -1361,12 +1494,12 @@
       }
     },
     {
-      "id": 30,
+      "id": 31,
       "title": "Redis 記憶體",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 84,
+        "y": 92,
         "w": 12,
         "h": 7
       },
@@ -1411,12 +1544,12 @@
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "title": "Redis clients / blocked",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 84,
+        "y": 92,
         "w": 12,
         "h": 7
       },
@@ -1461,12 +1594,12 @@
       }
     },
     {
-      "id": 32,
+      "id": 33,
       "title": "Redis replication offset",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 91,
+        "y": 99,
         "w": 12,
         "h": 7
       },
@@ -1511,12 +1644,12 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
       "title": "Sentinel quorum status / TILT",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 91,
+        "y": 99,
         "w": 12,
         "h": 7
       },
@@ -1561,12 +1694,12 @@
       }
     },
     {
-      "id": 34,
+      "id": 35,
       "title": "Sentinel TILT（應為 0）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 98,
+        "y": 106,
         "w": 12,
         "h": 7
       },
@@ -1611,12 +1744,12 @@
       }
     },
     {
-      "id": 35,
+      "id": 36,
       "title": "Redis 可用性（含密碼登入）",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 98,
+        "y": 106,
         "w": 12,
         "h": 7
       },
@@ -1661,12 +1794,12 @@
       }
     },
     {
-      "id": 36,
+      "id": 37,
       "title": "MinIO 儲存用量",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 105,
+        "y": 113,
         "w": 12,
         "h": 7
       },
@@ -1711,12 +1844,12 @@
       }
     },
     {
-      "id": 37,
+      "id": 38,
       "title": "MinIO 磁碟可用量",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 105,
+        "y": 113,
         "w": 12,
         "h": 7
       },
@@ -1761,12 +1894,12 @@
       }
     },
     {
-      "id": 38,
+      "id": 39,
       "title": "Milvus process RSS",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 112,
+        "y": 120,
         "w": 12,
         "h": 7
       },
@@ -1811,12 +1944,12 @@
       }
     },
     {
-      "id": 39,
+      "id": 40,
       "title": "Milvus 載入向量數量",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 112,
+        "y": 120,
         "w": 12,
         "h": 7
       },
@@ -1861,12 +1994,12 @@
       }
     },
     {
-      "id": 40,
+      "id": 41,
       "title": "etcd leader（1=有 leader）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 119,
+        "y": 127,
         "w": 12,
         "h": 7
       },
@@ -1911,12 +2044,12 @@
       }
     },
     {
-      "id": 41,
+      "id": 42,
       "title": "etcd WAL fsync p95",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 119,
+        "y": 127,
         "w": 12,
         "h": 7
       },
@@ -1961,24 +2094,24 @@
       }
     },
     {
-      "id": 42,
+      "id": 43,
       "title": "04 · Kubernetes Pods / 容量 / 資源",
       "type": "row",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 126,
+        "y": 134,
         "w": 24,
         "h": 1
       }
     },
     {
-      "id": 43,
+      "id": 44,
       "title": "VM node CPU cores",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 127,
+        "y": 135,
         "w": 12,
         "h": 7
       },
@@ -2023,12 +2156,12 @@
       }
     },
     {
-      "id": 44,
+      "id": 45,
       "title": "VM node memory",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 127,
+        "y": 135,
         "w": 12,
         "h": 7
       },
@@ -2073,12 +2206,12 @@
       }
     },
     {
-      "id": 45,
+      "id": 46,
       "title": "Pod CPU 使用量（cores）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 134,
+        "y": 142,
         "w": 12,
         "h": 7
       },
@@ -2123,12 +2256,12 @@
       }
     },
     {
-      "id": 46,
+      "id": 47,
       "title": "Pod memory working set",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 134,
+        "y": 142,
         "w": 12,
         "h": 7
       },
@@ -2173,12 +2306,12 @@
       }
     },
     {
-      "id": 47,
+      "id": 48,
       "title": "Pod ready（1=就緒）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 141,
+        "y": 149,
         "w": 12,
         "h": 7
       },
@@ -2223,12 +2356,12 @@
       }
     },
     {
-      "id": 48,
+      "id": 49,
       "title": "Pod 重啟",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 141,
+        "y": 149,
         "w": 12,
         "h": 7
       },
@@ -2273,12 +2406,12 @@
       }
     },
     {
-      "id": 49,
+      "id": 50,
       "title": "Deployment 可用 / 期望副本",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 148,
+        "y": 156,
         "w": 12,
         "h": 7
       },
@@ -2323,12 +2456,12 @@
       }
     },
     {
-      "id": 50,
+      "id": 51,
       "title": "CPU throttled 比例",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 148,
+        "y": 156,
         "w": 12,
         "h": 7
       },
@@ -2373,12 +2506,12 @@
       }
     },
     {
-      "id": 51,
+      "id": 52,
       "title": "Pod CPU requests",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 155,
+        "y": 163,
         "w": 12,
         "h": 7
       },
@@ -2423,12 +2556,12 @@
       }
     },
     {
-      "id": 52,
+      "id": 53,
       "title": "PVC 請求容量",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 155,
+        "y": 163,
         "w": 12,
         "h": 7
       },
