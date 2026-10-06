@@ -1,6 +1,7 @@
 import { NavigationGlyph } from './NavigationGlyph'
 import { importFileAccept } from '../../transcript/import-formats'
 import { CaptionPopout } from './CaptionPopout'
+import { CaptionMemberDetails } from './CaptionMemberDetails'
 import { TooltipButton } from './TooltipButton'
 import { createPortal } from 'react-dom'
 import { type SavedSession, type ModelCapabilities, type View } from '../../../shared/types'
@@ -322,11 +323,11 @@ const sessionTranscript = (entry: SavedSession, query: string): ReactElement => 
       {group.speaker && <div className="speaker-row speaker-labels">{Array.from(new Set(group.members.map(member => member.speaker).filter(Boolean))).map(speaker => <span key={speaker}>{speaker}</span>)}</div>}
       <p>{group.sourceText}</p>
       {group.translatedText && <p className="translation">{group.translatedText}</p>}
-      <details open={group.members.some(member => member.id === editingSessionSegmentId) || undefined}><summary>{ui('edit')}</summary>
-      {group.members.map((segment) => <article key={segment.id} className="transcript-segment">
+      <CaptionMemberDetails editing={group.members.some(member => member.id === editingSessionSegmentId)} summary={ui('edit')}>
+      {() => group.members.map((segment) => <article key={segment.id} className="transcript-segment">
       <time>{timestamp(segment.startMs)}</time>
       {editingSessionSegmentId === segment.id && entry.processingState !== 'running' ? <div className="transcript-edit"><div className="timing-inputs"><label>{ui('startMilliseconds')}<input type="number" min="0" defaultValue={segment.startMs} onBlur={(event) => updateSavedTranscriptTiming(entry.id, segment.id, { startMs: Number(event.currentTarget.value) })} /></label><label>{ui('endMilliseconds')}<input type="number" min="1" defaultValue={segment.endMs} onBlur={(event) => updateSavedTranscriptTiming(entry.id, segment.id, { endMs: Number(event.currentTarget.value) })} /></label></div><textarea defaultValue={segment.sourceText} aria-label={ui('sourceText')} onBlur={(event) => updateSavedTranscript(entry.id, segment.id, { sourceText: event.currentTarget.value })} /><textarea defaultValue={segment.translatedText ?? ''} aria-label={ui('translation')} placeholder={ui('optionalTranslation')} onBlur={(event) => updateSavedTranscript(entry.id, segment.id, { translatedText: event.currentTarget.value })} /><button className="text-button" onClick={() => setEditingSessionSegmentId(null)}>{ui('doneEditing')}</button></div> : <><div className="speaker-row"><input disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} list="registered-speakers" aria-label={ui('speakerName')} value={segment.speaker ?? ''} placeholder={ui('unassignedSpeaker')} onChange={(event) => updateSessionSpeaker(entry.id, segment.id, event.target.value)} /></div><p>{segment.sourceText}</p>{segment.translatedText && <p className="translation">{segment.translatedText}</p>}<button disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} className="edit-button" onClick={() => setEditingSessionSegmentId(segment.id)}>{ui('edit')}</button><div className="segment-actions">{segmentRerecordingId === segment.id ? <button className="text-button" onClick={() => void stopSegmentRerecord()}>{ui('endRerecording')}</button> : <button className="text-button" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry)) || Boolean(segmentRerecordingId)} onClick={() => void startSegmentRerecord(entry, segment)}>{ui('rerecordSegment')}</button>}<label className="text-button">{ui('rerecordWav')}<input disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} hidden type="file" accept="audio/wav,.wav" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) void replaceSessionSegmentAudio(entry, segment, file) }} /></label></div></>}
-    </article>)}</details>
+    </article>)}</CaptionMemberDetails>
     </article>)}
   </> : <pre>{entry.transcript || ui('noCaptionsForRecord')}</pre>
 
@@ -355,15 +356,14 @@ const liveWorkspace = (
               if (member.translationStatus === 'failed') setTranscripts(current => current.map(entry => entry.id === member.id ? retry : entry))
               void requestTranslation(retry)
             }}>{member.translationStatus === 'failed' ? ui('retryTranslation') : ui('translateSegment')} · {timestamp(member.startMs)}</button>)}
-            <details open={group.members.some(member => member.id === editingTranscriptId) || undefined}>
-              <summary>{ui('edit')}</summary>
-              {group.members.map((entry) => (
+            <CaptionMemberDetails editing={group.members.some(member => member.id === editingTranscriptId)} summary={ui('edit')}>
+              {() => group.members.map((entry) => (
           <article key={entry.id} className={`transcript-segment ${entry.status}`}>
             <time>{timestamp(entry.startMs)}</time>
             {editingTranscriptId === entry.id ? <div className="transcript-edit"><div className="timing-inputs"><label>{ui('startMilliseconds')}<input type="number" min="0" defaultValue={entry.startMs} onBlur={(event) => updateTranscriptTiming(entry.id, Number(event.currentTarget.value), entry.endMs)} /></label><label>{ui('endMilliseconds')}<input type="number" min="1" defaultValue={entry.endMs} onBlur={(event) => updateTranscriptTiming(entry.id, entry.startMs, Number(event.currentTarget.value))} /></label></div><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder={ui('optionalTranslation')} onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>{ui('doneEditing')}</button></div> : <><div className="speaker-row"><input list="registered-speakers" aria-label={ui('speakerName')} value={entry.speaker ?? ''} placeholder={ui('unassignedSpeaker')} onChange={(event) => updateSpeaker(entry.id, event.target.value)} /></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { const retry = { ...entry, translationStatus: undefined, translationAttempts: undefined }; setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? retry : currentEntry)); void requestTranslation(retry) }}>{ui('retryTranslation')}</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>{ui('edit')}</button></>}
           {(settings.translationLoadStrategy === 'manual' || captureState === 'idle') && entry.status === 'final' && !entry.translatedText && !entry.translationStatus && <button className="text-button translation-retry" onClick={() => void requestTranslation(entry)}>{ui('translateSegment')}</button>}</article>
               ))}
-            </details>
+            </CaptionMemberDetails>
           </article>
         ))}</>}
       </section>
