@@ -26,14 +26,19 @@ def watch():
     while not stop.wait(2):
         try:samples.append(capture())
         except subprocess.CalledProcessError as error:samples.append({'at':time.time(),'error':'kubectl observation failed','exit':error.returncode})
+# Use the versioned harness rather than a stale /tmp copy.
+source=Path('scripts/testing/load-test.cjs').read_text()
+subprocess.run(K+['exec','-i','load-client','--','sh','-c','cat > /tmp/current-load-test.cjs'],input=source,text=True,check=True)
 thread=threading.Thread(target=watch);thread.start()
 try:
     with (root/(phase+'-load.json')).open('w') as output:
-        subprocess.run(K+['exec','load-client','--','node','/tmp/load-test.cjs','load',phase,'100','90','1500'],stdout=output,check=True)
+        subprocess.run(K+['exec','load-client','--','node','/tmp/current-load-test.cjs','load',phase,'100','90','1500'],stdout=output,check=True)
 finally:
     stop.set();thread.join();samples.append(capture());(root/(phase+'-pods.json')).write_text(json.dumps(samples,indent=2)+'\n')
 
 result=json.loads((root/(phase+'-load.json')).read_text())
+if result.get('baseUrl') != 'http://test-ingress:8080':
+    raise SystemExit('Load did not traverse the two-Pod ingress')
 if result.get('failedChains') != 0 or result.get('dropped') != 0 or result.get('chains') != result.get('scheduled') or result.get('scheduled') != 6000:
     raise SystemExit('Load validation failed; raw results have been preserved')
 for sample in samples:

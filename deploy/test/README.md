@@ -17,3 +17,5 @@ bootstrap 先啟動 Storage、跑 migration，再啟動應用；已存在的 Sec
 舊實驗中的 manifests／stack-final 是歷史快照，可能含舊 Redis 名稱、1 秒 liveness 或過期映像，請勿當作目前部署來源。目前模板集中於 deploy/test。
 
 目前已驗證模板的 Kubernetes server dry-run 與既有叢集相容；尚未完成空白叢集的完整 bootstrap 驗證。
+
+負載測試使用版本控管的 `scripts/testing/load-test.cjs`，預設經由 `http://test-ingress:8080`。從專案根目錄執行 `python3 experiment/k8s/current-2026-10-06/run-load.py <phase> <gateway-replicas>`；先準備 load-client 中的測試帳號。工具不覆寫既有帳號，會記錄實際目標並驗證每個必要 Deployment 至少兩個 Ready Pods。

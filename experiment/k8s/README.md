@@ -22,3 +22,11 @@ This is a single physical node. Results cover these tested loads and updates, no
 ## Historical evidence
 
 [Initial 100 users](history/initial-2026-10-05/README.zh-TW.md), [rollout](history/rollout-2026-10-05/README.zh-TW.md), [Sentinel](history/sentinel-2026-10-06/README.zh-TW.md), [UI responsiveness](history/responsiveness-2026-10-06/README.zh-TW.md), [large history](history/large-history-2026-10-06/README.zh-TW.md), [legacy history](history/legacy-history-2026-10-06/README.zh-TW.md).
+
+## Load path audit
+
+Earlier load results, including `canonical-ingress-load.json`, sent requests directly to `gateway:8787`; they recorded ingress readiness but did not measure nginx request handling. Browser first-word tests did use ingress. The versioned load harness now defaults to `test-ingress:8080`, reports `baseUrl`, and the runner verifies that URL. It uploads the current harness to a separate temporary filename without replacing existing account fixtures.
+
+The `ingress-end-to-end` run sends 100 users through nginx while the four Gateway replicas roll. Raw load results and Pod observations remain in the current results directory.
+
+Verified result: 6,000/6,000 chains, zero failures or drops, Gateway minimum Ready 4, workers 2, ingress 2. Pod observations captured the rollout in progress. See [summary](current-2026-10-06/results/ingress-end-to-end-summary.json).
