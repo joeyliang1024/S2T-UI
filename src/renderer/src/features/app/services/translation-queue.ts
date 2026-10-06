@@ -74,7 +74,6 @@ export class TranslationQueue {
     if (this.active.size >= maximumAutomaticTranslationQueue || this.now() < this.blockedUntil ||
       shouldSkipTranslation(entry.detectedLanguage, resolveTranslationTarget(entry.detectedLanguage, targetLanguage)) ||
       !entry.sourceText.trim() || !matchesMembers(this.getEntries())) return Promise.resolve()
-    if (members.length > 1) this.updateEntries(entries => entries.map(current => members.some(member => member.id === current.id) ? { ...current, captionGroupId: entry.id } : current))
     const controller = new AbortController()
     const generation = this.generation
     const startedAt = this.now()
@@ -97,8 +96,12 @@ export class TranslationQueue {
           if (!matchesMembers(entries)) return entries
           applied = true
           registerTranslationTiming(entry.id, transportStartedAt, responseAt)
+          // `captionGroupId` is the display-row lock written by freezeCaptionGroups
+          // (speaker labelling, stop flush). Translation must not touch it: writing
+          // per-request ids made every translated segment its own row, so turning
+          // the sentence strategy off fragmented the live caption display.
           return entries.map(current => members.some(member => member.id === current.id)
-            ? { ...current, captionGroupId: entry.id, translatedText: current.id === entry.id ? text : undefined, translationStatus: 'completed' as const, translationAttempts: undefined, revision: current.revision + 1 }
+            ? { ...current, translatedText: current.id === entry.id ? text : undefined, translationStatus: 'completed' as const, translationAttempts: undefined, revision: current.revision + 1 }
             : current)
         })
         if (applied) this.diagnostics.completed += 1
