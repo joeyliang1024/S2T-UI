@@ -1,0 +1,156 @@
+{
+  "phase": "fixed",
+  "sampleRate": 16000,
+  "totalSamples": 720000,
+  "sentSamples": 720000,
+  "requests": 27,
+  "gaps": [],
+  "events": [
+    {
+      "startMs": 0,
+      "endMs": 1500,
+      "status": "final"
+    },
+    {
+      "startMs": 1500,
+      "endMs": 3000,
+      "status": "final"
+    },
+    {
+      "startMs": 3000,
+      "endMs": 6000,
+      "status": "final"
+    },
+    {
+      "startMs": 6000,
+      "endMs": 9000,
+      "status": "final"
+    },
+    {
+      "startMs": 9000,
+      "endMs": 12000,
+      "status": "final"
+    },
+    {
+      "startMs": 12000,
+      "endMs": 13500,
+      "status": "final"
+    },
+    {
+      "startMs": 13500,
+      "endMs": 15000,
+      "status": "final"
+    },
+    {
+      "startMs": 15000,
+      "endMs": 16500,
+      "status": "final"
+    },
+    {
+      "startMs": 16500,
+      "endMs": 18000,
+      "status": "final"
+    },
+    {
+      "startMs": 18000,
+      "endMs": 19500,
+      "status": "final"
+    },
+    {
+      "startMs": 19500,
+      "endMs": 21000,
+      "status": "final"
+    },
+    {
+      "startMs": 21000,
+      "endMs": 22500,
+      "status": "final"
+    },
+    {
+      "startMs": 22500,
+      "endMs": 24000,
+      "status": "final"
+    },
+    {
+      "startMs": 24000,
+      "endMs": 25500,
+      "status": "final"
+    },
+    {
+      "startMs": 25500,
+      "endMs": 27000,
+      "status": "final"
+    },
+    {
+      "startMs": 27000,
+      "endMs": 28500,
+      "status": "final"
+    },
+    {
+      "startMs": 28500,
+      "endMs": 30000,
+      "status": "final"
+    },
+    {
+      "startMs": 30000,
+      "endMs": 31500,
+      "status": "final"
+    },
+    {
+      "startMs": 31500,
+      "endMs": 33000,
+      "status": "final"
+    },
+    {
+      "startMs": 33000,
+      "endMs": 34500,
+      "status": "final"
+    },
+    {
+      "startMs": 34500,
+      "endMs": 36000,
+      "status": "final"
+    },
+    {
+      "startMs": 36000,
+      "endMs": 37500,
+      "status": "final"
+    },
+    {
+      "startMs": 37500,
+      "endMs": 39000,
+      "status": "final"
+    },
+    {
+      "startMs": 39000,
+      "endMs": 40500,
+      "status": "final"
+    },
+    {
+      "startMs": 40500,
+      "endMs": 42000,
+      "status": "final"
+    },
+    {
+      "startMs": 42000,
+      "endMs": 43500,
+      "status": "final"
+    },
+    {
+      "startMs": 43500,
+      "endMs": 45000,
+      "status": "final"
+    }
+  ],
+  "diagnostics": {
+    "requests": 27,
+    "completed": 27,
+    "rateLimited": 0,
+    "gaps": 0,
+    "inFlight": 0,
+    "maximumQueued": 4,
+    "totalRequestMs": 30,
+    "totalQueueWaitMs": 36,
+    "maximumPendingMs": 4490
+  }
+}
