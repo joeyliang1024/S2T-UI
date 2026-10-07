@@ -79,3 +79,5 @@ During 100-user ingress load with mock model latency, an authenticated `SENTINEL
 ### Failover latency fix
 
 The original controlled switch retained a five-second Redis diskless-sync batching delay while Sentinel waited for replica reconfiguration. The test deployment now starts Redis with `--repl-diskless-sync-delay 0`. Under the same 100-user delayed-mock load, chain P95 improved from 6.096 to 1.460 seconds, P99 from 8.619 to 2.641 seconds, and maximum from 9.881 to 4.460 seconds, with 6,000/6,000 successful chains. These sequential tests promote different replicas, so the result supports improvement in this scenario, not a general SLA. See [comparison](current-2026-10-06/results/sentinel-fast-sync-summary.json) and Sentinel/Redis logs. The tradeoff is less batching of full syncs; this tuning is for the small isolated three-node topology. Residual switch latency remains.
+
+[Current two-Pod rollout verification, 2026-10-07](two-pods-2026-10-07/README.md): 6,000 successful chains and 100-account integrity, preserving zero artificial model delay.
