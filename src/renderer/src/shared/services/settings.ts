@@ -1,3 +1,4 @@
+import { validateAdminParameters } from '../../../../../server/admin-parameters.cjs'
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
 import { activeTranslate, supportedUiLanguages } from '../i18n'
 import { normalizeResponseSpeed } from '../../features/capture/vad'
@@ -100,7 +101,8 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   dynaudnormEnabled: value.dynaudnormEnabled === true,
   // Legacy per-parameter vadConfig values are intentionally dropped: caption
   // segmentation is expressed by the three curated response-speed tiers.
-  responseSpeed: normalizeResponseSpeed(value.responseSpeed)
+  responseSpeed: normalizeResponseSpeed(value.responseSpeed),
+  adminParameters: (() => { try { return validateAdminParameters(value.adminParameters) } catch { return undefined } })()
   }
 }
 

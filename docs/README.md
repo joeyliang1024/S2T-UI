@@ -25,3 +25,5 @@
 一次性的已套用修正與環境盤點，保留當時的根因、步驟與驗證結果，不再列入待辦：[完成列才辨識講者](reports/COMPLETED_CAPTION_SPEAKERS_2026-10-04.zh-TW.md)、[講者標註第一階段](reports/SPEAKER_LABEL_FIX_2026-10-04.zh-TW.md)、[Nemotron timeout 修正](reports/NEMOTRON_TIMEOUT_FIX_2026-10-04.zh-TW.md)、[Docker 連外盤點與 Nemotron 映像](reports/DOCKER_NETWORK_NEMOTRON_2026-10-04.zh-TW.md)。
 
 research 中的規劃是歷史設計背景，不能取代現行部署指南或當成已驗證的功能。需要追蹤的缺口以 Enhancement.md 為準。
+
+[Admin 帳號、自己的 VAD／翻譯參數與 PostgreSQL 恢復](guide/ADMIN_RECOVERY.zh-TW.md)。

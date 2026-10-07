@@ -1,3 +1,4 @@
+const { validateAdminParameters } = require('./admin-parameters.cjs')
 const metrics = require('./metrics.cjs')
 const { loadSessionSnapshot } = require('./session-snapshot.cjs')
 const { readSessionPayload, createSessionWriteGate } = require('./session-payload.cjs')
@@ -222,9 +223,9 @@ const normalizeDetectedLanguage = (value) => {
   if (language.startsWith('de')) return 'de-DE'
   return undefined
 }
-const completeText = async (value, messages, maxRetries = 1) => {
+const completeText = async (value, messages, maxRetries = 1, temperature = 0.2) => {
   const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries })
-  const result = await client.chat.completions.create({ model: value.model, temperature: 0.2, messages })
+  const result = await client.chat.completions.create({ model: value.model, temperature, messages })
   return result.choices[0]?.message.content?.trim() || ''
 }
 const credentialKey = (secret) => createHash('sha256').update(`${secret}:s2t-model-credentials:v1`).digest()
@@ -746,7 +747,7 @@ const handleHttpRequest = async (request, response) => {
     return send(response, 200, prometheusMetrics() + backlog, 'text/plain; version=0.0.4; charset=utf-8')
   }
   if (request.method === 'GET' && request.url === '/readyz') {
-    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (quiescing || draining) throw new Error('服務正在排空'); await storage.ready; await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
+    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (quiescing || draining) throw new Error('服務正在排空'); await storage.ready; if (typeof storage.config.verifySchema === 'function') await storage.config.verifySchema(); await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
     catch (error) { return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' }) }
   }
   // The worker has a probe-only HTTP surface. It deliberately cannot serve
@@ -932,11 +933,17 @@ const handleHttpRequest = async (request, response) => {
     try {
       if (request.method === 'GET') {
         const stored = await storage.config.get(user.id, 'app-settings')
+        if (user.role !== 'admin' && stored?.settings) delete stored.settings.adminParameters
         return send(response, 200, stored && !Array.isArray(stored.settings) && stored.settings && typeof stored.settings === 'object' && Number.isSafeInteger(stored.version) ? stored : { settings: {}, version: 0 })
       }
       const body = JSON.parse((await readBody(request, 512 * 1024)).toString('utf8'))
       if (!body.settings || typeof body.settings !== 'object' || Array.isArray(body.settings) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'settings 與 version 必須有效' })
       const settings = JSON.parse(JSON.stringify(body.settings))
+      if (user.role !== 'admin' && settings.adminParameters !== undefined) return send(response, 403, { error: '只有 admin 可客製化進階參數' })
+      if (settings.adminParameters !== undefined) {
+        try { settings.adminParameters = validateAdminParameters(settings.adminParameters) }
+        catch (error) { return send(response, 400, { error: error.message }) }
+      }
       if (!await storage.config.compareAndSwap(user.id, 'app-settings', body.version, { settings, version: body.version + 1 })) return send(response, 409, { error: '設定已被其他視窗更新；請重新載入後再儲存。' })
       return send(response, 200, { saved: true, version: body.version + 1 })
     } catch (error) { return storageFailure(response, error, '無法保存設定') }
@@ -1276,6 +1283,10 @@ const handleHttpRequest = async (request, response) => {
     try {
       const raw = await readBody(request, 256 * 1024)
       const input = JSON.parse(raw.toString('utf8'))
+      if (input.temperature !== undefined && user.role !== 'admin') return send(response, 403, { error: '只有 admin 可調整翻譯參數' })
+      let requestedTemperature
+      try { requestedTemperature = input.temperature === undefined ? undefined : validateAdminParameters({ translationTemperature: input.temperature }).translationTemperature }
+      catch (error) { return send(response, 400, { error: error.message }) }
       const text = typeof input.text === 'string' ? input.text.trim().slice(0, 20_000) : ''
       const requestedSourceLanguage = typeof input.sourceLanguage === 'string' ? input.sourceLanguage.slice(0, 60) : 'zh-TW'
       const requestedTargetLanguage = typeof input.targetLanguage === 'string' ? input.targetLanguage.slice(0, 60) : 'en'
@@ -1287,7 +1298,9 @@ const handleHttpRequest = async (request, response) => {
       // language pair are enough to follow a slow or failing translation.
       logger.debug('translation.request', { profileId, sourceLanguage, targetLanguage, glossary: glossary ? 'provided' : 'none', chars: text.length })
       const translationStartedAt = Date.now()
-      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0))))
+      const accountSettings = user.role === 'admin' ? await storage.config.get(user.id, 'app-settings') : undefined
+      const translationTemperature = requestedTemperature ?? validateAdminParameters(accountSettings?.settings?.adminParameters)?.translationTemperature ?? 0.2
+      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, temperature: translationTemperature, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0, translationTemperature))))
       logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
       return send(response, 200, { text: textResult })
     } catch (error) {

@@ -574,6 +574,7 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     </section>
   ) : (
     <SettingsView
+      user={user}
       controller={controller}
       settingsReturnView={settingsReturnView}
       onNavigate={navigate}

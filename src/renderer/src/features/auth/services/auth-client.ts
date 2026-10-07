@@ -27,7 +27,7 @@ const synchronizeDesktopSession = async (): Promise<void> => {
 const request = async <T,>(path: string, input?: unknown): Promise<T> => {
   const response = await fetch(await gatewayPath(path), { credentials: 'include', method: input === undefined ? 'GET' : 'POST', headers: { 'content-type': 'application/json', ...(token() ? { authorization: `Bearer ${token()}` } : {}) }, ...(input === undefined ? {} : { body: JSON.stringify(input) }) })
   const payload = await response.json().catch(() => ({})) as { error?: string }
-  if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`)
+  if (!response.ok) throw Object.assign(new Error(payload.error || `HTTP ${response.status}`), { status: response.status })
   return payload as T
 }
 const save = async (result: AuthResult): Promise<AuthUser> => {
@@ -59,6 +59,6 @@ export const retryableAuthFetch = async (path: string, init: RequestInit = {}, a
 export const authClient = {
   async register(input: { username: string; password: string; NT: string; Department: string }): Promise<AuthUser> { return save(await request<AuthResult>('/api/auth/register', input)) },
   async login(input: { username: string; password: string }): Promise<AuthUser> { return save(await request<AuthResult>('/api/auth/login', input)) },
-  async session(): Promise<AuthUser | null> { try { const user = (await request<{ user: AuthUser }>('/api/auth/session')).user; await synchronizeDesktopSession(); return user } catch { accessToken = ''; await window.s2t?.clearGatewaySession(); return null } },
+  async session(): Promise<AuthUser | null> { try { const user = (await request<{ user: AuthUser }>('/api/auth/session')).user; await synchronizeDesktopSession(); return user } catch (error) { accessToken = ''; await window.s2t?.clearGatewaySession(); if ((error as { status?: number }).status === 401) return null; throw error } },
   async logout(): Promise<void> { try { await request('/api/auth/logout', {}) } finally { accessToken = ''; await window.s2t?.clearGatewaySession() } }
 }

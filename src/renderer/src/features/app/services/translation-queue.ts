@@ -17,6 +17,14 @@ export const matchesTranslationContent = (current: TranscriptEvent | undefined, 
 
 /** Bounded workers; captions remain the durable pending queue. */
 export class TranslationQueue {
+  private capacity = maximumAutomaticTranslationQueue
+  private sentenceWaitMs = maximumSentenceWaitMs
+  configure(input: { concurrency?: number; sentenceWaitMs?: number }): void {
+    const capacity = input.concurrency ?? maximumAutomaticTranslationQueue
+    const sentenceWaitMs = input.sentenceWaitMs ?? maximumSentenceWaitMs
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 4 || !Number.isInteger(sentenceWaitMs) || sentenceWaitMs < 0 || sentenceWaitMs > 15000) throw new Error('Invalid translation parameters')
+    this.capacity = capacity; this.sentenceWaitMs = sentenceWaitMs
+  }
   private active = new Map<string, ActiveRequest>()
   private retryAt = new Map<string, { revision: number; at: number }>()
   private generation = 0
@@ -38,7 +46,7 @@ export class TranslationQueue {
   get cooldownUntil(): number { return this.blockedUntil }
 
   private eligible(entry: TranscriptEvent, options: QueueOptions): boolean {
-    return shouldAutoTranslate(entry, options.strategy, options.elapsedMs) &&
+    return shouldAutoTranslate(entry, options.strategy, options.elapsedMs, this.sentenceWaitMs) &&
       !shouldSkipTranslation(entry.detectedLanguage, resolveTranslationTarget(entry.detectedLanguage, options.targetLanguage))
   }
 
@@ -53,7 +61,7 @@ export class TranslationQueue {
     const pending = options.strategy === 'sentence'
       ? groupLiveCaptions(entries).flatMap((group, index, groups) => {
         if (group.members.some(member => member.translatedText || member.translationStatus)) return group.members.filter(member => this.eligible(member, options))
-        const complete = group.isSentenceBoundary || index < groups.length - 1 || options.elapsedMs - group.endMs >= maximumSentenceWaitMs
+        const complete = group.isSentenceBoundary || index < groups.length - 1 || options.elapsedMs - group.endMs >= this.sentenceWaitMs
         return complete && group.members.every(member => member.status === 'final') ? [group] : []
       }) : entries
     return pending.filter((entry) => this.eligible(entry, { ...options, strategy: 'realtime' }) && !this.active.has(entry.id) && this.now() >= (this.retryAt.get(entry.id)?.at ?? 0))
@@ -61,7 +69,7 @@ export class TranslationQueue {
 
   tick(options: QueueOptions, translate: TranslateCaption, throttled = false): void {
     if (this.paused) return
-    const available = Math.max(0, maximumAutomaticTranslationQueue - this.active.size)
+    const available = Math.max(0, this.capacity - this.active.size)
     const limit = throttled ? Math.min(1, available) : available
     this.candidates(options).slice(0, limit).forEach((entry) => { void this.request(entry, translate, options.targetLanguage) })
   }
@@ -71,7 +79,7 @@ export class TranslationQueue {
     const matchesMembers = (entries: TranscriptEvent[]): boolean => members.every(member => matchesTranslationContent(entries.find(current => current.id === member.id), member))
     const existing = this.active.get(entry.id)
     if (existing) return existing.promise
-    if (this.active.size >= maximumAutomaticTranslationQueue || this.now() < this.blockedUntil ||
+    if (this.active.size >= this.capacity || this.now() < this.blockedUntil ||
       shouldSkipTranslation(entry.detectedLanguage, resolveTranslationTarget(entry.detectedLanguage, targetLanguage)) ||
       !entry.sourceText.trim() || !matchesMembers(this.getEntries())) return Promise.resolve()
     const controller = new AbortController()
@@ -174,7 +182,7 @@ export class TranslationQueue {
     const finalOptions = { ...options, elapsedMs: Number.POSITIVE_INFINITY }
     while (generation === this.generation && this.now() < deadline) {
       // Fill all free workers without bypassing cooldowns or retries.
-      if (includePending) this.candidates(finalOptions).slice(0, Math.max(0, maximumAutomaticTranslationQueue - this.active.size))
+      if (includePending) this.candidates(finalOptions).slice(0, Math.max(0, this.capacity - this.active.size))
         .forEach((entry) => { void this.request(entry, translate, options.targetLanguage) })
       if (!this.active.size && (!includePending || !this.getEntries().some((entry) => this.eligible(entry, finalOptions)))) return true
       // Do not race Promise.all against a long timeout: poll with a short,

@@ -32,7 +32,7 @@ RUN test -n "$NPM_REGISTRY" \
     && install -m 0755 /opt/s2t-dependencies/ffmpeg-static/ffmpeg-linux-$(node -p process.arch) node_modules/ffmpeg-static/ffmpeg
 COPY --from=build /app/out ./out
 COPY server ./server
-COPY scripts/storage/migrate-schema.cjs ./scripts/storage/migrate-schema.cjs
+COPY scripts/storage ./scripts/storage
 COPY icon ./icon
 EXPOSE 8787
 CMD ["node", "server/index.cjs"]

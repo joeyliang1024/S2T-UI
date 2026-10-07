@@ -46,11 +46,13 @@ const createAuth = async (storage, environment = process.env, limits = require('
     // intentionally left unchanged.
     const username = environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin'
     const password = environment.S2T_BOOTSTRAP_ADMIN_PASSWORD?.trim() || 'admin'
-    if (await users.findByUsername(username)) return
+    const existing = await users.findByUsername(username)
+    if (existing?.role === 'admin') return
+    if (existing) throw new Error('Bootstrap admin 名稱已被一般帳號使用，請更換 S2T_BOOTSTRAP_ADMIN_USERNAME')
     try {
       await users.create({ username, passwordHash: await bcrypt.hash(password, 12), NT: username, Department: 'admin', role: 'admin' })
       logger.info('auth.bootstrap-admin.created', { username })
-    } catch (error) { if (!(error instanceof Error) || error.message !== '帳號已存在') throw error }
+    } catch (error) { const winner = await users.findByUsername(username); if (!winner || winner.role !== 'admin') throw error }
   }
   await ensureBootstrapAdmin()
   const activeRevocations = async (userId) => {
@@ -110,6 +112,21 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
+      if (url === '/api/admin/users') {
+        const admin = await this.requireUser(request)
+        if (!admin) { send(response, 401, { error: '需要登入' }); return true }
+        if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可管理帳號' }); return true }
+        try {
+          if (request.method === 'GET') send(response, 200, { users: await users.list() })
+          else if (request.method === 'POST') {
+            const input = await readJson(request)
+            if (typeof input.password !== 'string' || input.password.length < 8 || Buffer.byteLength(input.password) > 72) throw new Error('密碼須為 8 至 72 bytes')
+            const user = await users.create({ username: input.username, NT: input.NT, Department: input.Department, role: input.role, passwordHash: await bcrypt.hash(input.password, 12) })
+            send(response, 201, { user })
+          } else send(response, 405, { error: 'Method not allowed' })
+        } catch (error) { send(response, ['帳號已存在', 'NT 已存在'].includes(error.message) ? 409 : 400, { error: error.message }) }
+        return true
+      }
       if (request.method === 'POST' && url === '/api/auth/register') {
         try { const result = await this.register(await readJson(request)); setSessionCookie(response, result.token); send(response, 201, result) } catch (error) {
           // A duplicate account is the user's own doing; anything else means

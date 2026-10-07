@@ -46,9 +46,17 @@ class PostgresConfigStore {
     this.ready = config.S2T_STORAGE_MIGRATIONS === 'verify' ? this.verifySchema() : this.migrate()
   }
   async verifySchema() {
-    const result = await this.pool.query("SELECT 1 FROM s2t_schema_migrations WHERE version = $1", [this.schemaVersion])
-    if (!result.rowCount) throw new Error('請先執行 Storage migration Job')
-    await this.pool.query('SELECT lease_generation FROM s2t_diarization_jobs LIMIT 0')
+    let result
+    try {
+      result = await this.pool.query("SELECT 1 FROM s2t_schema_migrations WHERE version = $1", [this.schemaVersion])
+      await this.pool.query('SELECT id FROM s2t_users LIMIT 0')
+      await this.pool.query('SELECT scope, record_key FROM s2t_config_records LIMIT 0')
+      await this.pool.query('SELECT lease_generation FROM s2t_diarization_jobs LIMIT 0')
+    } catch (error) {
+      if (error.code === '42P01' || error.code === '42703') throw new Error('Storage schema 缺失：請執行 node scripts/storage/recover-storage.cjs，完成後重新啟動 Gateway 與 worker；已刪資料需從備份還原。')
+      throw error
+    }
+    if (!result.rowCount) throw new Error('Storage migration 記錄缺失：請執行 node scripts/storage/recover-storage.cjs，完成後重啟服務。')
   }
   async migrate() {
     // A failed migration must be the loudest line in the console: it is why

@@ -57,7 +57,7 @@
                     }
                   }
                 ],
-                "image": "s2t-stress:20261007-chunk-latency",
+                "image": "s2t-stress:20261008-admin-release",
                 "imagePullPolicy": "IfNotPresent",
                 "lifecycle": {
                   "preStop": {
@@ -168,7 +168,7 @@
                     }
                   }
                 ],
-                "image": "s2t-stress:20261007-chunk-latency",
+                "image": "s2t-stress:20261008-admin-release",
                 "imagePullPolicy": "IfNotPresent",
                 "name": "audio-worker",
                 "ports": [

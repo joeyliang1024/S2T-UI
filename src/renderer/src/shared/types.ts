@@ -95,6 +95,7 @@ export type ImportCheckpoint = {
 }
 
 export type Settings = {
+  adminParameters?: import("../../../../server/admin-parameters.cjs").AdminParameters
   theme: 'system' | 'light' | 'dark'
   uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de' | 'system'
   /** Electron writes the selected destination by default; reads always merge both. */

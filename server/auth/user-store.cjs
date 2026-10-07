@@ -49,6 +49,7 @@ class LocalUserStore {
     }
     return publicUser(user)
   }
+  async list() { return (await this.config.list('auth', 'account-')).map(item => item.value).filter(Boolean).map(publicUser).sort((a,b) => a.username.localeCompare(b.username)).slice(0, 1000) }
   async findByUsername(username) { const user = await this.config.get('auth', `account-${normalizeUsername(username)}`); return user && typeof user === 'object' ? user : null }
   async findById(id) {
     const users = await this.config.list('auth', 'account-')
@@ -68,6 +69,7 @@ class PostgresUserStore {
       throw error
     }
   }
+  async list() { const result = await this.pool.query('SELECT id, username, nt AS "NT", department AS "Department", role, created_at AS "createdAt" FROM s2t_users ORDER BY username LIMIT 1000'); return result.rows.map(publicUser) }
   async findByUsername(username) { const result = await this.pool.query('SELECT id, username, password_hash AS "passwordHash", nt AS "NT", department AS "Department", role, created_at AS "createdAt" FROM s2t_users WHERE username = $1', [normalizeUsername(username)]); return result.rows[0] || null }
   async findById(id) { const result = await this.pool.query('SELECT id, username, password_hash AS "passwordHash", nt AS "NT", department AS "Department", role, created_at AS "createdAt" FROM s2t_users WHERE id = $1', [id]); return result.rows[0] || null }
 }
