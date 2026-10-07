@@ -43,7 +43,7 @@ fixtures=json.loads(Path('deploy/test/fixtures.json').read_text());apply({'apiVe
 print(run(['rollout','status','deployment/mock-models','--timeout=60s']))
 # Verify schema with an ephemeral named Job, keeping no credentials in the manifest.
 if not exists('job','s2t-test-schema-migration'):
- job={'apiVersion':'batch/v1','kind':'Job','metadata':{'name':'s2t-test-schema-migration','namespace':NS},'spec':{'backoffLimit':2,'template':{'spec':{'restartPolicy':'Never','containers':[{'name':'migration','image':'s2t-stress:20261006-telemetry-backpressure','command':['node','scripts/storage/migrate-schema.cjs'],'envFrom':[{'secretRef':{'name':'s2t-stress-config'}}],'env':[{'name':'S2T_STORAGE_MIGRATIONS','value':'auto'}]}]}}}}
+ job={'apiVersion':'batch/v1','kind':'Job','metadata':{'name':'s2t-test-schema-migration','namespace':NS},'spec':{'backoffLimit':2,'template':{'spec':{'restartPolicy':'Never','containers':[{'name':'migration','image':'s2t-stress:20261007-chunk-latency','command':['node','scripts/storage/migrate-schema.cjs'],'envFrom':[{'secretRef':{'name':'s2t-stress-config'}}],'env':[{'name':'S2T_STORAGE_MIGRATIONS','value':'auto'}]}]}}}}
  apply(job)
 print(run(['wait','--for=condition=complete','job/s2t-test-schema-migration','--timeout=60s']))
 apply({'apiVersion':'v1','kind':'List','items':[i for i in core['items'] if i['metadata']['name'] in ['gateway','audio-worker']]})

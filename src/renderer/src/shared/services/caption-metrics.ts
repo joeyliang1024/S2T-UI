@@ -1,6 +1,6 @@
 import { CaptionMetricTransport, type CaptionMetricSample } from './caption-metric-transport'
 import { authFetch } from '../../features/auth/services/auth-client'
-export type CaptionTiming = { speechAt?: number; detectedAt?: number; queuedAt: number; dequeuedAt: number; requestAt: number; responseAt: number }
+export type CaptionTiming = { speechAt?: number; detectedAt?: number; chunkSpeechAt?: number; chunkDetectedAt?: number; queuedAt: number; dequeuedAt: number; requestAt: number; responseAt: number }
 const timings = new WeakMap<object, CaptionTiming>()
 const pending = new Map<string, CaptionTiming>()
 const translationOrigins = new Map<string, CaptionTiming>()
@@ -70,6 +70,11 @@ export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
       add('chunk_wait', timing.detectedAt, timing.queuedAt)
     }
     samples.push(...buildFirstWordBreakdown(timing, paintedAt))
+    const chunkSlices = buildFirstWordBreakdown({ ...timing, speechAt: timing.chunkSpeechAt, detectedAt: timing.chunkDetectedAt }, paintedAt)
+    if (chunkSlices.length) {
+      add('chunk_speech_to_paint', timing.chunkSpeechAt!, paintedAt)
+      samples.push(...chunkSlices.map(sample => ({ ...sample, stage: sample.stage.replace('first_word_', 'chunk_') })))
+    }
     add('browser_queue', timing.queuedAt, timing.dequeuedAt)
     add('browser_preprocess', timing.dequeuedAt, timing.requestAt)
     add('asr_roundtrip_with_retries', timing.requestAt, timing.responseAt)

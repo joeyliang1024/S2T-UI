@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "browsers": 8,
+  "p50": 1.6654333332379665,
+  "p95": 3.4130999999046328,
+  "p99": 3.660300000190735,
+  "chunkPaintSamples": 160,
+  "speechOnsets": 32,
+  "sixStageSumVerified": true
+}

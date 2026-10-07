@@ -117,20 +117,27 @@ def row(title):
 def pair(a,b):
     global y
     panel(*a,x=0);panel(*b,x=12);y+=7
-row('01 · 使用者首字延遲 — Web 實際可見字幕；VAD 語音起點估計')
-for x,q in enumerate([.5,.95,.99]):panel(f'首字 p{int(q*100)}',f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="speech_to_first_paint"}}[5m])) by (le))','s',width=6,height=4,x=x*6,typ='stat',description='每次 VAD 語音開頭到第一個非空字幕段首次可見呈現；兩次 requestAnimationFrame 估計 paint。不是第一個 ASR token，也不包含 Grafana 抓取時間。只量測 Web。')
-panel('成功首字樣本（目前 Pods 累計）','sum(s2t_caption_stage_duration_seconds_count{stage="speech_to_first_paint"})',width=6,height=4,x=18,typ='stat');y+=4
-# Three donuts: identical overall cohort shares, separate percentile centers.
+row('01 · 每個 chunk 延遲 — 此 chunk 語音起點到 Web 字幕首次呈現')
 for x,q in enumerate([.5,.95,.99]):
-    panel(f'首字 P{int(q*100)} · 階段占比', 'sum(increase(s2t_first_word_stage_duration_seconds_sum[$__range])) by (stage) / scalar(sum(increase(s2t_first_word_stage_duration_seconds_sum[$__range])))', width=8,height=9,x=x*8,typ='s2t-latencydonut-panel',description='中央為所選時間範圍首字延遲百分位數（秒）；外圈為同一範圍全部首字樣本的階段耗時占比，三張共用，不是各百分位數的耗時拆分。')
-    panels[-1]['targets'] = [
-        {'refId':'A','expr':panels[-1]['targets'][0]['expr'],'instant':True,'range':False},
-        {'refId':'B','expr':f'histogram_quantile({q}, sum(increase(s2t_caption_stage_duration_seconds_bucket{{stage="speech_to_first_paint"}}[$__range])) by (le))','instant':True,'range':False}]
-    panels[-1]['options']={'percentile':f'P{int(q*100)} 首字延遲'}
-y += 9
-pair(('首字延遲分布 p50 / p95 / p99','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage="speech_to_first_paint"}[5m])) by (le))','s'),('Web 階段 p95（字幕 / 翻譯）','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~"speech_to_first_paint|speech_to_translation_paint"}[5m])) by (stage,le))','s','{{stage}}'))
+    panel(f'Chunk P{int(q*100)}（固定最近 5m）',f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="chunk_speech_to_paint"}}[5m])) by (le))','s',width=8,height=4,x=x*8,typ='stat',description='此 chunk 的語音起點到其文字首次在 Web UI 呈現。包含音訊累積與排隊，固定最近 5 分鐘；沒有新樣本時不保留舊數值。')
+    panels[-1]['targets'][0].update({'instant':True,'range':False})
+    panels[-1]['options']['reduceOptions']['calcs']=['last']
+
+y+=4
+panel('已呈現 chunk 樣本（所選範圍）','sum(increase(s2t_caption_stage_duration_seconds_count{stage="chunk_speech_to_paint"}[$__range]))',width=24,height=3,x=0,typ='stat')
+panels[-1]['targets'][0].update({'instant':True,'range':False})
+panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'text'}
+y+=3
+panel('每個 chunk 階段耗時占比（所選範圍）','sum(increase(s2t_chunk_stage_duration_seconds_sum[$__range])) by (stage) / scalar(sum(increase(s2t_chunk_stage_duration_seconds_sum[$__range])))','percentunit','{{stage}}',width=24,height=8,typ='piechart',description='每個已顯示 chunk 的同一批樣本，各階段耗時占比；不是 P50/P95/P99 的拆分。')
+panels[-1]['targets'][0].update({'instant':True,'range':False})
+panels[-1]['options']={'pieType':'donut','displayLabels':['percent'],'reduceOptions':{'calcs':['last'],'fields':'','values':False},'legend':{'displayMode':'table','placement':'right','values':['value'],'showLegend':True}}
+for name,label in [('vad_onset','VAD 語音確認'),('chunk_wait','音訊累積／切段'),('browser_queue','瀏覽器排隊'),('browser_preprocess','音訊前處理'),('asr_roundtrip_with_retries','ASR 往返（含 server 排隊與重試）'),('response_to_paint','UI 呈現')]:
+    panels[-1]['fieldConfig']['overrides'].append({'matcher':{'id':'byName','options':name},'properties':[{'id':'displayName','value':label}]})
+
+y += 8
+pair(('Chunk 延遲分布 P50 / P95 / P99','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage="chunk_speech_to_paint"}[5m])) by (le))','s'),('Web 階段 p95（字幕 / 翻譯）','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~"chunk_speech_to_paint|speech_to_first_paint|speech_to_translation_paint"}[5m])) by (stage,le))','s','{{stage}}'))
 # Add parallel quantiles to the first timeseries.
-panels[-2]['targets']=[{'refId':str(i),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="speech_to_first_paint"}}[5m])) by (le))','legendFormat':f'p{int(q*100)}'} for i,q in enumerate([.5,.95,.99])]
+panels[-2]['targets']=[{'refId':str(i),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="chunk_speech_to_paint"}}[5m])) by (le))','legendFormat':f'p{int(q*100)}'} for i,q in enumerate([.5,.95,.99])]
 pair(('Gateway 階段 p95（與 Web roundtrip 重疊，勿加總）','histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket[5m])) by (stage,le))','s','{{stage}}'),('可見字幕段樣本 / 秒','sum(rate(s2t_caption_stage_duration_seconds_count{stage="response_to_paint"}[5m]))'))
 pair(('語音偵測 / 無文字 / 失敗 / 音訊缺口','sum(increase(s2t_caption_events_total[5m])) by (event)','short','{{event}}'),('已偵測語音（目前 Pods 累計）','sum(s2t_caption_events_total{event="speech_detected"})','short'))
 row('02 · Gateway / Audio worker / 模擬模型')
@@ -155,10 +162,9 @@ pair(('Pod CPU 使用量（cores）','sum(rate(container_cpu_usage_seconds_total
 pair(('Pod ready（1=就緒）','kube_pod_status_ready{condition="true"}','short','{{pod}}'),('Pod 重啟','sum(kube_pod_container_status_restarts_total) by (pod)','short','{{pod}}'))
 pair(('Deployment 可用 / 期望副本','kube_deployment_status_replicas_available','short','{{deployment}}'),('CPU throttled 比例','sum(rate(s2t_cgroup_cpu_throttled_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace="'+N+'"}) by (pod) / clamp_min(sum(rate(s2t_cgroup_cpu_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace="'+N+'"}) by (pod), 0.000001)','percentunit','{{pod}}'))
 pair(('Pod CPU requests','sum(kube_pod_container_resource_requests{resource="cpu"}) by (pod)','short','{{pod}}'),('PVC 請求容量','kube_persistentvolumeclaim_resource_requests_storage_bytes','bytes','{{persistentvolumeclaim}}'))
-dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / 首字延遲與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','isolated-mock'],'panels':panels,'editable':False}
+dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / Chunk 延遲與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','isolated-mock'],'panels':panels,'editable':False}
 Path(__file__).with_name('dashboard.json').write_text(json.dumps(dashboard,ensure_ascii=False,indent=2)+'\n')
 cm('s2t-dashboard',{'dashboard.json':json.dumps(dashboard,ensure_ascii=False)})
-cm('s2t-latency-donut', {name:(Path(__file__).parent/'latency-donut'/name).read_text() for name in ['plugin.json','module.js']})
-deploy('grafana','grafana/grafana:12.2.0',3000,env=[{'name':'GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS','value':'s2t-latencydonut-panel'},{'name':'PROMETHEUS_URL','valueFrom':{'configMapKeyRef':{'name':'monitoring-connection','key':'PROMETHEUS_URL'}}},secretEnv('GF_SECURITY_ADMIN_PASSWORD','grafana-password'),{'name':'GF_USERS_ALLOW_SIGN_UP','value':'false'},{'name':'GF_AUTH_ANONYMOUS_ENABLED','value':'true'},{'name':'GF_AUTH_ANONYMOUS_ORG_ROLE','value':'Viewer'},{'name':'GF_ANALYTICS_REPORTING_ENABLED','value':'false'},{'name':'GF_ANALYTICS_CHECK_FOR_UPDATES','value':'false'},{'name':'GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH','value':'/var/lib/grafana/dashboards/dashboard.json'}],volumes=[{'name':'latency-donut','configMap':{'name':'s2t-latency-donut'}},{'name':'data','persistentVolumeClaim':{'claimName':'grafana-data'}},{'name':'provisioning','configMap':{'name':'grafana-provisioning'}},{'name':'dashboards','configMap':{'name':'s2t-dashboard'}}],mounts=[{'name':'latency-donut','mountPath':'/var/lib/grafana/plugins/s2t-latencydonut-panel','readOnly':True},{'name':'data','mountPath':'/var/lib/grafana'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/datasources/datasources.yaml','subPath':'datasources.yaml'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/dashboards/dashboards.yaml','subPath':'dashboards.yaml'},{'name':'dashboards','mountPath':'/var/lib/grafana/dashboards'}],cpu='100m',mem='128Mi')
+deploy('grafana','grafana/grafana:12.2.0',3000,env=[{'name':'PROMETHEUS_URL','valueFrom':{'configMapKeyRef':{'name':'monitoring-connection','key':'PROMETHEUS_URL'}}},secretEnv('GF_SECURITY_ADMIN_PASSWORD','grafana-password'),{'name':'GF_USERS_ALLOW_SIGN_UP','value':'false'},{'name':'GF_AUTH_ANONYMOUS_ENABLED','value':'true'},{'name':'GF_AUTH_ANONYMOUS_ORG_ROLE','value':'Viewer'},{'name':'GF_ANALYTICS_REPORTING_ENABLED','value':'false'},{'name':'GF_ANALYTICS_CHECK_FOR_UPDATES','value':'false'},{'name':'GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH','value':'/var/lib/grafana/dashboards/dashboard.json'}],volumes=[{'name':'data','persistentVolumeClaim':{'claimName':'grafana-data'}},{'name':'provisioning','configMap':{'name':'grafana-provisioning'}},{'name':'dashboards','configMap':{'name':'s2t-dashboard'}}],mounts=[{'name':'data','mountPath':'/var/lib/grafana'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/datasources/datasources.yaml','subPath':'datasources.yaml'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/dashboards/dashboards.yaml','subPath':'dashboards.yaml'},{'name':'dashboards','mountPath':'/var/lib/grafana/dashboards'}],cpu='100m',mem='128Mi')
 items[-2]['spec']['template']['spec']['securityContext']={'fsGroup':472,'runAsUser':472}
 Path(__file__).with_name('stack.json').write_text(json.dumps({'apiVersion':'v1','kind':'List','items':items},indent=2)+'\n')

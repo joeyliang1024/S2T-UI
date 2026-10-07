@@ -6,9 +6,11 @@ Grafana：[單張總覽](http://127.0.0.1:13000/d/s2t-overview?orgId=1&from=now-
 
 ## 讀圖
 
-首字延遲是 Web VAD 語音開頭估計，到主字幕 UI 第一段非空文字可見呈現；使用音訊樣本回推與兩次 requestAnimationFrame。它不等於模型 HTTP 回應，也不包含 Prometheus／Grafana 等待。未量測精確人類音素、硬體麥克風延遲、JS 前的音訊延遲、實體螢幕 scanout、Electron／浮動字幕視窗。
+現在量測每個成功呈現的 chunk：起點是該 chunk 內開始說話的音訊樣本時間，終點是該 chunk 的文字首次在 Web UI 可見呈現（兩次 requestAnimationFrame 估計）。第一個 chunk 使用 VAD 回推的語音起點；連續說話的後續 chunk 使用自身起始樣本回推，沒有新的 VAD onset 也會記錄。時間包含音訊累積／切段、瀏覽器排隊、前處理、ASR 往返、畫面呈現。不是從送出 API 才開始計時，也不從整段會議開頭計時。靜音前卷中的新 onset 以實際 VAD 起點為準。硬體麥克風、JS 前的延遲、螢幕 scanout、Electron／浮動字幕視窗尚未量測。
 
-甜甜圈圖跟隨上方時間選擇器。同一批成功顯示首字的樣本分成六個互不重疊的步驟：VAD 語音確認、音訊累積／切段、瀏覽器排隊、前處理、ASR 往返、畫面呈現。百分比是各步驟累計耗時／六步驟總耗時，並非正在某一步驟的請求數。後續字幕與翻譯不混入分母；ASR 往返已含 server 排隊／模型／重試，不再疊加 Gateway 內部指標。分母必須是 scalar，不能直接把帶 stage 的向量除以無 stage 的向量。
+頂部 P50／P95／P99 為固定最近 5 分鐘的即時查詢，不跟隨右上時間範圍。沒有有效樣本時顯示 No data，不沿用最後一次舊數值。下方原生圓環依所選時間範圍計算同一批 chunk 的六階段耗時占比，不是百分位數拆分；不同階段 P95 不能相加。連續語音後續 chunk 的 VAD 等待為零。所有面板都使用 Grafana 原生功能，無自訂 plugin 或允許未簽名插件的設定。
+
+新量測使用 `chunk_speech_to_paint` 與 `s2t_chunk_stage_duration_seconds`，不混用舊首字樣本。舊樣本留在 Prometheus 歷史，更新並重新載入字幕頁後才有新 chunk 資料。
 
 分位數為 histogram 的估計，與原始樣本排序分位數可能不同。不同步驟的 p95 不能直接相加。樣本累計以目前 Pod 生命週期為準，重啟會歸零；歷史時序由 Prometheus 保存。
 

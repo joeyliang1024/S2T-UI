@@ -244,6 +244,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private pendingChunks: Float32Array[] = []
   private pendingSamples = 0
   private speechOnsets: Array<{ sample: number; at: number; detected: number }> = []
+  private audioClock = { sample: 0, at: 0 }
   private pendingStart = 0
   private queued = Promise.resolve()
   private sequence = 0
@@ -303,6 +304,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
 
   pushAudio(chunk: Float32Array, startSample: number): void {
     if (this.stopped) return
+    this.audioClock = { sample: startSample + chunk.length, at: performance.now() }
     const vadFrame = this.vad?.process(chunk)
     if (vadFrame?.speechStarted) {
       recordCaptionEvent('speech_detected')
@@ -432,6 +434,12 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.diagnostics.maximumQueued = Math.max(this.diagnostics.maximumQueued, this.queuedChunks)
     const enqueuedAt = Date.now()
     const queuedAt = performance.now()
+    // First speech in this chunk, not the start of the whole continuous utterance.
+    // Sample-clock backdating retains collection time even when the queue is full.
+    const chunkStartAt = this.audioClock.at - (this.audioClock.sample - startSample) / this.sampleRate * 1000
+    const chunkOnset = this.speechOnsets.find(onset => onset.sample >= startSample && onset.sample < endSample)
+    const chunkSpeechAt = chunkOnset?.at ?? chunkStartAt
+    const chunkDetectedAt = chunkOnset ? Math.max(chunkSpeechAt, Math.min(queuedAt, chunkOnset.detected)) : chunkSpeechAt
     this.queued = this.queued.catch(() => undefined).then(async () => {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const dequeuedAt = performance.now()
@@ -454,7 +462,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary: isSentenceBoundary || this.explicitBoundaries.has(endSample) }
       const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
-      const timing: CaptionTiming = { queuedAt, dequeuedAt, requestAt, responseAt, ...(onsets[0] ? { speechAt: onsets[0].at, detectedAt: onsets[0].detected } : {}) }
+      const timing: CaptionTiming = { queuedAt, dequeuedAt, requestAt, responseAt, chunkSpeechAt, chunkDetectedAt, ...(onsets[0] ? { speechAt: onsets[0].at, detectedAt: onsets[0].detected } : {}) }
       attachCaptionTiming(event, timing)
       this.lastTranscript = event
       this.listeners.forEach((listener) => listener(event))

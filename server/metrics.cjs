@@ -1,5 +1,5 @@
 const { monitorEventLoopDelay } = require('node:perf_hooks')
-const stages = new Set(['speech_to_first_paint', 'vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint', 'translation_roundtrip', 'translation_response_to_paint', 'translation_schedule_wait', 'speech_to_translation_paint'])
+const stages = new Set(['chunk_speech_to_paint','speech_to_first_paint', 'vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint', 'translation_roundtrip', 'translation_response_to_paint', 'translation_schedule_wait', 'speech_to_translation_paint'])
 const firstWordStages = new Set(['vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint'])
 const buckets = [.025, .05, .1, .15, .25, .4, .6, .8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120, 300]
 const histograms = new Map()
@@ -13,6 +13,10 @@ for (const stage of stages) {
 }
 for (const stage of firstWordStages) {
   const labels = `stage=${JSON.stringify(stage)}`, name = 's2t_first_word_stage_duration_seconds'
+  histograms.set(`${name}:${labels}`, { name, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
+}
+for (const stage of firstWordStages) {
+  const labels = `stage=${JSON.stringify(stage)}`, name = 's2t_chunk_stage_duration_seconds'
   histograms.set(`${name}:${labels}`, { name, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
 }
 for (const event of allowedEvents) events.set(event, 0)
@@ -69,11 +73,12 @@ const acceptCaptionSamples = body => {
   const eventEntries = Object.entries(body.events || {})
   if (!body.samples.length && !eventEntries.length) return false
   if (eventEntries.some(([name, count]) => !allowedEvents.has(name) || !Number.isSafeInteger(count) || count < 1 || count > 1000)) return false
-  if (!body.samples.every(sample => (stages.has(sample?.stage) || (typeof sample?.stage === 'string' && sample.stage.startsWith('first_word_') && firstWordStages.has(sample.stage.slice(11)))) && Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300)) return false
+  if (!body.samples.every(sample => (stages.has(sample?.stage) || (typeof sample?.stage === 'string' && ((sample.stage.startsWith('first_word_') && firstWordStages.has(sample.stage.slice(11))) || (sample.stage.startsWith('chunk_') && firstWordStages.has(sample.stage.slice(6)))))) && Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300)) return false
   for (const [name, count] of eventEntries) events.set(name, (events.get(name) || 0) + count)
   for (const sample of body.samples) {
     const firstWord = sample.stage.startsWith('first_word_')
-    observe(firstWord ? 's2t_first_word_stage_duration_seconds' : 's2t_caption_stage_duration_seconds', { stage: firstWord ? sample.stage.slice(11) : sample.stage }, sample.seconds)
+    const chunk = sample.stage.startsWith('chunk_') && firstWordStages.has(sample.stage.slice(6))
+    observe(chunk ? 's2t_chunk_stage_duration_seconds' : firstWord ? 's2t_first_word_stage_duration_seconds' : 's2t_caption_stage_duration_seconds', { stage: chunk ? sample.stage.slice(6) : firstWord ? sample.stage.slice(11) : sample.stage }, sample.seconds)
   }
   return true
 }
