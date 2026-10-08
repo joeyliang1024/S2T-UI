@@ -45,3 +45,13 @@ kubectl --context colima-s2t-stress -n s2t-stress-20261005 port-forward svc/test
 在專案 `.env` 或部署命令的環境變數設定 `PROMETHEUS_URL=http://prometheus:9090`，再執行 `python3 deploy/monitoring/configure-connection.py`。命令的環境變數優先於 `.env`，未設定時使用上述叢集內預設值。URL 必須能從 Grafana Pod 存取；`localhost` 指 Grafana 容器本身。
 
 Grafana 的 datasource provisioning 使用 `${PROMETHEUS_URL}`，Deployment 從 `monitoring-connection` ConfigMap 注入環境變數。安裝程式會在 URL 改變時重新啟動 Grafana，套用資料來源；Prometheus 仍透過 scrape 拉取應用程式 `/metrics`。隔離測試叢集的 NetworkPolicy 只允許既有叢集內連線，外部 Prometheus 地址需另行配置允許的 egress。
+
+### 8787 網頁入口與測試站的量測來源
+
+`S2T_GATEWAY_METRICS_URL` 指定 **Prometheus 所在環境可連線**的 Gateway `/metrics` URL，與 Grafana 的 `PROMETHEUS_URL` 分開。環境變數優先，其次讀專案 `.env`。本機 Colima 的範例是 `http://192.168.5.2:8787/metrics`；在其他環境需替換為實際可達位址，不能直接把 Pod 的 `localhost` 當成使用者電腦。
+
+設定後執行 `python3 deploy/monitoring/configure-gateway-target.py`。此工具只更新 scrape ConfigMap、Dashboard、Prometheus 到指定 IP/port 的 egress 規則並重載 Prometheus，不更動 PostgreSQL、MinIO、帳號或模型。URL 使用 DNS 名稱時須另備對應 egress 規則。
+
+同一張 Dashboard 的「字幕量測來源」預設選 **8787 網頁入口**，可切換到 **K8s 測試站**。Web 字幕、Gateway 階段、HTTP 及應用儲存操作均依來源過濾，避免混合真實測試與模擬負載。其餘 Redis、PostgreSQL、MinIO、Milvus 與 K8s 資源圖仍代表隔離測試 cluster 的服務。
+
+API roundtrip 在瀏覽器收到回應時結算。只有當即時字幕頁可見、字幕實際可見時，才納入 chunk 說話到 UI 首次呈現及 response-to-paint 的樣本。離開字幕頁、隱藏分頁或字幕位於可視區外，會丟棄待呈現樣本；切回頁面不補報歷史字幕。沒有有效呈現樣本時顯示 No data，不能以 0 或舊值冒充。頂部 P50/P95/P99 仍使用固定最近 5m。

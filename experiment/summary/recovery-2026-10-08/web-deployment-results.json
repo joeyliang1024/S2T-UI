@@ -1,0 +1,11 @@
+{
+  "webOrigin": "http://localhost:8787",
+  "ready": true,
+  "bundleMatchesFinalBuild": true,
+  "bundleSha256": "1cec5a6263cc7eb9b240b41e2b041c5c4be80da974495886e1f7089554776a86",
+  "storageMode": {
+    "blob": "local",
+    "config": "local",
+    "vector": "local"
+  }
+}

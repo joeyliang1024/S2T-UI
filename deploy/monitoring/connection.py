@@ -10,6 +10,15 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_URL = 'http://prometheus:9090'
 
 
+def gateway_metrics_url():
+    """Optional separately scraped Web gateway; environment overrides dotenv."""
+    value = os.environ.get('S2T_GATEWAY_METRICS_URL')
+    if value is None and (ROOT / '.env').exists():
+        value = json.loads(subprocess.check_output(
+            ['node', '-e', "const fs=require('fs'),dotenv=require('dotenv');process.stdout.write(JSON.stringify(dotenv.parse(fs.readFileSync('.env')).S2T_GATEWAY_METRICS_URL ?? null))"], cwd=ROOT, text=True))
+    return value or ''
+
+
 def resolve_url():
     value = os.environ.get('PROMETHEUS_URL')
     if value is None and (ROOT / '.env').exists():

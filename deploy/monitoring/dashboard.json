@@ -11,12 +11,13 @@
   },
   "tags": [
     "S2T",
-    "isolated-mock"
+    "Web",
+    "K8s"
   ],
   "panels": [
     {
       "id": 1,
-      "title": "01 · 每個 chunk 延遲 — 此 chunk 語音起點到 Web 字幕首次呈現",
+      "title": "01 · 每個 chunk 延遲 — 此 chunk 語音起點到 Web 字幕首次呈現 · 來源：$caption_gateway",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -43,7 +44,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -95,7 +96,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -147,7 +148,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -199,7 +200,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{stage=\"chunk_speech_to_paint\"}[$__range]))",
+          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[$__range]))",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -255,7 +256,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(s2t_chunk_stage_duration_seconds_sum[$__range])) by (stage) / scalar(sum(increase(s2t_chunk_stage_duration_seconds_sum[$__range])))",
+          "expr": "sum(increase(s2t_chunk_stage_duration_seconds_sum{job=\"$caption_gateway\"}[$__range])) by (stage) / scalar(sum(increase(s2t_chunk_stage_duration_seconds_sum{job=\"$caption_gateway\"}[$__range])))",
           "legendFormat": "{{stage}}",
           "instant": true,
           "range": false
@@ -381,17 +382,17 @@
       "targets": [
         {
           "refId": "0",
-          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
           "legendFormat": "p50"
         },
         {
           "refId": "1",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
           "legendFormat": "p95"
         },
         {
           "refId": "2",
-          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
           "legendFormat": "p99"
         }
       ],
@@ -441,7 +442,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~\"chunk_speech_to_paint|speech_to_first_paint|speech_to_translation_paint\"}[5m])) by (stage,le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage!~\"chunk_speech_to_paint|speech_to_first_paint|speech_to_translation_paint\"}[5m])) by (stage,le))",
           "legendFormat": "{{stage}}"
         }
       ],
@@ -491,7 +492,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket[5m])) by (stage,le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket{job=\"$caption_gateway\"}[5m])) by (stage,le))",
           "legendFormat": "{{stage}}"
         }
       ],
@@ -541,7 +542,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(s2t_caption_stage_duration_seconds_count{stage=\"response_to_paint\"}[5m]))",
+          "expr": "sum(rate(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"response_to_paint\"}[5m]))",
           "legendFormat": ""
         }
       ],
@@ -591,7 +592,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(s2t_caption_events_total[5m])) by (event)",
+          "expr": "sum(increase(s2t_caption_events_total{job=\"$caption_gateway\"}[5m])) by (event)",
           "legendFormat": "{{event}}"
         }
       ],
@@ -641,7 +642,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(s2t_caption_events_total{event=\"speech_detected\"})",
+          "expr": "sum(s2t_caption_events_total{job=\"$caption_gateway\",event=\"speech_detected\"})",
           "legendFormat": ""
         }
       ],
@@ -676,7 +677,7 @@
     },
     {
       "id": 13,
-      "title": "02 · Gateway / Audio worker / 模擬模型",
+      "title": "02 · Gateway / Audio worker / 模擬模型 · 來源：$caption_gateway",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -703,7 +704,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket[5m])) by (route,le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket{job=\"$caption_gateway\"}[5m])) by (route,le))",
           "legendFormat": "{{route}}"
         }
       ],
@@ -753,7 +754,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(s2t_gateway_request_duration_seconds_count[2m])) by (route)",
+          "expr": "sum(rate(s2t_gateway_request_duration_seconds_count{job=\"$caption_gateway\"}[2m])) by (route)",
           "legendFormat": "{{route}}"
         }
       ],
@@ -803,7 +804,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(s2t_gateway_request_errors_total[2m])) by (route)",
+          "expr": "sum(rate(s2t_gateway_request_errors_total{job=\"$caption_gateway\"}[2m])) by (route)",
           "legendFormat": "{{route}}"
         }
       ],
@@ -853,7 +854,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "s2t_gateway_inflight_requests",
+          "expr": "s2t_gateway_inflight_requests{job=\"$caption_gateway\"}",
           "legendFormat": "{{service}} {{pod}}"
         }
       ],
@@ -1003,7 +1004,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(s2t_diarization_pending_jobs)",
+          "expr": "max(s2t_diarization_pending_jobs{job=\"$caption_gateway\"})",
           "legendFormat": ""
         }
       ],
@@ -1053,7 +1054,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(s2t_diarization_oldest_seconds)",
+          "expr": "max(s2t_diarization_oldest_seconds{job=\"$caption_gateway\"})",
           "legendFormat": ""
         }
       ],
@@ -1265,7 +1266,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket[5m])) by (service,operation,le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket{job=\"$caption_gateway\"}[5m])) by (service,operation,le))",
           "legendFormat": "{{service}} {{operation}}"
         }
       ],
@@ -1315,7 +1316,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(s2t_storage_operation_duration_seconds_errors_total[5m])) by (service,operation)",
+          "expr": "sum(rate(s2t_storage_operation_duration_seconds_errors_total{job=\"$caption_gateway\"}[5m])) by (service,operation)",
           "legendFormat": "{{service}} {{operation}}"
         }
       ],
@@ -2611,5 +2612,33 @@
       }
     }
   ],
-  "editable": false
+  "editable": false,
+  "templating": {
+    "list": [
+      {
+        "name": "caption_gateway",
+        "label": "字幕量測來源",
+        "type": "custom",
+        "query": "8787 網頁入口 : gateway-web,K8s 測試站 : s2t",
+        "current": {
+          "text": "8787 網頁入口",
+          "value": "gateway-web"
+        },
+        "options": [
+          {
+            "text": "8787 網頁入口",
+            "value": "gateway-web",
+            "selected": true
+          },
+          {
+            "text": "K8s 測試站",
+            "value": "s2t",
+            "selected": false
+          }
+        ],
+        "multi": false,
+        "includeAll": false
+      }
+    ]
+  }
 }

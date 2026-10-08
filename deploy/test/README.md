@@ -2,7 +2,7 @@
 
 只操作 `colima-s2t-stress`／`s2t-stress-20261005`。`core.json` 是唯一 Storage／Gateway／worker 模板：Gateway 和 worker 各至少兩個 Pod；Redis 3＋Sentinel 3、PVC、經修正的認證 PING probes。`fixtures.json` 是 mock API 與負載 client；來源位於 scripts/testing。
 
-先以 Dockerfile.web 建置 `s2t-stress:20261008-admin-release`。映像需能由本機 Colima Docker runtime 取得，不能直接套用至其他 cluster。
+先以 Dockerfile.web 建置 `s2t-stress:20261008-summary-fix`。映像需能由本機 Colima Docker runtime 取得，不能直接套用至其他 cluster。
 
 ```sh
 python3 deploy/test/bootstrap.py

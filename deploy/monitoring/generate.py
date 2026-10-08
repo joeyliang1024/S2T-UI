@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Generate the isolated K8s monitoring stack and its single provisioned dashboard."""
-import json
+import json, ipaddress
+from connection import gateway_metrics_url
+from urllib.parse import urlparse
 from pathlib import Path
 N='s2t-stress-20261005'; items=[]
 def add(kind,name,spec=None,**rest):
@@ -96,6 +98,25 @@ config += '''  - job_name: kubelet
       - {source_labels: [__meta_kubernetes_node_name], target_label: node}
       - {source_labels: [__meta_kubernetes_node_name], target_label: __metrics_path__, replacement: '/api/v1/nodes/$1/proxy/metrics'}
 '''
+# Optional real Web gateway; default isolation still collects the test cluster only.
+external_gateway = gateway_metrics_url()
+if any(char.isspace() for char in external_gateway):
+    raise ValueError('S2T_GATEWAY_METRICS_URL cannot contain whitespace')
+if external_gateway:
+    parsed = urlparse(external_gateway)
+    if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise ValueError('S2T_GATEWAY_METRICS_URL must be an HTTP(S) metrics URL without credentials, query or fragment')
+    port = parsed.port or (443 if parsed.scheme == 'https' else 80)
+    address = ('[' + parsed.hostname + ']' if ':' in parsed.hostname else parsed.hostname) + ':' + str(port)
+    config += '  - job_name: gateway-web\n    scheme: ' + parsed.scheme + '\n    metrics_path: ' + json.dumps(parsed.path or '/metrics') + '\n    static_configs: [{targets: [' + json.dumps(address) + '], labels: {service: gateway, pod: web-gateway}}]\n'
+    # Narrow exception: Prometheus may scrape this IP and port only.
+    # DNS targets require an operator-managed egress policy.
+    try:
+        host_ip = ipaddress.ip_address(parsed.hostname)
+    except ValueError:
+        host_ip = None
+    if host_ip is not None:
+        add('NetworkPolicy', 'monitoring-web-gateway', {'podSelector': {'matchLabels': {'app': 'prometheus'}}, 'policyTypes': ['Egress'], 'egress': [{'to': [{'ipBlock': {'cidr': str(host_ip) + ('/32' if host_ip.version == 4 else '/128')}}], 'ports': [{'protocol': 'TCP', 'port': port}]}]})
 cm('prometheus-config',{'prometheus.yml':config})
 for name in ['prometheus','grafana']:add('PersistentVolumeClaim',name+'-data',{'accessModes':['ReadWriteOnce'],'resources':{'requests':{'storage':'2Gi'}}})
 deploy('prometheus','prom/prometheus:v3.5.0',9090,args=['--config.file=/etc/prometheus/prometheus.yml','--storage.tsdb.path=/prometheus','--storage.tsdb.retention.time=3d','--storage.tsdb.retention.size=1GB'],volumes=[{'name':'config','configMap':{'name':'prometheus-config'}},{'name':'data','persistentVolumeClaim':{'claimName':'prometheus-data'}}],mounts=[{'name':'config','mountPath':'/etc/prometheus'},{'name':'data','mountPath':'/prometheus'}],cpu='100m',mem='192Mi',serviceAccount='prometheus')
@@ -162,7 +183,15 @@ pair(('Pod CPU 使用量（cores）','sum(rate(container_cpu_usage_seconds_total
 pair(('Pod ready（1=就緒）','kube_pod_status_ready{condition="true"}','short','{{pod}}'),('Pod 重啟','sum(kube_pod_container_status_restarts_total) by (pod)','short','{{pod}}'))
 pair(('Deployment 可用 / 期望副本','kube_deployment_status_replicas_available','short','{{deployment}}'),('CPU throttled 比例','sum(rate(s2t_cgroup_cpu_throttled_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace="'+N+'"}) by (pod) / clamp_min(sum(rate(s2t_cgroup_cpu_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace="'+N+'"}) by (pod), 0.000001)','percentunit','{{pod}}'))
 pair(('Pod CPU requests','sum(kube_pod_container_resource_requests{resource="cpu"}) by (pod)','short','{{pod}}'),('PVC 請求容量','kube_persistentvolumeclaim_resource_requests_storage_bytes','bytes','{{persistentvolumeclaim}}'))
-dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / Chunk 延遲與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','isolated-mock'],'panels':panels,'editable':False}
+dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / Chunk 延遲與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','Web','K8s'],'panels':panels,'editable':False}
+# Caption panels must never combine real users with the isolated load generator.
+import re
+for entry in panels:
+    for target in entry.get('targets', []):
+        target['expr'] = re.sub(r'(s2t_(?:caption_stage_duration_seconds|chunk_stage_duration_seconds|caption_events_total|server_stage_duration_seconds|gateway_request_duration_seconds|gateway_request_errors_total|gateway_inflight_requests|diarization_pending_jobs|diarization_oldest_seconds|storage_operation_duration_seconds)(?:_bucket|_sum|_count|_errors_total)?)(\{)?', lambda match: match.group(1) + '{job="$caption_gateway"' + (',' if match.group(2) else '}'), target['expr'])
+    if entry['type'] == 'row' and entry['title'].startswith(('01 ', '02 ')):
+        entry['title'] += ' · 來源：$caption_gateway'
+dashboard['templating'] = {'list': [{'name': 'caption_gateway', 'label': '字幕量測來源', 'type': 'custom', 'query': '8787 網頁入口 : gateway-web,K8s 測試站 : s2t', 'current': {'text': '8787 網頁入口' if external_gateway else 'K8s 測試站', 'value': 'gateway-web' if external_gateway else 's2t'}, 'options': [{'text': '8787 網頁入口', 'value': 'gateway-web', 'selected': bool(external_gateway)}, {'text': 'K8s 測試站', 'value': 's2t', 'selected': not bool(external_gateway)}], 'multi': False, 'includeAll': False}]}
 Path(__file__).with_name('dashboard.json').write_text(json.dumps(dashboard,ensure_ascii=False,indent=2)+'\n')
 cm('s2t-dashboard',{'dashboard.json':json.dumps(dashboard,ensure_ascii=False)})
 deploy('grafana','grafana/grafana:12.2.0',3000,env=[{'name':'PROMETHEUS_URL','valueFrom':{'configMapKeyRef':{'name':'monitoring-connection','key':'PROMETHEUS_URL'}}},secretEnv('GF_SECURITY_ADMIN_PASSWORD','grafana-password'),{'name':'GF_USERS_ALLOW_SIGN_UP','value':'false'},{'name':'GF_AUTH_ANONYMOUS_ENABLED','value':'true'},{'name':'GF_AUTH_ANONYMOUS_ORG_ROLE','value':'Viewer'},{'name':'GF_ANALYTICS_REPORTING_ENABLED','value':'false'},{'name':'GF_ANALYTICS_CHECK_FOR_UPDATES','value':'false'},{'name':'GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH','value':'/var/lib/grafana/dashboards/dashboard.json'}],volumes=[{'name':'data','persistentVolumeClaim':{'claimName':'grafana-data'}},{'name':'provisioning','configMap':{'name':'grafana-provisioning'}},{'name':'dashboards','configMap':{'name':'s2t-dashboard'}}],mounts=[{'name':'data','mountPath':'/var/lib/grafana'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/datasources/datasources.yaml','subPath':'datasources.yaml'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/dashboards/dashboards.yaml','subPath':'dashboards.yaml'},{'name':'dashboards','mountPath':'/var/lib/grafana/dashboards'}],cpu='100m',mem='128Mi')

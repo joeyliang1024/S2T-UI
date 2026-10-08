@@ -5,11 +5,30 @@ const timings = new WeakMap<object, CaptionTiming>()
 const pending = new Map<string, CaptionTiming>()
 const translationOrigins = new Map<string, CaptionTiming>()
 const translations = new Map<string, { started: number; response: number }>()
+// Only paints of newly received captions in the live view form a latency sample.
+// Navigation/hidden tabs must never replay an old response as a fresh paint.
+let liveViewActive = false
+export const setCaptionMeasurementActive = (active: boolean): void => {
+  liveViewActive = active
+  if (!active) { pending.clear(); translationOrigins.clear(); translations.clear() }
+}
+const canMeasurePaint = (): boolean => liveViewActive && document.visibilityState === 'visible'
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') { pending.clear(); translationOrigins.clear(); translations.clear() }
+})
+export const discardCaptionPaint = (ids: string[], translation = false): void => {
+  for (const id of ids) {
+    if (translation) { translations.delete(id); translationOrigins.delete(id) }
+    else pending.delete(id)
+  }
+}
 export const registerTranslationTiming = (id: string, started: number, response: number): void => {
+  if (!canMeasurePaint()) return
   translations.set(id, { started, response })
   if (translations.size > 1000) translations.delete(translations.keys().next().value!)
 }
 export const reportTranslationPaint = (ids: string[], paintedAt: number): void => {
+  if (!canMeasurePaint()) return
   const samples: Sample[] = []
   for (const id of ids) {
     const timing = translations.get(id), origin = translationOrigins.get(id)
@@ -36,6 +55,13 @@ export const attachCaptionTiming = (event: object, timing: CaptionTiming): void 
 export const registerCaptionTiming = (id: string, event: object): void => {
   const timing = timings.get(event)
   if (!timing) return
+  // Arrival-side timings end at receipt, independent of navigation and RAF.
+  enqueue([
+    { stage: 'browser_queue', seconds: (timing.dequeuedAt - timing.queuedAt) / 1000 },
+    { stage: 'browser_preprocess', seconds: (timing.requestAt - timing.dequeuedAt) / 1000 },
+    { stage: 'asr_roundtrip_with_retries', seconds: (timing.responseAt - timing.requestAt) / 1000 }
+  ].filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
+  if (!canMeasurePaint()) return
   pending.set(id, timing)
   translationOrigins.set(id, timing)
   if (translationOrigins.size > 1000) translationOrigins.delete(translationOrigins.keys().next().value!)
@@ -54,7 +80,7 @@ export const buildFirstWordBreakdown = (timing: CaptionTiming, paintedAt: number
 // Measurements are ephemeral: no transcript, user ID, model name or trace ID
 // is sent or used as a Prometheus label. Missing/hidden paints are not zeroes.
 export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
-  if (document.visibilityState !== 'visible') return
+  if (!canMeasurePaint()) return
   const samples: Array<{ stage: string; seconds: number }> = []
   for (const id of ids) {
     const timing = pending.get(id)
@@ -75,9 +101,6 @@ export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
       add('chunk_speech_to_paint', timing.chunkSpeechAt!, paintedAt)
       samples.push(...chunkSlices.map(sample => ({ ...sample, stage: sample.stage.replace('first_word_', 'chunk_') })))
     }
-    add('browser_queue', timing.queuedAt, timing.dequeuedAt)
-    add('browser_preprocess', timing.dequeuedAt, timing.requestAt)
-    add('asr_roundtrip_with_retries', timing.requestAt, timing.responseAt)
     add('response_to_paint', timing.responseAt, paintedAt)
   }
   if (!samples.length || window.s2t) return // This deployment instruments the Web capture path.

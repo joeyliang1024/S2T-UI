@@ -1,4 +1,4 @@
-import { registerCaptionTiming } from '../../../shared/services/caption-metrics'
+import { registerCaptionTiming, setCaptionMeasurementActive } from '../../../shared/services/caption-metrics'
 import { applyEnvironmentSettings } from '../services/environment-settings'
 import { importExtensions } from '../../transcript/import-formats'
 import { openCaptionPopout, type CaptionPopout } from '../services/caption-popout'
@@ -9,7 +9,7 @@ import { modelEndpoint, defaultWebSocketCapabilities, defaultHttpCapabilities, d
 import { speedToVadConfig } from '../../capture/vad'
 import { HttpServiceError, readJsonResponse } from '../../../shared/services/http'
 import { browserDownload } from '../../../shared/services/download'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from '../../models/model-adapter'
 import { assignSpeakersByOverlap, parseSpeakerEmbeddings, parseSpeakerTurns, stabilizeSpeakerTurns, type SpeakerTurn } from '../../speakers/diarization'
 import { voiceprintStorage, type Voiceprint } from '../../speakers/services/voiceprint-storage'
@@ -126,6 +126,10 @@ const [titleDraft, setTitleDraft] = useState('')
 const [status, setStatus] = useState(activeTranslate('stReady'))
 
 const [view, setCurrentView] = useState<View>(viewFromLocation)
+useLayoutEffect(() => {
+  setCaptionMeasurementActive(view === 'live')
+  return () => setCaptionMeasurementActive(false)
+}, [view])
 
 const setView = useCallback((next: View): void => {
     const route = `/${next}`
@@ -210,6 +214,7 @@ const activeModelSnapshotRef = useRef<CaptureModelSnapshot | null>(null)
 
 const glossaryVersionRef = useRef<number | null>(null)
 const summaryTemplateVersionRef = useRef<number | null>(null)
+const summaryTemplateSaveRef = useRef<Promise<void>>(Promise.resolve())
 const remoteSettingsVersionRef = useRef<number | null>(null)
 // The model catalog is deliberately separate from general UI settings.  It is
 // account-scoped on the gateway and can be updated by another browser tab.
@@ -798,7 +803,7 @@ useEffect(() => {
       // a Browser Storage copy when it is unavailable. Electron is local-first.
       const primarySessions = window.s2t ? localSessions : remote.status === 'fulfilled' ? remoteSessions : []
       const merged = mergeSessions(primarySessions, recovery)
-      setSessions(recoverStaleProcessing(merged, { finishing: finishingSessionRef.current, durableJobs: !window.s2t }))
+      setSessions(recoverStaleProcessing(merged, { finishing: finishingSessionRef.current, durableJobs: !window.s2t }).map(entry => entry.summary === '正在產生摘要…' ? { ...entry, summary: undefined, summaryError: activeTranslate('stSummaryGenerationFailedShort') } : entry))
       setSessionStorageStates(Object.fromEntries(merged.map((session) => [session.id, window.s2t || remote.status !== 'fulfilled' ? 'local' : 'remote'])))
       if (local.status === 'rejected') setStatus(activeTranslate('stLocalLoadFailed'))
       else if (!window.s2t && remote.status === 'rejected') setStatus(activeTranslate('stRemoteLoadFailed'))
@@ -1086,14 +1091,16 @@ useEffect(() => {
 useEffect(() => {
     if (window.s2t || !summaryTemplatesHydrated || summaryTemplateVersionRef.current === null) return
     const timer = window.setTimeout(() => {
-      const version = summaryTemplateVersionRef.current
-      if (version === null) return
-      void retryableAuthFetch('/api/data/summary-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templates: settings.summaryTemplates, selectedTemplateId: settings.selectedSummaryTemplateId, version }) }).then(async (response) => {
-        if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
-        const saved = await response.json() as { version?: number }
-        if (!Number.isSafeInteger(saved.version) || saved.version! < 1) throw new Error(activeTranslate('stServerNoValidTemplateVersion'))
-        summaryTemplateVersionRef.current = saved.version!
-      }).catch((error: unknown) => setStatus(error instanceof Error ? activeTranslate('stSummaryTemplateSaveFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stSummaryTemplateSaveFailed')))
+      summaryTemplateSaveRef.current = summaryTemplateSaveRef.current.then(async () => {
+        const version = summaryTemplateVersionRef.current
+        if (version === null) return
+        await retryableAuthFetch('/api/data/summary-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templates: settings.summaryTemplates, selectedTemplateId: settings.selectedSummaryTemplateId, version }) }).then(async (response) => {
+          if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
+          const saved = await response.json() as { version?: number }
+          if (!Number.isSafeInteger(saved.version) || saved.version! < 1) throw new Error(activeTranslate('stServerNoValidTemplateVersion'))
+          summaryTemplateVersionRef.current = saved.version!
+        }).catch((error: unknown) => setStatus(error instanceof Error ? activeTranslate('stSummaryTemplateSaveFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stSummaryTemplateSaveFailed')))
+      })
     }, 350)
     return () => window.clearTimeout(timer)
   }, [settings.selectedSummaryTemplateId, settings.summaryTemplates, summaryTemplatesHydrated])
@@ -2780,25 +2787,28 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
     } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
   }
 
-const createSessionSummary = async (sessionId: string, transcript: string): Promise<void> => {
-    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
+const createSessionSummary = async (sessionId: string, transcript: string): Promise<boolean> => {
+    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return false
     const generation = (summaryGenerationRef.current.get(sessionId) ?? 0) + 1
     summaryGenerationRef.current.set(sessionId, generation)
-    let sourceVersionId: string | undefined
+    const previous = sessions.find(entry => entry.id === sessionId)
+    const sourceVersionId = previous ? previous.activeAudioVersionId ?? audioVersionsFor(previous)[0]?.id : undefined
     setSessions((current) => current.map((entry) => {
       if (entry.id !== sessionId) return entry
-      sourceVersionId = entry.activeAudioVersionId ?? audioVersionsFor(entry)[0]?.id
-      return { ...entry, summary: '正在產生摘要…', summaryTranslation: undefined }
+      return { ...entry, ...(!entry.transcript.trim() ? { transcript, audioVersions: entry.audioVersions?.map(version => version.id === sourceVersionId ? { ...version, transcript } : version) } : {}), summary: '正在產生摘要…', summaryError: undefined, summaryTranslation: undefined }
     }))
     try {
       const text = await summarizeTranscript(transcript)
-      if (summaryGenerationRef.current.get(sessionId) !== generation) return
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || undefined, summarySourceSignature: text ? transcriptSignature(transcript) : undefined, summarySourceVersionId: text ? sourceVersionId : undefined, summaryTranslation: undefined } : entry))
+      if (summaryGenerationRef.current.get(sessionId) !== generation) return false
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || undefined, summaryError: text ? undefined : activeTranslate('stSummaryServiceEmpty'), summarySourceSignature: text ? transcriptSignature(transcript) : undefined, summarySourceVersionId: text ? sourceVersionId : undefined, summaryTranslation: undefined } : entry))
       if (!text) setStatus(activeTranslate('stSummaryServiceEmpty'))
+      return Boolean(text)
     } catch (error) {
-      if (summaryGenerationRef.current.get(sessionId) !== generation) return
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined, summaryTranslation: undefined } : entry))
-      setStatus(error instanceof Error ? activeTranslate('stSummaryGenerationFailed').replace('{error}', String(error.message)) : activeTranslate('stSummaryGenerationFailedShort'))
+      if (summaryGenerationRef.current.get(sessionId) !== generation) return false
+      const message = error instanceof Error ? activeTranslate('stSummaryGenerationFailed').replace('{error}', error.message) : activeTranslate('stSummaryGenerationFailedShort')
+      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: previous?.summary === '正在產生摘要…' ? undefined : previous?.summary, summarySourceSignature: previous?.summarySourceSignature, summarySourceVersionId: previous?.summarySourceVersionId, summaryTranslation: previous?.summaryTranslation, summaryError: message } : entry))
+      setStatus(message)
+      return false
     }
   }
 
@@ -2851,10 +2861,10 @@ const createSummary = async (): Promise<void> => {
 
 const summarizeSession = async (entry: SavedSession): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessingInBackground')); return }
-    if (!entry.transcript.trim()) { setStatus(activeTranslate('stNoTranscriptToSummarize')); return }
+    const transcript = entry.transcript.trim() || makeTranscriptText(entry.segments)
+    if (!transcript.trim()) { setStatus(activeTranslate('stNoTranscriptToSummarize')); return }
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim()) { setStatus(activeTranslate('stSummaryApiAndModelRequired')); return }
-    await createSessionSummary(entry.id, entry.transcript)
-    setStatus(activeTranslate('stMeetingSummaryUpdated'))
+    if (await createSessionSummary(entry.id, transcript)) setStatus(activeTranslate('stMeetingSummaryUpdated'))
   }
 
 const canRecord = captureState === 'idle'

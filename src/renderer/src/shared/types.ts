@@ -57,6 +57,7 @@ export type SavedSession = {
   qualityCorrectionState?: 'completed' | 'failed'
   qualityCorrectionError?: string
   summary?: string
+  summaryError?: string
   /** Deterministic signature of the transcript used when this summary was generated. */
   summarySourceSignature?: string
   /** Audio/caption version whose transcript was used to create the summary. */
