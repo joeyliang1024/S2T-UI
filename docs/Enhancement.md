@@ -1,12 +1,12 @@
 # S2T-UI 統一需求與改善清單
 
-更新日期：2026-10-01。此檔為 repo **唯一待辦與需求狀態來源**。
+更新日期：2026-10-06。此檔為 repo **唯一待辦與需求狀態來源**。
 
 已整併原 TODO、假日需求單、新版需求單、舊 Enhancement 長時間錄音設計，以及 README、docs 下的規劃、技術契約、部署與驗收文件；並納入本次程式碼盤點與使用者確認。前三份舊待辦已由本檔取代並刪除，歷史原文可從 Git 查閱。技術文件保留作為操作／契約參考，不再另訂優先順序。
 
 **目前急迫需求只有：語者分離系統、斷句速度、翻譯模式。** 舊文件的 P0／P1、先做 storage、先做語系等排序不再沿用。先處理這三項需要的直接依賴，其餘按本檔分類追蹤；本次只整理文件，不代表已完成下列開發。
 
-狀態規則：**部分完成**＝有實作但仍有明確缺口；**未完成**＝未見完整功能路徑；**待驗收**＝已有路徑、缺情境證據；**不確定**＝規格衝突、候選方案或外部契約未定。工程改善建議會明示，不把建議當成新增的使用者承諾。完成項目應移除待辦，保留版本、平台、步驟與結果於 [驗收手冊](docs/guide/VALIDATION.zh-TW.md)。
+狀態規則：**部分完成**＝有實作但仍有明確缺口；**未完成**＝未見完整功能路徑；**待驗收**＝已有路徑、缺情境證據；**不確定**＝規格衝突、候選方案或外部契約未定。工程改善建議會明示，不把建議當成新增的使用者承諾。完成項目應移除待辦，保留版本、平台、步驟與結果於 [驗收手冊](guide/VALIDATION.zh-TW.md)。
 
 已確認的共同規則：
 
@@ -22,9 +22,8 @@
 
 ### O01 結構拆分與共用契約 — 部分完成（原 25；舊 N13）
 
-現況：App.tsx 已是入口，auth、storage、翻譯策略、摘要規劃、術語解析已有模組；摘要工作區／渲染與講者批次改名已拆為獨立 view component。主要流程仍集中於約 1,959 行的 useAppController，畫面仍有大型 AppView 區塊。
+現況：App.tsx 已收斂為 auth gate 與 controller/view 組裝，auth hooks/views、storage、翻譯策略、摘要規劃、術語解析已模組化；摘要工作區／渲染與講者批次改名已拆為獨立 view component。主要流程仍集中於約 1,959 行的 useAppController，畫面仍有大型 AppView 區塊。
 
-- [x] App.tsx 已收斂為 auth gate 與 controller/view 組裝；應用行為分別位於 auth hooks/views、app controller 與 app views/services，入口檔不再承載收音、翻譯或 Storage 邏輯。
 - [ ] 將即時字幕、歷史、摘要、匯入、模型、聲紋、設定與浮動字幕拆為各自 view／components；拆出收音生命週期、音源切換、字幕、翻譯、歷史與設定 hooks。
 - [ ] 按責任拆 HTTP／WebSocket adapter、gateway 路由／模型代理，以及 Electron 錄音、session、金鑰、IPC、視窗服務；避免僅把大檔移到另一個大檔。
 - [ ] 統一 session、segment、speaker、model、錯誤及資料版本契約；必要回歸涵蓋亂序 revision、時間軸、取消、資料遷移與權限。
@@ -32,84 +31,52 @@
 
 ### O02 長時間錄音、字幕與資源上限 — 部分完成（舊 Enhancement／TODO 長錄音設計）
 
-現況：Electron 持續寫 WAV，已有約 125 ms PCM 批次、寫入 ACK、約 2 秒待寫入保護；HTTP ASR 有佇列上限及 gap 事件。Web 仍累積完整 PCM，字幕／session 仍持有完整陣列。不能把既有背壓、AudioWorklet 或逐片 WAV 讀取重新列為未實作。
+現況：Electron 持續寫 WAV，已有約 125 ms PCM 批次、寫入 ACK、約 2 秒待寫入保護；HTTP ASR 有佇列上限及 gap 事件。Web 在支援 OPFS 的瀏覽器逐片寫入暫存 PCM16 WAV，停止時以磁碟 backed Blob 保存並清理暫存；不支援 OPFS 時退回記憶體並以 256 MB 為上限，觸頂會暫停並要求先保存目前錄音。設定頁已顯示瀏覽器儲存使用量／配額、OPFS／記憶體／Electron 暫存模式與持久儲存授權狀態。Web 收音期間的帳號隔離 live draft（final 字幕、時間、暫停狀態、來源與 OPFS 暫存識別）已持久化至 IndexedDB，正常完成會清除，強制關閉後轉成可查看的「復原字幕」並在 OPFS 檔仍可讀時重建 WAV。即時字幕未搜尋時只渲染最近 500 段，完整逐字稿仍供保存、匯出、摘要與搜尋，清除字幕只移動顯示邊界。gateway 已以獨立 bucket 限制 ASR 60／翻譯 30／摘要 12／語者分離 8 每分鐘，回應含 `Retry-After` 與 `retryAfterSeconds`。不能把既有背壓、AudioWorklet 或逐片 WAV 讀取重新列為未實作。
 
-- [x] Web 收音在支援 OPFS 的瀏覽器逐片寫入暫存 PCM16 WAV，記憶體只保留 ASR／VAD 所需緩衝；停止時以磁碟 backed Blob 保存，完成後清理暫存檔。不支援 OPFS 時保留既有記憶體 fallback，需在 V09 量測其限制。
-- [ ] 已顯示瀏覽器儲存使用量／配額、OPFS／記憶體／Electron 暫存模式與持久儲存授權狀態；Electron／OPFS 都有寫入背壓、暫停／自動續錄與可理解錯誤。仍需補不支援 OPFS 時的短暫預覽限制。MediaRecorder 壓縮 blob 方案須驗證容器與播放，不以改副檔名冒充 WAV／MP3。
-  - [x] Web 設定頁已顯示瀏覽器儲存使用量／配額、OPFS／記憶體／Electron 暫存模式及持久儲存授權；不支援 OPFS 的 RAM fallback 以 256 MB 為上限，觸頂會暫停並要求先保存目前錄音，不會無界累積或靜默丟失已收音訊。
-- [ ] 逐字稿改為可增量持久化與分頁讀取，UI 虛擬列表只載入最近／可見內容（舊設計建議 200–500 筆）。搜尋、CSV、摘要走持久資料；清除字幕只移動顯示游標。
-  - [x] 即時字幕未搜尋時只渲染最近 500 段，避免長時間錄音讓 live DOM 無界成長；完整逐字稿仍供保存、匯出、摘要與關鍵字搜尋使用，清除字幕仍只移動顯示邊界。
-- [ ] 保存 session completion marker、錄音／字幕游標與暫停、音源切換、缺口事件，以便強制關閉後復原；錄音與字幕使用一致有效錄音時間，另記牆鐘事件。
-  - [x] Web 收音期間會將帳號隔離的 live draft（final 字幕、時間、暫停狀態、來源與 OPFS 暫存識別）持久化至 IndexedDB；正常完成會清除，強制關閉後重開會轉成可查看的「復原字幕」歷史項目，並在 OPFS 檔仍可讀時重建 WAV 供播放。
+- [ ] 不支援 OPFS 的瀏覽器仍需驗證短暫預覽限制；MediaRecorder 壓縮 blob 方案須驗證容器與播放，不以改副檔名冒充 WAV／MP3。
+- [ ] 逐字稿改為可增量持久化與分頁讀取，UI 虛擬列表只載入最近／可見內容（舊設計建議 200–500 筆）。搜尋、CSV、摘要走持久資料。
+- [ ] 為 Electron 保存 session completion marker、錄音／字幕游標與暫停、音源切換、缺口事件，以便強制關閉後復原；錄音與字幕使用一致有效錄音時間，另記牆鐘事件。
 - [ ] 量測 Electron 慢磁碟與 IPC 待處理量，finish 等 ACK 並核對 sample count。評估 sequence、persistedBytes、credit 契約；MessagePort／transferable 是候選優化，不是現有 ACK 方案未完成的理由。
-- [ ] gateway 已分 ASR／翻譯／摘要限流桶，仍需獨立併發上限、Retry-After 與可診斷錯誤；ASR 優先，不讓附屬工作堵塞收音。翻譯排程統一追蹤 U03，分離視窗統一追蹤 U01。
-  - [x] gateway 以獨立 bucket 限制 ASR 60／分鐘、翻譯 30／分鐘、摘要 12／分鐘、語者分離 8／分鐘；限制回應包含 `Retry-After` 與 `retryAfterSeconds`，隔離 gateway smoke 已驗證語者分離的限制與 header。
+- [ ] gateway 限流桶仍缺各用途獨立併發上限與可診斷錯誤；ASR 優先，不讓附屬工作堵塞收音。翻譯排程統一追蹤 U03，分離視窗統一追蹤 U01。
 
 設計保留：音訊 chunk 至少包含 sessionId、chunkIndex、start/end sample、MIME；字幕事件包含 sessionId、order、revision、updatedAt，索引可按 sessionId＋startMs。背壓不得靜默丟掉原始 WAV；無法寫入時明確暫停／停止。
 
 ### O03 儲存同步、遷移與故障恢復 — 部分完成（原 10；舊 V04）
 
-現況：三類 adapter、本機帳號隔離、並行 config 寫入、損毀檔報錯、CAS 與保留遠端衝突副本已有。本機 config 以同程序序列化加 lockfile 跨程序保護；兩個獨立 Node 程序競爭同一 CAS 已驗證僅一方成功。
+現況：三類 adapter、本機帳號隔離、並行 config 寫入、損毀檔報錯、CAS 與保留遠端衝突副本已有。本機 config 以同程序序列化加 lockfile 跨程序保護，fallback 外部 config 以 advisory lock 序列化 schema migration；兩個獨立 Node 程序競爭同一 CAS 已驗證僅一方成功。已完成並經 smoke 實測的部分：
 
-- [x] session 遠端保存已改為單一序列化、合併最新 snapshot，避免同視窗連續保存使用相同版本造成自我衝突；同步錯誤後可由設定中的「重新載入並同步遠端紀錄」重新載入、合併並恢復同步。
-- [x] Web 一般設定已以帳號 scope 寫入外部 config，登入時載入並以 CAS 同步；摘要模板與術語各自使用版本端點，避免互相覆蓋。gateway smoke 已驗證跨帳號隔離與版本衝突。
-- [x] 設定頁已顯示全域遠端同步中／正常／暫停、實際 blob／config／vector adapter 與 schema version，並可重新載入遠端紀錄或手動重試 Storage 補償；同 ID 不同內容仍以保留遠端衝突副本處理。
-- [x] 歷史紀錄逐筆顯示本機、遠端、本機＋遠端與待同步狀態；遠端保存失敗會將非遠端-only 記錄標示為待同步，重試成功後改為本機＋遠端。
+- **同步與可觀測**：session 遠端保存為單一序列化並合併最新 snapshot，同步錯誤後可由設定中的「重新載入並同步遠端紀錄」恢復；Web 設定以帳號 scope 寫入外部 config，模板與術語各自使用版本端點避免互相覆寫；設定頁顯示全域同步狀態、實際 blob／config／vector adapter 與 schema version，歷史逐筆顯示本機、遠端、本機＋遠端與待同步。`/api/storage` 回報 adapter 模式、schema version 與 ready，`001-core-storage` migration 已登錄。
+- **遷移**：Web 會把舊 IndexedDB 未遷移音檔上傳遠端後再同步 session 引用，保留 marker 並於下次登入重試；fallback→外部 Storage 有 `--apply` 保護式遷移（dry-run 盤點、同 key 不覆蓋、權限受限 journal、PostgreSQL advisory lock 序列化），無帳號歸屬的 scope 列 `unowned` 跳過，另以 `S2T_MIGRATION_SCOPE_MAP_JSON` 明確映射。
+- **補償與回收**：PostgreSQL／Milvus 聲紋註冊刪除有持久補償，音檔先進待 session 確認清單、CAS 成功後確認引用或清除孤兒；session 更新在 CAS 前記錄不再引用的音檔並回收原始、接續與重講版本；設定區可稽核與清理未被引用的舊 blob。外部 gateway 補償與 MinIO／Milvus 停機→恢復均已實測。
+- **備份還原**：向量與 metadata 同時間點備份還原，驗證 metadata、聲紋清單與 embedding 完整性，以帳號級 advisory lock 序列化，兩個獨立程序同時還原已驗證一致；`storage:smoke` 與 `storage:remote:smoke` 分別覆蓋本機 fallback 與 Docker 三個外部 adapter。
+
 - [ ] 最終衝突選擇規則見 Q05。
 - [ ] 設定、模板、術語、文字與音檔的帳號範圍和保存目的地一致；修補載入競態、部分成功、配額不足、跨程序鎖定及損毀復原。
-- [x] Web 已按登入 user ID 將舊 IndexedDB session 的未遷移音檔上傳至遠端 blob storage，成功後再同步 session 引用；本機保留遷移 marker，失敗於下次登入重試。
-- [x] fallback→外部 Storage 有保護式遷移命令：先 dry-run 盤點，再以 `--apply` 搬移帳號、設定、術語、blob、向量與聲紋 metadata；同 key 不同內容不覆蓋。已以本機 fallback 資料遷移至 Docker 的三個外部服務驗證，既有同名 admin 可明確採用外部帳號 ID。
-  - [x] `--apply` 會在來源資料夾留下權限受限的 migration journal，記錄完成、衝突或失敗；中斷後的下一次 run 會標示前次未完成，保守新增／衝突保留的 copy 可安全重跑。目標 PostgreSQL 以 advisory lock 序列化整個 migration，避免兩位操作者同時搬移。已以明確 scope mapping、帳號採用與 Docker 外部服務完成實測。
-- [x] fallback 遷移只會處理可由本機帳號記錄對應的 scope；匿名／無帳號設定、blob scope 與無 metadata 的向量會列在 `unowned` 並跳過，不會自動歸給任一帳號。人工確認歸屬後可用受目標帳號存在性驗證的 `S2T_MIGRATION_SCOPE_MAP_JSON` 明確遷移。
-- [x] PostgreSQL／Milvus 的聲紋註冊與刪除具持久補償紀錄；MinIO／本機音檔先進入待 session 確認清單，session CAS 成功後確認引用或清除孤兒檔。清理失敗會保留並於下次操作或手動按鈕重試。
-- [x] 外部 gateway 補償整合測試已驗證：未提交 session 的音檔會由重試清除、已提交 session 的音檔保留，聲紋補償佇列可清空；測試使用臨時帳號並於結束後刪除。
-- [x] 外部 MinIO 與 Milvus 故障恢復測試已驗證：服務停機時音檔／聲紋補償維持 pending，重新啟動後重試可清除 blob、metadata 與佇列；測試只操作本機 Docker Compose。
-- [x] session 更新會在 CAS 前記錄不再引用的音檔清理意圖，CAS 成功後回收原始、接續及重講版本的遠端 blob；刪除 session 的實測已覆蓋此流程。
-- [x] 遠端 Storage 設定區可稽核與清理未被 session 或待補償項目引用的舊音檔 blob；稽核與清理均需登入且依帳號 scope 執行，外部 smoke 已驗證發現、清理及 404 確認。
-- [x] 已完成向量與 metadata 同時間點備份還原與跨程序失敗注入驗收。
-  - [x] 外部 PostgreSQL／Milvus 的聲紋快照會驗證 metadata、聲紋清單與 embedding 完整性，還原以交易替換 metadata 並復原向量；`storage:voiceprint-backup:smoke` 已在 Docker 服務驗證刪除後可完整還原，且注入設定寫入失敗時會回復向量與 metadata。
-  - [x] PostgreSQL 以帳號級 advisory lock 序列化聲紋 metadata 的完整替換；外部 smoke 會由兩個獨立 Node 程序同時還原同一快照，確認最終 metadata、聲紋清單與 Milvus embedding 一致。
-- [x] `/api/storage` 回報 blob／config／vector adapter 模式、schema version 與 ready 狀態；PostgreSQL 記錄 `001-core-storage` migration。
-- [x] 本機 Docker Compose 與 adapter fallback 已分開驗證：`storage:smoke` 僅驗證本機替代層；`storage:remote:smoke` 實測 MinIO blob、PostgreSQL CAS 與 Milvus upsert/search，web `/api/storage` 也已回報三個外部 adapter。
-- [x] PostgreSQL schema migration 以 advisory lock 序列化；remote smoke 已用兩個獨立程序驗證同時啟動不死鎖、同一 CAS 僅一方成功。
-- [x] fallback local config 以 lockfile 跨程序序列化 read-modify-write；`storage:smoke` 已由兩個獨立 Node 程序驗證同一 CAS 僅一方成功。
 - [ ] 實際外部部署與 V08 的跨程序、離線、配額、權限錯誤及備份還原驗收。
 
 ### O04 登入、NT 與憑證可靠性 — 部分完成（原 2、10）
 
-- [x] NT 以公司範圍、大小寫不敏感方式強制唯一；本機使用原子 reservation，PostgreSQL 使用唯一索引，重複註冊回傳 409。既有遠端重複 NT 會讓 migration 明確失敗，需先人工合併後再建立索引；大小寫及格式正規化見 Q01。
-- [ ] 工程補強：測試預設 admin 初始化不得覆蓋既有帳號；正式環境避免使用 admin/admin，補登入嘗試限流、token 逾期／撤銷與可理解的登入失效動線。改環境密碼不等於既有帳號密碼已更新。
-  - [x] 預設使用者只在帳號不存在時依環境變數建立；重啟後改動 bootstrap 密碼不會覆蓋既有帳號。`storage:smoke` 已驗證原帳密仍能登入、新密碼不會被套用。
-  - [x] JWT 為 7 天有效期且帶唯一 jti；登出會在帳號範圍的 config 儲存撤銷紀錄，之後同一 token 的 session 與受保護 API 均失效，過期撤銷紀錄會在讀取時清理。
-  - [x] gateway 對同一 IP＋帳號在 15 分鐘內限制 8 次失敗登入，成功登入會清除失敗紀錄；隔離 gateway smoke 已驗證第 9 次回傳 429，帳號與 Storage API 隔離不受影響。
+現況：NT 以公司範圍、大小寫不敏感方式強制唯一，本機使用原子 reservation、PostgreSQL 使用唯一索引，重複註冊回傳 409；既有遠端重複 NT 會讓 migration 明確失敗，需先人工合併後再建立索引，大小寫與格式正規化見 Q01。預設 admin 只在帳號不存在時依環境變數建立，重啟後改動 bootstrap 密碼不會覆蓋既有帳號（`storage:smoke` 已驗證）。JWT 為 7 天有效期且帶唯一 jti，登出在帳號範圍的 config 保存撤銷紀錄，同一 token 的 session 與受保護 API 隨即失效。gateway 對同一 IP＋帳號在 15 分鐘內限制 8 次失敗登入、成功即清除，隔離 smoke 已驗證第 9 次回傳 429。Web 模型 key 只經已登入 gateway 的單一寫入端點保存，以持久 auth secret 派生 AES-256-GCM、帳號 scope 與模型 ID 加密，registry 讀取回應不含 key；Electron 繼續使用 Main safeStorage。簡易登入先維持可用，不自行擴成完整企業 IAM；未來 TSSO 另見 Q07。
+
+- [ ] 正式環境不得沿用 admin/admin，並補可理解的登入失效動線（逾期、撤銷後的提示與重新登入路徑）。改環境密碼不等於既有帳號密碼已更新。
 - [ ] Electron 以 gateway 驗證身分決定帳號目錄，登出清除主程序身分；換帳號時設定、金鑰、模板、術語、字幕、摘要、WAV、復原 manifest 均隔離。
-- [ ] API key 僅存後端或 Main safeStorage，不能進 DOM、localStorage、URL、匯出或日誌；逐模型綁定憑證，避免文字服務共用 key slot 導致切模型後錯用憑證。
-  - [x] Web 的模型 key 現在只經已登入 gateway 的單向寫入端點保存；gateway 以其持久 auth secret 派生 AES-256-GCM 金鑰、帳號 scope 與模型 ID 加密保存，registry 的讀取回應不會包含 key。Electron 繼續使用 Main safeStorage；gateway smoke 已驗證 key 不會由 registry 洩漏且可刪除。
-- [ ] 簡易登入先維持可用，不自行擴成完整企業 IAM；未來 TSSO 另見 Q07。
+- [ ] API key 不得進 DOM、localStorage、URL、匯出或日誌；逐模型綁定憑證，避免文字服務共用 key slot 導致切模型後錯用憑證。
 
 ### O05 模型管理、語言與音訊契約一致 — 部分完成（原 19、26；舊 N03、N04）
 
-現況：模型列表、搜尋、用途篩選、註冊／編輯、ASR 能力欄位與 Electron ASR 免 key 已有；Web 已有環境 ASR 多模型列表及 profile ID 路由，尚不等於完成使用者註冊 registry。
+現況：模型列表、搜尋、用途篩選、註冊／編輯、ASR 能力欄位與 Electron ASR 免 key 已有。gateway 提供帳號隔離、版本化的 model registry，保存 ASR／翻譯／摘要／語者分離／embedding 的名稱、endpoint、model ID、用途、免 key 與能力欄位，隔離 smoke 已驗證跨帳號不可讀取與 CAS 衝突；Web 模型管理會載入並以版本化 registry 回存（環境模型先載入、再套用使用者模型），key 走獨立加密端點，四類用途皆以選定 ID 在 gateway 解析帳號模型與憑證後代理呼叫。收音保存時 session 與 audio version 會記錄實際模型 ID、endpoint、能力、語言、術語 prompt 與原始／模型取樣率快照，日後改 registry 不改寫既有追查資料；收音開始後模型選擇即鎖定。Web ASR gateway 已拒絕未支援 MIME（415）與語言代碼（400），不靜默轉送。
 
-- [ ] Web 註冊／編輯模型接上後端 registry，實際 endpoint、model ID、key、用途與選項一致；翻譯／摘要仍固定環境服務的路徑需接上選擇。
-  - [x] gateway 已提供帳號隔離、版本化的 model registry，保存 ASR／翻譯／摘要／語者分離／embedding 的名稱、endpoint、model ID、用途、免 key 與能力欄位；隔離 smoke 已驗證跨帳號不可讀取及 CAS 衝突。
-  - [x] Web 模型管理的 ASR、翻譯、摘要與講者分離修改會載入並以版本化 registry 回存；環境模型先載入，再套用使用者模型，避免預設服務覆寫使用者設定。模型 key 以獨立加密端點寫入，不進一般 settings 或 registry；Web ASR、翻譯、摘要與講者分離會以選定 ID 在 gateway 解析帳號模型與憑證後代理呼叫，smoke 覆蓋 ASR、翻譯與摘要的選擇路徑。
-- [ ] 四類既有模型統一表單與保存語義；新增聲紋用途見 F01。明確免 key 模式延伸至 Web 及其他用途，不能用假 key 代替。
+- [ ] 四類既有模型統一表單與保存語義，並實機核對實際 endpoint、model ID、key、用途與選項一致；新增聲紋用途見 F01。明確免 key 模式延伸至 Web 及其他用途，不能用假 key 代替。
 - [ ] 即時開始、匯入與片段重講都會依模型宣告語言能力拒絕不相容設定；接續沿用開始時設定。仍需實機驗證錄音中改語言與全流程取樣率，未知能力不得當成全支援。
-  - [x] 即時收音保存時，session 與其 audio version 都會保存實際模型 ID、endpoint、model、傳輸類型、能力、語言、術語 prompt，以及原始／模型取樣率快照；日後修改 registry 不會改寫既有收音的追查資料。
 - [ ] 即時 ASR 已真正重取樣；PCM WAV 匯入與片段重講也會解碼、downmix、重取樣後送 ASR，錄音原始檔與字幕 offset 不變。仍需對非 WAV 匯入、模型能力缺失與各流程的原始／模型取樣率追蹤做實機驗證；不要只改 WAV header。
-- [ ] 固定模型選擇於收音開始；目前鎖定策略不等同需開發熱切模型。能力探測、真正串流與熱更新的服務契約見 Q03。
-  - [x] 即時收音開始後，完整設定與快速設定中的 ASR 模型選擇皆會鎖定；本次收音使用的 adapter 與模型快照不會隨 UI 設定變更而切換。
-- [ ] 驗證 maxPayloadBytes、音訊格式、language／prompt、時間戳來源、逾時與錯誤回應；配置錯誤應明示，不默默改用其他模型／語言。
-  - [x] Web ASR gateway 已拒絕未支援的 MIME 類型（415）與不支援的語言代碼（400），不再以通用二進位格式或預設語言靜默轉送。
+- [ ] 驗證 maxPayloadBytes、音訊格式、language／prompt、時間戳來源、逾時與錯誤回應；配置錯誤應明示，不默默改用其他模型／語言。能力探測、真正串流與熱更新的服務契約見 Q03。
 
 ### O06 重講、接續與版本一致性 — 部分完成（原 20、21）
 
-- [x] 重講保存音訊與 ASR 輸入已統一使用固定原時間槽：超長裁切、過短保留靜音；保存 WAV 正確 downmix，字幕不再描述被裁掉的聲音。時間軸規則見 Q04。
-- [x] 音檔版本保存相應的字幕、翻譯與時間軸快照；切換會一併還原文字，所有目前版本的講者／文字／時間軸編輯與語者分離也會回寫快照。摘要保存來源版本與逐字稿簽章，版本或文字不符時會要求重新產生。
+現況：重講保存音訊與 ASR 輸入已統一使用固定原時間槽（超長裁切、過短保留靜音），保存 WAV 正確 downmix，字幕不再描述被裁掉的聲音，時間軸規則見 Q04。音檔版本保存相應的字幕、翻譯與時間軸快照，切換會一併還原文字，目前版本的講者／文字／時間軸編輯與語者分離會回寫快照；摘要保存來源版本與逐字稿簽章，版本或文字不符時要求重新產生。即時字幕有未保存內容時，載入歷史紀錄會以五語系確認視窗保護，取消保留現有字幕、收音中仍拒絕載入。
+
 - [ ] 接續已以所選音檔實際時長作為字幕 offset，保存後以有效收音時間更新總時長並保留父版本；仍需驗證保存失敗回復、重試不重複追加、多聲道重講 WAV 長度及解碼錯誤時 AudioContext 清理。
-- [ ] 歷史載入即時區之前保護未保存／未提交編輯，錄音中限制清楚；編輯後搜尋、複製、匯出及摘要過期提示同步。
-  - [x] 即時字幕有未保存內容時，載入歷史紀錄會以五語系確認視窗保護；取消會保留現有字幕，收音中則仍拒絕載入。
+- [ ] 歷史載入即時區的編輯保護仍缺錄音中限制的清楚提示；編輯後搜尋、複製、匯出及摘要過期提示需同步。
 
 ### O07 全介面語系、主題與可用性 — 部分完成（原 11、12、22、23、24；舊 N01、N02）
 
@@ -124,16 +91,17 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### O08 摘要、模板、術語與輸出品質 — 部分完成（原 6、9、13、16、17）
 
-- [x] Markdown UI 已支援表格、粗體、受限的 HTTP(S)／mailto 連結、引用、巢狀列表、inline／區塊程式碼與標題；以 React 節點渲染，不插入不可信 HTML。摘要匯出保留原始 Markdown，與畫面內容一致。
+現況：Markdown UI 已支援表格、粗體、受限的 HTTP(S)／mailto 連結、引用、巢狀列表、inline／區塊程式碼與標題，以 React 節點渲染、不插入不可信 HTML；摘要匯出保留原始 Markdown，與畫面內容一致。
+
 - [ ] 摘要已有分段／分層合併與 generation／來源簽章；補模型上下文預算、超時／取消、失敗重試、晚到回應與來源更新的一致性，不能靜默截掉長逐字稿。
 - [ ] 自訂模板會立即保存：Electron 使用帳號範圍本機設定；Web 使用版本化遠端模板 API，跨重開會載入，衝突與保存失敗會提示。即時摘要、摘要頁與歷史卡片摘要複製共用失敗提示；仍需補實機跨視窗合併／重新載入動線。
 - [ ] 術語 JSON 物件／陣列匯入、1 MB 限制、去重、逐筆管理、帳號版本及 ASR／翻譯套用驗收；保留返回來源頁，不恢復舊「重新載入伺服器術語」按鈕。
-- [ ] 確認匯出選項、搜尋後範圍、時間／講者／翻譯與目前版本一致；VTT 特殊字元／時間檢查、CSV BOM／引號／換行與 gap 原因維持正確。
-  - [x] `transcript:export:smoke` 驗證 VTT 的時間、`<v 講者>`、原文／譯文特殊字元跳脫與排除 gap，以及 CSV 的 BOM、講者欄與 gap 原因輸出。
+- [ ] 確認匯出選項、搜尋後範圍、時間／講者／翻譯與目前版本一致；`transcript:export:smoke` 已覆蓋 VTT 時間、`<v 講者>`、特殊字元跳脫與排除 gap，以及 CSV 的 BOM、講者欄與 gap 原因，仍需真人核對畫面與下載檔一致。
 
 ### O09 降噪、取樣率研究與觀測 — 部分完成（原 15、18）
 
-- [x] 已顯示 noiseSuppression 音軌實際回報的已套用／未套用／未知狀態及生效時機；設定套用到即時收音、片段重講與聲紋取樣的新建 stream，錄音和 ASR 共用即時收音的處理後 stream。
+現況：已顯示 noiseSuppression 音軌實際回報的已套用／未套用／未知狀態及生效時機；設定套用到即時收音、片段重講與聲紋取樣的新建 stream，錄音和 ASR 共用即時收音的處理後 stream。
+
 - [ ] 相同素材比較 48k→16k、44.1k→16k、原率直通與降噪開關，記錄 CER／WER、聲紋誤配／漏配、聽感、頻寬、延遲、CPU／記憶體、樣本數與時間戳。
 - [ ] 比較聲紋端線性重取樣與 ASR 端重取樣品質，依實測決定預設，不假定更高取樣率一定更好。獨立降噪模型見 Q08。
 - [ ] 量測收音、VAD、傳輸、推論、字幕更新及翻譯各階段；每分鐘記錄 renderer heap、Main RSS、pending PCM、各 queue depth、P50／P95、gap、CPU、event-loop delay 與磁碟用量。
@@ -141,10 +109,9 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### O10 技術文件與部署說明一致性 — 部分完成
 
-- [x] docs/ 依用途分四類並建立索引：`guide`（操作）、`reference`（契約與架構）、`research`（歷史研究與規劃）、`reports`（量測報告），新增 `docs/README.md` 分類索引；根目錄 `0930_plan.md` 移為 `docs/research/K8S_SCALE_PLAN.zh-TW.md`。全 repo 連結、程式碼內文件路徑註解與 README 同步翻新（瘦身為分類索引＋快速開始＋常用指令，長篇 Storage 操作併入部署文件）。
+現況：docs/ 已依用途分四類並建立索引（`guide` 操作、`reference` 契約與架構、`research` 歷史研究與規劃、`reports` 量測報告），`docs/README.md` 為分類索引，根目錄 `0930_plan.md` 已移為 `docs/research/K8S_SCALE_PLAN.zh-TW.md`；全 repo 連結、程式碼內文件路徑註解與 README 已同步翻新。Gateway 文件已同步 Bearer auth、格式上限、模型 registry／加密 key 寫入端點、選定帳號模型代理與限流／錯誤行為；部署文件已說明 bootstrap 帳密只建立新帳號；README、部署與 sherpa 操作文件已同步 Web 啟動順序、`5173`／`8787` 的責任與常見 404／Origin 問題，Linux x64 離線模型 image `joeyliang1024/s2t-sherpa-models:1.13.8` 已建置並驗證。
+
 - [ ] 技術文件的操作範例持續核對現有 code：模型註冊位置、儲存與認證、能力欄位、語者分離即時／離線路徑、檔案大小、取消行為。
-  - [x] Gateway 文件已同步 Bearer auth、100 MB 格式上限、模型 registry／加密 key 寫入端點、選定帳號模型代理與目前的限流／錯誤行為；部署文件已說明 bootstrap 帳密只建立新帳號、不會覆寫既有密碼。
-  - [x] README、部署與 sherpa 操作文件已同步 Web 啟動順序、`5173`／`8787` 的責任、常見 404／Origin 問題、完整 `.env.example` 與 Linux x64 離線模型 image；`joeyliang1024/s2t-sherpa-models:1.13.8` 已以 `linux/amd64` 建置並驗證包含 segmentation、embedding 與授權檔。
 - [ ] 將歷史研究中的「不依賴 sherpa」與現有可選 sherpa gateway 區分；API key 留空不代表不需要登入 token；前端／後端聲紋樣本長度檢查需一致。
 - [ ] 部署範例不可誤把本機 adapter 測試當遠端整合證據；Docker 資源／版本、TLS、備份還原、故障檢查及乾淨環境安裝需可重現。
 
@@ -152,22 +119,20 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 本章保留舊設計中尚未完整提供的能力；已有 UI 但後端未接通的改善列於第一章。未確認的產品延伸放第五章，不自動納入交付。
 
-### F01 聲紋模型用途與註冊管理 — 未完成（原 26；假日需求單第 6 節）
+### F01 聲紋模型用途與註冊管理 — 部分完成（原 26；假日需求單第 6 節）
 
-- [ ] 在模型列表獨立表示聲紋／embedding 用途，填 name、model ID、endpoint、key／免 key、用途、模型版本與能力；不要把語者分離服務等同 embedding 服務。
-  - [x] 模型列表已有獨立的 Embedding 篩選頁與「註冊 Embedding」入口，可保存名稱、endpoint、model ID、key／免 key 至帳號專屬 registry；它與講者分離分開呈現。模型版本、能力宣告與實際聲紋服務套用仍待完成。
+現況：模型列表已有獨立的 Embedding 篩選頁與「註冊 Embedding」入口，可保存名稱、endpoint、model ID、key／免 key 至帳號專屬 registry，與講者分離分開呈現；模型版本、能力宣告與實際聲紋服務套用仍待完成。
+
+- [ ] 在模型列表完整表達聲紋／embedding 用途的模型版本與能力；不要把語者分離服務等同 embedding 服務。
 - [ ] 註冊樣本、比對與 Milvus 維度／版本相容性接上選定模型，變更模型後提示重註冊／遷移；一般聲紋錄製／上傳／刪除已存在，不重做。
 - [ ] 驗收新增、編輯、刪除、重開、憑證綁定與實際呼叫一致；此項作為 U01 的直接依賴時先處理必要部分。
 
-### F02 大檔轉錄 checkpoint 與續跑 — 未完成（舊 Enhancement 第四階段）
+### F02 大檔轉錄 checkpoint 與續跑 — 部分完成（舊 Enhancement 第四階段）
 
-現況：PCM16 WAV 已採 RIFF header＋File.slice 逐片讀取，每段約 45 秒、重疊 1.5 秒，Web 可 abort 當前請求。
+現況：PCM16 WAV 已採 RIFF header＋File.slice 逐片讀取，每段約 45 秒、重疊 1.5 秒，Web 可 abort 當前請求。Web 匯入以登入帳號範圍的 IndexedDB checkpoint 保存檔案名稱／大小／lastModified、next chunk／byte offset、完成字幕、模型快照、語言與術語 prompt，來源檔不複製；同一 WAV 與相同設定會從已完成 chunk 接續，取消、請求失敗或重開保留 checkpoint、成功才刪除，變更設定從第 1 段重建不混入舊段落，`import-checkpoint:smoke` 已覆蓋接續匹配與拒絕條件。仍缺 job ID 與必要檔案 hash。
 
-- [ ] 保存 job ID、原檔 fingerprint（名稱／大小／lastModified／必要 hash）、next byte offset、完成片段及模型／語言／prompt 設定快照。
-  - [x] Web PCM16 WAV 匯入會以登入帳號範圍的 IndexedDB checkpoint 保存檔案名稱／大小／lastModified、next chunk／byte offset、完成字幕、模型快照、語言與術語 prompt；來源檔不複製，避免重複佔用大檔空間。
-- [ ] 重新選同一檔可從完成位置繼續；取消／重啟保留 checkpoint，設定改變建立新 job，不混用結果。
-  - [x] 同一 WAV 與相同模型快照、語言、術語設定會從已完成 chunk 接續；取消、請求失敗或重開會保留 checkpoint，成功才刪除。變更設定會從第 1 段重新建立結果，不混入舊段落；`import-checkpoint:smoke` 已覆蓋檔案、模型、語言與術語設定的接續匹配／拒絕條件。
 - [ ] 分段同時受模型 payload 上限約束；保留原始 ASR 結果與重疊去重決策。Electron 當前請求取消需補對等路徑。
+- [ ] 補 job ID 與必要檔案 hash，讓同檔多個 job 可明確區分。
 - [ ] 2 GB fixture 驗證記憶體只與單段＋overlap 有關，續跑不重複、不漏段；取消清理與進度可見。
 
 ### F03 大型非 WAV／影片轉碼工作 — 未完成（舊 Enhancement 第五階段）
@@ -190,14 +155,9 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 **目標：已註冊聲紋命中顯示 NT，未命中自動分群，字幕可編輯講者；即時與歷史均可使用。**
 
-現況：本機 sherpa 與外部分離服務皆會將分群結果接到可見聲紋比對，命中顯示 NT；未命中會維持匿名群組。Web 與 Electron 都使用最近 45 秒緩衝，每 15 秒預覽一次，並以重疊區間穩定匿名 ID；即時講者預覽可獨立開關，失敗不會中斷收音，會顯示狀態。字幕可直接手動輸入或從註冊 NT 清單選取講者。這不是原生逐 frame 講者辨識，仍須以 V01 的真人素材量測穩定性與誤配。
+現況：本機 sherpa 與外部分離服務皆會將分群結果接到可見聲紋比對，命中顯示 NT；未命中會維持匿名群組。Web 與 Electron 都使用固定的最近 45 秒緩衝、每 15 秒預覽一次，並以重疊區間在跨窗口維持匿名 ID，預覽標示暫定、可獨立開關、錯誤可查，完整檔最終處理保留人工修正，分離失敗不會中斷 ASR、登入或保存。字幕可直接手動輸入或從註冊 NT 清單選取講者，即時字幕可依原講者批次改名，人工結果優先。註冊前會拒絕少於 3 秒、RMS 低於 -45 dBFS 或削波超過 2% 的 PCM16 WAV，metadata 保存樣本時長與 RMS，`diarization:smoke` 已覆蓋可接受、過短、過低音量與削波樣本。這不是原生逐 frame 講者辨識，仍須以 V01 的真人素材量測穩定性與誤配。
 
-- [x] 外部分離服務回傳統一接上聲紋匹配；不能只在本機分支命中 NT。
-- [x] 跨窗口以重疊區間維持匿名 ID；預覽標示暫定，完整檔最終處理保留人工修正。
-- [x] Web／Electron 都改固定窗口，預覽可獨立開關、錯誤可查，分離失敗不會中斷 ASR、登入或保存。
-- [x] 即時與歷史可手動編輯／指派講者；輸入欄提供註冊 NT 選擇入口，即時字幕可依原講者批次改名，人工結果優先。
 - [ ] 校正樣本品質、匹配門檻、不同模型版本／維度、短句、噪音及多人重疊；一段字幕跨多人時不能把最大重疊策略宣稱為精準逐字講者。
-  - [x] 註冊前會拒絕少於 3 秒、RMS 低於 -45 dBFS 或削波超過 2% 的 PCM16 WAV；註冊 metadata 保存樣本時長與 RMS，`diarization:smoke` 已覆蓋可接受、過短、過低音量與削波樣本。
 - [ ] 共享、刪除與向量 metadata 一致性補齊；NT 已在本機與 PostgreSQL 以大小寫不敏感方式強制唯一，模型用途必要部分追蹤 F01，帳號／storage 共用修正在 O03、O04。
 
 完成條件：已知＋至少兩名未知講者交替對話，跨 45 秒窗口與長停頓仍穩定；Web／Electron 即時回填、歷史最終分離、人工修改、重開、VTT／JSON 講者一致；未登入／私有／同部門／跨部門／刪除權限均符合規則；ASR 與錄音不受分離失敗影響。保留誤配、漏配、分群錯誤及 CPU／延遲數據（V01）。
@@ -206,14 +166,9 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 **目標：斷句快慢可調、字幕及時出現，又不切掉句首／句尾或把連續語句切得過碎。**
 
-現況（2026-10-01）：逐項 VAD 滑桿已移除，收音控制側欄只保留單一「回應速度」滑桿（快／正常／慢），內部對應 `responseSpeedVadConfig` 三組預設（快 700/1200/150、正常 700/1500/250、慢 1000/2400/800）；滾動上下文 prompt 與 ASR 輸出清洗已進產品碼，Settings schema 由 `vadConfig` 收斂為 `responseSpeed`。`npm run caption:eval` 以真實收音節奏實測 Breeze-ASR-25：對話素材（前 300 秒、32 句）正常檔首筆字幕 P50 1029 ms／P95 1701 ms，「≤2500 ms」目標達成率 100%。第二輪以同場六組（BGM）＋九組（無 BGM 旁白）矩陣按「快＝延遲、慢＝CER、正常＝穩定」定案：快維持 700/1200/150（chunkMin 500 無可測收益、chunkMax 1000 漏 4/32 句）、正常維持 250（250 vs 350 產生相同 chunk 流）、慢的 `minSilence` 500→800（無 BGM 語料 CER 10.27%→8.35% 重跑同值、BGM 不回歸）。三速與各輪對照數據、淘汰依據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。UI 連續 final 合併上限維持約 12 秒。
+現況（2026-10-01）：逐項 VAD 滑桿已移除，收音控制側欄只保留單一「回應速度」滑桿（快／正常／慢），內部對應 `responseSpeedVadConfig` 三組預設（快 700/1200/150、正常 700/1500/250、慢 1000/2400/800）；滾動上下文 prompt 與 ASR 輸出清洗已進產品碼，Settings schema 由 `vadConfig` 收斂為 `responseSpeed`。`npm run caption:eval` 以真實收音節奏實測 Breeze-ASR-25：對話素材（前 300 秒、32 句）正常檔首筆字幕 P50 1029 ms／P95 1701 ms，「≤2500 ms」目標達成率 100%。第二輪以同場六組（BGM）＋九組（無 BGM 旁白）矩陣按「快＝延遲、慢＝CER、正常＝穩定」定案：快維持 700/1200/150（chunkMin 500 無可測收益、chunkMax 1000 漏 4/32 句）、正常維持 250（250 vs 350 產生相同 chunk 流）、慢的 `minSilence` 500→800（無 BGM 語料 CER 10.27%→8.35% 重跑同值、BGM 不回歸）。三速與各輪對照數據、淘汰依據見[字幕延遲調校報告](reports/CAPTION_LATENCY.zh-TW.md)。UI 連續 final 合併上限維持約 12 秒。三速滑桿含五語系 i18n 與無障礙標註，`responseSpeed` 隨設定持久化、舊存檔的逐項 VAD 參數自動丟棄正規化；快速設定保留即時講者預覽、音源、語言、翻譯開關與目標語言，收音中變更於下一段音訊生效。靜音不持續送空 ASR、短停頓不過度切段、長句有上限、停止不足一段的尾音會 flush，HTTP gap／重試／背壓可見，`vad:smoke` 已覆蓋起音門檻、短停頓與靜音句界。`caption:eval` 會記錄逐句上屏 P50/P95、ASR 推論與排隊延遲、請求數、碎片化與逐句／語料 CER，並產出 `experiment/evaluation-reports/` JSON。
 
-- [x] 斷句參數收斂為三速：移除設定頁 VAD 卡片 6 支滑桿與收音面板 3 支 inline 滑桿，改為收音控制面板單一「回應速度」滑桿（快／正常／慢，i18n 五語系＋無障礙標註）；`responseSpeed` 隨設定持久化，舊存檔逐項參數自動丟棄正規化。
-- [x] 快速設定保留即時講者預覽、音源、語言、翻譯開關與目標語言；收音中變更於下一段音訊生效。
-- [x] 量測語音開始→首段字幕與模型耗時／佇列等待：`caption:eval` 記錄逐句上屏 P50/P95、ASR 推論與排隊延遲、請求數、碎片化與逐句／語料 CER，並產出 `experiment/evaluation-reports/` JSON；正常檔 P95 1701 ms 已達成 ≤2500 ms 目標。**句尾→final（endpoint delay）指標與日文／中英混說素材仍在 V02。**
-- [x] 靜音不持續送空 ASR，短停頓不過度切段，長句有上限，停止不足一段的尾音 flush；HTTP gap／重試／背壓可見。`vad:smoke` 已覆蓋起音門檻、短停頓與靜音句界。
-- [ ] 收音中調整明示立即／下一段／下次開始生效，避免重建 capture 造成缺口；App／server VAD 不互相重複裁切。
-  - [x] 收音中變更語言、術語或切段設定時，HTTP chunked ASR 會明示「下一段音訊生效」且不重建 capture；未定義 live-setting 協定的 WebSocket 模型會明示需下次開始，避免假稱已即時套用。
+- [ ] 收音中調整的生效時機已由 HTTP chunked ASR 明示「下一段音訊生效」、未定義 live-setting 協定的 WebSocket 明示需下次開始，且不重建 capture；仍需在 UI 即時呈現，並確認 App／server VAD 不互相重複裁切。
 
 完成條件（現況）：已以 32 句對話素材完成快／中／慢三速比較，記錄首段 P50/P95、請求數、漏字與碎片化（BGM 素材、含快速對談、短停頓、長句），並以無 BGM 旁白素材（18 段）補齊三速對照；**仍缺**日文、中英混說、鍵盤噪音素材，句尾→final 指標，以及 Web／Electron 雙平台收音中調整的驗證（V02）。
 
@@ -221,15 +176,9 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 **目標：保留原策略，提供較低負載選項、即時／整句，以及範圍內自動辨識來源並產生正確方向的翻譯。**
 
-現況：保留自動、手動、即時與整句策略，新增節流模式（每次最多送一段並延後 900 ms），即時待翻譯工作上限為 6；停止收音時，非手動模式會逐段完成尾句，不會突破上限。ASR gateway／Electron 回傳的偵測語言會正規化為中、英、日、德；選擇「自動雙向」時中文譯英文，其餘支援語言譯繁中，同語言會略過請求。仍須用 V03 評估混說與無明確語言結果時的 fallback 品質。
+現況：保留自動、手動、即時與整句策略，新增節流模式（每次最多送一段並延後 900 ms），即時待翻譯工作上限為 6；停止收音時，非手動模式會逐段完成尾句，不會突破上限。整句以標點／VAD 停頓累積（日文涵蓋 。！？），保留 5 秒最大等待與停止收音時的尾句完成，是否必須嚴格等完整句見 Q02。ASR gateway／Electron 回傳的偵測語言會保留並正規化為中、英、日、德，無回傳時才走既有 fallback；選擇「自動雙向」時中文譯英文，其餘支援語言譯繁中，同語言會略過請求。目標／來源語言、endpoint、模型或術語變更會遞增翻譯 generation，Web 中止在跑的請求、Web／Electron 的晚到回應因 generation 不符被忽略；Electron 請求帶 renderer 範圍 request ID，取消或切換設定會透過 IPC 中止 Main process 的 `AbortController`。仍須用 V03 評估混說與無明確語言結果時的 fallback 品質。
 
-- [x] 保留既有策略，新增節流模式、有界 pending 與手動控制；翻譯不會無限累積或阻擋 ASR／保存。
-- [x] 整句以標點／VAD 停頓累積，日文涵蓋 。！？；保留 5 秒最大等待與停止收音時的尾句完成。是否必須嚴格等完整句見 Q02。
-- [x] gateway／adapter 保留並正規化 ASR 偵測語言；無回傳時才走既有 fallback。
-- [x] 補限定語言配對的自動翻譯方向與同語言略過規則。
-- [ ] 目標語言、模型或原文變更後，舊回應不得污染新結果；模式切換、取消、失敗重試、停止／重開狀態一致。Electron 目前取消多為忽略回應，補真正中止的可行路徑。
-  - [x] 目標／來源語言、翻譯 endpoint、模型或術語變更會遞增翻譯 generation；Web 會中止仍在執行的請求，Web／Electron 的晚到回應都會因 generation 不符而被忽略，不會寫回舊設定的譯文。
-  - [x] Electron 翻譯請求帶 renderer 範圍的 request ID；取消或切換設定會透過 IPC 中止 Main process 的 `AbortController`，不再只忽略晚到結果。
+- [ ] 模式切換、失敗重試、停止／重開的一致性仍需實測確認；generation 中止路徑已實作但未逐情境驗證。
 - [ ] Web／Electron 的 prompt 與實際模型一致，保留 HY-MT 既有適配背景但不把單一模型 prompt 當所有模型通用契約；registry 路由見 O05。
 
 完成條件：相同音訊比較各模式請求數、等待／完成延遲、譯文完整度與錯意；手動模式零自動請求；測無標點長句、日文、混說、自動方向、最後尾句、5xx／429、取消及人工編輯後晚到結果；翻譯失敗時原文與 WAV 正常保存（V03）。
@@ -240,7 +189,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### 已有基線與證據邊界
 
-2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `experiment/evaluation-reports/`。以下為更早一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
+2026-10-01 滑桿改版一輪實際通過：`typecheck`、`build`、`model-adapter:smoke`、`i18n:smoke`、`vad:smoke`、`translation-policy:smoke`、`storage:smoke`；字幕延遲基線以 `caption:eval` 實測（三速與對照組數據見[字幕延遲調校報告](reports/CAPTION_LATENCY.zh-TW.md)），原始數據在 `experiment/evaluation-reports/`。另有一輪於 2026-09-26 通過的基線：`typecheck`、`build`、`git diff --check`、`storage:smoke`、`resample:smoke`、`glossary:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`summary-plan:smoke`、`summary-templates:smoke`、`i18n:smoke`。每次文件整理輪不重跑程式測試，不沿用為後續修改的通過證據。
 
 既有文件另記錄 gateway 授權 smoke、Breeze 中文 WAV、HY-MT 英／日翻譯、本機 sherpa 靜音 WAV／原生 addon 成功；本輪未重新驗證。模型 API 有回應不代表麥克風端到端或多人辨識品質完成。字典測試只涵蓋已登錄 key；storage smoke 只涵蓋本機 adapter。每筆實機結果記版本／dirty diff、平台、模型版本、素材、設定、步驟及量測，憑證不得寫入。
 
@@ -296,4 +245,4 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 | Q08 | 研究性延伸 | 獨立降噪模型／更換 VAD、字幕同步回放／變速、MP3／M4A／Word／Excel 匯出、逐字稿優化／問答、視覺摘要、語音口譯、會後第二輪重轉錄僅早期研究／候選功能，不當成已承諾需求；需確認用途與模型能力後再排。 |
 | Q09 | 品質與資源門檻 | 舊文 partial P95≤2 秒、譯文≤4 秒是初始工程目標，HTTP 無 partial 不套該指標；CER／WER、講者誤配／漏配、可接受斷句延遲、heap／RSS／queue 上限與 2 小時 soak 門檻需依指定硬體及模型基線定案。驗收需提供數據，不用空白 WAV 或單句成功代替。 |
 
-技術參考保留：[文件索引](docs/README.md)、[架構](docs/reference/ARCHITECTURE.zh-TW.md)、[模型契約](docs/reference/MODEL_ADAPTER.md)、[Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質](docs/reference/AUDIO_QUALITY.zh-TW.md)、[sherpa 操作](docs/guide/SHERPA_ONNX.zh-TW.md)、[部署備份](docs/guide/DEPLOYMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)。[早期研究](docs/research/PLAN.zh-TW.md) 與 [後端方案研究](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md) 的歷史假設不覆蓋本檔決策；[K8s 擴充計畫](docs/research/K8S_SCALE_PLAN.zh-TW.md) 屬未來規劃，不代表已交付。
+技術參考保留：[文件索引](README.md)、[架構](reference/ARCHITECTURE.zh-TW.md)、[模型契約](reference/MODEL_ADAPTER.md)、[Gateway](reference/WEB_GATEWAY.zh-TW.md)、[分離 API](reference/DIARIZATION_API.zh-TW.md)、[音訊品質](reference/AUDIO_QUALITY.zh-TW.md)、[sherpa 操作](guide/SHERPA_ONNX.zh-TW.md)、[部署備份](guide/DEPLOYMENT.zh-TW.md)、[驗收手冊](guide/VALIDATION.zh-TW.md)。[早期研究](research/PLAN.zh-TW.md) 與 [後端方案研究](research/OPEN_SOURCE_BACKENDS.zh-TW.md) 的歷史假設不覆蓋本檔決策；[K8s 擴充計畫](research/K8S_SCALE_PLAN.zh-TW.md) 屬未來規劃，不代表已交付。

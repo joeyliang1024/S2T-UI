@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "requestsBeforePause": 0,
+  "requestsAfterPause": 1,
+  "firstRequestAfterPauseMs": 43,
+  "requests": [
+    {
+      "at": 1791251169820,
+      "bytes": 61484
+    }
+  ]
+}

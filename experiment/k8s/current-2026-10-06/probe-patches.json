@@ -1,0 +1,94 @@
+[
+  {
+    "name": "redis",
+    "patch": {
+      "spec": {
+        "template": {
+          "spec": {
+            "containers": [
+              {
+                "name": "redis",
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 5,
+                  "failureThreshold": 3
+                },
+                "startupProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 3,
+                  "failureThreshold": 60
+                },
+                "livenessProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 10,
+                  "failureThreshold": 6
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "sentinel",
+    "patch": {
+      "spec": {
+        "template": {
+          "spec": {
+            "containers": [
+              {
+                "name": "sentinel",
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 5,
+                  "failureThreshold": 3
+                },
+                "startupProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 3,
+                  "failureThreshold": 60
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+]

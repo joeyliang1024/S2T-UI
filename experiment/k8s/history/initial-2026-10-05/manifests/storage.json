@@ -1,0 +1,974 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "Namespace",
+      "metadata": {
+        "name": "s2t-stress-20261005"
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "no-real-model-api",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {},
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "podSelector": {}
+              }
+            ]
+          },
+          {
+            "to": [
+              {
+                "namespaceSelector": {
+                  "matchLabels": {
+                    "kubernetes.io/metadata.name": "kube-system"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "UDP",
+                "port": 53
+              },
+              {
+                "protocol": "TCP",
+                "port": 53
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "postgres-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "4Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "minio-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "8Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "etcd-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "milvus-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "6Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "postgres",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "postgres"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "postgres"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "postgres",
+                "image": "postgres:16-alpine",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 5432
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "256Mi"
+                  },
+                  "limits": {
+                    "memory": "768Mi"
+                  }
+                },
+                "env": [
+                  {
+                    "name": "POSTGRES_DB",
+                    "value": "s2t"
+                  },
+                  {
+                    "name": "POSTGRES_USER",
+                    "value": "s2t"
+                  },
+                  {
+                    "name": "POSTGRES_PASSWORD",
+                    "value": "stress-postgres-test-only"
+                  }
+                ],
+                "command": [
+                  "docker-entrypoint.sh",
+                  "postgres",
+                  "-c",
+                  "shared_buffers=128MB",
+                  "-c",
+                  "max_connections=100",
+                  "-c",
+                  "work_mem=4MB"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/var/lib/postgresql/data"
+                  }
+                ]
+              }
+            ],
+            "terminationGracePeriodSeconds": 45,
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "postgres-data"
+                }
+              }
+            ]
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "postgres",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "postgres"
+        },
+        "ports": [
+          {
+            "name": "p5432",
+            "port": 5432,
+            "targetPort": 5432
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "minio",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "minio"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "minio"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "minio",
+                "image": "cgr.dev/chainguard/minio:latest",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 9000
+                  },
+                  {
+                    "containerPort": 9001
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "256Mi"
+                  },
+                  "limits": {
+                    "memory": "768Mi"
+                  }
+                },
+                "env": [
+                  {
+                    "name": "MINIO_ROOT_USER",
+                    "value": "stress-minio"
+                  },
+                  {
+                    "name": "MINIO_ROOT_PASSWORD",
+                    "value": "stress-minio-test-only"
+                  }
+                ],
+                "command": [
+                  "minio",
+                  "server",
+                  "/data",
+                  "--console-address",
+                  ":9001"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/data"
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/minio/health/ready",
+                    "port": 9000
+                  },
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3
+                },
+                "startupProbe": {
+                  "httpGet": {
+                    "path": "/minio/health/ready",
+                    "port": 9000
+                  },
+                  "periodSeconds": 5,
+                  "failureThreshold": 90,
+                  "timeoutSeconds": 3
+                }
+              }
+            ],
+            "terminationGracePeriodSeconds": 45,
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "minio-data"
+                }
+              }
+            ],
+            "securityContext": {
+              "fsGroup": 65532
+            }
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "minio",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "minio"
+        },
+        "ports": [
+          {
+            "name": "p9000",
+            "port": 9000,
+            "targetPort": 9000
+          },
+          {
+            "name": "p9001",
+            "port": 9001,
+            "targetPort": 9001
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "etcd",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "etcd"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "etcd"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "etcd",
+                "image": "quay.io/coreos/etcd:v3.5.18",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 2379
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "memory": "512Mi"
+                  }
+                },
+                "command": [
+                  "etcd",
+                  "--name",
+                  "s2t-stress-etcd",
+                  "--data-dir",
+                  "/etcd",
+                  "--advertise-client-urls",
+                  "http://etcd:2379",
+                  "--listen-client-urls",
+                  "http://0.0.0.0:2379"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/etcd"
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 2379
+                  },
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3
+                },
+                "startupProbe": {
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 2379
+                  },
+                  "periodSeconds": 5,
+                  "failureThreshold": 90,
+                  "timeoutSeconds": 3
+                }
+              }
+            ],
+            "terminationGracePeriodSeconds": 45,
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "etcd-data"
+                }
+              }
+            ]
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "etcd",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "etcd"
+        },
+        "ports": [
+          {
+            "name": "p2379",
+            "port": 2379,
+            "targetPort": 2379
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "milvus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "milvus"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "milvus"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "milvus",
+                "image": "milvusdb/milvus:v2.5.3",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 9091
+                  },
+                  {
+                    "containerPort": 19530
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "500m",
+                    "memory": "1Gi"
+                  },
+                  "limits": {
+                    "memory": "3Gi"
+                  }
+                },
+                "env": [
+                  {
+                    "name": "ETCD_ENDPOINTS",
+                    "value": "etcd:2379"
+                  },
+                  {
+                    "name": "MINIO_ADDRESS",
+                    "value": "minio:9000"
+                  },
+                  {
+                    "name": "MINIO_ACCESS_KEY_ID",
+                    "value": "stress-minio"
+                  },
+                  {
+                    "name": "MINIO_SECRET_ACCESS_KEY",
+                    "value": "stress-minio-test-only"
+                  }
+                ],
+                "command": [
+                  "milvus",
+                  "run",
+                  "standalone"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/var/lib/milvus"
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 9091
+                  },
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3
+                },
+                "startupProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 9091
+                  },
+                  "periodSeconds": 5,
+                  "failureThreshold": 90,
+                  "timeoutSeconds": 3
+                }
+              }
+            ],
+            "terminationGracePeriodSeconds": 45,
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "milvus-data"
+                }
+              }
+            ]
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "milvus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "milvus"
+        },
+        "ports": [
+          {
+            "name": "p9091",
+            "port": 9091,
+            "targetPort": 9091
+          },
+          {
+            "name": "p19530",
+            "port": 19530,
+            "targetPort": 19530
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "StatefulSet",
+      "metadata": {
+        "name": "redis",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 3,
+        "selector": {
+          "matchLabels": {
+            "app": "redis"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "redis"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "redis",
+                "image": "redis:7.4-alpine",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 6379
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "256Mi"
+                  }
+                },
+                "env": [
+                  {
+                    "name": "REDIS_PASSWORD",
+                    "value": "stress-redis-test-only"
+                  },
+                  {
+                    "name": "SENTINEL_PASSWORD",
+                    "value": "stress-sentinel-test-only"
+                  }
+                ],
+                "command": [
+                  "sh",
+                  "-c",
+                  "set -eu\nmaster=\"\"\nfor i in 0 1 2; do\n master=$(redis-cli -h sentinel-$i.sentinel -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning --raw SENTINEL get-master-addr-by-name s2t-stress-master 2>/dev/null | head -n 1) || true\n [ -n \"$master\" ] && break\ndone\nif [ -z \"$master\" ]; then master=redis-0.redis.s2t-stress-20261005.svc.cluster.local; fi\nown=\"$HOSTNAME.redis.s2t-stress-20261005.svc.cluster.local\"\nif [ \"$master\" = \"$own\" ]; then\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replica-announce-ip \"$own\" --replica-announce-port 6379\nelse\n exec redis-server --requirepass \"$REDIS_PASSWORD\" --masterauth \"$REDIS_PASSWORD\" --appendonly yes --dir /data --replicaof \"$master\" 6379 --replica-announce-ip \"$own\" --replica-announce-port 6379\nfi"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/data"
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "periodSeconds": 3
+                },
+                "livenessProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -a \"$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "periodSeconds": 3
+                }
+              }
+            ],
+            "terminationGracePeriodSeconds": 45
+          }
+        },
+        "serviceName": "redis",
+        "podManagementPolicy": "Parallel",
+        "volumeClaimTemplates": [
+          {
+            "metadata": {
+              "name": "data"
+            },
+            "spec": {
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "512Mi"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "redis",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "redis"
+        },
+        "ports": [
+          {
+            "name": "p6379",
+            "port": 6379,
+            "targetPort": 6379
+          }
+        ],
+        "clusterIP": "None",
+        "publishNotReadyAddresses": true
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "StatefulSet",
+      "metadata": {
+        "name": "sentinel",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 3,
+        "selector": {
+          "matchLabels": {
+            "app": "sentinel"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "sentinel"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "sentinel",
+                "image": "redis:7.4-alpine",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 26379
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "25m",
+                    "memory": "32Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "env": [
+                  {
+                    "name": "REDIS_PASSWORD",
+                    "value": "stress-redis-test-only"
+                  },
+                  {
+                    "name": "SENTINEL_PASSWORD",
+                    "value": "stress-sentinel-test-only"
+                  }
+                ],
+                "command": [
+                  "sh",
+                  "-c",
+                  "set -eu\nif [ ! -f /data/sentinel.conf ]; then\ncat > /data/sentinel.conf <<CFG\nport 26379\nbind 0.0.0.0\nprotected-mode yes\nrequirepass $SENTINEL_PASSWORD\nsentinel resolve-hostnames yes\nsentinel announce-hostnames yes\nsentinel announce-ip $HOSTNAME.sentinel.s2t-stress-20261005.svc.cluster.local\nsentinel monitor s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 2\nsentinel auth-pass s2t-stress-master $REDIS_PASSWORD\nsentinel sentinel-pass $SENTINEL_PASSWORD\nsentinel down-after-milliseconds s2t-stress-master 2000\nsentinel failover-timeout s2t-stress-master 15000\nsentinel parallel-syncs s2t-stress-master 1\nCFG\nfi\nsed -i '/^sentinel announce-ip /d; /^sentinel announce-hostnames /d; /^sentinel resolve-hostnames /d' /data/sentinel.conf\nprintf 'sentinel resolve-hostnames yes\\nsentinel announce-hostnames yes\\nsentinel announce-ip %s\\n' \"$HOSTNAME.sentinel.s2t-stress-20261005.svc.cluster.local\" >> /data/sentinel.conf\nexec redis-server /data/sentinel.conf --sentinel"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/data"
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "sh",
+                      "-c",
+                      "redis-cli -p 26379 -a \"$SENTINEL_PASSWORD\" --no-auth-warning ping | grep PONG"
+                    ]
+                  },
+                  "periodSeconds": 3
+                }
+              }
+            ],
+            "terminationGracePeriodSeconds": 45
+          }
+        },
+        "serviceName": "sentinel",
+        "podManagementPolicy": "Parallel",
+        "volumeClaimTemplates": [
+          {
+            "metadata": {
+              "name": "data"
+            },
+            "spec": {
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "64Mi"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "sentinel",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "sentinel"
+        },
+        "ports": [
+          {
+            "name": "p26379",
+            "port": 26379,
+            "targetPort": 26379
+          }
+        ],
+        "clusterIP": "None",
+        "publishNotReadyAddresses": true
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "mock-model-code",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "mock-services.cjs": "const { createServer } = require('node:http')\nconst stats = { counts: {}, active: {}, peak: {}, rejected: 0 }\nlet controls = { asrMs: 400, translationMs: 180, diarizationMs: 750, errorEvery: 0 }\nconst sleep = ms => new Promise(r => setTimeout(r, ms))\nconst send = (res, status, value) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(value)) }\ncreateServer(async (req, res) => {\n  if (req.url === '/healthz') return send(res, 200, { mock: true })\n  if (req.url === '/stats') return send(res, 200, { mock: true, controls, ...stats })\n  const parts = []; for await (const part of req) parts.push(part)\n  if (req.url === '/control') { Object.assign(controls, JSON.parse(Buffer.concat(parts))); return send(res, 200, controls) }\n  let kind\n  if (req.url === '/v1/models') return send(res, 200, { data: [{ id: 'mock-asr' }, { id: 'mock-translation' }, { id: 'mock-diarization' }] })\n  if (req.url === '/v1/audio/transcriptions') kind = 'asr'\n  else if (req.url === '/v1/chat/completions') kind = 'translation'\n  else if (req.url === '/diarizations') kind = 'diarization'\n  else if (req.url.startsWith('/internal/audio/')) kind = req.url.split('/').pop()\n  else { stats.rejected++; return send(res, 404, { error: 'Only isolated mock routes are implemented.' }) }\n  stats.counts[kind] = (stats.counts[kind] || 0) + 1\n  stats.active[kind] = (stats.active[kind] || 0) + 1\n  stats.peak[kind] = Math.max(stats.peak[kind] || 0, stats.active[kind])\n  try {\n    await sleep(controls[`${kind}Ms`] || 20)\n    if (controls.errorEvery && stats.counts[kind] % controls.errorEvery === 0) return send(res, 503, { error: 'injected mock failure' })\n    if (kind === 'asr') return send(res, 200, { text: 'Isolated simulated speech for capacity testing.', language: 'en' })\n    if (kind === 'translation') return send(res, 200, { id: 'mock-completion', choices: [{ message: { role: 'assistant', content: '\u9019\u662f\u9694\u96e2\u58d3\u6e2c\u7684\u6a21\u64ec\u7ffb\u8b6f\u3002' }, finish_reason: 'stop' }] })\n    if (kind === 'diarization') return send(res, 200, { model: 'mock-diarization', exclusive_diarization: [{ start: 0, end: 1.5, speaker: 'SPEAKER_01' }] })\n    const vector = Array.from({ length: 192 }, (_, i) => i === 0 ? 1 : 0)\n    let value = null\n    if (kind === 'extractSpeakerEmbedding') value = vector\n    if (kind === 'extractDiarizedSpeakerBlocks') value = [{ startMs: 0, endMs: 1500, vector }]\n    if (kind === 'extractSpeakerLabelEmbeddings') value = [{ speaker: 'SPEAKER_01', embedding: vector }]\n    if (kind === 'assessVoiceprintSample') value = { durationMs: 15000, rmsDbfs: -18, quality: 'good', speechRatio: 1 }\n    if (kind === 'analyzeSileroVad') value = { speech: [{ start: 0, end: 1.5 }] }\n    if (kind === 'diarizeWav') value = [{ start: 0, end: 1.5, speaker: 'SPEAKER_01' }]\n    if (kind === 'audioPreprocessStatus') value = { sileroVad: { available: false }, dynaudnorm: { available: false } }\n    return send(res, 200, { value })\n  } finally { stats.active[kind]-- }\n}).listen(9090, '0.0.0.0', () => console.log('Isolated model mocks listening on 9090; no upstream forwarding exists.'))\n"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "mock-models",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "mock-models"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "mock-models"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "mock-models",
+                "image": "s2t-stress:20261005",
+                "imagePullPolicy": "IfNotPresent",
+                "ports": [
+                  {
+                    "containerPort": 9090
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "memory": "512Mi"
+                  }
+                },
+                "command": [
+                  "node",
+                  "/mocks/mock-services.cjs"
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "mock-code",
+                    "mountPath": "/mocks"
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 9090
+                  },
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3
+                },
+                "startupProbe": {
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 9090
+                  },
+                  "periodSeconds": 5,
+                  "failureThreshold": 90,
+                  "timeoutSeconds": 3
+                }
+              }
+            ],
+            "terminationGracePeriodSeconds": 45,
+            "volumes": [
+              {
+                "name": "mock-code",
+                "configMap": {
+                  "name": "mock-model-code"
+                }
+              }
+            ]
+          }
+        },
+        "strategy": {
+          "type": "Recreate"
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "mock-models",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "mock-models"
+        },
+        "ports": [
+          {
+            "name": "p9090",
+            "port": 9090,
+            "targetPort": 9090
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "chains": 6000,
+  "failed": 0,
+  "dropped": 0,
+  "chainLatencyMs": {
+    "n": 6000,
+    "p50": 12,
+    "p95": 46,
+    "p99": 301,
+    "max": 750
+  },
+  "minimumReady": {
+    "gateway": 2,
+    "audio-worker": 2,
+    "test-ingress": 2
+  },
+  "originalAccountsIntact": 100,
+  "fullSchemaRecoveryObserved": true,
+  "partialSchemaRecovery": {
+    "before": {
+      "id": "82dcd9ab-f920-4638-b243-f458f26499a3",
+      "role": "admin"
+    },
+    "after": {
+      "id": "82dcd9ab-f920-4638-b243-f458f26499a3",
+      "role": "admin"
+    },
+    "existingAdminPreserved": true,
+    "schemaDiagnostics": [
+      {
+        "status": 503,
+        "body": {
+          "ready": false,
+          "role": "api",
+          "error": "Storage schema 缺失：請執行 node scripts/storage/recover-storage.cjs，完成後重新啟動 Gateway 與 worker；已刪資料需從備份還原。"
+        }
+      },
+      {
+        "status": 503,
+        "body": {
+          "ready": false,
+          "role": "api",
+          "error": "Storage schema 缺失：請執行 node scripts/storage/recover-storage.cjs，完成後重新啟動 Gateway 與 worker；已刪資料需從備份還原。"
+        }
+      }
+    ],
+    "readyPodsAfter": 2
+  },
+  "roleChecks": {
+    "adminLogin": true,
+    "registerCannotEscalate": true,
+    "anonymousDenied": true,
+    "ordinaryAccountManagementDenied": true,
+    "adminAccountCreation": true,
+    "adminSessionPreserved": true,
+    "adminParameterPersistence": true,
+    "ordinaryParametersDenied": true,
+    "invalidRangesRejected": true,
+    "translationTemperaturePermission": true
+  },
+  "uiChecks": [
+    {
+      "role": "admin",
+      "adminTab": true,
+      "pageErrors": []
+    },
+    {
+      "role": "user",
+      "adminTab": false,
+      "pageErrors": []
+    }
+  ],
+  "vadScope": [
+    {
+      "role": "admin",
+      "firstChunkMs": 1800,
+      "chunks": 5
+    },
+    {
+      "role": "user",
+      "firstChunkMs": 1500,
+      "chunks": 6
+    }
+  ],
+  "releaseImage": "s2t-stress:20261008-admin-release"
+}

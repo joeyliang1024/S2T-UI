@@ -1,0 +1,1079 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "ServiceAccount",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ServiceAccount",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "prometheus",
+          "namespace": "s2t-stress-20261005"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "prometheus"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRole",
+      "metadata": {
+        "name": "s2t-stress-prometheus"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "nodes",
+            "nodes/proxy",
+            "nodes/metrics"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRoleBinding",
+      "metadata": {
+        "name": "s2t-stress-prometheus"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "prometheus",
+          "namespace": "s2t-stress-20261005"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "ClusterRole",
+        "name": "s2t-stress-prometheus"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims"
+          ],
+          "verbs": [
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "replicasets",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "batch"
+          ],
+          "resources": [
+            "jobs"
+          ],
+          "verbs": [
+            "list",
+            "watch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "kube-state-metrics",
+          "namespace": "s2t-stress-20261005"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "kube-state-metrics"
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "monitoring-api-access",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "prometheus"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "10.43.0.1/32"
+                }
+              },
+              {
+                "ipBlock": {
+                  "cidr": "192.168.5.3/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 443
+              },
+              {
+                "protocol": "TCP",
+                "port": 59119
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "monitoring-state-access",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "kube-state-metrics"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "10.43.0.1/32"
+                }
+              },
+              {
+                "ipBlock": {
+                  "cidr": "192.168.5.3/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 443
+              },
+              {
+                "protocol": "TCP",
+                "port": 59119
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "cgroup-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "collector.cjs": "// Read-only cgroup v2 collector for Docker runtimes whose kubelet omits CFS metrics.\nconst fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http')\nconst parse=value=>Object.fromEntries(value.trim().split('\\n').map(line=>line.trim().split(/\\s+/)).map(([key,v])=>[key,Number(v)]))\nasync function collect(root='/host-cgroup/kubepods') {\n const pods=[]\n async function scan(directory,depth=0) {\n  if(depth>3)return\n  let entries;try{entries=await fs.readdir(directory,{withFileTypes:true})}catch{return}\n  for(const entry of entries){if(!entry.isDirectory())continue\n   const folder=path.join(directory,entry.name),match=/^pod([a-f0-9-]+)$/.exec(entry.name)\n   if(!match){await scan(folder,depth+1);continue}\n   let periods=0,throttled=0,seconds=0,available=false\n   for(const child of await fs.readdir(folder,{withFileTypes:true})){\n    if(!child.isDirectory()||!/^[a-f0-9]{64}$/.test(child.name))continue\n    try{const values=parse(await fs.readFile(path.join(folder,child.name,'cpu.stat'),'utf8'))\n     if(!Number.isFinite(values.nr_periods)||!Number.isFinite(values.nr_throttled))continue\n     available=true;periods+=values.nr_periods;throttled+=values.nr_throttled;seconds+=(values.throttled_usec||0)/1e6\n    }catch{}\n   }\n   if(available)pods.push({uid:match[1],periods,throttled,seconds})\n  }\n }\n await scan(root)\n return pods\n}\nasync function render(root){const pods=await collect(root),lines=['# TYPE s2t_cgroup_cpu_periods_total counter','# TYPE s2t_cgroup_cpu_throttled_periods_total counter','# TYPE s2t_cgroup_cpu_throttled_seconds_total counter']\n for(const p of pods)lines.push(`s2t_cgroup_cpu_periods_total{uid=\"${p.uid}\"} ${p.periods}`,`s2t_cgroup_cpu_throttled_periods_total{uid=\"${p.uid}\"} ${p.throttled}`,`s2t_cgroup_cpu_throttled_seconds_total{uid=\"${p.uid}\"} ${p.seconds}`)\n return lines.join('\\n')+'\\n'\n}\nif(require.main===module)http.createServer(async(req,res)=>{if(req.url!='/metrics'){res.writeHead(404);return res.end()}try{res.writeHead(200,{'content-type':'text/plain; version=0.0.4'});res.end(await render())}catch{res.writeHead(503);res.end()}}).listen(9108,'0.0.0.0')\nmodule.exports={parse,collect,render}\n"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "DaemonSet",
+      "metadata": {
+        "name": "cgroup-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "matchLabels": {
+            "app": "cgroup-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "cgroup-exporter"
+            }
+          },
+          "spec": {
+            "automountServiceAccountToken": false,
+            "containers": [
+              {
+                "name": "collector",
+                "image": "node:22-bookworm-slim",
+                "command": [
+                  "node",
+                  "/collector/collector.cjs"
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9108
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "32Mi"
+                  },
+                  "limits": {
+                    "memory": "96Mi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "code",
+                    "mountPath": "/collector",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "cgroups",
+                    "mountPath": "/host-cgroup",
+                    "readOnly": true
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "code",
+                "configMap": {
+                  "name": "cgroup-exporter"
+                }
+              },
+              {
+                "name": "cgroups",
+                "hostPath": {
+                  "path": "/sys/fs/cgroup",
+                  "type": "Directory"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "cgroup-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "cgroup-exporter"
+        },
+        "ports": [
+          {
+            "port": 9108,
+            "targetPort": 9108
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "monitoring-web-gateway",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "prometheus"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "192.168.5.2/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 8787
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "prometheus-config",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "prometheus.yml": "global:\n  scrape_interval: 5s\n  evaluation_interval: 5s\nscrape_configs:\n  - job_name: s2t\n    kubernetes_sd_configs:\n      - role: pod\n        namespaces: {names: [s2t-stress-20261005]}\n    relabel_configs:\n      - {source_labels: [__meta_kubernetes_pod_label_app], regex: 'gateway|audio-worker', action: keep}\n      - {source_labels: [__meta_kubernetes_pod_phase], regex: Running, action: keep}\n      - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '8787', action: keep}\n      - {source_labels: [__meta_kubernetes_pod_name], target_label: pod}\n      - {source_labels: [__meta_kubernetes_pod_label_app], target_label: service}\n  - job_name: prometheus\n    static_configs: [{targets: ['localhost:9090']}]\n  - job_name: cgroups\n    static_configs: [{targets: ['cgroup-exporter:9108']}]\n  - job_name: grafana\n    static_configs: [{targets: ['grafana:3000']}]\n  - job_name: kube-state\n    static_configs: [{targets: ['kube-state-metrics:8080']}]\n  - job_name: postgres\n    static_configs: [{targets: ['postgres-exporter:9187']}]\n  - job_name: minio\n    metrics_path: /minio/v2/metrics/cluster\n    static_configs: [{targets: ['minio:9000']}]\n  - job_name: milvus\n    static_configs: [{targets: ['milvus:9091']}]\n  - job_name: etcd\n    static_configs: [{targets: ['etcd:2379']}]\n  - job_name: mock-models\n    static_configs: [{targets: ['mock-models:9090']}]\n  - job_name: redis\n    metrics_path: /scrape\n    static_configs: [{targets: ['redis-0.redis:6379', 'redis-1.redis:6379', 'redis-2.redis:6379']}]\n    relabel_configs:\n      - {source_labels: [__address__], target_label: __param_target}\n      - {source_labels: [__param_target], target_label: instance}\n      - {target_label: __address__, replacement: 'redis-exporter:9121'}\n  - job_name: sentinel\n    metrics_path: /scrape\n    static_configs: [{targets: ['sentinel-0.sentinel:26379', 'sentinel-1.sentinel:26379', 'sentinel-2.sentinel:26379']}]\n    relabel_configs:\n      - {source_labels: [__address__], target_label: __param_target}\n      - {source_labels: [__param_target], target_label: instance}\n      - {target_label: __address__, replacement: 'sentinel-exporter:9121'}\n  - job_name: kubelet-cadvisor\n    scheme: https\n    authorization: {credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token}\n    tls_config: {ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt}\n    kubernetes_sd_configs: [{role: node}]\n    relabel_configs:\n      - {target_label: __address__, replacement: 'kubernetes.default.svc:443'}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: node}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: __metrics_path__, replacement: '/api/v1/nodes/$1/proxy/metrics/cadvisor'}\n    metric_relabel_configs:\n      - {source_labels: [namespace], regex: 's2t-stress-20261005|', action: keep}\n  - job_name: kubelet\n    scheme: https\n    authorization: {credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token}\n    tls_config: {ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt}\n    kubernetes_sd_configs: [{role: node}]\n    relabel_configs:\n      - {target_label: __address__, replacement: 'kubernetes.default.svc:443'}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: node}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: __metrics_path__, replacement: '/api/v1/nodes/$1/proxy/metrics'}\n  - job_name: gateway-web\n    scheme: http\n    metrics_path: \"/metrics\"\n    static_configs: [{targets: [\"192.168.5.2:8787\"], labels: {service: gateway, pod: web-gateway}}]\n"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "prometheus-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "grafana-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "prometheus"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "prometheus"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "prometheus",
+                "image": "prom/prometheus:v3.5.0",
+                "args": [
+                  "--config.file=/etc/prometheus/prometheus.yml",
+                  "--storage.tsdb.path=/prometheus",
+                  "--storage.tsdb.retention.time=3d",
+                  "--storage.tsdb.retention.size=1GB"
+                ],
+                "env": [],
+                "ports": [
+                  {
+                    "containerPort": 9090
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "192Mi"
+                  },
+                  "limits": {
+                    "memory": "512Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "config",
+                    "mountPath": "/etc/prometheus"
+                  },
+                  {
+                    "name": "data",
+                    "mountPath": "/prometheus"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "config",
+                "configMap": {
+                  "name": "prometheus-config"
+                }
+              },
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "prometheus-data"
+                }
+              }
+            ],
+            "serviceAccountName": "prometheus",
+            "securityContext": {
+              "fsGroup": 65534
+            }
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "prometheus"
+        },
+        "ports": [
+          {
+            "port": 9090,
+            "targetPort": 9090
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "kube-state-metrics"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "kube-state-metrics"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "kube-state-metrics",
+                "image": "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.16.0",
+                "args": [
+                  "--namespaces=s2t-stress-20261005",
+                  "--resources=pods,persistentvolumeclaims,deployments,replicasets,statefulsets,daemonsets,jobs"
+                ],
+                "env": [],
+                "ports": [
+                  {
+                    "containerPort": 8080
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "20m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": [],
+            "serviceAccountName": "kube-state-metrics"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "kube-state-metrics"
+        },
+        "ports": [
+          {
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "postgres-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "postgres-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "postgres-exporter"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "postgres-exporter",
+                "image": "quay.io/prometheuscommunity/postgres-exporter:v0.17.1",
+                "args": [],
+                "env": [
+                  {
+                    "name": "DATA_SOURCE_NAME",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "postgres-dsn"
+                      }
+                    }
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9187
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "20m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "postgres-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "postgres-exporter"
+        },
+        "ports": [
+          {
+            "port": 9187,
+            "targetPort": 9187
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "redis-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "redis-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "redis-exporter"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "redis-exporter",
+                "image": "oliver006/redis_exporter:v1.88.0",
+                "args": [
+                  "--redis.addr="
+                ],
+                "env": [
+                  {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "redis-password"
+                      }
+                    }
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9121
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "redis-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "redis-exporter"
+        },
+        "ports": [
+          {
+            "port": 9121,
+            "targetPort": 9121
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "sentinel-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "sentinel-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "sentinel-exporter"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "sentinel-exporter",
+                "image": "oliver006/redis_exporter:v1.88.0",
+                "args": [
+                  "--redis.addr="
+                ],
+                "env": [
+                  {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "sentinel-password"
+                      }
+                    }
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9121
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "sentinel-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "sentinel-exporter"
+        },
+        "ports": [
+          {
+            "port": 9121,
+            "targetPort": 9121
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "monitoring-connection",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "PROMETHEUS_URL": "http://prometheus:9090"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "grafana-provisioning",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "datasources.yaml": "apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: ${PROMETHEUS_URL}\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n",
+        "dashboards.yaml": "apiVersion: 1\nproviders:\n  - name: S2T\n    type: file\n    updateIntervalSeconds: 10\n    options: {path: /var/lib/grafana/dashboards}\n"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "s2t-dashboard",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "dashboard.json": "{\"uid\": \"s2t-overview\", \"title\": \"S2T \u00b7 \u4e00\u5f35\u7e3d\u89bd / Chunk \u5ef6\u9072\u8207\u670d\u52d9\u5065\u5eb7\", \"schemaVersion\": 41, \"version\": 1, \"timezone\": \"browser\", \"refresh\": \"5s\", \"time\": {\"from\": \"now-15m\", \"to\": \"now\"}, \"tags\": [\"S2T\", \"Web\", \"K8s\"], \"panels\": [{\"id\": 1, \"title\": \"01 \u00b7 \u6bcf\u500b chunk \u5ef6\u9072 \u2014 \u6b64 chunk \u8a9e\u97f3\u8d77\u9ede\u5230 Web \u5b57\u5e55\u9996\u6b21\u5448\u73fe \u00b7 \u4f86\u6e90\uff1a$caption_gateway\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 0, \"w\": 24, \"h\": 1}}, {\"id\": 2, \"title\": \"Chunk P50\uff08\u56fa\u5b9a\u6700\u8fd1 5m\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6b64 chunk \u7684\u8a9e\u97f3\u8d77\u9ede\u5230\u5176\u6587\u5b57\u9996\u6b21\u5728 Web UI \u5448\u73fe\u3002\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u56fa\u5b9a\u6700\u8fd1 5 \u5206\u9418\uff1b\u6c92\u6709\u65b0\u6a23\u672c\u6642\u4e0d\u4fdd\u7559\u820a\u6578\u503c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 3, \"title\": \"Chunk P95\uff08\u56fa\u5b9a\u6700\u8fd1 5m\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 8, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6b64 chunk \u7684\u8a9e\u97f3\u8d77\u9ede\u5230\u5176\u6587\u5b57\u9996\u6b21\u5728 Web UI \u5448\u73fe\u3002\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u56fa\u5b9a\u6700\u8fd1 5 \u5206\u9418\uff1b\u6c92\u6709\u65b0\u6a23\u672c\u6642\u4e0d\u4fdd\u7559\u820a\u6578\u503c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 4, \"title\": \"Chunk P99\uff08\u56fa\u5b9a\u6700\u8fd1 5m\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 16, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6b64 chunk \u7684\u8a9e\u97f3\u8d77\u9ede\u5230\u5176\u6587\u5b57\u9996\u6b21\u5728 Web UI \u5448\u73fe\u3002\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u56fa\u5b9a\u6700\u8fd1 5 \u5206\u9418\uff1b\u6c92\u6709\u65b0\u6a23\u672c\u6642\u4e0d\u4fdd\u7559\u820a\u6578\u503c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 5, \"title\": \"\u5df2\u5448\u73fe chunk \u6a23\u672c\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 5, \"w\": 24, \"h\": 3}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_caption_stage_duration_seconds_count{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"text\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 6, \"title\": \"\u6bcf\u500b chunk \u968e\u6bb5\u8017\u6642\u5360\u6bd4\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"piechart\", \"gridPos\": {\"x\": 0, \"y\": 8, \"w\": 24, \"h\": 8}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_chunk_stage_duration_seconds_sum{job=\\\"$caption_gateway\\\"}[$__range])) by (stage) / scalar(sum(increase(s2t_chunk_stage_duration_seconds_sum{job=\\\"$caption_gateway\\\"}[$__range])))\", \"legendFormat\": \"{{stage}}\", \"instant\": true, \"range\": false}], \"description\": \"\u6bcf\u500b\u5df2\u986f\u793a chunk \u7684\u540c\u4e00\u6279\u6a23\u672c\uff0c\u5404\u968e\u6bb5\u8017\u6642\u5360\u6bd4\uff1b\u4e0d\u662f P50/P95/P99 \u7684\u62c6\u5206\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"vad_onset\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"VAD \u8a9e\u97f3\u78ba\u8a8d\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"chunk_wait\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u97f3\u8a0a\u7d2f\u7a4d\uff0f\u5207\u6bb5\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"browser_queue\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u700f\u89bd\u5668\u6392\u968a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"browser_preprocess\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u97f3\u8a0a\u524d\u8655\u7406\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"asr_roundtrip_with_retries\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"ASR \u5f80\u8fd4\uff08\u542b server \u6392\u968a\u8207\u91cd\u8a66\uff09\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"response_to_paint\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"UI \u5448\u73fe\"}]}]}, \"options\": {\"pieType\": \"donut\", \"displayLabels\": [\"percent\"], \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"table\", \"placement\": \"right\", \"values\": [\"value\"], \"showLegend\": true}}}, {\"id\": 7, \"title\": \"Chunk \u5ef6\u9072\u5206\u5e03 P50 / P95 / P99\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 16, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"0\", \"expr\": \"histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"p50\"}, {\"refId\": \"1\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"p95\"}, {\"refId\": \"2\", \"expr\": \"histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"p99\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 8, \"title\": \"Web \u968e\u6bb5 p95\uff08\u5b57\u5e55 / \u7ffb\u8b6f\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 16, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage!~\\\"chunk_speech_to_paint|speech_to_first_paint|speech_to_translation_paint\\\"}[5m])) by (stage,le))\", \"legendFormat\": \"{{stage}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 9, \"title\": \"Gateway \u968e\u6bb5 p95\uff08\u8207 Web roundtrip \u91cd\u758a\uff0c\u52ff\u52a0\u7e3d\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 23, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\"}[5m])) by (stage,le))\", \"legendFormat\": \"{{stage}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 10, \"title\": \"\u53ef\u898b\u5b57\u5e55\u6bb5\u6a23\u672c / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 23, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_caption_stage_duration_seconds_count{job=\\\"$caption_gateway\\\",stage=\\\"response_to_paint\\\"}[5m]))\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 11, \"title\": \"\u8a9e\u97f3\u5075\u6e2c / \u7121\u6587\u5b57 / \u5931\u6557 / \u97f3\u8a0a\u7f3a\u53e3\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 30, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_caption_events_total{job=\\\"$caption_gateway\\\"}[5m])) by (event)\", \"legendFormat\": \"{{event}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 12, \"title\": \"\u5df2\u5075\u6e2c\u8a9e\u97f3\uff08\u76ee\u524d Pods \u7d2f\u8a08\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 30, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(s2t_caption_events_total{job=\\\"$caption_gateway\\\",event=\\\"speech_detected\\\"})\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 13, \"title\": \"02 \u00b7 Gateway / Audio worker / \u6a21\u64ec\u6a21\u578b \u00b7 \u4f86\u6e90\uff1a$caption_gateway\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 37, \"w\": 24, \"h\": 1}}, {\"id\": 14, \"title\": \"HTTP \u8def\u7531 p95\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 38, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket{job=\\\"$caption_gateway\\\"}[5m])) by (route,le))\", \"legendFormat\": \"{{route}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 15, \"title\": \"HTTP \u541e\u5410 / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 38, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_duration_seconds_count{job=\\\"$caption_gateway\\\"}[2m])) by (route)\", \"legendFormat\": \"{{route}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 16, \"title\": \"HTTP \u5931\u6557 / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 45, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_errors_total{job=\\\"$caption_gateway\\\"}[2m])) by (route)\", \"legendFormat\": \"{{route}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 17, \"title\": \"\u670d\u52d9\u9032\u884c\u4e2d\u8acb\u6c42\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 45, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_gateway_inflight_requests{job=\\\"$caption_gateway\\\"}\", \"legendFormat\": \"{{service}} {{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 18, \"title\": \"\u7a0b\u5e8f RSS\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 52, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_process_resident_memory_bytes\", \"legendFormat\": \"{{service}} {{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 19, \"title\": \"Event loop p99\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 52, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_event_loop_p99_seconds\", \"legendFormat\": \"{{service}} {{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 20, \"title\": \"Diarization \u5f85\u8655\u7406\u5de5\u4f5c / \u6700\u8001\u79d2\u6578\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 59, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"max(s2t_diarization_pending_jobs{job=\\\"$caption_gateway\\\"})\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 21, \"title\": \"Diarization \u6700\u8001\u7b49\u5f85\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 59, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"max(s2t_diarization_oldest_seconds{job=\\\"$caption_gateway\\\"})\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 22, \"title\": \"Mock \u6a21\u578b\u9032\u884c\u4e2d / \u660e\u78ba\u662f\u6a21\u64ec API\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 66, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_mock_active_requests\", \"legendFormat\": \"{{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 23, \"title\": \"Mock \u6ce8\u5165\u5ef6\u9072 / \u9577\u5c3e\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 66, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_mock_configured_delay_seconds\", \"legendFormat\": \"{{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 24, \"title\": \"03 \u00b7 \u6240\u6709\u670d\u52d9\u53ef\u7528\u6027\u8207\u5132\u5b58\u64cd\u4f5c\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 73, \"w\": 24, \"h\": 1}}, {\"id\": 25, \"title\": \"\u6240\u6709 scrape targets\uff081=\u6210\u529f\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 74, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"up\", \"legendFormat\": \"{{job}} {{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 26, \"title\": \"\u61c9\u7528\u5132\u5b58\u64cd\u4f5c p95\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 74, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket{job=\\\"$caption_gateway\\\"}[5m])) by (service,operation,le))\", \"legendFormat\": \"{{service}} {{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 27, \"title\": \"\u5132\u5b58\u64cd\u4f5c\u5931\u6557 / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 81, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_storage_operation_duration_seconds_errors_total{job=\\\"$caption_gateway\\\"}[5m])) by (service,operation)\", \"legendFormat\": \"{{service}} {{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 28, \"title\": \"PostgreSQL \u9023\u7dda\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 81, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(pg_stat_database_numbackends) by (datname)\", \"legendFormat\": \"{{datname}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 29, \"title\": \"PostgreSQL commits / rollback \u6bcf\u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 88, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(pg_stat_database_xact_commit[5m])) by (datname)\", \"legendFormat\": \"{{datname}} commits\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"ops\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 30, \"title\": \"PostgreSQL rollback / deadlock \u6bcf\u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 88, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(pg_stat_database_xact_rollback[5m])) by (datname)\", \"legendFormat\": \"{{datname}} rollback\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"ops\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 31, \"title\": \"Redis \u8a18\u61b6\u9ad4\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 95, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_memory_used_bytes{job=\\\"redis\\\"}\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 32, \"title\": \"Redis clients / blocked\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 95, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_connected_clients{job=\\\"redis\\\"}\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 33, \"title\": \"Redis replication offset\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 102, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_master_repl_offset{job=\\\"redis\\\"}\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 34, \"title\": \"Sentinel quorum status / TILT\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 102, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_sentinel_master_ckquorum_status\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 35, \"title\": \"Sentinel TILT\uff08\u61c9\u70ba 0\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 109, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_sentinel_tilt\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 36, \"title\": \"Redis \u53ef\u7528\u6027\uff08\u542b\u5bc6\u78bc\u767b\u5165\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 109, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_up\", \"legendFormat\": \"{{job}} {{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 37, \"title\": \"MinIO \u5132\u5b58\u7528\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 116, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"minio_cluster_usage_total_bytes\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 38, \"title\": \"MinIO \u78c1\u789f\u53ef\u7528\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 116, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"minio_cluster_capacity_usable_free_bytes\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 39, \"title\": \"Milvus process RSS\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 123, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"process_resident_memory_bytes{job=\\\"milvus\\\"}\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 40, \"title\": \"Milvus \u8f09\u5165\u5411\u91cf\u6578\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 123, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"milvus_querynode_entity_num\", \"legendFormat\": \"{{collection_id}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 41, \"title\": \"etcd leader\uff081=\u6709 leader\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 130, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"etcd_server_has_leader\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 42, \"title\": \"etcd WAL fsync p95\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 130, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m])) by (le))\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 43, \"title\": \"04 \u00b7 Kubernetes Pods / \u5bb9\u91cf / \u8cc7\u6e90\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 137, \"w\": 24, \"h\": 1}}, {\"id\": 44, \"title\": \"VM node CPU cores\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 138, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(container_cpu_usage_seconds_total{id=\\\"/\\\"}[2m]))\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 45, \"title\": \"VM node memory\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 138, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"container_memory_working_set_bytes{id=\\\"/\\\"}\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 46, \"title\": \"Pod CPU \u4f7f\u7528\u91cf\uff08cores\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 145, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(container_cpu_usage_seconds_total{namespace=\\\"s2t-stress-20261005\\\",pod!=\\\"\\\"}[2m])) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 47, \"title\": \"Pod memory working set\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 145, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(container_memory_working_set_bytes{namespace=\\\"s2t-stress-20261005\\\",pod!=\\\"\\\"}) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 48, \"title\": \"Pod ready\uff081=\u5c31\u7dd2\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 152, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"kube_pod_status_ready{condition=\\\"true\\\"}\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 49, \"title\": \"Pod \u91cd\u555f\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 152, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(kube_pod_container_status_restarts_total) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 50, \"title\": \"Deployment \u53ef\u7528 / \u671f\u671b\u526f\u672c\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 159, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"kube_deployment_status_replicas_available\", \"legendFormat\": \"{{deployment}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 51, \"title\": \"CPU throttled \u6bd4\u4f8b\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 159, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_cgroup_cpu_throttled_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace=\\\"s2t-stress-20261005\\\"}) by (pod) / clamp_min(sum(rate(s2t_cgroup_cpu_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace=\\\"s2t-stress-20261005\\\"}) by (pod), 0.000001)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 52, \"title\": \"Pod CPU requests\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 166, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(kube_pod_container_resource_requests{resource=\\\"cpu\\\"}) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 53, \"title\": \"PVC \u8acb\u6c42\u5bb9\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 166, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"kube_persistentvolumeclaim_resource_requests_storage_bytes\", \"legendFormat\": \"{{persistentvolumeclaim}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}], \"editable\": false, \"templating\": {\"list\": [{\"name\": \"caption_gateway\", \"label\": \"\u5b57\u5e55\u91cf\u6e2c\u4f86\u6e90\", \"type\": \"custom\", \"query\": \"8787 \u7db2\u9801\u5165\u53e3 : gateway-web,K8s \u6e2c\u8a66\u7ad9 : s2t\", \"current\": {\"text\": \"8787 \u7db2\u9801\u5165\u53e3\", \"value\": \"gateway-web\"}, \"options\": [{\"text\": \"8787 \u7db2\u9801\u5165\u53e3\", \"value\": \"gateway-web\", \"selected\": true}, {\"text\": \"K8s \u6e2c\u8a66\u7ad9\", \"value\": \"s2t\", \"selected\": false}], \"multi\": false, \"includeAll\": false}]}}"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "grafana",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "grafana"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "grafana"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "grafana",
+                "image": "grafana/grafana:12.2.0",
+                "args": [],
+                "env": [
+                  {
+                    "name": "PROMETHEUS_URL",
+                    "valueFrom": {
+                      "configMapKeyRef": {
+                        "name": "monitoring-connection",
+                        "key": "PROMETHEUS_URL"
+                      }
+                    }
+                  },
+                  {
+                    "name": "GF_SECURITY_ADMIN_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "grafana-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "GF_USERS_ALLOW_SIGN_UP",
+                    "value": "false"
+                  },
+                  {
+                    "name": "GF_AUTH_ANONYMOUS_ENABLED",
+                    "value": "true"
+                  },
+                  {
+                    "name": "GF_AUTH_ANONYMOUS_ORG_ROLE",
+                    "value": "Viewer"
+                  },
+                  {
+                    "name": "GF_ANALYTICS_REPORTING_ENABLED",
+                    "value": "false"
+                  },
+                  {
+                    "name": "GF_ANALYTICS_CHECK_FOR_UPDATES",
+                    "value": "false"
+                  },
+                  {
+                    "name": "GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH",
+                    "value": "/var/lib/grafana/dashboards/dashboard.json"
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 3000
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "memory": "384Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/var/lib/grafana"
+                  },
+                  {
+                    "name": "provisioning",
+                    "mountPath": "/etc/grafana/provisioning/datasources/datasources.yaml",
+                    "subPath": "datasources.yaml"
+                  },
+                  {
+                    "name": "provisioning",
+                    "mountPath": "/etc/grafana/provisioning/dashboards/dashboards.yaml",
+                    "subPath": "dashboards.yaml"
+                  },
+                  {
+                    "name": "dashboards",
+                    "mountPath": "/var/lib/grafana/dashboards"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "grafana-data"
+                }
+              },
+              {
+                "name": "provisioning",
+                "configMap": {
+                  "name": "grafana-provisioning"
+                }
+              },
+              {
+                "name": "dashboards",
+                "configMap": {
+                  "name": "s2t-dashboard"
+                }
+              }
+            ],
+            "securityContext": {
+              "fsGroup": 472,
+              "runAsUser": 472
+            }
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "grafana",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "grafana"
+        },
+        "ports": [
+          {
+            "port": 3000,
+            "targetPort": 3000
+          }
+        ]
+      }
+    }
+  ]
+}

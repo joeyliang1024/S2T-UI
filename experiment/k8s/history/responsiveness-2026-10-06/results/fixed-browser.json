@@ -1,0 +1,19 @@
+{
+  "name": "fixed",
+  "segments": 2400,
+  "openMs": 112,
+  "detailMs": 68,
+  "openedMembers": 5,
+  "closedMembers": 0,
+  "editingAndSearchPassed": true,
+  "nodes": 3840,
+  "groups": 480,
+  "memberRows": 0,
+  "longTasks": [
+    {
+      "start": 1388.6999998092651,
+      "duration": 51
+    }
+  ],
+  "pageErrors": []
+}

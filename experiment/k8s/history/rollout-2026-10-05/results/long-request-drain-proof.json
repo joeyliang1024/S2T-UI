@@ -1,0 +1,47 @@
+[
+  {
+    "pod": "gateway-8689985fc9-gpd27",
+    "shutdownAt": "2026-10-05T15:49:33.151000+00:00",
+    "responseAt": "2026-10-05T15:49:33.299000+00:00",
+    "requestId": "64fc2b44-dce3-40f3-a769-8ebb838f1d2f",
+    "durationMs": 12010,
+    "status": 200,
+    "source": "fixed-2pods-slow-initial-pods.log"
+  },
+  {
+    "pod": "gateway-8689985fc9-t5bnw",
+    "shutdownAt": "2026-10-05T15:49:41.125000+00:00",
+    "responseAt": "2026-10-05T15:49:42.297000+00:00",
+    "requestId": "cd52a923-4a98-4889-a0bb-4c514cfae9fd",
+    "durationMs": 12007,
+    "status": 200,
+    "source": "fixed-2pods-slow-initial-pods.log"
+  },
+  {
+    "pod": "gateway-67895dbcc4-s7gqt",
+    "shutdownAt": "2026-10-05T15:46:26.134000+00:00",
+    "responseAt": "2026-10-05T15:46:27.686000+00:00",
+    "requestId": "8326c06c-1b52-4adc-abdb-a033f28bd6f6",
+    "durationMs": 12007,
+    "status": 200,
+    "source": "fixed-4pods-jitter-tail-initial-pods.log"
+  },
+  {
+    "pod": "gateway-67895dbcc4-qhn8b",
+    "shutdownAt": "2026-10-05T15:46:35.189000+00:00",
+    "responseAt": "2026-10-05T15:46:36.693000+00:00",
+    "requestId": "fa7e7ddc-9fc6-4c8e-b4b8-049a110b82c9",
+    "durationMs": 12016,
+    "status": 200,
+    "source": "fixed-4pods-jitter-tail-initial-pods.log"
+  },
+  {
+    "pod": "gateway-67895dbcc4-r24vj",
+    "shutdownAt": "2026-10-05T15:46:44.123000+00:00",
+    "responseAt": "2026-10-05T15:46:45.685000+00:00",
+    "requestId": "e416088a-73fd-4500-9d0e-ebec3cdb7b93",
+    "durationMs": 12007,
+    "status": 200,
+    "source": "fixed-4pods-jitter-tail-initial-pods.log"
+  }
+]

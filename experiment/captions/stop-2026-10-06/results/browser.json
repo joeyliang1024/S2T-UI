@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "requestsBeforeStop": 0,
+  "totalRequests": 1,
+  "finalSegments": 1,
+  "completedAfterMs": 3353,
+  "sourceTexts": [
+    "stop tail verified 1"
+  ],
+  "requests": [
+    {
+      "at": 1791251445385,
+      "bytes": 61484
+    }
+  ]
+}

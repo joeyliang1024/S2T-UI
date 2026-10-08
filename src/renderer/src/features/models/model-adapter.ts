@@ -1,3 +1,4 @@
+import { attachCaptionTiming, recordCaptionEvent, type CaptionTiming } from '../../shared/services/caption-metrics'
 import { EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
 import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
@@ -26,6 +27,8 @@ export type TranscriptEvent = {
    * chunks sent while speech continues deliberately keep this false so the UI
    * can extend one readable caption instead of making a new row. */
   isSentenceBoundary?: boolean
+  /** Updates only closure metadata; never replaces a manually edited caption. */
+  boundaryOnly?: boolean
   /** Best-effort app-side source language when ASR runs in automatic mode. */
   detectedLanguage?: 'zh-TW' | 'en-US' | 'ja-JP' | 'de-DE'
   /** Present only when audio could not be transcribed. Export this event so a
@@ -37,6 +40,8 @@ export interface ModelAdapter {
   start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void>
   pushAudio(chunk: Float32Array, startSample: number): void
   stop(): Promise<void>
+  /** Mark a pause boundary without ending the capture session. */
+  flush?(): void
   onTranscript(listener: (event: TranscriptEvent) => void): () => void
   onError(listener: (message: string) => void): () => void
   /** Applies settings to audio received after this call; it never restarts capture. */
@@ -238,6 +243,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private language = 'zh'
   private pendingChunks: Float32Array[] = []
   private pendingSamples = 0
+  private speechOnsets: Array<{ sample: number; at: number; detected: number }> = []
+  private audioClock = { sample: 0, at: 0 }
   private pendingStart = 0
   private queued = Promise.resolve()
   private sequence = 0
@@ -246,13 +253,20 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private readonly maximumQueuedChunks = 4
   private vad: EnergyVad | null = null
   private pendingContainsSpeech = false
+  private pendingBoundaries: number[] = []
+  private explicitBoundaries = new Set<number>()
+  private vadSpeaking = false
+  private lastSpeechSample = 0
+  private readonly maximumPendingSeconds = 30
   private prompt?: string
   /** Tail of the last successful caption; conditions the next short chunk. */
   private rollingContext = ''
+  private lastTranscript?: TranscriptEvent
+  private overflowGap?: TranscriptEvent & { emittedEndMs: number }
   private vadConfig?: VadConfig
   private activeGatewayRequests = new Set<AbortController>()
   private readonly gatewayTimeoutMs = 30_000
-  readonly diagnostics = { requests: 0, completed: 0, rateLimited: 0, gaps: 0, inFlight: 0, maximumQueued: 0, totalRequestMs: 0, totalQueueWaitMs: 0 }
+  readonly diagnostics = { requests: 0, completed: 0, rateLimited: 0, gaps: 0, inFlight: 0, maximumQueued: 0, totalRequestMs: 0, totalQueueWaitMs: 0, maximumPendingMs: 0 }
 
   constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean }) {
     this.prompt = profile.prompt
@@ -270,20 +284,34 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingChunks = []
     this.pendingSamples = 0
     this.pendingStart = 0
+    this.speechOnsets = []
     this.queued = Promise.resolve()
     this.sequence = 0
     this.stopped = false
     this.queuedChunks = 0
     this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
     this.pendingContainsSpeech = false
+    this.pendingBoundaries = []
+    this.explicitBoundaries.clear()
+    this.vadSpeaking = false
+    this.lastSpeechSample = 0
     this.rollingContext = ''
+    this.lastTranscript = undefined
+    this.overflowGap = undefined
     this.activeGatewayRequests.clear()
     Object.keys(this.diagnostics).forEach((key) => { this.diagnostics[key as keyof typeof this.diagnostics] = 0 })
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
     if (this.stopped) return
+    this.audioClock = { sample: startSample + chunk.length, at: performance.now() }
     const vadFrame = this.vad?.process(chunk)
+    if (vadFrame?.speechStarted) {
+      recordCaptionEvent('speech_detected')
+      const now = performance.now()
+      this.speechOnsets.push({ sample: startSample + chunk.length - vadFrame.onsetSamples, at: now - vadFrame.onsetSamples / this.sampleRate * 1000, detected: now })
+      this.speechOnsets = this.speechOnsets.slice(-256)
+    }
     if (this.pendingSamples === 0) this.pendingStart = startSample
     this.pendingChunks.push(chunk)
     this.pendingSamples += chunk.length
@@ -291,47 +319,87 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     // Keep ASR latency bounded while preferring natural VAD sentence boundaries.
     const configuredMinimum = this.vadConfig?.chunkMinMs ?? 1_000
     const configuredMaximum = this.vadConfig?.chunkMaxMs ?? 2_400
-    const minimumChunkSamples = Math.floor(this.sampleRate * Math.min(configuredMinimum, configuredMaximum) / 1000)
     const configuredMaximumMs = Math.max(configuredMinimum, configuredMaximum, 200)
-    // HTTP ASR is ordered so rolling context stays correct. If the provider is
-    // marginally slower than real time, fixed 2–3s chunks accumulate one
-    // request at a time until captions are visibly behind. Coalesce only while
-    // backlogged (up to 6s) to recover throughput without sacrificing normal
-    // low-latency behavior.
-    const adaptiveMaximumMs = Math.min(6_000, configuredMaximumMs * (this.queuedChunks >= 2 ? 2 : 1))
-    const maximumChunkSamples = Math.floor(this.sampleRate * adaptiveMaximumMs / 1000)
-    this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || vadFrame?.speaking)
-    const reachedNaturalBoundary = this.pendingContainsSpeech && Boolean(vadFrame?.speechEnded)
-    // Keep 300 ms of room tone before a voice onset, but avoid sending empty
-    // requests while nobody is speaking.
-    if (!this.pendingContainsSpeech && this.pendingSamples > maximumChunkSamples) {
-      const preRollSamples = Math.floor(this.sampleRate * (this.vadConfig?.preRollMs ?? 300) / 1000)
-      this.discardPending(this.pendingSamples - preRollSamples)
+    this.vadSpeaking = Boolean(vadFrame?.speaking)
+    if (this.vadSpeaking || vadFrame?.speechStarted) this.lastSpeechSample = startSample + chunk.length
+    this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || this.vadSpeaking)
+    if (this.pendingContainsSpeech && vadFrame?.speechEnded) this.pendingBoundaries.push(startSample + chunk.length)
+    if (!this.pendingContainsSpeech && this.pendingSamples > this.sampleRate * configuredMaximumMs / 1000) {
+      const preRoll = Math.floor(this.sampleRate * (this.vadConfig?.preRollMs ?? 300) / 1000)
+      this.discardPending(this.pendingSamples - preRoll)
       return
     }
-    while (this.pendingSamples >= maximumChunkSamples || reachedNaturalBoundary) {
-      const size = reachedNaturalBoundary ? this.pendingSamples : maximumChunkSamples
+    // Keep a bounded audio backlog, rather than discard every chunk while a
+    // healthy but slow request occupies the four ordered request slots.
+    const maximumPending = this.sampleRate * this.maximumPendingSeconds
+    if (this.pendingSamples > maximumPending) {
+      const startMs = Math.round(this.pendingStart / this.sampleRate * 1000)
+      this.discardPending(this.pendingSamples - maximumPending)
+      this.recordOverflow(startMs, Math.round(this.pendingStart / this.sampleRate * 1000))
+    }
+    this.diagnostics.maximumPendingMs = Math.max(this.diagnostics.maximumPendingMs, this.pendingSamples / this.sampleRate * 1000)
+    this.flushPending()
+  }
+
+  private flushPending(): void {
+    const configuredMaximum = Math.max(this.vadConfig?.chunkMinMs ?? 1000, this.vadConfig?.chunkMaxMs ?? 2400, 200)
+    while (this.pendingBoundaries.length && this.pendingBoundaries[0] <= this.pendingStart) this.pendingBoundaries.shift()
+    this.pendingContainsSpeech = this.vadSpeaking || this.pendingStart < this.lastSpeechSample || this.pendingBoundaries.length > 0
+    while (this.pendingSamples && this.pendingContainsSpeech && this.queuedChunks < this.maximumQueuedChunks) {
+      const maximum = Math.floor(this.sampleRate * Math.min(6000, configuredMaximum * (this.queuedChunks >= 2 ? 2 : 1)) / 1000)
+      const boundary = this.pendingBoundaries[0]
+      const toBoundary = boundary === undefined ? Infinity : boundary - this.pendingStart
+      if (this.pendingSamples < maximum && toBoundary > this.pendingSamples) break
+      const size = Math.min(maximum, toBoundary, this.pendingSamples)
+      const natural = size === toBoundary
       const start = this.pendingStart
       const audio = this.takePending(size)
-      this.enqueue(audio, start, reachedNaturalBoundary)
-      this.pendingContainsSpeech = Boolean(vadFrame?.speaking)
-      if (this.pendingSamples < minimumChunkSamples) break
+      if (natural) this.pendingBoundaries.shift()
+      this.flushOverflow()
+      this.enqueue(audio, start, natural)
+      this.pendingContainsSpeech = this.vadSpeaking || this.pendingStart < this.lastSpeechSample || this.pendingBoundaries.length > 0
     }
+  }
+
+  flush(): void {
+    if (this.stopped) return
+    const end = this.pendingStart + this.pendingSamples
+    if (this.pendingContainsSpeech && (this.pendingSamples || this.queuedChunks)) {
+      this.explicitBoundaries.add(end)
+      if (this.pendingSamples && this.pendingBoundaries[this.pendingBoundaries.length - 1] !== end) this.pendingBoundaries.push(end)
+    }
+    // Pause has no incoming silence frames; reset onset detection for resume.
+    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    this.vadSpeaking = false
+    this.flushPending()
+    this.closePreviousCaption(Math.round(end / this.sampleRate * 1000))
   }
 
   async stop(): Promise<void> {
     if (this.stopped) return
     this.stopped = true
+    this.flushOverflow()
     // Normal stop drains accepted audio. Aborting here used to turn the last
     // in-flight chunk into a gap even when the model was working normally.
     if (this.queuedChunks >= this.maximumQueuedChunks) await this.queued
-    if (this.pendingSamples && this.pendingContainsSpeech) {
+    // A retained backlog can be longer than one provider request should carry.
+    // Drain it in bounded clips, retaining natural endpoints and final closure.
+    while (this.pendingSamples && this.pendingContainsSpeech) {
+      if (this.queuedChunks >= this.maximumQueuedChunks) await this.queued
       const start = this.pendingStart
-      this.enqueue(this.takePending(this.pendingSamples), start, true)
+      while (this.pendingBoundaries.length && this.pendingBoundaries[0] <= start) this.pendingBoundaries.shift()
+      const boundary = this.pendingBoundaries[0]
+      const size = Math.min(this.pendingSamples, this.sampleRate * 6, boundary === undefined ? Infinity : boundary - start)
+      const final = size === this.pendingSamples
+      const natural = boundary === start + size
+      if (natural) this.pendingBoundaries.shift()
+      this.enqueue(this.takePending(size), start, natural || final)
+      this.pendingContainsSpeech = this.pendingStart < this.lastSpeechSample || this.pendingBoundaries.length > 0
     }
     this.pendingChunks = []
     this.pendingSamples = 0
     this.pendingContainsSpeech = false
+    this.pendingBoundaries = []
     await this.queued
   }
 
@@ -355,7 +423,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private enqueue(audio: Float32Array, startSample: number, isSentenceBoundary = false): void {
     const sequence = this.sequence++
     const startMs = Math.round(startSample / this.sampleRate * 1000)
-    const endMs = Math.round((startSample + audio.length) / this.sampleRate * 1000)
+    const endSample = startSample + audio.length
+    const endMs = Math.round(endSample / this.sampleRate * 1000)
     if (this.queuedChunks >= this.maximumQueuedChunks) {
       this.emitError(activeTranslate('svcModelTooSlow'))
       this.emitGap(sequence, startMs, endMs, 'queue-overflow')
@@ -364,20 +433,85 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.queuedChunks += 1
     this.diagnostics.maximumQueued = Math.max(this.diagnostics.maximumQueued, this.queuedChunks)
     const enqueuedAt = Date.now()
+    const queuedAt = performance.now()
+    // First speech in this chunk, not the start of the whole continuous utterance.
+    // Sample-clock backdating retains collection time even when the queue is full.
+    const chunkStartAt = this.audioClock.at - (this.audioClock.sample - startSample) / this.sampleRate * 1000
+    const chunkOnset = this.speechOnsets.find(onset => onset.sample >= startSample && onset.sample < endSample)
+    const chunkSpeechAt = chunkOnset?.at ?? chunkStartAt
+    const chunkDetectedAt = chunkOnset ? Math.max(chunkSpeechAt, Math.min(queuedAt, chunkOnset.detected)) : chunkSpeechAt
     this.queued = this.queued.catch(() => undefined).then(async () => {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
+      const dequeuedAt = performance.now()
       const wav = wavFromFloat32(audio, this.sampleRate)
-      if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) return
+      if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) {
+        if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
+        return
+      }
+      const requestAt = performance.now()
       const response = await this.transcribeWithRetry(wav)
+      const responseAt = performance.now()
       const sourceText = sanitizeAsrText(response.text)
-      if (!sourceText) return
+      if (!sourceText) {
+        recordCaptionEvent('asr_empty')
+        this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
+        if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
+        return
+      }
       this.rollingContext = sourceText
-      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary }
+      const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary: isSentenceBoundary || this.explicitBoundaries.has(endSample) }
+      const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
+      this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
+      const timing: CaptionTiming = { queuedAt, dequeuedAt, requestAt, responseAt, chunkSpeechAt, chunkDetectedAt, ...(onsets[0] ? { speechAt: onsets[0].at, detectedAt: onsets[0].detected } : {}) }
+      attachCaptionTiming(event, timing)
+      this.lastTranscript = event
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
+      recordCaptionEvent('asr_failed')
+      this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
       this.emitError(error instanceof Error ? error.message : activeTranslate('svcModelTranscribeFailed'))
       this.emitGap(sequence, startMs, endMs, 'request-failed')
-    }).finally(() => { this.queuedChunks -= 1 })
+    }).finally(() => {
+      this.queuedChunks -= 1
+      this.explicitBoundaries.delete(endSample)
+      if (!this.stopped) this.flushPending()
+    })
+  }
+
+  private recordOverflow(startMs: number, endMs: number): void {
+    recordCaptionEvent('audio_gap')
+    this.speechOnsets = this.speechOnsets.filter(onset => onset.sample / this.sampleRate * 1000 >= endMs)
+    if (!this.overflowGap || this.overflowGap.endMs !== startMs) {
+      this.flushOverflow()
+      this.emitError(activeTranslate('svcModelTooSlow'))
+      this.diagnostics.gaps += 1
+      this.overflowGap = { id: `gap-${this.sequence++}`, revision: 1, status: 'gap', startMs, endMs, sourceText: '', gapReason: 'queue-overflow', emittedEndMs: endMs }
+      const { emittedEndMs: _, ...event } = this.overflowGap
+      this.listeners.forEach(listener => listener(event))
+      return
+    }
+    this.overflowGap.endMs = endMs
+    if (endMs - this.overflowGap.emittedEndMs >= 1000) this.emitOverflow()
+  }
+
+  private emitOverflow(): void {
+    if (!this.overflowGap || this.overflowGap.endMs === this.overflowGap.emittedEndMs) return
+    this.overflowGap.emittedEndMs = this.overflowGap.endMs
+    this.overflowGap.revision += 1
+    const { emittedEndMs: _, ...event } = this.overflowGap
+    this.listeners.forEach(listener => listener(event))
+  }
+
+  private flushOverflow(): void {
+    this.emitOverflow()
+    this.overflowGap = undefined
+  }
+
+  private closePreviousCaption(startMs: number): void {
+    const previous = this.lastTranscript
+    if (!previous || previous.isSentenceBoundary || previous.endMs !== startMs) return
+    this.lastTranscript = { ...previous, revision: previous.revision + 1, isSentenceBoundary: true }
+    this.listeners.forEach(listener => listener({ ...this.lastTranscript!, boundaryOnly: true }))
   }
 
   private emitGap(sequence: number, startMs: number, endMs: number, gapReason: TranscriptEvent['gapReason']): void {
@@ -387,6 +521,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   }
 
   private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
+    const request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }
     const delays = [0, 250, 750, 1750]
     let lastError: unknown
     for (const delay of delays) {
@@ -398,8 +533,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         try {
           const result = window.s2t ? await window.s2t.transcribeAudioChunk({
             profileId: this.profile.id, endpoint: this.profile.endpoint, model: this.profile.model,
-            language: this.language, requiresApiKey: this.profile.requiresApiKey !== false, prompt: this.rollingPrompt(), audio
-          }) : await this.transcribeThroughWebGateway(audio)
+            language: request.language, requiresApiKey: this.profile.requiresApiKey !== false, prompt: request.prompt, audio
+          }) : await this.transcribeThroughWebGateway(audio, request)
           this.diagnostics.completed += 1
           return result
         } finally { this.diagnostics.inFlight -= 1; this.diagnostics.totalRequestMs += Date.now() - startedAt }
@@ -407,6 +542,9 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         // A hung gateway must release the live-caption queue immediately;
         // retrying the same timed-out request would leave the screen stalled.
         if (error instanceof Error && error.name === 'TimeoutError') throw error
+        // Authentication, validation and unsupported-model errors cannot be
+        // repaired by resending the same audio. Keep retries for transient errors.
+        if (error instanceof HttpServiceError && error.status >= 400 && error.status < 500 && ![408, 409, 425, 429].includes(error.status)) throw error
         if (error instanceof HttpServiceError && error.status === 429) {
           this.diagnostics.rateLimited += 1
           // Do not rapidly spend retries inside the same rate-limit window.
@@ -477,8 +615,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingStart += discarded
   }
 
-  private async transcribeThroughWebGateway(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
-    const prompt = this.rollingPrompt()
+  private async transcribeThroughWebGateway(audio: ArrayBuffer, request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
+    const prompt = request.prompt
     const controller = new AbortController()
     this.activeGatewayRequests.add(controller)
     const timeout = window.setTimeout(() => controller.abort(), this.gatewayTimeoutMs)
@@ -487,7 +625,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         method: 'POST',
         headers: {
           'content-type': 'audio/wav',
-          'x-s2t-language': this.language,
+          'x-s2t-idempotency-key': request.key,
+          'x-s2t-language': request.language,
           ...(this.profile.gatewayProfileId ? { 'x-s2t-model-id': this.profile.gatewayProfileId } : {}),
           ...(this.profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
           ...(prompt ? { 'x-s2t-prompt': encodeURIComponent(prompt) } : {})

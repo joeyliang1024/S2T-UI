@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "simulatedLostResponse": true,
+  "requests": [
+    {
+      "key": "becc79cc-c154-463d-a9ce-ba47638628a9",
+      "language": "en",
+      "bytes": 48044
+    },
+    {
+      "key": "becc79cc-c154-463d-a9ce-ba47638628a9",
+      "language": "en",
+      "bytes": 48044
+    }
+  ],
+  "result": {
+    "text": "Isolated simulated speech for capacity testing.",
+    "diagnostics": {
+      "requests": 2,
+      "completed": 1,
+      "rateLimited": 0,
+      "gaps": 0,
+      "inFlight": 0,
+      "maximumQueued": 0,
+      "totalRequestMs": 447,
+      "totalQueueWaitMs": 0,
+      "maximumPendingMs": 0
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "datasourceUrl": "http://prometheus.s2t-stress-20261005.svc.cluster.local:9090",
+  "query": "up",
+  "status": "success",
+  "targetCount": 23
+}

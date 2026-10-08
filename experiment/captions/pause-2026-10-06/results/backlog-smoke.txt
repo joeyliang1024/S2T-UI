@@ -1,0 +1,1 @@
+PASS 100 capture streams with 12s latency: all PCM retained in order, bounded queue/audio backlog, final drain stable retry fingerprint, empty-tail sentence closure and manual-edit preservation

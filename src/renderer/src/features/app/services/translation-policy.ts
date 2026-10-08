@@ -32,8 +32,8 @@ export const canMergeHttpCaption = (previous: TranscriptEvent | undefined, next:
   previous.endMs > clearedThroughMs && !previous.isSentenceBoundary &&
   next.startMs - previous.endMs < 900 && next.endMs - previous.startMs < 12_000)
 
-export const shouldAutoTranslate = (entry: TranscriptEvent, strategy: 'realtime' | 'sentence', elapsedMs: number): boolean => {
+export const shouldAutoTranslate = (entry: TranscriptEvent, strategy: 'realtime' | 'sentence', elapsedMs: number, sentenceWaitMs = maximumSentenceWaitMs): boolean => {
   if (entry.status !== 'final' || !entry.sourceText.trim() || entry.translatedText || entry.translationStatus) return false
   if (strategy === 'realtime') return true
-  return Boolean(entry.isSentenceBoundary || /[。！？.!?]$/.test(entry.sourceText.trim()) || elapsedMs - entry.endMs >= maximumSentenceWaitMs)
+  return Boolean(entry.isSentenceBoundary || /[。！？.!?]$/.test(entry.sourceText.trim()) || elapsedMs - entry.endMs >= sentenceWaitMs)
 }

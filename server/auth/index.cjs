@@ -18,7 +18,7 @@ const localSecret = async (directory) => {
     await writeFile(temporary, secret, { mode: 0o600 }); await rename(temporary, file); return secret
   }
 }
-const createAuth = async (storage, environment = process.env) => {
+const createAuth = async (storage, environment = process.env, limits = require('../shared-limits.cjs').createSharedLimits(environment, {})) => {
   // Bootstrap admin creation and every later user lookup query the backing
   // store. Storage owns the schema migration (Postgres CREATE TABLE), so wait
   // for it before the first SELECT — otherwise startup races the DDL and auth
@@ -39,27 +39,20 @@ const createAuth = async (storage, environment = process.env) => {
   if (cookieSameSite === 'None' && environment.S2T_COOKIE_SECURE !== 'true') throw new Error('S2T_COOKIE_SAME_SITE=none 必須同時設定 S2T_COOKIE_SECURE=true')
   const setSessionCookie = (response, token) => response.setHeader('set-cookie', `s2t_auth=${token}; Path=/; HttpOnly; SameSite=${cookieSameSite}; Max-Age=604800${environment.S2T_COOKIE_SECURE === 'true' ? '; Secure' : ''}`)
   const issue = (user) => jwt.sign({ sub: user.id }, secret, { algorithm: 'HS256', expiresIn: '7d', jwtid: randomBytes(18).toString('base64url') })
-  const failedLogins = new Map()
-  const loginWindowMs = 15 * 60_000
-  const maximumLoginFailures = 8
-  const loginKey = (request, input) => `${request.socket.remoteAddress || 'unknown'}:${typeof input?.username === 'string' ? input.username.trim().toLowerCase().slice(0, 64) : ''}`
-  const recentFailures = (key) => {
-    const now = Date.now()
-    const recent = (failedLogins.get(key) || []).filter((time) => now - time < loginWindowMs)
-    if (recent.length) failedLogins.set(key, recent); else failedLogins.delete(key)
-    return recent
-  }
+  const loginKey = (request, input) => `${environment.S2T_KUBERNETES_MODE === 'true' ? 'account' : request.socket.remoteAddress || 'unknown'}:${typeof input?.username === 'string' ? input.username.trim().toLowerCase().slice(0, 64) : ''}`
   const ensureBootstrapAdmin = async () => {
     // Environment values define the initial user. Later users can always
     // register independently; if a matching account already exists it is
     // intentionally left unchanged.
     const username = environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin'
     const password = environment.S2T_BOOTSTRAP_ADMIN_PASSWORD?.trim() || 'admin'
-    if (await users.findByUsername(username)) return
+    const existing = await users.findByUsername(username)
+    if (existing?.role === 'admin') return
+    if (existing) throw new Error('Bootstrap admin 名稱已被一般帳號使用，請更換 S2T_BOOTSTRAP_ADMIN_USERNAME')
     try {
       await users.create({ username, passwordHash: await bcrypt.hash(password, 12), NT: username, Department: 'admin', role: 'admin' })
       logger.info('auth.bootstrap-admin.created', { username })
-    } catch (error) { if (!(error instanceof Error) || error.message !== '帳號已存在') throw error }
+    } catch (error) { const winner = await users.findByUsername(username); if (!winner || winner.role !== 'admin') throw error }
   }
   await ensureBootstrapAdmin()
   const activeRevocations = async (userId) => {
@@ -119,6 +112,21 @@ const createAuth = async (storage, environment = process.env) => {
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
+      if (url === '/api/admin/users') {
+        const admin = await this.requireUser(request)
+        if (!admin) { send(response, 401, { error: '需要登入' }); return true }
+        if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可管理帳號' }); return true }
+        try {
+          if (request.method === 'GET') send(response, 200, { users: await users.list() })
+          else if (request.method === 'POST') {
+            const input = await readJson(request)
+            if (typeof input.password !== 'string' || input.password.length < 8 || Buffer.byteLength(input.password) > 72) throw new Error('密碼須為 8 至 72 bytes')
+            const user = await users.create({ username: input.username, NT: input.NT, Department: input.Department, role: input.role, passwordHash: await bcrypt.hash(input.password, 12) })
+            send(response, 201, { user })
+          } else send(response, 405, { error: 'Method not allowed' })
+        } catch (error) { send(response, ['帳號已存在', 'NT 已存在'].includes(error.message) ? 409 : 400, { error: error.message }) }
+        return true
+      }
       if (request.method === 'POST' && url === '/api/auth/register') {
         try { const result = await this.register(await readJson(request)); setSessionCookie(response, result.token); send(response, 201, result) } catch (error) {
           // A duplicate account is the user's own doing; anything else means
@@ -133,19 +141,17 @@ const createAuth = async (storage, environment = process.env) => {
         let input
         try { input = await readJson(request) } catch (error) { send(response, 400, { error: error instanceof Error ? error.message : '登入格式錯誤' }); return true }
         const key = loginKey(request, input)
-        if (recentFailures(key).length >= maximumLoginFailures) { send(response, 429, { error: '登入失敗次數過多，請 15 分鐘後再試。' }); return true }
-        try {
-          const result = await this.login(input)
-          failedLogins.delete(key)
-          setSessionCookie(response, result.token)
-          send(response, 200, result)
-        } catch (error) {
-          const failures = recentFailures(key); failures.push(Date.now()); failedLogins.set(key, failures)
-          // The submitted password is never logged; the attempt count is what
-          // an operator needs to spot a brute-force run.
-          logger.warn('auth.login.failed', { username: typeof input?.username === 'string' ? input.username.slice(0, 64) : '', failures: failures.length, error })
+        if (!(await limits.loginAllowed(key)).accepted) { send(response, 429, { error: '登入失敗次數過多，請 15 分鐘後再試。' }); return true }
+        let result
+        try { result = await this.login(input) } catch (error) {
+          const failures = await limits.loginFailed(key)
+          logger.warn('auth.login.failed', { username: typeof input?.username === 'string' ? input.username.slice(0, 64) : '', failures: failures.count, error })
           send(response, 401, { error: error instanceof Error ? error.message : '登入失敗' })
+          return true
         }
+        await limits.loginSucceeded(key)
+        setSessionCookie(response, result.token)
+        send(response, 200, result)
         return true
       }
       if (request.method === 'GET' && url === '/api/auth/session') {

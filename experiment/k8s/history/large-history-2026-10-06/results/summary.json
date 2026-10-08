@@ -1,0 +1,38 @@
+{
+  "100-users": {
+    "passed": 100,
+    "concurrency": 4,
+    "saveP50Ms": 256,
+    "saveP95Ms": 448,
+    "saveMaxMs": 533,
+    "elapsedMs": 23556
+  },
+  "burst": {
+    "passed": 100,
+    "concurrency": 100,
+    "saveP50Ms": 3820,
+    "saveP95Ms": 6062,
+    "saveMaxMs": 6343,
+    "elapsedMs": 21449
+  },
+  "mixed-burst": {
+    "passed": 100,
+    "concurrency": 100,
+    "saveP50Ms": 3469,
+    "saveP95Ms": 5655,
+    "saveMaxMs": 5819,
+    "elapsedMs": 19897
+  },
+  "mixedModels": {
+    "chains": 4000,
+    "failedChains": 0,
+    "dropped": 0,
+    "chainLatencyMs": {
+      "n": 4000,
+      "p50": 941,
+      "p95": 1211,
+      "p99": 12223,
+      "max": 12468
+    }
+  }
+}

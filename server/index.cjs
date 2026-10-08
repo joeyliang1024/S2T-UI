@@ -1,3 +1,8 @@
+const { validateAdminParameters } = require('./admin-parameters.cjs')
+const metrics = require('./metrics.cjs')
+const { loadSessionSnapshot } = require('./session-snapshot.cjs')
+const { readSessionPayload, createSessionWriteGate } = require('./session-payload.cjs')
+const withSessionWrite = createSessionWriteGate()
 const { matchesJob, finalizeDiarizationSession } = require('./diarization-session.cjs')
 const { createServer } = require('node:http')
 const { readFile, stat } = require('node:fs/promises')
@@ -8,21 +13,27 @@ const { config } = require('dotenv')
 // Existing process environment still wins (dotenv's default override=false).
 config({ path: join(process.cwd(), '.env') })
 const { pipeline } = require('node:stream/promises')
+const { Transform } = require('node:stream')
 const { convertImportAudio, MAX_IMPORT_BYTES } = require('./import-audio.cjs')
 const { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } = require('node:crypto')
 const OpenAI = require('openai').default
 const { toFile } = require('openai')
-const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav } = require('./sherpa-worker-pool.cjs')
+const { createAudioClient, handleAudioService, proxyImport } = require('./audio-service.cjs')
+const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav, transcodeM4a } = createAudioClient(process.env)
 const { localModelName, NEMOTRON_MODEL, localDiarizationProfiles, resolveLocalDiarizationModel } = require('./local-diarization.cjs')
-const { nemotronStatus } = require('./sherpa-worker-pool.cjs')
+const { nemotronStatus } = createAudioClient(process.env)
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
 const { findIdentityCandidates, findMatches, identityCandidates, identityKey, decideIdentity, fastMatch } = require('./voiceprint-matching.cjs')
 const { createStorage } = require('./storage/index.cjs')
 const { createAuth } = require('./auth/index.cjs')
-const { transcodeM4a } = require('./audio-preprocess.cjs')
 const { logger, newRequestId } = require('./logger.cjs')
-const { requestLimits, createRequestLimiter, upstreamRateLimit } = require('./request-limits.cjs')
+const { requestLimits, upstreamRateLimit } = require('./request-limits.cjs')
 
+
+const { RecordingChunks } = require('./recording-chunks.cjs')
+const { executeIdempotent, hash: requestHash } = require('./idempotency.cjs')
+const { createSharedLimits } = require('./shared-limits.cjs')
+const sharedLimits = createSharedLimits(process.env, requestLimits())
 
 const productTitleImage = (() => {
   const imagePath = (process.env.S2T_PRODUCT_TITLE_IMAGE || '').trim()
@@ -34,7 +45,7 @@ const productTitleImage = (() => {
 })()
 const port = Number(process.env.S2T_WEB_PORT || 8787)
 const processRole = process.env.S2T_PROCESS_ROLE || 'all'
-if (!['all', 'api', 'audio-worker'].includes(processRole)) throw new Error('S2T_PROCESS_ROLE 必須是 all、api 或 audio-worker')
+if (!['all', 'api', 'audio-worker', 'audio-service'].includes(processRole)) throw new Error('S2T_PROCESS_ROLE 必須是 all、api、audio-worker 或 audio-service')
 const maxAsrAudioBytes = 100 * 1024 * 1024
 const service = (name) => ({
   endpoint: process.env[`S2T_${name}_ENDPOINT`] || '',
@@ -83,11 +94,14 @@ try { storage = createStorage(process.env) } catch (error) {
   storageStartupError = error instanceof Error ? error : new Error('storage 設定無效')
   storage = { mode: { blob: 'unavailable', config: 'unavailable', vector: 'unavailable' }, config: {}, ready: Promise.reject(storageStartupError) }
 }
+metrics.instrumentStorage(storage)
 const kubernetesConfigError = process.env.S2T_KUBERNETES_MODE === 'true' && Object.values(storage.mode).some((mode) => mode === 'local')
   ? new Error('Kubernetes 模式必須設定共享 MinIO、PostgreSQL 與 Milvus，不能使用 Pod 本地 storage')
   : null
-const startupError = storageStartupError || kubernetesConfigError
-const authReady = startupError ? Promise.reject(startupError) : createAuth(storage, process.env)
+const recordingChunks = new RecordingChunks(storage)
+const audioConfigurationError = ((processRole === 'audio-service' || (processRole === 'api' && process.env.S2T_AUDIO_SERVICE_URL)) && !process.env.S2T_AUDIO_SERVICE_TOKEN) || (process.env.S2T_KUBERNETES_MODE === 'true' && processRole === 'api' && !process.env.S2T_AUDIO_SERVICE_URL) ? new Error('音訊服務必須設定 S2T_AUDIO_SERVICE_TOKEN；K8s API 必須設定 S2T_AUDIO_SERVICE_URL') : null
+const startupError = storageStartupError || kubernetesConfigError || sharedLimits.configurationError || audioConfigurationError
+const authReady = startupError ? Promise.reject(startupError) : createAuth(storage, process.env, sharedLimits)
 // Readiness reports dependency failures, but a transient startup outage must
 // not become an unhandled rejection that kills the Pod before probes can see
 // the actionable 503. Keep the original promises rejected for callers that
@@ -101,15 +115,31 @@ authReady
 if (startupError) logger.error('startup.failed', { role: processRole, error: startupError })
 if (asrConfigurationError) logger.warn('asr.configuration.incomplete', { error: asrConfigurationError })
 process.on('unhandledRejection', (reason) => logger.error('process.unhandled-rejection', { error: reason }))
+// Optional warmup is explicit, preserving Docker's current startup behavior.
+const audioWarmupReady = (async () => {
+  const operations = (process.env.S2T_AUDIO_WARMUP || '').split(',').map(value => value.trim()).filter(Boolean)
+  for (const operation of operations) {
+    if (operation === 'silero') await warmSileroVad()
+    else if (operation === 'nemotron') await nemotronStatus()
+    else if (operation === 'diarization') {
+      const { wavHeader } = require('./recording-chunks.cjs')
+      await diarizeWav(Buffer.concat([wavHeader(32000, 16000), Buffer.alloc(32000)]))
+    } else throw new Error('S2T_AUDIO_WARMUP 僅接受 silero、nemotron、diarization')
+  }
+})()
+audioWarmupReady.catch(error => logger.warn('audio.warmup.failed', { error }))
 const staticRoot = join(process.cwd(), 'out/renderer')
 const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
 const modelHealthChecks = new Map()
-const acceptLimitedRequest = createRequestLimiter(requestLimits())
+const acceptLimitedRequest = sharedLimits.accept
 const requestLatency = new Map()
 const modelHealthLastState = new Map()
-const latencyBuckets = [.25, .5, 1, 2.5, 5, 10]
+const latencyBuckets = [.025, .05, .1, .25, .5, .8, 1, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120]
 const observeRequest = (path, status, startedAt) => {
-  if (!['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/audio-processing/silero-vad'].includes(path)) return
+  if (!path.startsWith('/api/')) return
+  // IDs and object keys must never become metric labels.
+  path = path.replace(/\/api\/data\/model-credentials\/[^/]+/, '/api/data/model-credentials/id').replace(/\/api\/audio\/.*/, '/api/audio/object')
+  if (!new Set(['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/summaries', '/api/config', '/api/storage', '/api/telemetry/captions', '/api/audio/object', '/api/data/sessions', '/api/data/settings', '/api/data/glossary', '/api/data/voiceprints', '/api/data/diarization-jobs', '/api/data/storage-status', '/api/data/storage-audit', '/api/data/storage-retry', '/api/data/model-registry', '/api/data/model-health', '/api/data/model-credentials/id', '/api/data/summary-templates', '/api/auth/login', '/api/auth/register', '/api/auth/session', '/api/auth/logout', '/api/audio-processing/silero-vad', '/api/audio-processing/status', '/api/audio-processing/import-wav']).has(path)) path = '/api/other'
   const metric = requestLatency.get(path) || { count: 0, errors: 0, sum: 0, buckets: latencyBuckets.map(() => 0) }
   const seconds = Math.max(0, (performance.now() - startedAt) / 1000)
   metric.count += 1; metric.sum += seconds; if (status >= 400) metric.errors += 1
@@ -153,7 +183,8 @@ const prometheusMetrics = () => {
     lines.push(`s2t_sherpa_op_transferred_bytes_total{op="${op}"} ${value.transferredBytes}`)
     lines.push(`s2t_sherpa_op_rtf{op="${op}"} ${value.rtf ?? 0}`)
   }
-  return `${lines.join('\n')}\n`
+  lines.push('# TYPE s2t_gateway_inflight_requests gauge', `s2t_gateway_inflight_requests ${activeHttpRequests}`)
+  return `${lines.join('\n')}\n` + metrics.render()
 }
 const languageNames = { auto: '自动检测（中文、英语、日语或德语）', 'zh-TW': '繁体中文', 'en-US': '英语', en: '英语', 'ja-JP': '日语', ja: '日语', 'de-DE': '德语', de: '德语' }
 const supportedTranslationSourceLanguages = new Set(['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-DE'])
@@ -192,9 +223,9 @@ const normalizeDetectedLanguage = (value) => {
   if (language.startsWith('de')) return 'de-DE'
   return undefined
 }
-const completeText = async (value, messages, maxRetries = 1) => {
+const completeText = async (value, messages, maxRetries = 1, temperature = 0.2) => {
   const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries })
-  const result = await client.chat.completions.create({ model: value.model, temperature: 0.2, messages })
+  const result = await client.chat.completions.create({ model: value.model, temperature, messages })
   return result.choices[0]?.message.content?.trim() || ''
 }
 const credentialKey = (secret) => createHash('sha256').update(`${secret}:s2t-model-credentials:v1`).digest()
@@ -319,7 +350,7 @@ const send = (response, status, body, type = 'application/json; charset=utf-8') 
 // The access log records the status; this line carries the reason, which is
 // what an operator needs (Postgres down vs. MinIO down vs. Milvus down).
 const storageFailure = (response, error, fallback) => {
-  const status = error instanceof SyntaxError ? 400 : 503
+  const status = [400, 413, 415, 503].includes(error?.status) ? error.status : error instanceof SyntaxError ? 400 : 503
   if (status >= 500) logger.warn('storage.request.failed', { status, error })
   return send(response, status, { error: error instanceof Error ? error.message : fallback })
 }
@@ -373,6 +404,28 @@ const updateVoiceprintCompensations = (user, transform) => storage.config.update
 const updateVoiceprintIndex = (user, transform) => storage.config.update(user.id, voiceprintRecordKey, (value) => transform(asList(value)))
 const addAudioCompensation = (user, item) => updateAudioCompensations(user, (entries) => (entries.some((entry) => entry.id === item.id) ? undefined : [...entries, item]))
 const dropAudioCompensation = (user, id) => updateAudioCompensations(user, (entries) => (entries.some((entry) => entry.id === id) ? entries.filter((entry) => entry.id !== id) : undefined))
+const withProtectedAudioUpload = async (user, id, operation) => {
+  const token = randomUUID()
+  const refresh = () => updateAudioCompensations(user, entries => {
+    const item = entries.find(entry => entry.id === id) || { id, createdAt: new Date().toISOString(), eligibleAfter: Date.now() + compensationGraceMs }
+    const leases = (item.uploadLeases || []).filter(lease => lease.token !== token && lease.until > Date.now())
+    return [...entries.filter(entry => entry.id !== id), { ...item, uploadLeases: [...leases, { token, until: Date.now() + 120000 }] }]
+  })
+  await refresh()
+  let lost = false, renewing = false
+  const timer = setInterval(() => {
+    if (renewing || lost) return
+    renewing = true
+    refresh().catch(() => { lost = true }).finally(() => { renewing = false })
+  }, 15000)
+  timer.unref()
+  try { await operation(); if (lost) throw new Error('音訊保存協調失敗，請重試') }
+  finally {
+    clearInterval(timer)
+    await updateAudioCompensations(user, entries => entries.map(item => item.id !== id ? item : { ...item, eligibleAfter: Date.now() + compensationGraceMs, uploadLeases: (item.uploadLeases || []).filter(lease => lease.token !== token && lease.until > Date.now()) }))
+  }
+}
+
 const addVoiceprintCompensation = (user, item) => updateVoiceprintCompensations(user, (entries) => (entries.some((entry) => entry.id === item.id) ? undefined : [...entries, item]))
 const dropVoiceprintCompensation = (user, id) => updateVoiceprintCompensations(user, (entries) => (entries.some((entry) => entry.id === id) ? entries.filter((entry) => entry.id !== id) : undefined))
 const voiceprintThreshold = Math.max(0, Math.min(1, Number(process.env.S2T_VOICEPRINT_THRESHOLD || 0.65)))
@@ -456,6 +509,7 @@ const reconcileAudioCompensations = async (user, sessions) => {
   const referenced = audioKeysInSessions(sessions)
   const processed = []
   for (const item of pending) {
+    if (item.uploadLeases?.some(lease => lease.until > Date.now())) continue
     // Referenced blobs are committed: drop their cleanup intent.
     if (referenced.has(item.id)) { processed.push(item.id); continue }
     // A freshly uploaded blob may be moments away from its session commit.
@@ -469,6 +523,9 @@ const reconcileAudioCompensations = async (user, sessions) => {
 const orphanAudioKeys = async (user, sessions) => {
   if (typeof storage.blob.list !== 'function') return []
   const referenced = audioKeysInSessions(sessions)
+  for (const record of await storage.config.list(user.id, 'recording-')) {
+    if (record.value?.chunks && ['recording', 'finishing', 'completed'].includes(record.value.state)) referenced.add(record.key.slice('recording-'.length))
+  }
   const pending = new Set((await pendingAudioCompensations(user)).map((item) => item.id))
   const keys = await storage.blob.list(user.id, 'audio')
   return keys.flatMap((key) => {
@@ -565,16 +622,23 @@ const runDurableDiarizationJob = async (auth, owner) => {
     await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, `超過最大重試次數（${diarizationJobMaxAttempts}）`).catch(() => undefined)
     return
   }
+  let leaseLost = false
+  let renewingLease = false
   const leaseTimer = typeof storage.config.renewDiarizationJob === 'function' ? setInterval(() => {
-    storage.config.renewDiarizationJob(job.id, owner, job.leaseGeneration).catch(error => logger.warn('diarization.job.renew.failed', { jobId: job.id, error }))
-  }, 60000) : null
+    if (renewingLease || leaseLost) return
+    renewingLease = true
+    storage.config.renewDiarizationJob(job.id, owner, job.leaseGeneration)
+      .then(owned => { if (!owned) leaseLost = true })
+      .catch(error => { leaseLost = true; logger.warn('diarization.job.renew.failed', { jobId: job.id, error }) })
+      .finally(() => { renewingLease = false })
+  }, 30000) : null
   leaseTimer?.unref()
   const jobStartedAt = Date.now()
   logger.info('diarization.job.started', { jobId: job.id, attempt: job.attempts, sessionId: job.sessionId, owner })
   try {
     const user = job.payload?.user
     if (!user?.id || user.id !== job.userId) throw new Error('工作使用者資料無效')
-    const initial = await storage.config.get(user.id, 'sessions')
+    const initial = await loadSessionSnapshot(storage.config, user.id)
     const target = initial?.sessions?.find(session => session.id === job.sessionId)
     if (!target) throw new Error('retry:紀錄尚未同步完成')
     if (job.payload?.processingToken && target.processingToken === job.payload.processingToken && target.processingStage !== 'diarization' && target.processingState === 'running') throw new Error('retry:紀錄尚未完成尾段處理')
@@ -601,7 +665,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
     } else rawTurns = await diarizeWav(audio, resolveLocalDiarizationModel(job.payload?.localModel))
     const turns = await labelDiarizationTurns(user, audio, rawTurns)
     if (!turns.length) throw new Error('講者分離服務沒有回傳有效區段')
-    const stored = await storage.config.get(user.id, 'sessions')
+    const stored = await loadSessionSnapshot(storage.config, user.id)
     const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []
     const version = Number.isSafeInteger(stored?.version) ? stored.version : 0
     let matched = false
@@ -611,12 +675,10 @@ const runDurableDiarizationJob = async (auth, owner) => {
       return finalizeDiarizationSession(session, job, turns)
     })
     if (!matched) throw new Error('retry:紀錄尚未同步完成')
-    // A pod can be terminated while inference is in flight.  Never let a
-    // worker whose five-minute lease has expired write an older result over
-    // the worker that took over the same durable job.
-    if (!await storage.config.stillOwnsDiarizationJob(job.id, owner, job.leaseGeneration)) return
-    if (!await storage.config.compareAndSwap(user.id, 'sessions', version, { sessions: next, version: version + 1 })) throw new Error('retry:紀錄已更新，背景工作將重試')
-    await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration)
+    if (leaseLost) return
+    const committed = await storage.config.commitDiarizationJob(job.id, owner, job.leaseGeneration, user.id, version, { sessions: next, version: version + 1 })
+    if (committed === 'lost') return
+    if (committed === 'conflict') throw new Error('retry:紀錄已更新，背景工作將重試')
     logger.info('diarization.job.completed', { jobId: job.id, attempt: job.attempts, durationMs: Date.now() - jobStartedAt, turns: turns.length })
   } catch (error) {
     const reason = error instanceof Error ? error.message : '背景講者分離失敗'
@@ -625,7 +687,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
     // real failure is an error so an operator sees it without debug logging.
     if (reason.startsWith('retry:')) logger.warn('diarization.job.retry', fields)
     else logger.error('diarization.job.failed', fields)
-    await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, reason)
+    if (!leaseLost) await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, reason)
   } finally { if (leaseTimer) clearInterval(leaseTimer) }
 }
 const staticFile = async (request, response) => {
@@ -651,7 +713,14 @@ const rateLimitResponse = (response, result, message) => {
 
 let acceptingDiarizationJobs = true
 let activeDiarizationJob = null
-if (processRole !== 'api' && typeof storage.config.claimDiarizationJob === 'function') {
+let pruningRequests = false
+const requestCleanup = setInterval(() => {
+  if (pruningRequests || draining || typeof storage.config.pruneExpiredRequests !== 'function') return
+  pruningRequests = true
+  storage.config.pruneExpiredRequests().catch(error => logger.warn('requests.cleanup.failed', { error })).finally(() => { pruningRequests = false })
+}, 60000)
+requestCleanup.unref()
+if (['all', 'audio-worker'].includes(processRole) && typeof storage.config.claimDiarizationJob === 'function') {
   const owner = `gateway-${randomUUID()}`
   authReady.then((auth) => {
     const drain = () => {
@@ -670,14 +739,24 @@ const handleHttpRequest = async (request, response) => {
   // lets Kubernetes restart a stuck Node process without amplifying a storage
   // outage. Readiness below verifies the shared durable state instead.
   if (request.method === 'GET' && request.url === '/livez') return send(response, 200, { live: true, role: processRole })
-  if (request.method === 'GET' && request.url === '/metrics') return send(response, 200, prometheusMetrics(), 'text/plain; version=0.0.4; charset=utf-8')
+  if (request.method === 'GET' && request.url === '/metrics') {
+    let backlog = ''
+    if (typeof storage.config.diarizationBacklog === 'function') {
+      try { const value = await storage.config.diarizationBacklog(); backlog = `# TYPE s2t_diarization_pending_jobs gauge\ns2t_diarization_pending_jobs ${value.pending}\n# TYPE s2t_diarization_pending_audio_seconds gauge\ns2t_diarization_pending_audio_seconds ${value.audioSeconds}\n# TYPE s2t_diarization_oldest_seconds gauge\ns2t_diarization_oldest_seconds ${value.oldest}\n` } catch { /* Keep independent gateway metrics available during DB outages. */ }
+    }
+    return send(response, 200, prometheusMetrics() + backlog, 'text/plain; version=0.0.4; charset=utf-8')
+  }
   if (request.method === 'GET' && request.url === '/readyz') {
-    try { if (kubernetesConfigError) throw kubernetesConfigError; if (processRole !== 'audio-worker' && asrConfigurationError) throw asrConfigurationError; await storage.ready; await authReady; return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
+    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (quiescing || draining) throw new Error('服務正在排空'); await storage.ready; if (typeof storage.config.verifySchema === 'function') await storage.config.verifySchema(); await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
     catch (error) { return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' }) }
   }
   // The worker has a probe-only HTTP surface. It deliberately cannot serve
   // authenticated API traffic, but Kubernetes can still restart it when its
   // process or shared durable dependencies are unhealthy.
+  if (processRole === 'audio-service') {
+    if (startupError) return send(response, 503, { error: startupError.message })
+    try { return await handleAudioService(request, response, readBody, send) } catch (error) { if (!response.headersSent) return send(response, error.status || 503, { error: error.message }); response.destroy() }
+  }
   if (processRole === 'audio-worker') return send(response, 404, { error: 'audio worker only exposes health probes' })
   const origin = request.headers.origin
   const host = request.headers.host || ''
@@ -685,19 +764,31 @@ const handleHttpRequest = async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after') }
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent', 'access-control-allow-credentials': 'true' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, content-encoding, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
   // failed schema migration). Answer 503 instead of letting that rejection
   // escape the request listener: an unhandled rejection would crash the whole
   // gateway on its first API request.
-  if (kubernetesConfigError) return send(response, 503, { error: kubernetesConfigError.message })
+  if (startupError) return send(response, 503, { error: startupError.message })
   let auth
   try { auth = await authReady } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'storage 尚未就緒，無法處理請求' }) }
   const requestPath = new URL(request.url, 'http://localhost').pathname
   const startedAt = performance.now()
   response.once('finish', () => observeRequest(requestPath, response.statusCode, startedAt))
   if (await auth.handle(request, response, send)) return
+  if (request.method === 'POST' && request.url === '/api/telemetry/captions') {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    const limit = await acceptsRequest(request, 'telemetry', user.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Telemetry rate limited')
+    try {
+      const payload = JSON.parse((await readBody(request, 16384)).toString('utf8'))
+      if (!metrics.acceptCaptionSamples(payload)) return send(response, 400, { error: 'Invalid caption measurements' })
+      return send(response, 200, { accepted: true })
+    } catch (error) { return send(response, error.status || 400, { error: 'Invalid caption measurements' }) }
+  }
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
+    capabilities: { durableRecordingChunks: true, distributed: process.env.S2T_KUBERNETES_MODE === 'true' },
     branding: { titleImage: productTitleImage },
     asr: publicService(asr, '/api/transcriptions'),
     asrProfiles: configuredAsrProfiles.map(publicAsrProfile),
@@ -715,6 +806,38 @@ const handleHttpRequest = async (request, response) => {
     catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'Storage is unavailable', mode: storage.mode, schemaVersion: storage.schemaVersion, ready: false, compensationGraceMs }) }
   }
   const storagePath = new URL(request.url, 'http://localhost').pathname
+  const recordingMatch = /^\/api\/data\/recordings\/([A-Za-z0-9._-]{1,120})(?:\/(chunks)\/(\d+)|(\/(?:finish|promote)))?$/.exec(storagePath)
+  if (recordingMatch) {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    const id = recordingMatch[1]
+    try {
+      if (request.method === 'DELETE' && !recordingMatch[2] && !recordingMatch[4]) { await recordingChunks.removeCompleted(user.id, id); return send(response, 204, '') }
+      if (request.method === 'GET' && !recordingMatch[2] && !recordingMatch[4]) {
+        const value = await recordingChunks.status(user.id, id)
+        return value ? send(response, 200, { sampleRate: value.sampleRate, state: value.state, contiguousChunks: value.contiguousChunks, persistedSamples: value.persistedSamples, audioKey: value.audioKey }) : send(response, 404, { error: '找不到錄音' })
+      }
+      if (request.method === 'PUT' && recordingMatch[2]) {
+        const audio = await readBody(request, 1024 ** 2)
+        return send(response, 200, await recordingChunks.append(user.id, id, Number(recordingMatch[3]), Number(request.headers['x-s2t-start-sample']), Number(request.headers['x-s2t-sample-rate']), audio))
+      }
+      if (request.method === 'POST' && recordingMatch[4] === '/promote') {
+        const body = JSON.parse((await readBody(request, 4096)).toString('utf8'))
+        if (typeof body.audioKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/.test(body.audioKey) || body.audioKey === id) return send(response, 400, { error: '無效的正式音訊 ID' })
+        const value = await recordingChunks.status(user.id, id)
+        if (value?.state !== 'completed') return send(response, 409, { error: '錄音尚未完成' })
+        const audio = await storage.blob.readStream(user.id, `audio/${id}`)
+        if (!audio) return send(response, 503, { error: '錄音備份暫時不可用' })
+        await withProtectedAudioUpload(user, body.audioKey, () => storage.blob.putStream(user.id, `audio/${body.audioKey}`, audio, value.persistedSamples * 2 + 44))
+        return send(response, 201, { saved: true, pendingSessionCommit: true })
+      }
+      if (request.method === 'POST' && recordingMatch[4]) {
+        const body = JSON.parse((await readBody(request, 4096)).toString('utf8'))
+        return send(response, 200, await recordingChunks.finish(user.id, id, body.totalChunks, body.totalSamples))
+      }
+      return send(response, 405, { error: 'Method not allowed' })
+    } catch (error) { return send(response, error.status || (error instanceof SyntaxError ? 400 : 503), { error: error.message }) }
+  }
   if (storagePath === '/api/data/storage-status' && request.method === 'GET') {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
@@ -728,7 +851,7 @@ const handleHttpRequest = async (request, response) => {
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
       await reconcileVoiceprintCompensations(user)
-      const stored = await storage.config.get(user.id, 'sessions')
+      const stored = await loadSessionSnapshot(storage.config, user.id)
       const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []
       await reconcileAudioCompensations(user, sessions)
       return send(response, 200, { retried: true, audioPending: (await pendingAudioCompensations(user)).length, voiceprintPending: (await pendingVoiceprintCompensations(user)).length })
@@ -738,7 +861,7 @@ const handleHttpRequest = async (request, response) => {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
-      const stored = await storage.config.get(user.id, 'sessions')
+      const stored = await loadSessionSnapshot(storage.config, user.id)
       const sessions = Array.isArray(stored?.sessions) ? stored.sessions : []
       const orphans = await orphanAudioKeys(user, sessions)
       if (request.method === 'POST') await Promise.all(orphans.map((id) => storage.blob.remove(user.id, `audio/${id}`)))
@@ -750,13 +873,13 @@ const handleHttpRequest = async (request, response) => {
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
       if (request.method === 'GET') {
-        const stored = await storage.config.get(user.id, 'sessions')
-        const value = Array.isArray(stored) ? { sessions: stored, version: 0 } : stored
-        return send(response, 200, value && Array.isArray(value.sessions) && Number.isSafeInteger(value.version) ? value : { sessions: [], version: 0 })
+        return send(response, 200, await loadSessionSnapshot(storage.config, user.id))
       }
-      const body = JSON.parse((await readBody(request, 5 * 1024 * 1024)).toString('utf8'))
-      if (!Array.isArray(body.sessions) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'sessions 與 version 必須有效' })
-      const stored = await storage.config.get(user.id, 'sessions')
+      return await withSessionWrite(async () => {
+      if (request.destroyed) throw Object.assign(new Error('紀錄同步傳輸中斷'), { status: 400 })
+      const body = await readSessionPayload(request)
+      if (!body || typeof body !== 'object' || !Array.isArray(body.sessions) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'sessions 與 version 必須有效' })
+      const stored = await loadSessionSnapshot(storage.config, user.id)
       const previousSessions = Array.isArray(stored?.sessions) ? stored.sessions : Array.isArray(stored) ? stored : []
       const sessions = canonicalSessions(body.sessions)
       const previousAudioKeys = audioKeysInSessions(previousSessions)
@@ -778,7 +901,13 @@ const handleHttpRequest = async (request, response) => {
       }
       await reconcileAudioCompensations(user, sessions).catch(() => undefined)
       return send(response, 200, { saved: true, version })
-    } catch (error) { return storageFailure(response, error, '無法保存紀錄') }
+      })
+    } catch (error) {
+      // Finish the structured error before closing an unread/oversized body.
+      if (!request.complete) { response.setHeader('connection', 'close'); response.once('finish', () => request.destroy()) }
+      if (error?.status === 503) response.setHeader('retry-after', '1')
+      return storageFailure(response, error, '無法保存紀錄')
+    }
   }
   if (storagePath === '/api/data/glossary' && (request.method === 'GET' || request.method === 'POST')) {
     const user = await auth.requireUser(request)
@@ -804,11 +933,17 @@ const handleHttpRequest = async (request, response) => {
     try {
       if (request.method === 'GET') {
         const stored = await storage.config.get(user.id, 'app-settings')
+        if (user.role !== 'admin' && stored?.settings) delete stored.settings.adminParameters
         return send(response, 200, stored && !Array.isArray(stored.settings) && stored.settings && typeof stored.settings === 'object' && Number.isSafeInteger(stored.version) ? stored : { settings: {}, version: 0 })
       }
       const body = JSON.parse((await readBody(request, 512 * 1024)).toString('utf8'))
       if (!body.settings || typeof body.settings !== 'object' || Array.isArray(body.settings) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'settings 與 version 必須有效' })
       const settings = JSON.parse(JSON.stringify(body.settings))
+      if (user.role !== 'admin' && settings.adminParameters !== undefined) return send(response, 403, { error: '只有 admin 可客製化進階參數' })
+      if (settings.adminParameters !== undefined) {
+        try { settings.adminParameters = validateAdminParameters(settings.adminParameters) }
+        catch (error) { return send(response, 400, { error: error.message }) }
+      }
       if (!await storage.config.compareAndSwap(user.id, 'app-settings', body.version, { settings, version: body.version + 1 })) return send(response, 409, { error: '設定已被其他視窗更新；請重新載入後再儲存。' })
       return send(response, 200, { saved: true, version: body.version + 1 })
     } catch (error) { return storageFailure(response, error, '無法保存設定') }
@@ -875,10 +1010,11 @@ const handleHttpRequest = async (request, response) => {
     catch (error) { return send(response, 503, { sileroVad: { available: false, reason: error instanceof Error ? error.message : 'Silero VAD 狀態無法取得' }, dynaudnorm: { available: false, reason: '音訊前處理 worker 無法取得狀態' } }) }
   }
   if (storagePath === '/api/audio-processing/silero-vad' && request.method === 'POST') {
-    const limit = acceptsRequest(request, 'silero-vad')
-    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many Silero VAD requests. Try again later.')
     const user = await auth.requireUser(request)
+    const limit = await acceptsRequest(request, 'silero-vad', user?.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many Silero VAD requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
+
     try {
       if (!safeAudioContentType(request.headers['content-type'])) return send(response, 415, { error: 'Silero VAD 僅接受支援的音訊格式' })
       const audio = await readBody(request, maxAsrAudioBytes)
@@ -890,10 +1026,11 @@ const handleHttpRequest = async (request, response) => {
   }
   if (storagePath === '/api/audio-processing/import-wav' && request.method === 'POST') {
     const user = await auth.requireUser(request)
-    if (!user) return send(response, 401, { error: '需要登入' })
-    const limit = acceptsRequest(request, 'transcode')
+    const limit = await acceptsRequest(request, 'transcode', user?.id)
     if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many import conversions.')
+    if (!user) return send(response, 401, { error: '需要登入' })
     if (Number(request.headers['content-length']) > MAX_IMPORT_BYTES) return send(response, 413, { error: '匯入檔案不可超過 2 GB。' })
+    if (processRole === 'api' && process.env.S2T_AUDIO_SERVICE_URL) return proxyImport(request, response)
     const controller = new AbortController()
     const abort = () => { if (!response.writableFinished) controller.abort() }
     request.once('aborted', abort); response.once('close', abort)
@@ -913,10 +1050,11 @@ const handleHttpRequest = async (request, response) => {
   if (storagePath === '/api/audio-processing/transcode' && request.method === 'POST') {
     const format = new URL(request.url, 'http://localhost').searchParams.get('format')
     if (format !== 'm4a') return send(response, 400, { error: '目前只支援轉檔為 M4A' })
-    const limit = acceptsRequest(request, 'transcode')
-    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcode requests. Try again later.')
     const user = await auth.requireUser(request)
+    const limit = await acceptsRequest(request, 'transcode', user?.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcode requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
+
     try {
       if (!safeAudioContentType(request.headers['content-type'])) return send(response, 415, { error: '轉檔僅接受支援的音訊格式' })
       const audio = await readBody(request, maxAsrAudioBytes)
@@ -938,7 +1076,10 @@ const handleHttpRequest = async (request, response) => {
       }
       const body = JSON.parse((await readBody(request, 32 * 1024)).toString('utf8'))
       if (typeof body.sessionId !== 'string' || typeof body.audioKey !== 'string' || !/^[A-Za-z0-9._-]{1,160}$/.test(body.audioKey)) return send(response, 400, { error: 'sessionId 與 audioKey 必須有效' })
-      const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization', ...(body.localModel ? { localModel: resolveLocalDiarizationModel(body.localModel) } : {}), ...(typeof body.processingToken === 'string' ? { processingToken: body.processingToken } : {}) } })
+      const sessionMetadata = await loadSessionSnapshot(storage.config, user.id)
+      const sessionDuration = sessionMetadata?.sessions?.find(session => session.id === body.sessionId)?.durationMs
+      const audioSeconds = Number.isFinite(sessionDuration) && sessionDuration > 0 ? sessionDuration / 1000 : 60
+      const job = await storage.config.enqueueDiarizationJob({ id: randomUUID(), userId: user.id, sessionId: body.sessionId, audioKey: body.audioKey, payload: { user: { id: user.id, NT: user.NT, Department: user.Department }, modelId: 'managed-diarization', audioSeconds, ...(body.localModel ? { localModel: resolveLocalDiarizationModel(body.localModel) } : {}), ...(typeof body.processingToken === 'string' ? { processingToken: body.processingToken } : {}) } })
       return send(response, 202, { job })
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '無法建立講者分離工作' }) }
   }
@@ -987,20 +1128,27 @@ const handleHttpRequest = async (request, response) => {
     const audioKey = `audio/${audioMatch[1]}`
     try {
       if (request.method === 'POST') {
-        // Bodies are buffered in memory up to 1 GiB; bound how fast one client
-        // can ask for more of them.
-        const limit = acceptsRequest(request, 'audioUploads')
+        const limit = await acceptsRequest(request, 'audioUploads', user.id)
         if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many audio uploads. Try again later.')
-        const audio = await readBody(request, 1024 * 1024 * 1024); if (!audio.length) return send(response, 400, { error: '音檔不可為空' })
-        // The intent protects this upload until its session commit, and until
-        // the grace window passes it must survive concurrent reconciliation.
-        await addAudioCompensation(user, { id: audioMatch[1], createdAt: new Date().toISOString(), eligibleAfter: Date.now() + compensationGraceMs })
-        try { await storage.blob.put(user.id, audioKey, audio) } catch (error) { await dropAudioCompensation(user, audioMatch[1]).catch(() => undefined); throw error }
+        const maximum = process.env.S2T_KUBERNETES_MODE === 'true' ? 2 * 1024 ** 3 : 1024 ** 3
+        const declaredSize = Number(request.headers['content-length'])
+        if (request.headers['content-length'] === '0') return send(response, 400, { error: '音檔不可為空' })
+        if (declaredSize > maximum) return send(response, 413, { error: '音檔超過大小上限' })
+        let bytes = 0
+        const limited = new Transform({
+          transform(chunk, encoding, callback) { bytes += chunk.length; callback(bytes > maximum ? new Error('音檔超過大小上限') : null, chunk) },
+          flush(callback) { callback(bytes ? null : new Error('音檔不可為空')) }
+        })
+        try { await withProtectedAudioUpload(user, audioMatch[1], () => Promise.all([pipeline(request, limited), storage.blob.putStream(user.id, audioKey, limited, Number.isFinite(declaredSize) && declaredSize > 0 ? declaredSize : undefined)])) }
+        catch (error) { limited.destroy(); throw error }
         return send(response, 201, { saved: true, pendingSessionCommit: true })
       }
       if (request.method === 'DELETE') { await storage.blob.remove(user.id, audioKey); await dropAudioCompensation(user, audioMatch[1]); return send(response, 204, '') }
-      const audio = await storage.blob.get(user.id, audioKey); return audio ? send(response, 200, audio, 'audio/wav') : send(response, 404, { error: '找不到音檔' })
-    } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '音檔操作失敗' }) }
+      const audio = await storage.blob.readStream(user.id, audioKey)
+      if (!audio) return send(response, 404, { error: '找不到音檔' })
+      response.writeHead(200, { 'content-type': 'audio/wav', 'cache-control': 'no-store' })
+      return await pipeline(audio, response)
+    } catch (error) { if (response.headersSent) return response.destroy(); return storageFailure(response, error, '音檔操作失敗') }
   }
   if (storagePath === '/api/voiceprints' && ['GET', 'POST'].includes(request.method || '')) {
     const user = await auth.requireUser(request)
@@ -1010,13 +1158,13 @@ const handleHttpRequest = async (request, response) => {
       if (request.method === 'GET') return send(response, 200, { voiceprints: await ownVoiceprints(user) })
       // Enrolment bodies are buffered up to 500 MB; bound how fast one client
       // can ask for more of them.
-      const limit = acceptsRequest(request, 'voiceprintUploads')
+      const limit = await acceptsRequest(request, 'voiceprintUploads', user.id)
       if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many voiceprint requests. Try again later.')
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: '聲紋註冊需要 WAV 音檔' })
       const sharingScope = String(request.headers['x-s2t-voiceprint-sharing'] || 'private')
       if (!['private', 'department', 'organization'].includes(sharingScope)) return send(response, 400, { error: '無效的聲紋共享範圍' })
-      if (sharingScope !== 'private' && request.headers['x-s2t-voiceprint-consent'] !== 'true') return send(response, 400, { error: '分享聲紋前必須明確同意比對用途' })
+      if (sharingScope !== 'private' && request.headers['x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate'] !== 'true') return send(response, 400, { error: '分享聲紋前必須明確同意比對用途' })
       const quality = await assessVoiceprintSample(audio)
       const embedding = await extractSpeakerEmbedding(audio)
       const id = `vp-${randomUUID()}`
@@ -1065,7 +1213,7 @@ const handleHttpRequest = async (request, response) => {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
-      const limit = acceptsRequest(request, 'voiceprintUploads')
+      const limit = await acceptsRequest(request, 'voiceprintUploads', user.id)
       if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many voiceprint requests. Try again later.')
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: '聲紋比對需要 WAV 音檔' })
@@ -1077,7 +1225,7 @@ const handleHttpRequest = async (request, response) => {
   }
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
     const user = await auth.requireUser(request)
-    const limit = acceptsRequest(request, 'transcriptions', user?.id)
+    const limit = await acceptsRequest(request, 'transcriptions', user?.id)
     if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcription requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
     const profileId = String(request.headers['x-s2t-model-id'] || 'default')
@@ -1092,20 +1240,24 @@ const handleHttpRequest = async (request, response) => {
       if (!contentType) return send(response, 415, { error: 'Unsupported audio content type. Use WAV, MP3, M4A/AAC, OGG, WebM, FLAC, MP4, or MOV.' })
       const requestedLanguage = String(request.headers['x-s2t-language'] || '')
       if (requestedLanguage && !['zh', 'en', 'ja', 'de'].includes(requestedLanguage)) return send(response, 400, { error: 'Unsupported ASR language. Use zh, en, ja, de, or omit it for automatic detection.' })
-      let audio = await readBody(request, maxAsrAudioBytes)
+      let audio = await metrics.measure('asr_upload_read', () => readBody(request, maxAsrAudioBytes))
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
       asrAudioBytes = audio.length
-      if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await dynaudnormWav(audio)
+      const fingerprint = requestHash(Buffer.concat([audio, Buffer.from(JSON.stringify({ contentType, requestedLanguage, prompt: request.headers['x-s2t-prompt'] || '', filename: request.headers['x-s2t-filename'] || '', dynaudnorm: request.headers['x-s2t-dynaudnorm'] || '', model: selectedAsr.model, endpoint: selectedAsr.endpoint, credential: requestHash(selectedAsr.apiKey || '') }))]))
+      const output = await executeIdempotent(storage.config, user.id, '/api/transcriptions', request.headers['x-s2t-idempotency-key'], fingerprint, () => sharedLimits.withCapacity('asr', async () => {
+      if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await metrics.measure('audio_preprocess', () => dynaudnormWav(audio))
       // Never the prompt itself, the audio or the transcript — only sizes.
       logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
       const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
-      const result = await client.audio.transcriptions.create({
+      const result = await metrics.measure('asr_model', async () => client.audio.transcriptions.create({
         file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
         ...(requestedLanguage ? { language: requestedLanguage } : {}),
         ...(request.headers['x-s2t-prompt'] ? { prompt: decodedHeaderValue(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
-      })
+      }))
       logger.debug('asr.completed', { profileId, model: selectedAsr.model, durationMs: Date.now() - asrStartedAt, audioBytes: asrAudioBytes, chars: (result.text || '').length })
-      return send(response, 200, { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) })
+      return { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) }
+      }))
+      return send(response, 200, output)
     } catch (error) {
       logger.error('asr.failed', {
         profileId,
@@ -1117,12 +1269,12 @@ const handleHttpRequest = async (request, response) => {
       })
       const rateLimit = upstreamRateLimit(error)
       if (rateLimit) return rateLimitResponse(response, rateLimit, 'ASR provider temporarily rate limited. Try again later.')
-      return send(response, 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
+      return send(response, [400, 409, 503].includes(error?.status) ? error.status : 502, { error: error instanceof Error ? error.message : 'ASR request failed' })
     }
   }
   if (request.method === 'POST' && request.url === '/api/translations') {
     const user = await auth.requireUser(request)
-    const limit = acceptsRequest(request, 'translations', user?.id)
+    const limit = await acceptsRequest(request, 'translations', user?.id)
     if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many translation requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
     const profileId = String(request.headers['x-s2t-model-id'] || '')
@@ -1131,6 +1283,10 @@ const handleHttpRequest = async (request, response) => {
     try {
       const raw = await readBody(request, 256 * 1024)
       const input = JSON.parse(raw.toString('utf8'))
+      if (input.temperature !== undefined && user.role !== 'admin') return send(response, 403, { error: '只有 admin 可調整翻譯參數' })
+      let requestedTemperature
+      try { requestedTemperature = input.temperature === undefined ? undefined : validateAdminParameters({ translationTemperature: input.temperature }).translationTemperature }
+      catch (error) { return send(response, 400, { error: error.message }) }
       const text = typeof input.text === 'string' ? input.text.trim().slice(0, 20_000) : ''
       const requestedSourceLanguage = typeof input.sourceLanguage === 'string' ? input.sourceLanguage.slice(0, 60) : 'zh-TW'
       const requestedTargetLanguage = typeof input.targetLanguage === 'string' ? input.targetLanguage.slice(0, 60) : 'en'
@@ -1142,20 +1298,23 @@ const handleHttpRequest = async (request, response) => {
       // language pair are enough to follow a slow or failing translation.
       logger.debug('translation.request', { profileId, sourceLanguage, targetLanguage, glossary: glossary ? 'provided' : 'none', chars: text.length })
       const translationStartedAt = Date.now()
-      const textResult = await completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0)
+      const accountSettings = user.role === 'admin' ? await storage.config.get(user.id, 'app-settings') : undefined
+      const translationTemperature = requestedTemperature ?? validateAdminParameters(accountSettings?.settings?.adminParameters)?.translationTemperature ?? 0.2
+      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, temperature: translationTemperature, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0, translationTemperature))))
       logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
       return send(response, 200, { text: textResult })
     } catch (error) {
       const rateLimit = upstreamRateLimit(error)
       if (rateLimit) return rateLimitResponse(response, rateLimit, 'Translation provider temporarily rate limited. Try again later.')
-      return send(response, 502, { error: error instanceof Error ? error.message : 'Translation request failed' })
+      return send(response, [400, 409, 503].includes(error?.status) ? error.status : 502, { error: error instanceof Error ? error.message : 'Translation request failed' })
     }
   }
   if (request.method === 'POST' && request.url === '/api/summaries') {
-    const limit = acceptsRequest(request, 'summaries')
-    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many summary requests. Try again later.')
     const user = await auth.requireUser(request)
+    const limit = await acceptsRequest(request, 'summaries', user?.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many summary requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
+
     const profileId = String(request.headers['x-s2t-model-id'] || '')
     const selectedSummary = profileId ? await accountModelService(auth, user, profileId, 'summary') : summary
     if (!selectedSummary?.endpoint || !selectedSummary.model || (!profileId && !selectedSummary.apiKey)) return send(response, 503, { error: 'Web summary gateway has not been configured.' })
@@ -1169,10 +1328,11 @@ const handleHttpRequest = async (request, response) => {
     }
   }
   if (request.method === 'POST' && request.url === '/api/diarizations') {
-    const limit = acceptsRequest(request, 'diarizations')
-    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many diarization requests. Try again later.')
     const user = await auth.requireUser(request)
+    const limit = await acceptsRequest(request, 'diarizations', user?.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many diarization requests. Try again later.')
     if (!user) return send(response, 401, { error: '需要登入' })
+
     try {
       const audio = await readBody(request, 500 * 1024 * 1024)
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
@@ -1238,7 +1398,17 @@ const httpLogLevel = (status, probe) => {
   if (status >= 400) return probe || status === 401 || status === 403 ? 'info' : 'warn'
   return probe ? 'debug' : 'info'
 }
+let quiescing = false
+let draining = false
+const activeHttpResponses = new Set()
+let activeHttpRequests = 0
+let httpDrained
+const httpDrainedPromise = new Promise(resolve => { httpDrained = resolve })
 const httpServer = createServer((request, response) => {
+  activeHttpRequests += 1
+  activeHttpResponses.add(response)
+  if (quiescing) response.setHeader('connection', 'close')
+  response.once('close', () => { activeHttpResponses.delete(response); activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() })
   const requestId = incomingRequestId(request)
   const path = requestPathOf(request)
   const startedAt = performance.now()
@@ -1253,6 +1423,7 @@ const httpServer = createServer((request, response) => {
     })
   })
   logger.run({ requestId }, () => {
+    if (draining && request.url !== '/livez' && request.url !== '/readyz') { response.setHeader('connection', 'close'); return send(response, 503, { error: '服務正在排空，請重試' }) }
     void handleHttpRequest(request, response).catch((error) => {
       logger.error('http.request.failed', {
         method: request.method,
@@ -1269,7 +1440,23 @@ const httpServer = createServer((request, response) => {
   if (processRole === 'audio-worker') logger.info('audio-worker.started', { port, durableDiarizationJobs: true })
 })
 
+// Kubernetes withdraws endpoints asynchronously. During preStop, keep serving
+// traffic that still reaches us, but finish keep-alive connections normally so
+// clients move to another Pod before SIGTERM closes the listener.
+const prepareForShutdown = () => {
+  if (quiescing) return
+  quiescing = true
+  acceptingDiarizationJobs = false
+  for (const response of activeHttpResponses) {
+    if (!response.headersSent) response.setHeader('connection', 'close')
+  }
+  logger.info('gateway.quiescing', { role: processRole, activeRequests: activeHttpRequests })
+}
 const stopServer = () => {
+  if (draining) return
+  prepareForShutdown()
+  draining = true
+  if (activeHttpRequests === 0) httpDrained()
   acceptingDiarizationJobs = false
   httpServer?.close(() => undefined)
   // A rolling update should normally let the active durable job finish. If
@@ -1278,8 +1465,9 @@ const stopServer = () => {
   // being committed after that handoff.
   const graceMs = Math.max(1_000, Number(process.env.S2T_SHUTDOWN_GRACE_MS || 25_000))
   logger.info('gateway.shutdown', { role: processRole, graceMs, activeJob: Boolean(activeDiarizationJob) })
-  const finish = activeDiarizationJob ? Promise.race([activeDiarizationJob, new Promise((resolve) => setTimeout(resolve, graceMs))]) : Promise.resolve()
-  void finish.finally(() => sherpaWorkerPool.close()).finally(() => process.exit(0))
+  const finish = Promise.race([Promise.all([httpDrainedPromise, activeDiarizationJob || Promise.resolve()]), new Promise(resolve => setTimeout(resolve, graceMs))])
+  void finish.finally(() => sherpaWorkerPool.close()).finally(() => sharedLimits.close()).finally(() => process.exit(0))
 }
 process.once('SIGTERM', stopServer)
 process.once('SIGINT', stopServer)
+process.on('SIGUSR2', prepareForShutdown)

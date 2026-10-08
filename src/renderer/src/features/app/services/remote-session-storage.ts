@@ -16,7 +16,20 @@ export const remoteSessionStorage = {
     return { sessions: Array.isArray(body.sessions) ? body.sessions : [], version: Number.isSafeInteger(body.version) && body.version! >= 0 ? body.version! : 0 }
   },
   async save(sessions: SavedSession[], version: number): Promise<number> {
-    const response = await retryableAuthFetch('/api/data/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessions: sessions.map(remoteSession), version }) })
+    const requestBody = JSON.stringify({ sessions: sessions.map(remoteSession), version })
+    let compressed: ArrayBuffer | undefined
+    if (requestBody.length >= 256 * 1024 && typeof CompressionStream !== 'undefined') {
+      const payload = new Blob([requestBody])
+      compressed = await new Response(payload.stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()
+      if (compressed.byteLength >= payload.size || compressed.byteLength > 8 * 1024 * 1024) compressed = undefined
+    }
+    let response = await retryableAuthFetch('/api/data/sessions', { method: 'POST', headers: { 'content-type': 'application/json', ...(compressed ? { 'content-encoding': 'gzip' } : {}) }, body: compressed ?? requestBody })
+    // During rollout an older gateway can reject gzip before any CAS write.
+    // Retry the identical version as plain JSON; never retry a 409 conflict here.
+    if (compressed && [400, 415].includes(response.status)) {
+      await response.arrayBuffer()
+      response = await retryableAuthFetch('/api/data/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: requestBody })
+    }
     await check(response)
     const body = await response.json() as { version?: number }
     if (!Number.isSafeInteger(body.version) || body.version! < 1) throw new Error(activeTranslate('svcRemoteInvalidVersion'))

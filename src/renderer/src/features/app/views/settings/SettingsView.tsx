@@ -1,10 +1,12 @@
+import { AdminSettingsPanel } from './AdminSettingsPanel'
+import type { AuthUser } from '../../../auth/services/auth-client'
 import { type ReactElement, type ReactNode, useEffect, useRef, useState } from 'react'
 import { interfaceTranslate } from '../../../../shared/i18n'
 import type { Settings, View } from '../../../../shared/types'
 import { parseGlossaryJson } from '../../services/glossary-json'
 import type { AppController } from '../../hooks/useAppController'
 
-type SettingsCategory = 'asr' | 'translation' | 'summary' | 'app'
+type SettingsCategory = 'asr' | 'translation' | 'summary' | 'app' | 'account'
 
 const serializeSettings = (value: Settings): string => JSON.stringify(value)
 
@@ -62,6 +64,7 @@ function UnsavedLeaveDialog({ title, message, discardLabel, keepLabel, onDiscard
 
 export interface SettingsViewProps {
   controller: AppController
+  user: AuthUser
   settingsReturnView: Exclude<View, 'settings'>
   onNavigate: (target: View) => void
   leaveRequest: { target: View; nonce: number } | null
@@ -74,7 +77,7 @@ export interface SettingsViewProps {
   }
 }
 
-export function SettingsView({ controller, settingsReturnView, onNavigate, leaveRequest, onLeaveResolved, onLeaveDismissed, onDirtyChange, summaryTemplate }: SettingsViewProps): ReactElement {
+export function SettingsView({ controller, user, settingsReturnView, onNavigate, leaveRequest, onLeaveResolved, onLeaveDismissed, onDirtyChange, summaryTemplate }: SettingsViewProps): ReactElement {
   const {
     settings, setSettings, setStatus, saveSettings, settingsSaved, denoiseApplied,
     browserRecordingStorage, remoteSessionSyncState, storageHealth, audioMigrationStatus,
@@ -181,7 +184,8 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
     { id: 'asr', label: ui('transcriptionVad') },
     { id: 'translation', label: ui('translationGlossary') },
     { id: 'summary', label: ui('summaryTemplates') },
-    { id: 'app', label: ui('application') }
+    { id: 'app', label: ui('application') },
+    ...(user.role === 'admin' ? [{ id: 'account' as const, label: '帳號／Admin 參數' }] : [])
   ]
 
   const filteredGlossaryEntries = glossaryEntries.filter((entry) => entry.value.toLocaleLowerCase().includes(glossarySearch.trim().toLocaleLowerCase()))
@@ -191,6 +195,7 @@ export function SettingsView({ controller, settingsReturnView, onNavigate, leave
       <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>{ui('settingsTitle')}</h2></div></div>
       <nav className="settings-category-nav" aria-label={ui('settingsTitle')}>{categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'nav-active' : ''} aria-current={category === entry.id ? 'true' : undefined} onClick={() => setCategory(entry.id)}>{entry.label}</button>)}</nav>
 
+      {category === 'account' && user.role === 'admin' && <AdminSettingsPanel user={user} settings={settings} update={update} />}
       {category === 'asr' && <>
         <SettingsCard eyebrow="AUDIO" title={ui('audioProcessing')}>
           <div className="toggle-list">

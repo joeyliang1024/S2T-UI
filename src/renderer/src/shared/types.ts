@@ -57,6 +57,7 @@ export type SavedSession = {
   qualityCorrectionState?: 'completed' | 'failed'
   qualityCorrectionError?: string
   summary?: string
+  summaryError?: string
   /** Deterministic signature of the transcript used when this summary was generated. */
   summarySourceSignature?: string
   /** Audio/caption version whose transcript was used to create the summary. */
@@ -95,6 +96,7 @@ export type ImportCheckpoint = {
 }
 
 export type Settings = {
+  adminParameters?: import("../../../../server/admin-parameters.cjs").AdminParameters
   theme: 'system' | 'light' | 'dark'
   uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de' | 'system'
   /** Electron writes the selected destination by default; reads always merge both. */

@@ -1,0 +1,14 @@
+{
+  "name": "fixed-clean",
+  "segments": 2400,
+  "openMs": 103,
+  "detailMs": 66,
+  "openedMembers": 5,
+  "closedMembers": 0,
+  "editingAndSearchPassed": true,
+  "nodes": 3840,
+  "groups": 480,
+  "memberRows": 0,
+  "longTasks": [],
+  "pageErrors": []
+}

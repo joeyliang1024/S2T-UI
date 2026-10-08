@@ -11,7 +11,7 @@
 
 **準確度限制：參考 TSV 是未校對的機器草稿。沒有完成聽音人工核對，因此本報告不提供正式 CER，也不宣稱已證明真實正確率提升。** 原文／譯文保存與延遲可實測；「換句是否自然」仍須聽音核對回放案例。
 
-**關鍵反例：** 在 90–108 秒的「淨資產／收入直接中斷」附近，重疊也產生了「羞辱」「種段／種族」等與草稿不一致的內容。**目前不建議全域預設開啟音訊重疊**；它是需人工核對與可回退的候選，不是已驗收的準確度修正。見 [核對案例.md](caption-comparison-2026-10-04/核對案例.md)。
+**關鍵反例：** 在 90–108 秒的「淨資產／收入直接中斷」附近，重疊也產生了「羞辱」「種段／種族」等與草稿不一致的內容。**目前不建議全域預設開啟音訊重疊**；它是需人工核對與可回退的候選，不是已驗收的準確度修正。見 [核對案例.md](../../experiment/captions/comparison-2026-10-04/核對案例.md)。
 
 **三檔結論：** 300 ms 重疊在快檔與正常檔配對重跑未通過速度門檻；慢檔通過（草稿差異率 8.49%→4.84%，塊級 P95 增加 69 ms）。只有慢檔可列為人工核對後的小範圍候選，不能將其結果套到快／正常檔。
 
@@ -93,11 +93,11 @@
 
 ## 回放與交付
 
-另附 [核對案例.md](caption-comparison-2026-10-04/核對案例.md)，含 6 組音訊與各方法的原文，尤其保留 90–108 秒的反例。
+另附 [核對案例.md](../../experiment/captions/comparison-2026-10-04/核對案例.md)，含 6 組音訊與各方法的原文，尤其保留 90–108 秒的反例。
 
 - 打開 `subtitle-replay.html`，兩側先選同一實驗，再比較「現況字幕列」與「獨立顯示合句」；也可選不同實驗比較實際到達時間。音訊文件要留在相同文件夾。
 - 開頭 00:00–00:20、中段 02:20–02:40、尾段 04:40–05:00，以及姓名／邊界短音訊均已附上。機參考草稿可疑姓名和斷詞應與音訊一起核對。
-- [comparison.csv](caption-comparison-2026-10-04/comparison.csv)、[comparison-data.json](caption-comparison-2026-10-04/comparison-data.json)、`raw-events.json`（保留於實驗 outputs） 提供數值與原始文本；[speed-acceptance.json](caption-comparison-2026-10-04/speed-acceptance.json) 保留速度門檻計算。
+- [comparison.csv](../../experiment/captions/comparison-2026-10-04/comparison.csv)、[comparison-data.json](../../experiment/captions/comparison-2026-10-04/comparison-data.json)、[raw-events.json](../../experiment/captions/comparison-2026-10-04/raw-events.json) 提供數值與原始文本；[speed-acceptance.json](../../experiment/captions/comparison-2026-10-04/speed-acceptance.json) 保留速度門檻計算。
 
 適用範圍僅限這支五分鐘旁白，不代表多人會議、多語對話或其他背景噪音均有效。
 
@@ -121,11 +121,13 @@
 
 ## 文件保存位置
 
-本報告、核對案例文字、比較 CSV／JSON 與速度驗收計算已保存於專案 docs。音訊、並排回放、完整事件與重跑套件保留於本機：
+量測證據集中在 [experiment/captions/comparison-2026-10-04](../../experiment/captions/comparison-2026-10-04/README.md)：音訊、`subtitle-replay.html` 並排回放、`comparison.csv`／`comparison-data.json`、`speed-acceptance.json`、`raw-events.json` 與重跑說明都在該目錄，核對案例文字也以那裡的版本為準；docs 只保留本報告。從專案根目錄啟動：
 
-`/Users/liangzhiquan/Documents/Codex/2026-10-03/new-chat/outputs`
+```sh
+python3 -m http.server 58755 --bind 127.0.0.1 --directory experiment/captions/comparison-2026-10-04
+```
 
-回放請開啟該目錄的 `subtitle-replay.html`，並保持 `audio-5min.mp3` 位於同一目錄。音訊與完整回放未納入專案文件；上述本機目錄不保證在其他電腦存在。此報告描述 2026-10-04 實驗當時的版本，不代表後續程式變更已驗證。
+開啟 <http://127.0.0.1:58755/subtitle-replay.html?results=final>。此報告描述 2026-10-04 實驗當時的版本，不代表後續程式變更已驗證。
 
 ## 後續已批准的顯示修正（2026-10-04）
 

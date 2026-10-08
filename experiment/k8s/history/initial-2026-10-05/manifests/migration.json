@@ -1,0 +1,42 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "schema-migration",
+    "namespace": "s2t-stress-20261005"
+  },
+  "spec": {
+    "backoffLimit": 3,
+    "activeDeadlineSeconds": 300,
+    "template": {
+      "spec": {
+        "restartPolicy": "Never",
+        "containers": [
+          {
+            "name": "migration",
+            "image": "s2t-stress:20261005",
+            "imagePullPolicy": "IfNotPresent",
+            "envFrom": [
+              {
+                "secretRef": {
+                  "name": "s2t-stress-config"
+                }
+              }
+            ],
+            "env": [
+              {
+                "name": "S2T_STORAGE_MIGRATIONS",
+                "value": "auto"
+              }
+            ],
+            "command": [
+              "node",
+              "-e",
+              "const {readStorageConfig}=require(\"./server/storage/config.cjs\");const {PostgresConfigStore}=require(\"./server/storage/remote.cjs\");const s=new PostgresConfigStore(readStorageConfig().postgres);s.ready.then(async()=>{console.log(\"schema migrated\");await s.pool.end()}).catch(e=>{console.error(e.message);process.exit(1)})"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

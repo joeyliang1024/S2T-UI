@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),{buildSync}=require('esbuild')
+const code=buildSync({stdin:{contents:"export {buildFirstWordBreakdown} from './src/renderer/src/shared/services/caption-metrics'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
+const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require)
+const input={speechAt:100,detectedAt:220,queuedAt:800,dequeuedAt:850,requestAt:900,responseAt:1300},samples=m.exports.buildFirstWordBreakdown(input,1310)
+assert.equal(samples.length,6);assert.ok(Math.abs(samples.reduce((total,s)=>total+s.seconds,0)-1.21)<1e-12)
+assert.equal(m.exports.buildFirstWordBreakdown({...input,speechAt:undefined},1310).length,0)
+assert.equal(m.exports.buildFirstWordBreakdown({...input,queuedAt:210},1310).length,0)
+assert.equal(m.exports.buildFirstWordBreakdown(input,400000).length,0)
+const metrics=require('../../server/metrics.cjs');assert.equal(metrics.acceptCaptionSamples({samples}),true)
+const output=metrics.render();for(const sample of samples)assert.ok(output.includes(`s2t_first_word_stage_duration_seconds_count{stage="${sample.stage.slice(11)}"} 1`))
+assert.equal(metrics.acceptCaptionSamples({samples:[{stage:'first_word_arbitrary',seconds:.1}]}),false)
+console.log('PASS six exclusive stages sum to first-word latency; non-onset/inverted/expired samples excluded; bounded server family keeps other chunks separate')
