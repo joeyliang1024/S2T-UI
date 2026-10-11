@@ -1,0 +1,12 @@
+{
+  "adminLogin": true,
+  "registerCannotEscalate": true,
+  "anonymousDenied": true,
+  "ordinaryAccountManagementDenied": true,
+  "adminAccountCreation": true,
+  "adminSessionPreserved": true,
+  "adminParameterPersistence": true,
+  "ordinaryParametersDenied": true,
+  "invalidRangesRejected": true,
+  "translationTemperaturePermission": true
+}

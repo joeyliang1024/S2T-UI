@@ -1,0 +1,42 @@
+2026-10-06T12:47:27.081022122Z 1:X 06 Oct 2026 12:47:27.080 * Executing user requested FAILOVER of 's2t-stress-master'
+2026-10-06T12:47:27.081169505Z 1:X 06 Oct 2026 12:47:27.081 # +new-epoch 19
+2026-10-06T12:47:27.081175297Z 1:X 06 Oct 2026 12:47:27.081 # +try-failover master s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:27.164107479Z 1:X 06 Oct 2026 12:47:27.160 * Sentinel new configuration saved on disk
+2026-10-06T12:47:27.164141356Z 1:X 06 Oct 2026 12:47:27.160 # +vote-for-leader e90163d8cdfef254d59e7268598556c9960c8a0f 19
+2026-10-06T12:47:27.164143481Z 1:X 06 Oct 2026 12:47:27.160 # +elected-leader master s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:27.164144314Z 1:X 06 Oct 2026 12:47:27.160 # +failover-state-select-slave master s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:27.251797961Z 1:X 06 Oct 2026 12:47:27.251 # +selected-slave slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:27.251820587Z 1:X 06 Oct 2026 12:47:27.251 * +failover-state-send-slaveof-noone slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:27.307201143Z 1:X 06 Oct 2026 12:47:27.307 * +failover-state-wait-promotion slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:28.209162849Z 1:X 06 Oct 2026 12:47:28.209 * Sentinel new configuration saved on disk
+2026-10-06T12:47:28.209181266Z 1:X 06 Oct 2026 12:47:28.209 # +promoted-slave slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:28.209183600Z 1:X 06 Oct 2026 12:47:28.209 # +failover-state-reconf-slaves master s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:28.261954509Z 1:X 06 Oct 2026 12:47:28.261 * +slave-reconf-sent slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:29.221144650Z 1:X 06 Oct 2026 12:47:29.220 * +slave-reconf-inprog slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:34.426370532Z 1:X 06 Oct 2026 12:47:34.425 * +slave-reconf-done slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:34.492403123Z 1:X 06 Oct 2026 12:47:34.492 # +failover-end master s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:34.492429750Z 1:X 06 Oct 2026 12:47:34.492 # +switch-master s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:34.496459341Z 1:X 06 Oct 2026 12:47:34.493 * +slave slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:34.496476009Z 1:X 06 Oct 2026 12:47:34.494 * +slave slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:47:34.497819206Z 1:X 06 Oct 2026 12:47:34.497 * Sentinel new configuration saved on disk
+2026-10-06T12:50:17.922306902Z 1:X 06 Oct 2026 12:50:17.921 * Executing user requested FAILOVER of 's2t-stress-master'
+2026-10-06T12:50:17.922360821Z 1:X 06 Oct 2026 12:50:17.921 # +new-epoch 20
+2026-10-06T12:50:17.922363238Z 1:X 06 Oct 2026 12:50:17.921 # +try-failover master s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:17.947994932Z 1:X 06 Oct 2026 12:50:17.947 * Sentinel new configuration saved on disk
+2026-10-06T12:50:17.948011724Z 1:X 06 Oct 2026 12:50:17.947 # +vote-for-leader e90163d8cdfef254d59e7268598556c9960c8a0f 20
+2026-10-06T12:50:17.948013932Z 1:X 06 Oct 2026 12:50:17.947 # +elected-leader master s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:17.948015099Z 1:X 06 Oct 2026 12:50:17.947 # +failover-state-select-slave master s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:18.003537157Z 1:X 06 Oct 2026 12:50:18.003 # +selected-slave slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:18.003548241Z 1:X 06 Oct 2026 12:50:18.003 * +failover-state-send-slaveof-noone slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:18.075897885Z 1:X 06 Oct 2026 12:50:18.075 * +failover-state-wait-promotion slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:18.952894879Z 1:X 06 Oct 2026 12:50:18.952 * Sentinel new configuration saved on disk
+2026-10-06T12:50:18.952912380Z 1:X 06 Oct 2026 12:50:18.952 # +promoted-slave slave redis-2.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:18.952915214Z 1:X 06 Oct 2026 12:50:18.952 # +failover-state-reconf-slaves master s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:19.002577825Z 1:X 06 Oct 2026 12:50:19.002 * +slave-reconf-sent slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.003250529Z 1:X 06 Oct 2026 12:50:20.001 * +slave-reconf-inprog slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.003286697Z 1:X 06 Oct 2026 12:50:20.001 * +slave-reconf-done slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.072935264Z 1:X 06 Oct 2026 12:50:20.072 # +failover-end master s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.072973433Z 1:X 06 Oct 2026 12:50:20.072 # +switch-master s2t-stress-master redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.076291398Z 1:X 06 Oct 2026 12:50:20.076 * +slave slave redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-1.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.076552075Z 1:X 06 Oct 2026 12:50:20.076 * +slave slave redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 redis-0.redis.s2t-stress-20261005.svc.cluster.local 6379 @ s2t-stress-master redis-2.redis.s2t-stress-20261005.svc.cluster.local 6379
+2026-10-06T12:50:20.081435311Z 1:X 06 Oct 2026 12:50:20.081 * Sentinel new configuration saved on disk

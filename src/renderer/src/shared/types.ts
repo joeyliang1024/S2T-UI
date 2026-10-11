@@ -7,7 +7,7 @@ export type AudioDevice = { deviceId: string; label: string }
 
 export type View = 'live' | 'history' | 'summary' | 'import' | 'models' | 'voiceprints' | 'settings'
 
-export type SummaryTemplate = { id: string; name: string; content: string }
+export type SummaryTemplate = { id: string; name: string; content: string; sourceFile?: string }
 
 /** An immutable audio asset retained for a session. The active version is used for playback and export. */
 /** Audio and its matching caption snapshot are selected as one version. */
@@ -51,12 +51,15 @@ export type SavedSession = {
   /** Missing state on older records means completed. */
   processingState?: 'running' | 'completed' | 'failed'
   processingStage?: 'asr' | 'translation' | 'saving' | 'diarization'
+  recoveryFullAsr?: boolean
+  processingFailures?: Array<NonNullable<SavedSession['processingStage']>>
   processingToken?: string
   processingError?: string
   diarizationJobId?: string
   qualityCorrectionState?: 'completed' | 'failed'
   qualityCorrectionError?: string
   summary?: string
+  summaryError?: string
   /** Deterministic signature of the transcript used when this summary was generated. */
   summarySourceSignature?: string
   /** Audio/caption version whose transcript was used to create the summary. */
@@ -95,6 +98,7 @@ export type ImportCheckpoint = {
 }
 
 export type Settings = {
+  adminParameters?: import("../../../../server/admin-parameters.cjs").AdminParameters
   theme: 'system' | 'light' | 'dark'
   uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de' | 'system'
   /** Electron writes the selected destination by default; reads always merge both. */

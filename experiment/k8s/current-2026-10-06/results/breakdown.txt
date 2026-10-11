@@ -1,0 +1,1 @@
+PASS six exclusive stages sum to first-word latency; non-onset/inverted/expired samples excluded; bounded server family keeps other chunks separate

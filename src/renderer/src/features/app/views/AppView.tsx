@@ -1,6 +1,10 @@
+import { displayedSessionStorageState } from '../services/session-storage-state'
+import { sessionRecoveryStages } from '../services/session-recovery'
+import { CaptionPaintMetric } from './CaptionPaintMetric'
 import { NavigationGlyph } from './NavigationGlyph'
 import { importFileAccept } from '../../transcript/import-formats'
 import { CaptionPopout } from './CaptionPopout'
+import { CaptionMemberDetails } from './CaptionMemberDetails'
 import { TooltipButton } from './TooltipButton'
 import { createPortal } from 'react-dom'
 import { type SavedSession, type ModelCapabilities, type View } from '../../../shared/types'
@@ -30,14 +34,12 @@ const [modelDialogCanDelete, setModelDialogCanDelete] = useState(false)
 const [modelCapabilities, setModelCapabilities] = useState<ModelCapabilities>({ asrMode: 'non-streaming', vadSource: 'app', timestampPrecision: 'chunk' })
 const [editingSessionSegmentId, setEditingSessionSegmentId] = useState<string | null>(null)
 const [modelSearch, setModelSearch] = useState('')
-const [newSummaryTemplateName, setNewSummaryTemplateName] = useState('')
-const [newSummaryTemplateContent, setNewSummaryTemplateContent] = useState('')
-const [isCreatingSummaryTemplate, setIsCreatingSummaryTemplate] = useState(false)
 const [historyCollapsed, setHistoryCollapsed] = useState(true)
 const [liveControlsOpen, setLiveControlsOpen] = useState(false)
 const [titleImageFailed, setTitleImageFailed] = useState(false)
 const [sidebarSection, setSidebarSection] = useState<'history' | 'capture' | 'speakers'>('history')
 const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+const [legacyRecoveryId, setLegacyRecoveryId] = useState<string | null>(null)
 const [sessionMenuId, setSessionMenuId] = useState<string | null>(null)
 const sessionMenuRef = useRef<HTMLDivElement | null>(null)
 const [processingDetailsId, setProcessingDetailsId] = useState<string | null>(null)
@@ -174,6 +176,7 @@ segmentRerecordingId,
 startSegmentRerecord,
 stopSegmentRerecord,
 finalizeSession,
+retryFailedSession,
 deleteSession,
 copyTranscript,
 openSavedSession,
@@ -196,6 +199,9 @@ renderedLiveTranscripts,
 clearCaptions,
 loadSessionIntoLive,
 renameSession,
+regenerateSessionTitle,
+titleGeneratingIds,
+summaryGeneratingIds,
 sessionStorageStates
 } = controller
 
@@ -217,6 +223,11 @@ useEffect(() => {
   if (!status || status === lastStatusRef.current) return
   lastStatusRef.current = status
   setStatusToast(status)
+  // When the recording auto-pauses (staging backpressure, write failure,
+  // memory limit), the pause reason is the only clue the user has for why
+  // recording stopped. Keep it visible until recording resumes — a 4-second
+  // toast is gone before they can read it.
+  if (captureState === 'paused') return
   const timer = window.setTimeout(() => setStatusToast((current) => (current === status ? null : current)), 4000)
   return () => window.clearTimeout(timer)
 }, [status])
@@ -263,6 +274,13 @@ const modelHealthBadge = (id: string): ReactElement => {
   const state = health?.state ?? 'unknown'
   const label = state === 'healthy' ? ui('modelHealthHealthy') : state === 'degraded' ? ui('modelHealthDegraded') : state === 'unhealthy' ? ui('modelHealthFailed') : ui('modelHealthUnknown')
   return <span className={`model-health ${state}`} title={health?.reason ?? ui('modelHealthNotChecked')}><i aria-hidden="true" />{label}</span>
+}
+
+const storageBadge = (entry: SavedSession): ReactElement => {
+  const busy = entry.processingState === 'running' || qualityCorrectionRunning(entry) || summaryGeneratingIds.includes(entry.id) || titleGeneratingIds.includes(entry.id)
+  const state = displayedSessionStorageState(sessionStorageStates[entry.id], busy)
+  const key = { local: 'sessionStorageLocal', remote: 'sessionStorageRemote', both: 'sessionStorageBoth', pending: 'sessionStoragePending' }[state]
+  return <span className={`session-storage-state ${state}`}>{ui(key)}</span>
 }
 
 const processingBadge = (entry: SavedSession, location = 'card'): ReactElement => {
@@ -322,11 +340,11 @@ const sessionTranscript = (entry: SavedSession, query: string): ReactElement => 
       {group.speaker && <div className="speaker-row speaker-labels">{Array.from(new Set(group.members.map(member => member.speaker).filter(Boolean))).map(speaker => <span key={speaker}>{speaker}</span>)}</div>}
       <p>{group.sourceText}</p>
       {group.translatedText && <p className="translation">{group.translatedText}</p>}
-      <details open={group.members.some(member => member.id === editingSessionSegmentId) || undefined}><summary>{ui('edit')}</summary>
-      {group.members.map((segment) => <article key={segment.id} className="transcript-segment">
+      <CaptionMemberDetails editing={group.members.some(member => member.id === editingSessionSegmentId)} summary={ui('edit')}>
+      {() => group.members.map((segment) => <article key={segment.id} className="transcript-segment">
       <time>{timestamp(segment.startMs)}</time>
       {editingSessionSegmentId === segment.id && entry.processingState !== 'running' ? <div className="transcript-edit"><div className="timing-inputs"><label>{ui('startMilliseconds')}<input type="number" min="0" defaultValue={segment.startMs} onBlur={(event) => updateSavedTranscriptTiming(entry.id, segment.id, { startMs: Number(event.currentTarget.value) })} /></label><label>{ui('endMilliseconds')}<input type="number" min="1" defaultValue={segment.endMs} onBlur={(event) => updateSavedTranscriptTiming(entry.id, segment.id, { endMs: Number(event.currentTarget.value) })} /></label></div><textarea defaultValue={segment.sourceText} aria-label={ui('sourceText')} onBlur={(event) => updateSavedTranscript(entry.id, segment.id, { sourceText: event.currentTarget.value })} /><textarea defaultValue={segment.translatedText ?? ''} aria-label={ui('translation')} placeholder={ui('optionalTranslation')} onBlur={(event) => updateSavedTranscript(entry.id, segment.id, { translatedText: event.currentTarget.value })} /><button className="text-button" onClick={() => setEditingSessionSegmentId(null)}>{ui('doneEditing')}</button></div> : <><div className="speaker-row"><input disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} list="registered-speakers" aria-label={ui('speakerName')} value={segment.speaker ?? ''} placeholder={ui('unassignedSpeaker')} onChange={(event) => updateSessionSpeaker(entry.id, segment.id, event.target.value)} /></div><p>{segment.sourceText}</p>{segment.translatedText && <p className="translation">{segment.translatedText}</p>}<button disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} className="edit-button" onClick={() => setEditingSessionSegmentId(segment.id)}>{ui('edit')}</button><div className="segment-actions">{segmentRerecordingId === segment.id ? <button className="text-button" onClick={() => void stopSegmentRerecord()}>{ui('endRerecording')}</button> : <button className="text-button" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry)) || Boolean(segmentRerecordingId)} onClick={() => void startSegmentRerecord(entry, segment)}>{ui('rerecordSegment')}</button>}<label className="text-button">{ui('rerecordWav')}<input disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} hidden type="file" accept="audio/wav,.wav" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) void replaceSessionSegmentAudio(entry, segment, file) }} /></label></div></>}
-    </article>)}</details>
+    </article>)}</CaptionMemberDetails>
     </article>)}
   </> : <pre>{entry.transcript || ui('noCaptionsForRecord')}</pre>
 
@@ -348,22 +366,21 @@ const liveWorkspace = (
           <article key={group.id} className={group.status}>
             <time>{timestamp(group.startMs)}</time>
             {group.speaker && <div className="speaker-row speaker-labels">{Array.from(new Set(group.members.map(member => member.speaker).filter(Boolean))).map(speaker => <span key={speaker}>{speaker}</span>)}</div>}
-            <p>{group.sourceText}</p>
-            {group.translatedText && <p className="translation">{group.translatedText}</p>}
+            <CaptionPaintMetric members={group.members} text={group.sourceText} />
+            {group.translatedText && <CaptionPaintMetric members={group.members} text={group.translatedText} translation />}
             {group.members.filter(member => member.status === 'final' && !member.translatedText && (member.translationStatus === 'failed' || ((settings.translationLoadStrategy === 'manual' || captureState === 'idle') && !member.translationStatus))).map(member => <button key={member.id} className="text-button translation-retry" onClick={() => {
               const retry = { ...member, translationStatus: undefined, translationAttempts: undefined }
               if (member.translationStatus === 'failed') setTranscripts(current => current.map(entry => entry.id === member.id ? retry : entry))
               void requestTranslation(retry)
             }}>{member.translationStatus === 'failed' ? ui('retryTranslation') : ui('translateSegment')} · {timestamp(member.startMs)}</button>)}
-            <details open={group.members.some(member => member.id === editingTranscriptId) || undefined}>
-              <summary>{ui('edit')}</summary>
-              {group.members.map((entry) => (
+            <CaptionMemberDetails editing={group.members.some(member => member.id === editingTranscriptId)} summary={ui('edit')}>
+              {() => group.members.map((entry) => (
           <article key={entry.id} className={`transcript-segment ${entry.status}`}>
             <time>{timestamp(entry.startMs)}</time>
             {editingTranscriptId === entry.id ? <div className="transcript-edit"><div className="timing-inputs"><label>{ui('startMilliseconds')}<input type="number" min="0" defaultValue={entry.startMs} onBlur={(event) => updateTranscriptTiming(entry.id, Number(event.currentTarget.value), entry.endMs)} /></label><label>{ui('endMilliseconds')}<input type="number" min="1" defaultValue={entry.endMs} onBlur={(event) => updateTranscriptTiming(entry.id, entry.startMs, Number(event.currentTarget.value))} /></label></div><textarea value={entry.sourceText} onChange={(event) => updateTranscript(entry.id, event.target.value, entry.translatedText ?? '')} /><textarea value={entry.translatedText ?? ''} placeholder={ui('optionalTranslation')} onChange={(event) => updateTranscript(entry.id, entry.sourceText, event.target.value)} /><button className="text-button" onClick={() => setEditingTranscriptId(null)}>{ui('doneEditing')}</button></div> : <><div className="speaker-row"><input list="registered-speakers" aria-label={ui('speakerName')} value={entry.speaker ?? ''} placeholder={ui('unassignedSpeaker')} onChange={(event) => updateSpeaker(entry.id, event.target.value)} /></div><p>{entry.sourceText}</p>{entry.translatedText && <p className="translation">{entry.translatedText}</p>}{entry.translationStatus === 'failed' && <button className="text-button translation-retry" onClick={() => { const retry = { ...entry, translationStatus: undefined, translationAttempts: undefined }; setTranscripts((current) => current.map((currentEntry) => currentEntry.id === entry.id ? retry : currentEntry)); void requestTranslation(retry) }}>{ui('retryTranslation')}</button>}<button className="edit-button" onClick={() => setEditingTranscriptId(entry.id)}>{ui('edit')}</button></>}
           {(settings.translationLoadStrategy === 'manual' || captureState === 'idle') && entry.status === 'final' && !entry.translatedText && !entry.translationStatus && <button className="text-button translation-retry" onClick={() => void requestTranslation(entry)}>{ui('translateSegment')}</button>}</article>
               ))}
-            </details>
+            </CaptionMemberDetails>
           </article>
         ))}</>}
       </section>
@@ -435,17 +452,23 @@ const selectSummaryTemplate = (id: string): void => setSettings((current) => {
   const selected = resolveSummaryTemplate(current.summaryTemplates, id)
   return selected ? { ...current, ...selected } : current
 })
-const addSummaryTemplate = (): void => {
+const saveSummaryTemplate = (name: string, content: string, id?: string): boolean => {
   try {
-    setSettings((current) => ({ ...current, ...createSummaryTemplate(current.summaryTemplates, crypto.randomUUID(), newSummaryTemplateName, newSummaryTemplateContent) }))
-  } catch { setStatus(ui('templateNameRequired')); return }
-  setNewSummaryTemplateName(''); setNewSummaryTemplateContent(''); setIsCreatingSummaryTemplate(false)
+    if (settings.summaryTemplates.find(template => template.id === id)?.sourceFile) id = undefined
+    const added = createSummaryTemplate(settings.summaryTemplates, id || crypto.randomUUID(), name, content)
+    const templates = id ? settings.summaryTemplates.map(template => template.id === id ? added.summaryTemplates[added.summaryTemplates.length - 1] : template) : added.summaryTemplates
+    setSettings(current => ({ ...current, ...added, summaryTemplates: templates }))
+    setStatus(ui('templateUpdated'))
+    return true
+  } catch { setStatus(ui('templateNameRequired')); return false }
 }
-const deleteSummaryTemplate = (): void => setSettings((current) => {
-  try { return { ...current, ...removeSelectedSummaryTemplate(current.summaryTemplates, current.selectedSummaryTemplateId) } }
-  catch { setStatus(ui('keepOneTemplate')); return current }
-})
-const summaryWorkspace = <SummaryWorkspace ui={ui} sessions={sessions} settings={settings} sessionId={summarySessionId} setSessionId={setSummarySessionId} isCreatingTemplate={isCreatingSummaryTemplate} setIsCreatingTemplate={setIsCreatingSummaryTemplate} templateName={newSummaryTemplateName} setTemplateName={setNewSummaryTemplateName} templateContent={newSummaryTemplateContent} setTemplateContent={setNewSummaryTemplateContent} selectTemplate={selectSummaryTemplate} addTemplate={addSummaryTemplate} openSettings={() => openSettings('summary')} summarizeSession={summarizeSession} translateSummary={translateSummary} copySummary={copySummary} openSummaryDownload={openSummaryDownloadPicker} />
+const deleteSummaryTemplate = (): void => {
+  try {
+    const remaining = removeSelectedSummaryTemplate(settings.summaryTemplates, settings.selectedSummaryTemplateId)
+    setSettings((current) => ({ ...current, ...remaining }))
+  } catch { setStatus(ui('keepOneTemplate')) }
+}
+const summaryWorkspace = <SummaryWorkspace generatingIds={summaryGeneratingIds} ui={ui} sessions={sessions} settings={settings} sessionId={summarySessionId} setSessionId={setSummarySessionId} selectTemplate={selectSummaryTemplate} openSettings={() => openSettings('summary')} summarizeSession={summarizeSession} translateSummary={translateSummary} copySummary={copySummary} openSummaryDownload={openSummaryDownloadPicker} />
 const useAsrProfile = (id: string): void => {
   if (captureState !== 'idle') { setStatus(ui('asrModelLockedHint')); return }
   setSettings((current) => {
@@ -534,8 +557,8 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
       {sessions.length === 0 ? <div className="empty compact"><h2>{ui('noRecords')}</h2><p>{ui('noRecordsHint')}</p></div> : <>
         <div className="history-pagination"><label className="history-search"><input className="caption-search" aria-label={ui('searchRecords')} value={historySearch} placeholder={ui('recordSearchPlaceholder')} onChange={(event) => { setHistorySearch(event.target.value); setHistoryPage(1) }} /></label><div className="history-pagination-controls"><select aria-label={ui('sort')} title={ui('sort')} value={historySort} onChange={(event) => { setHistorySort(event.target.value as 'title' | 'createdAt' | 'durationMs'); setHistoryPage(1) }}><option value="createdAt">{ui('time')}</option><option value="title">{ui('title')}</option><option value="durationMs">{ui('duration')}</option></select><button className="text-button history-dir-button" aria-label={ui(historySortDirection === 'asc' ? 'ascending' : 'descending')} title={ui(historySortDirection === 'asc' ? 'ascending' : 'descending')} onClick={() => setHistorySortDirection((current) => current === 'asc' ? 'desc' : 'asc')}>{historySortDirection === 'asc' ? '↑' : '↓'}</button><select className="history-page-size" aria-label={ui('perPage')} title={ui('perPage')} value={historyPageSize} onChange={(event) => { setHistoryPageSize(Number(event.target.value)); setHistoryPage(1) }}><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option><option value={100}>100</option></select><span className="history-page-indicator">{currentHistoryPage}{ui('pageSeparator')}{historyPageCount}</span><button className="text-button" aria-label={ui('previousPage')} title={ui('previousPage')} disabled={currentHistoryPage === 1} onClick={() => setHistoryPage((current) => Math.max(1, current - 1))}>‹</button><button className="text-button" aria-label={ui('nextPage')} title={ui('nextPage')} disabled={currentHistoryPage === historyPageCount} onClick={() => setHistoryPage((current) => Math.min(historyPageCount, current + 1))}>›</button></div></div>
         <div className="session-list">{pagedSessions.map((entry) => <article key={entry.id} className="session-item">
-          <div className="session-details">{renamingSessionId === entry.id ? <form className="session-rename" onSubmit={(event) => { event.preventDefault(); renameSession(entry.id) }}><input autoFocus aria-label={ui('recordTitle')} maxLength={200} value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} onBlur={() => renameSession(entry.id)} onKeyDown={(event) => { if (event.key === 'Escape') { setTitleDraft(entry.title); setRenamingSessionId(null) } }} /></form> : <button type="button" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} className="session-title" title={ui('editRecordTitle')} aria-label={`${ui('recordTitle')}: ${entry.title}`} onClick={() => { setTitleDraft(entry.title); setRenamingSessionId(entry.id) }}>{entry.title}</button>}<p className="session-meta"><span className="session-meta-date">{new Date(entry.createdAt).toLocaleString(resolveUiLanguage(settings.uiLanguage))}</span><span>{timestamp(entry.durationMs)}</span><span>{entry.source}</span>{entry.audioUnavailable && <span>{ui('audioNotSavedRecoveryDownloaded')}</span>}<span className={`session-storage-state ${sessionStorageStates[entry.id] ?? 'local'}`}>{sessionStorageStates[entry.id] === 'remote' ? ui('sessionStorageRemote') : sessionStorageStates[entry.id] === 'both' ? ui('sessionStorageBoth') : sessionStorageStates[entry.id] === 'pending' ? ui('sessionStoragePending') : ui('sessionStorageLocal')}</span>{processingBadge(entry)}{qualityCorrectionBadge(entry)}</p>{qualityCorrectionBar(entry)}{playingSessionId === entry.id && playbackUrl && <audio controls src={playbackUrl}>{ui('audioPlaybackUnsupported')}</audio>}</div>
-          <div className="session-actions"><TooltipButton className="session-quick-button" aria-label={ui('viewCaptions')} tooltip={ui('viewCaptions')} onClick={() => { setViewingSessionId(entry.id); setSessionMenuId(null) }}><span>▤</span></TooltipButton><TooltipButton className="session-quick-button" aria-label={playingSessionId === entry.id ? ui('collapsePlayer') : ui('playRecording')} tooltip={playingSessionId === entry.id ? ui('collapsePlayer') : ui('playRecording')} disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void playSession(entry); setSessionMenuId(null) }}><span>▶</span></TooltipButton><TooltipButton className="session-quick-button" aria-label={ui('download')} tooltip={ui('download')} disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => openDownloadPicker(entry, 'all')}><span>↓</span></TooltipButton><TooltipButton className="session-more-button" tooltip={ui('moreActionsForRecord').replace('{title}', entry.title)} aria-label={ui('moreActionsForRecord').replace('{title}', entry.title)} aria-expanded={sessionMenuId === entry.id} onClick={() => setSessionMenuId((current) => current === entry.id ? null : entry.id)}>•••</TooltipButton>{sessionMenuId === entry.id && <div ref={sessionMenuRef} className="session-action-menu" role="menu"><button role="menuitem" onClick={() => { setViewingSessionId(entry.id); setSessionMenuId(null) }}><span>▤</span>{ui('viewCaptions')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void finalizeSession(entry); setSessionMenuId(null) }}><span>✦</span>{ui('qualityCorrection')}</button><button role="menuitem" disabled={captureState !== 'idle' || (entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void continueSession(entry); setSessionMenuId(null) }}><span>↗</span>{ui('continueRecording')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void playSession(entry); setSessionMenuId(null) }}><span>▶</span>{playingSessionId === entry.id ? ui('collapsePlayer') : ui('playRecording')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => openDownloadPicker(entry, 'audio')}><span>↓</span>{ui('downloadAudio')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => openDownloadPicker(entry, 'transcript')}><span>↓</span>{ui('downloadTranscript')}</button><button role="menuitem" onClick={() => { void copyTranscript(entry.segments); setSessionMenuId(null) }}><span>⧉</span>{ui('copyTranscript')}</button><button className="danger" role="menuitem" disabled={qualityCorrectionRunning(entry)} onClick={() => { void deleteSession(entry); setSessionMenuId(null) }}><span>⌫</span>{ui('deleteRecord')}</button></div>}</div>
+          <div className="session-details"><div className="session-title-row">{renamingSessionId === entry.id ? <form className="session-rename" onSubmit={(event) => { event.preventDefault(); renameSession(entry.id) }}><input autoFocus aria-label={ui('recordTitle')} maxLength={200} value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} onBlur={() => renameSession(entry.id)} onKeyDown={(event) => { if (event.key === 'Escape') { setTitleDraft(entry.title); setRenamingSessionId(null) } }} /></form> : <button type="button" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} className="session-title" title={ui('editRecordTitle')} aria-label={`${ui('recordTitle')}: ${entry.title}`} onClick={() => { setTitleDraft(entry.title); setRenamingSessionId(entry.id) }}>{entry.title?.trim() || ui('untitledRecord')}</button>}<TooltipButton className="text-button session-title-generate" tooltip={titleGeneratingIds.includes(entry.id) ? ui('titleGenerating') : ui('generateRecordTitle')} disabled={titleGeneratingIds.includes(entry.id) || entry.processingState === 'running' || qualityCorrectionRunning(entry)} onClick={() => void regenerateSessionTitle(entry)}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m4 20 12-12 4 4L8 24M15 3v4M13 5h4M5 6v4M3 8h4M20 17v4M18 19h4" transform="translate(0 -2)" /></svg></TooltipButton></div><p className="session-meta"><span className="session-meta-date">{new Date(entry.createdAt).toLocaleString(resolveUiLanguage(settings.uiLanguage))}</span><span>{timestamp(entry.durationMs)}</span><span>{entry.source}</span>{entry.audioUnavailable && <span>{ui('audioNotSavedRecoveryDownloaded')}</span>}{storageBadge(entry)}{processingBadge(entry)}{qualityCorrectionBadge(entry)}</p>{qualityCorrectionBar(entry)}{legacyRecoveryId === entry.id && <section className="legacy-recovery-options" aria-label={ui('legacyRecoveryOptions')}><p>{ui('legacyRecoveryChoose')}</p><div className="settings-button-row"><button className="secondary" disabled={!entry.audioKey && !entry.nativeAudioPath} onClick={() => { setLegacyRecoveryId(null); void retryFailedSession(entry, undefined, 'asr') }}>{ui('legacyRecoverAsr')}</button><button className="secondary" disabled={!entry.transcript?.trim() && !entry.segments.some(segment => segment.status === 'final' && segment.sourceText.trim())} onClick={() => { setLegacyRecoveryId(null); void retryFailedSession(entry, undefined, 'translation') }}>{ui('legacyRecoverTranslation')}</button><button className="secondary" disabled={(!entry.audioKey && !entry.nativeAudioPath) || !settings.diarizationModel} onClick={() => { setLegacyRecoveryId(null); void retryFailedSession(entry, undefined, 'diarization') }}>{ui('recordProcessingDiarization')}</button><button className="secondary" onClick={() => { setLegacyRecoveryId(null); void retryFailedSession(entry, undefined, 'saving') }}>{ui('legacyRecoverSaving')}</button><button className="text-button" onClick={() => setLegacyRecoveryId(null)}>{ui('cancel')}</button></div><p className="hint">{ui('legacyRecoverAsrHint')}</p></section>}{playingSessionId === entry.id && playbackUrl && <audio controls src={playbackUrl}>{ui('audioPlaybackUnsupported')}</audio>}</div>
+          <div className="session-actions">{(entry.processingState === 'failed' || sessionRecoveryStages(entry).length > 0) && <TooltipButton className="session-quick-button" tooltip={ui('errorRecovery')} disabled={entry.processingState === 'running' || qualityCorrectionRunning(entry)} onClick={() => { if (!sessionRecoveryStages(entry).length) { setLegacyRecoveryId(current => current === entry.id ? null : entry.id); return } if (entry.audioUnavailable) { setStatus(ui('recoveryAudioRequired')); const input = document.createElement('input'); input.type = 'file'; input.accept = 'audio/wav,.wav'; input.onchange = () => { if (input.files?.[0]) void retryFailedSession(entry, input.files[0]) }; input.click() } else void retryFailedSession(entry) }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.1 8a7 7 0 0 1 11.6-2L20 9M4 15l2.3 3A7 7 0 0 0 17.9 16" /></svg></TooltipButton>}<TooltipButton className="session-quick-button" aria-label={ui('viewCaptions')} tooltip={ui('viewCaptions')} onClick={() => { setViewingSessionId(entry.id); setSessionMenuId(null) }}><span>▤</span></TooltipButton><TooltipButton className="session-quick-button" aria-label={playingSessionId === entry.id ? ui('collapsePlayer') : ui('playRecording')} tooltip={playingSessionId === entry.id ? ui('collapsePlayer') : ui('playRecording')} disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void playSession(entry); setSessionMenuId(null) }}><span>▶</span></TooltipButton><TooltipButton className="session-quick-button" aria-label={ui('download')} tooltip={ui('download')} disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => openDownloadPicker(entry, 'all')}><span>↓</span></TooltipButton><TooltipButton className="session-more-button" tooltip={ui('moreActionsForRecord').replace('{title}', entry.title)} aria-label={ui('moreActionsForRecord').replace('{title}', entry.title)} aria-expanded={sessionMenuId === entry.id} onClick={() => setSessionMenuId((current) => current === entry.id ? null : entry.id)}>•••</TooltipButton>{sessionMenuId === entry.id && <div ref={sessionMenuRef} className="session-action-menu" role="menu"><button role="menuitem" onClick={() => { setViewingSessionId(entry.id); setSessionMenuId(null) }}><span>▤</span>{ui('viewCaptions')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void finalizeSession(entry); setSessionMenuId(null) }}><span>✦</span>{ui('qualityCorrection')}</button><button role="menuitem" disabled={captureState !== 'idle' || (entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void continueSession(entry); setSessionMenuId(null) }}><span>↗</span>{ui('continueRecording')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => { void playSession(entry); setSessionMenuId(null) }}><span>▶</span>{playingSessionId === entry.id ? ui('collapsePlayer') : ui('playRecording')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => openDownloadPicker(entry, 'audio')}><span>↓</span>{ui('downloadAudio')}</button><button role="menuitem" disabled={(entry.processingState === 'running' || qualityCorrectionRunning(entry))} onClick={() => openDownloadPicker(entry, 'transcript')}><span>↓</span>{ui('downloadTranscript')}</button><button role="menuitem" onClick={() => { void copyTranscript(entry.segments); setSessionMenuId(null) }}><span>⧉</span>{ui('copyTranscript')}</button><button className="danger" role="menuitem" disabled={qualityCorrectionRunning(entry)} onClick={() => { void deleteSession(entry); setSessionMenuId(null) }}><span>⌫</span>{ui('deleteRecord')}</button></div>}</div>
         </article>)}</div>
       </>}
       {viewingSession && <div className="transcript-modal-backdrop" role="presentation" onMouseDown={() => setViewingSessionId(null)}><section className="transcript-modal" role="dialog" aria-modal="true" aria-label={ui('recordTranscriptAria').replace('{title}', viewingSession.title)} onMouseDown={(event) => event.stopPropagation()}><header><div><p className="eyebrow">TRANSCRIPT</p><h2>{viewingSession.title}</h2>{processingBadge(viewingSession, 'modal')}{viewingSession.modelSnapshot && <p className="hint">{ui('modelId')}: {viewingSession.modelSnapshot.name} ({viewingSession.modelSnapshot.model}) · {viewingSession.modelSnapshot.inputSampleRate} Hz → {viewingSession.modelSnapshot.modelSampleRate} Hz</p>}</div><button className="text-button" onClick={() => { setViewingSessionId(null); setSessionTranscriptSearch('') }}>{ui('close')}</button></header><div className="transcript-tools"><input aria-label={ui('searchThisRecord')} value={sessionTranscriptSearch} placeholder={ui('searchTranscriptPlaceholder')} onChange={(event) => setSessionTranscriptSearch(event.target.value)} /></div><div className="session-transcript record-transcript">{sessionTranscript(viewingSession, sessionTranscriptSearch)}</div></section></div>}
@@ -568,6 +591,7 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
     </section>
   ) : (
     <SettingsView
+      user={user}
       controller={controller}
       settingsReturnView={settingsReturnView}
       onNavigate={navigate}
@@ -575,7 +599,7 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
       onLeaveResolved={(target) => { setLeaveRequest(null); setSettingsDirty(false); setView(target) }}
       onLeaveDismissed={() => setLeaveRequest(null)}
       onDirtyChange={setSettingsDirty}
-      summaryTemplate={{ select: selectSummaryTemplate, remove: deleteSummaryTemplate }}
+      summaryTemplate={{ select: selectSummaryTemplate, remove: deleteSummaryTemplate, save: saveSummaryTemplate }}
     />
   )
 

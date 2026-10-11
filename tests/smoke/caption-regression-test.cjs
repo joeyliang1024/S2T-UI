@@ -5,7 +5,7 @@ const { requestLimits, createRequestLimiter, upstreamRateLimit } = require('../.
 const exportsCode = `export * from './src/renderer/src/shared/services/settings'; export * from './src/renderer/src/features/app/services/translation-queue'; export * from './src/renderer/src/features/app/services/translation-policy'; export * from './src/renderer/src/features/app/services/live-caption'; export * from './src/renderer/src/features/models/model-adapter'; export * from './src/renderer/src/features/capture/vad'; export * from './src/renderer/src/shared/services/http'; export * from './src/renderer/src/features/speakers/diarization';`
 const code = buildSync({ stdin: { contents: exportsCode, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }; new Function('module','exports','require',code)(m,m.exports,require)
-const { normalizeSettings, TranslationQueue, HttpServiceError, readJsonResponse, upsertLiveCaption, editCaptionContent, renderedLiveCaptionWindow, OpenAiChunkedModelAdapter, speedToVadConfig, assignSpeakersByOverlap } = m.exports
+const { normalizeSettings, TranslationQueue, HttpServiceError, readJsonResponse, upsertLiveCaption, editCaptionContent, renderedLiveCaptionWindow, OpenAiChunkedModelAdapter, speedToVadConfig, assignSpeakersByOverlap, groupLiveCaptions, freezeCaptionGroups } = m.exports
 const flush = async () => { for(let i=0;i<40;i++) await Promise.resolve() }
 class Clock {
  constructor(){this.now=0;this.id=0;this.tasks=new Map()}
@@ -94,6 +94,25 @@ async function regressions(){
  const bodyAdapter=new OpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default'});bodyAdapter.gatewayTimeoutMs=1000
  await bodyAdapter.start({sampleRate:16000,language:'zh-TW',targetLanguage:'en'})
  const timedOut=assert.rejects(bodyAdapter.transcribeThroughWebGateway(new ArrayBuffer(44)),e=>e.name==='TimeoutError');await flush();await bodyClock.advance(1000);await timedOut;assert.equal(bodyAdapter.activeGatewayRequests.size,0)
+ // Translation must not write `captionGroupId`: that field is the display-row lock
+ // set by freezeCaptionGroups. Translation strategy may only change how requests
+ // are emitted, never how the live caption display is grouped.
+ const displayRow=[entry('row1',{startMs:0,endMs:1000}),entry('row2',{startMs:1000,endMs:2000}),entry('row3',{startMs:2000,endMs:3000}),entry('row4',{startMs:3000,endMs:4000})]
+ assert.equal(groupLiveCaptions(displayRow).length,1,'four consecutive captions form one display row')
+ const realtime=setup(displayRow.map(e=>({...e})))
+ for(const segment of realtime.entries)await realtime.queue.request(segment,async()=> '即時譯文','en')
+ assert.ok(realtime.entries.every(e=>e.translatedText),'realtime strategy translates every segment')
+ assert.ok(realtime.entries.every(e=>e.captionGroupId===undefined),'realtime translation must not write display-row locks')
+ assert.equal(groupLiveCaptions(realtime.entries).length,1,'realtime translation must not fragment the display')
+ const sentenceStrategy=setup(displayRow.map(e=>({...e})))
+ await sentenceStrategy.queue.request(groupLiveCaptions(sentenceStrategy.entries)[0],async()=> '整句譯文','en')
+ assert.equal(sentenceStrategy.entries.filter(e=>e.translatedText).length,1,'sentence strategy stores one group translation')
+ assert.ok(sentenceStrategy.entries.every(e=>e.captionGroupId===undefined),'sentence translation must not write display-row locks either')
+ assert.equal(groupLiveCaptions(sentenceStrategy.entries).length,1,'sentence translation must not fragment the display')
+ const frozen=setup(freezeCaptionGroups(displayRow.map(e=>({...e})),true))
+ await frozen.queue.request(groupLiveCaptions(frozen.entries)[0],async()=> '整句譯文','en')
+ assert.ok(frozen.entries.some(e=>e.captionGroupId),'freezeCaptionGroups keeps the display-row lock')
+ assert.equal(groupLiveCaptions(frozen.entries).length,1,'translation must not split a row frozen by speaker labelling')
  console.log('Caption lifecycle, limiter and scheduler regressions passed.')
 }
 async function virtualCapture(speed,inject=false){

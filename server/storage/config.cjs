@@ -23,6 +23,10 @@ const readStorageConfig = (environment = process.env) => {
   const milvus = requiredGroup(environment, 'Milvus', [
     'S2T_MILVUS_ENDPOINT', 'S2T_MILVUS_DB_NAME', 'S2T_MILVUS_COLLECTION', 'S2T_MILVUS_TOKEN'
   ])
+  if (postgres) {
+    postgres.S2T_POSTGRES_MAX_CONNECTIONS = environment.S2T_POSTGRES_MAX_CONNECTIONS
+    postgres.S2T_STORAGE_MIGRATIONS = environment.S2T_STORAGE_MIGRATIONS
+  }
   if (postgres && (!Number.isInteger(Number(postgres.S2T_POSTGRES_PORT)) || Number(postgres.S2T_POSTGRES_PORT) < 1)) {
     throw new StorageConfigurationError('S2T_POSTGRES_PORT 必須是有效連接埠。')
   }

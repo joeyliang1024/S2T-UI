@@ -1,0 +1,19 @@
+{
+  "baseUrl": "http://test-ingress:8080",
+  "scheduled": 6000,
+  "chains": 6000,
+  "failedChains": 0,
+  "dropped": 0,
+  "chainLatencyMs": {
+    "n": 6000,
+    "p50": 644,
+    "p95": 6096,
+    "p99": 8619,
+    "max": 9881
+  },
+  "scenario": "authenticated manual Sentinel failover during load",
+  "masterBefore": "redis-2.redis.s2t-stress-20261005.svc.cluster.local",
+  "masterAfter": "redis-0.redis.s2t-stress-20261005.svc.cluster.local",
+  "integrityPassed": 100,
+  "limits": "Controlled failover, not abrupt master crash or network partition"
+}

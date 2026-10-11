@@ -1,0 +1,3 @@
+PASS new Sentinel names, separate auth/TLS, invalid groups, old names rejected and standalone mode
+PASS whole-command timeout and abort during topology waits
+PASS FIFO admission, bounded Sentinel failover wait, completed lease reconciliation and one model execution

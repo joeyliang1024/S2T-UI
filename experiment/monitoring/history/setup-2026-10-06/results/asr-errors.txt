@@ -1,0 +1,1 @@
+PASS permanent 4xx fail once, transient errors recover with the same idempotency key

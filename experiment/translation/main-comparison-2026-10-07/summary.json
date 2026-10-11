@@ -1,0 +1,63 @@
+{
+  "mainCommit": "ed725a1f0fa6cd42e4706629344f58f4ef358de7",
+  "featureCommit": "5b512495d0abf8e8cb2bb87d46992fc1dd0626b7",
+  "cases": [
+    {
+      "strategy": "realtime",
+      "mockLatencyMs": 180,
+      "sameInputs": true,
+      "sameQueueLatency": true,
+      "mainP95Ms": 200,
+      "featureP95Ms": 200,
+      "requests": 24
+    },
+    {
+      "strategy": "realtime",
+      "mockLatencyMs": 800,
+      "sameInputs": true,
+      "sameQueueLatency": true,
+      "mainP95Ms": 800,
+      "featureP95Ms": 800,
+      "requests": 24
+    },
+    {
+      "strategy": "realtime",
+      "mockLatencyMs": 2500,
+      "sameInputs": true,
+      "sameQueueLatency": true,
+      "mainP95Ms": 4150,
+      "featureP95Ms": 4150,
+      "requests": 24
+    },
+    {
+      "strategy": "sentence",
+      "mockLatencyMs": 180,
+      "sameInputs": true,
+      "sameQueueLatency": true,
+      "mainP95Ms": 3800,
+      "featureP95Ms": 3800,
+      "requests": 6
+    },
+    {
+      "strategy": "sentence",
+      "mockLatencyMs": 800,
+      "sameInputs": true,
+      "sameQueueLatency": true,
+      "mainP95Ms": 4400,
+      "featureP95Ms": 4400,
+      "requests": 6
+    },
+    {
+      "strategy": "sentence",
+      "mockLatencyMs": 2500,
+      "sameInputs": true,
+      "sameQueueLatency": true,
+      "mainP95Ms": 6100,
+      "featureP95Ms": 6100,
+      "requests": 6
+    }
+  ],
+  "scope": "Actual branch TranslationQueue code with identical supplied captions and deterministic virtual-clock model responses. No real model inference or UI paint measurement.",
+  "current8790EnvironmentTranslationModel": "mock-translation",
+  "qualityComparison": "Pending identification of real model and affected account; mock coverage is not translation quality"
+}

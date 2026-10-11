@@ -1,0 +1,26 @@
+{
+  "setting": "repl-diskless-sync-delay 0",
+  "scope": "isolated three-node Redis test deployment",
+  "before": {
+    "n": 6000,
+    "p50": 644,
+    "p95": 6096,
+    "p99": 8619,
+    "max": 9881
+  },
+  "after": {
+    "n": 6000,
+    "p50": 632,
+    "p95": 1460,
+    "p99": 2641,
+    "max": 4460
+  },
+  "failoverSecondsFromSentinelLog": [
+    7.411,
+    2.151
+  ],
+  "chains": 6000,
+  "failed": 0,
+  "dropped": 0,
+  "limitation": "Controlled failover; residual delay remains and abrupt crash/partition are not covered"
+}

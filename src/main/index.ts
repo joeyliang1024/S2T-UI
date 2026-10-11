@@ -1,3 +1,4 @@
+import { validateAdminParameters, type AdminParameters } from '../../server/admin-parameters.cjs'
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
 import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -28,6 +29,7 @@ const gatewayUrl = (): string => {
 
 let captionWindow: BrowserWindow | null = null
 const desktopUsers = new Map<number, string>()
+const desktopRoles = new Map<number, string>()
 const validUserId = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value)
 const accountDirectory = (userId: string): string => join(app.getPath('userData'), 'accounts', userId)
 const accountSessionsDirectory = (userId: string): string => join(accountDirectory(userId), 'sessions')
@@ -147,6 +149,7 @@ const environmentKey = (profileId: string): string | undefined => {
 
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; requiresApiKey?: boolean; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages: string[]; supportedSampleRates: number[] } }
 type StoredModelConfig = {
+  adminParameters?: AdminParameters
   theme: 'system' | 'light' | 'dark'; uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
   translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryRequiresApiKey: boolean; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; diarizationRequiresApiKey: boolean; embeddingEndpoint: string; embeddingModel: string; embeddingRequiresApiKey: boolean; diarizationPreviewEnabled: boolean; denoiseEnabled: boolean; kaiserResampleEnabled: boolean; sileroVadEnabled: boolean; dynaudnormEnabled: boolean; glossary: string
   responseSpeed: 'fast' | 'normal' | 'slow'
@@ -193,7 +196,7 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' || input.translationLoadStrategy === 'throttled' ? input.translationLoadStrategy : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),
     translationModel: shortText(input.translationModel, 200), translationProfiles, selectedTranslationModelId: shortText(input.selectedTranslationModelId, 100), summaryEndpoint: shortText(input.summaryEndpoint, 2_000),
     summaryModel: shortText(input.summaryModel, 200), summaryRequiresApiKey: input.summaryRequiresApiKey !== false, summaryTemplate: shortText(input.summaryTemplate, 20_000), summaryTemplates, selectedSummaryTemplateId: shortText(input.selectedSummaryTemplateId, 100), summaryOutputLanguage: shortText(input.summaryOutputLanguage, 40), summaryIncludeTranslation: input.summaryIncludeTranslation === true, diarizationEndpoint: shortText(input.diarizationEndpoint, 2_000), diarizationModel: shortText(input.diarizationModel, 200), diarizationRequiresApiKey: input.diarizationRequiresApiKey !== false, embeddingEndpoint: shortText(input.embeddingEndpoint, 2_000), embeddingModel: shortText(input.embeddingModel, 200), embeddingRequiresApiKey: input.embeddingRequiresApiKey !== false, diarizationPreviewEnabled: input.diarizationPreviewEnabled !== false, denoiseEnabled: input.denoiseEnabled !== false, kaiserResampleEnabled: input.kaiserResampleEnabled === true, sileroVadEnabled: input.sileroVadEnabled === true, dynaudnormEnabled: input.dynaudnormEnabled === true, glossary: shortText(input.glossary, 20_000),
-    responseSpeed
+    responseSpeed, adminParameters: validateAdminParameters(input.adminParameters)
   }
 }
 
@@ -287,13 +290,14 @@ app.whenReady().then(() => {
   ipcMain.handle('gateway:authenticate', async (event, accessToken: unknown) => {
     if (typeof accessToken !== 'string' || !accessToken.trim()) throw new Error('缺少登入權杖')
     const response = await fetch(new URL('/api/auth/session', `${gatewayUrl()}/`), { headers: { authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15_000) })
-    const payload = await response.json().catch(() => null) as { user?: { id?: unknown }; error?: string } | null
+    const payload = await response.json().catch(() => null) as { user?: { id?: unknown; role?: unknown }; error?: string } | null
     if (!response.ok || !validUserId(payload?.user?.id)) throw new Error(payload?.error || '無法驗證登入身分')
     desktopUsers.set(event.sender.id, payload.user.id)
-    event.sender.once('destroyed', () => desktopUsers.delete(event.sender.id))
+    desktopRoles.set(event.sender.id, payload.user.role === 'admin' ? 'admin' : 'user')
+    event.sender.once('destroyed', () => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id) })
     return { userId: payload.user.id }
   })
-  ipcMain.handle('gateway:clear-session', (event) => { desktopUsers.delete(event.sender.id) })
+  ipcMain.handle('gateway:clear-session', (event) => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id) })
 
   ipcMain.handle('model:save-api-key', async (event, input: { profileId: string; apiKey: string }) => {
     if (!validSecretId(input.profileId) || typeof input.apiKey !== 'string' || input.apiKey.trim().length < 8) throw new Error('無效的 API key 設定')
@@ -327,9 +331,10 @@ app.whenReady().then(() => {
     return { diarizationProfiles: localModels.localDiarizationProfiles(), branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
   })
   ipcMain.handle('models:load-config', async (event) => {
-    try { return JSON.parse(await readFile(modelConfigPath(requireDesktopUser(event)), 'utf8')) } catch { return null }
+    try { const config = JSON.parse(await readFile(modelConfigPath(requireDesktopUser(event)), 'utf8')); if (desktopRoles.get(event.sender.id) !== 'admin') delete config.adminParameters; return config } catch { return null }
   })
   ipcMain.handle('models:save-config', async (event, config: unknown) => {
+    if (config && typeof config === 'object' && 'adminParameters' in config && (config as { adminParameters?: unknown }).adminParameters !== undefined && desktopRoles.get(event.sender.id) !== 'admin') throw new Error('只有 admin 可保存進階參數')
     const sanitized = sanitizeModelConfig(config)
     const userId = requireDesktopUser(event)
     await mkdir(accountDirectory(userId), { recursive: true })
@@ -372,7 +377,8 @@ app.whenReady().then(() => {
       throw new Error(error instanceof Error ? `模型轉錄失敗：${error.message}` : '模型轉錄失敗')
     }
   })
-  ipcMain.handle('model:complete', async (event, input: { requestId?: string; profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
+  ipcMain.handle('model:complete', async (event, input: { requestId?: string; profileId: string; endpoint: string; model: string; temperature?: number; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
+    if (input.temperature !== undefined && (desktopRoles.get(event.sender.id) !== 'admin' || !Number.isFinite(input.temperature) || input.temperature < 0 || input.temperature > 2)) throw new Error('只有 admin 可調整有效的翻譯參數')
     if (!validSecretId(input.profileId) || !Array.isArray(input.messages) || !input.model.trim()) throw new Error('無效的文字模型請求')
     const apiKey = environmentKey(input.profileId) || (await readSecrets(requireDesktopUser(event)))[input.profileId]
     if (!apiKey) throw new Error('請先在設定中儲存此服務的 API key')
@@ -383,7 +389,7 @@ app.whenReady().then(() => {
     const controller = requestKey ? new AbortController() : undefined
     if (requestKey && controller) textRequestControllers.set(requestKey, controller)
     try {
-      const result = await client.chat.completions.create({ model: input.model, messages: input.messages, temperature: 0.2 }, controller ? { signal: controller.signal } : undefined)
+      const result = await client.chat.completions.create({ model: input.model, messages: input.messages, temperature: input.temperature ?? 0.2 }, controller ? { signal: controller.signal } : undefined)
       return { text: result.choices[0]?.message.content?.trim() ?? '' }
     } catch (error) {
       throw new Error(error instanceof Error ? `文字模型請求失敗：${error.message}` : '文字模型請求失敗')

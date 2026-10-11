@@ -1,0 +1,1809 @@
+{
+  "schemaVersion": 41,
+  "version": 1,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "tags": [
+    "S2T",
+    "值班"
+  ],
+  "editable": false,
+  "templating": {
+    "list": [
+      {
+        "name": "caption_gateway",
+        "label": "字幕量測來源",
+        "type": "custom",
+        "query": "8787 網頁入口 : gateway-web,K8s 測試站 : s2t,驗收模擬資料（非正式） : gateway-acceptance",
+        "current": {
+          "text": "8787 網頁入口",
+          "value": "gateway-web"
+        },
+        "options": [
+          {
+            "text": "8787 網頁入口",
+            "value": "gateway-web",
+            "selected": true
+          },
+          {
+            "text": "K8s 測試站",
+            "value": "s2t",
+            "selected": false
+          },
+          {
+            "text": "驗收模擬資料（非正式）",
+            "value": "gateway-acceptance",
+            "selected": false
+          }
+        ],
+        "multi": false,
+        "includeAll": false
+      },
+      {
+        "name": "usage_department",
+        "label": "部門",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "s2t-prometheus"
+        },
+        "query": "label_values(s2t_user_requests_total{job=\"$caption_gateway\",department!=\"\"}, department)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "usage_user",
+        "label": "使用量 NT",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "s2t-prometheus"
+        },
+        "query": "label_values(s2t_user_requests_total{job=\"$caption_gateway\",department=~\"$usage_department\",department!=\"\"}, nt)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "uid": "s2t-oncall",
+  "title": "S2T · 值班總覽｜延遲・使用者・請求",
+  "panels": [
+    {
+      "id": 1,
+      "title": "01 · 延遲｜語音到字幕（來源：$caption_gateway）",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "title": "字幕 P50（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "字幕 P95（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "字幕 P99（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "字幕延遲趨勢｜P50／P95／P99",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 16,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "0",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "legendFormat": "P50",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "1",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "legendFormat": "P95",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "2",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "legendFormat": "P99",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "有效字幕樣本（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 8,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "無有效樣本時，延遲分位數不能用來判斷服務正常。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "02 · 使用者｜NT 與部門（來源：$caption_gateway）",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 8,
+      "title": "有請求的 NT（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(sum(increase(s2t_user_requests_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\"}[5m])) by (nt) > 0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "最近 5 分鐘有 API 活動的使用者，非目前登入或在線人數；包含字幕遙測。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "有活動的部門（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 11,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(sum(increase(s2t_user_requests_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\"}[5m])) by (department) > 0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "ASR 音訊量（所選範圍）",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 11,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(s2t_user_audio_seconds_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\",operation=\"transcriptions\"}[$__range])) / 3600",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "成功完成的可解析 WAV 音訊量；未知格式時長不估算。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:小時",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "模型權杖數（所選範圍）",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 11,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(s2t_user_input_tokens_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\"}[$__range])) + sum(increase(s2t_user_output_tokens_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\"}[$__range]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "翻譯／摘要模型回報的輸入與輸出 token；未回報部分請查看詳細總覽。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "使用者請求量｜前 10 位 NT（所選範圍）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum(increase(s2t_user_requests_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\",nt=~\"$usage_user\",department=~\"$usage_department\"}[$__range])) by (nt))",
+          "legendFormat": "{{nt}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "依選定部門與 NT 篩選，包含重試、快取命中、字幕遙測及資料 API。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true
+      }
+    },
+    {
+      "id": 13,
+      "title": "部門總體請求量（所選範圍）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(s2t_user_requests_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\",department=~\"$usage_department\"}[$__range])) by (department)",
+          "legendFormat": "{{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "部門加總不受 NT 篩選影響。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true
+      }
+    },
+    {
+      "id": 14,
+      "title": "03 · 請求｜入口健康與負載（來源：$caption_gateway）",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 15,
+      "title": "監控入口狀態",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min(up{job=\"$caption_gateway\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "Prometheus 是否能抓取此來源；可抓取不等同模型或所有下游服务正常。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "抓取失敗",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "可抓取",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "API 請求速率（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_gateway_request_duration_seconds_count{job=\"$caption_gateway\"}[5m]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "全部 gateway API 請求，包含未登入與拒絕的請求。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "title": "API 錯誤率（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_gateway_request_errors_total{job=\"$caption_gateway\"}[5m])) / sum(rate(s2t_gateway_request_duration_seconds_count{job=\"$caption_gateway\"}[5m]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "4xx 與 5xx 合計；無請求時不填零。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1e-06
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "title": "處理中的 HTTP 請求",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(s2t_gateway_inflight_requests{job=\"$caption_gateway\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "目前請求數，包含正在執行的 metrics 抓取；不是使用者數。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "title": "API 請求趨勢（每秒）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_gateway_request_duration_seconds_count{job=\"$caption_gateway\"}[5m])) by (route)",
+          "legendFormat": "{{route}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "transcriptions"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "語音辨識"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "translations"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "翻譯"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "summaries"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "摘要"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "diarizations"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "講者分離"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "telemetry_captions"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "字幕遙測"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_session"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "登入狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_register"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "註冊"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_login"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "登入"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_logout"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "登出"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "storage"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存服務"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_object"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "錄音檔案"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_glossary"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "詞彙表"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_voiceprints"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "聲紋資料"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_diarization_jobs"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "講者分離工作"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_storage_status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_storage_audit"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存稽核"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_storage_retry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存重試"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_model_registry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "模型設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_model_health"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "模型健康狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_model_credentials_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "模型憑證設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_summary_templates"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "摘要模板"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_processing_silero_vad"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "語音活動偵測"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_processing_status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "音訊處理狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_processing_import_wav"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "匯入音訊"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "config"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "服務設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_sessions"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "會議紀錄"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_settings"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "使用者設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "其他操作"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "client_error"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "請求錯誤（4xx）"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "server_error"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "服務錯誤（5xx）"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "aborted"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "連線中斷"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "title": "已登入請求錯誤分類（每秒）",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(s2t_user_requests_total{job=\"$caption_gateway\",nt!=\"\",department!=\"\",user_id!=\"__overflow__\",outcome!=\"success\"}[5m])) by (outcome)",
+          "legendFormat": "{{outcome}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "transcriptions"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "語音辨識"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "translations"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "翻譯"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "summaries"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "摘要"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "diarizations"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "講者分離"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "telemetry_captions"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "字幕遙測"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_session"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "登入狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_register"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "註冊"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_login"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "登入"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "auth_logout"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "登出"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "storage"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存服務"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_object"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "錄音檔案"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_glossary"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "詞彙表"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_voiceprints"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "聲紋資料"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_diarization_jobs"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "講者分離工作"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_storage_status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_storage_audit"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存稽核"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_storage_retry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "儲存重試"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_model_registry"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "模型設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_model_health"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "模型健康狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_model_credentials_id"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "模型憑證設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_summary_templates"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "摘要模板"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_processing_silero_vad"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "語音活動偵測"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_processing_status"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "音訊處理狀態"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "audio_processing_import_wav"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "匯入音訊"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "config"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "服務設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_sessions"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "會議紀錄"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "data_settings"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "使用者設定"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "其他操作"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "client_error"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "請求錯誤（4xx）"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "server_error"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "服務錯誤（5xx）"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "aborted"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "連線中斷"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ],
+  "links": [
+    {
+      "title": "詳細監控與用量",
+      "type": "link",
+      "url": "/d/s2t-overview",
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": true
+    }
+  ],
+  "description": "值班快速判讀：延遲 → NT／部門使用情況 → 請求健康。來源選擇器區分 8787 真實入口與驗收模擬資料；不將缺失資料當作零。"
+}

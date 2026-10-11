@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - workloads.yaml
+  - migration.yaml
+  - autoscaling.yaml
+images:
+  - name: s2t-ui
+    newName: YOUR_REGISTRY/s2t-ui
+    newTag: REPLACE_WITH_IMMUTABLE_TAG

@@ -1,0 +1,34 @@
+{
+  "baseUrl": "http://test-ingress:8080",
+  "scheduled": 6000,
+  "chains": 6000,
+  "failedChains": 0,
+  "dropped": 0,
+  "asrLatencyMs": {
+    "n": 6000,
+    "p50": 428,
+    "p95": 1204,
+    "p99": 1221,
+    "max": 1649
+  },
+  "translationLatencyMs": {
+    "n": 6000,
+    "p50": 202,
+    "p95": 395,
+    "p99": 819,
+    "max": 1227
+  },
+  "chainLatencyMs": {
+    "n": 6000,
+    "p50": 631,
+    "p95": 1352,
+    "p99": 1470,
+    "max": 2332
+  },
+  "minimumReady": {
+    "gateway": 4,
+    "audio-worker": 2,
+    "test-ingress": 2
+  },
+  "rolloutObserved": true
+}

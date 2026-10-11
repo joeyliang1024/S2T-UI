@@ -1,0 +1,129 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "test-ingress",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "nginx.conf": "pid /tmp/nginx.pid;\nevents { worker_connections 1024; }\nhttp {\n  access_log off;\n  error_log /dev/stderr warn;\n  client_body_temp_path /tmp/client-body;\n  proxy_temp_path /tmp/proxy;\n  fastcgi_temp_path /tmp/fastcgi;\n  uwsgi_temp_path /tmp/uwsgi;\n  scgi_temp_path /tmp/scgi;\n  server {\n    listen 8080;\n    client_max_body_size 512m;\n    location = /ingress-healthz { return 200 'ok'; }\n    location / {\n      proxy_pass http://gateway:8787;\n      proxy_http_version 1.1;\n      proxy_set_header Host $http_host;\n      proxy_set_header Connection '';\n      proxy_request_buffering off;\n      proxy_buffering off;\n      proxy_next_upstream off;\n      proxy_read_timeout 180s;\n      proxy_send_timeout 180s;\n    }\n  }\n}\n"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "test-ingress",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 2,
+        "selector": {
+          "matchLabels": {
+            "app": "test-ingress"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "test-ingress"
+            },
+            "annotations": {
+              "s2t-test/config-sha256": "93dfd098174902f55506ecaf392e6dcba169dd1aa1141f931e80008fad6d6a60"
+            }
+          },
+          "spec": {
+            "automountServiceAccountToken": false,
+            "containers": [
+              {
+                "name": "nginx",
+                "image": "nginx:1.28.0-alpine",
+                "command": [
+                  "nginx"
+                ],
+                "args": [
+                  "-g",
+                  "daemon off;"
+                ],
+                "ports": [
+                  {
+                    "containerPort": 8080
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "32Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true
+                },
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/ingress-healthz",
+                    "port": 8080
+                  },
+                  "periodSeconds": 2
+                },
+                "volumeMounts": [
+                  {
+                    "name": "config",
+                    "mountPath": "/etc/nginx/nginx.conf",
+                    "subPath": "nginx.conf",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "tmp",
+                    "mountPath": "/tmp"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "config",
+                "configMap": {
+                  "name": "test-ingress"
+                }
+              },
+              {
+                "name": "tmp",
+                "emptyDir": {
+                  "sizeLimit": "128Mi"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "test-ingress",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "test-ingress"
+        },
+        "ports": [
+          {
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ]
+      }
+    }
+  ]
+}

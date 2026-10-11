@@ -1,0 +1,11 @@
+{
+    "kind": "ConfigMap",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "cross-pod-code",
+        "namespace": "s2t-stress-20261005"
+    },
+    "data": {
+        "cross-pod-check.cjs": "const fs=require('node:fs');const users=JSON.parse(fs.readFileSync('/tmp/stress-users.json'));const hosts=process.argv.slice(2).map(ip=\u003e'http://'+ip+':8787');const u=users[99];\nasync function req(host,path,body,headers={}){const r=await fetch(host+path,{method:'POST',headers:{authorization:'Bearer '+u.token,...headers},body,signal:AbortSignal.timeout(10000)});return {status:r.status,body:await r.json()};}\nasync function stats(){return(await fetch('http://mock-models:9090/stats')).json();}\n(async()=\u003e{const before=await stats(),key='crosspod-'+Date.now(),audio=Buffer.alloc(48044);const options={'content-type':'audio/wav','x-s2t-idempotency-key':key};const initial=await req(hosts[0],'/api/transcriptions',audio,options);const replay=await req(hosts[1],'/api/transcriptions',audio,options);const changed=await req(hosts[1],'/api/transcriptions',Buffer.alloc(48044,1),options);const after=await stats();\nconst race=await Promise.all(hosts.map((host,i)=\u003ereq(host,'/api/data/glossary',JSON.stringify({glossary:'test-'+i,version:0}),{'content-type':'application/json'})));\nconsole.log(JSON.stringify({phase:'cross-pod',hosts,initialStatus:initial.status,replayStatus:replay.status,sameOutput:JSON.stringify(initial.body)===JSON.stringify(replay.body),changedPayloadStatus:changed.status,mockAsrCalls:after.counts.asr-before.counts.asr,casStatuses:race.map(r=\u003er.status).sort()}));})().catch(e=\u003e{console.error(e);process.exit(1)});\n"
+    }
+}

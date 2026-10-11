@@ -1,0 +1,267 @@
+{
+  "baseline": {
+    "startedAt": "2026-10-05T15:40:03.275Z",
+    "phase": "baseline-4pods-rolling-valid",
+    "users": 100,
+    "seconds": 60,
+    "intervalMs": 1500,
+    "scheduled": 4000,
+    "dropped": 0,
+    "asr": {
+      "200": 3963,
+      "503": 34,
+      "network": 3
+    },
+    "translation": {
+      "200": 3937,
+      "503": 11,
+      "network": 15
+    },
+    "chains": 3937,
+    "failedChains": 63,
+    "errors": [
+      {
+        "kind": "translation",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      },
+      {
+        "kind": "asr",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      },
+      {
+        "kind": "asr",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      },
+      {
+        "kind": "translation",
+        "message": "fetch failed"
+      },
+      {
+        "kind": "asr",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      },
+      {
+        "kind": "translation",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      },
+      {
+        "kind": "asr",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      },
+      {
+        "kind": "asr",
+        "status": 503,
+        "message": "服務正在排空，請重試"
+      }
+    ],
+    "peakPending": 63,
+    "schedulerLagMaxMs": 122,
+    "elapsedMs": 60586,
+    "asrLatencyMs": {
+      "n": 3963,
+      "p50": 411,
+      "p95": 436,
+      "p99": 525,
+      "max": 717
+    },
+    "translationLatencyMs": {
+      "n": 3937,
+      "p50": 190,
+      "p95": 211,
+      "p99": 273,
+      "max": 501
+    },
+    "chainLatencyMs": {
+      "n": 3937,
+      "p50": 602,
+      "p95": 646,
+      "p99": 808,
+      "max": 1004
+    }
+  },
+  "fixed": [
+    {
+      "startedAt": "2026-10-05T15:44:24.802Z",
+      "phase": "fixed-4pods-constant",
+      "users": 100,
+      "seconds": 75,
+      "intervalMs": 1500,
+      "scheduled": 5000,
+      "dropped": 0,
+      "asr": {
+        "200": 5000
+      },
+      "translation": {
+        "200": 5000
+      },
+      "chains": 5000,
+      "failedChains": 0,
+      "errors": [],
+      "peakPending": 61,
+      "schedulerLagMaxMs": 218,
+      "elapsedMs": 75576,
+      "asrLatencyMs": {
+        "n": 5000,
+        "p50": 408,
+        "p95": 421,
+        "p99": 507,
+        "max": 717
+      },
+      "translationLatencyMs": {
+        "n": 5000,
+        "p50": 187,
+        "p95": 199,
+        "p99": 260,
+        "max": 505
+      },
+      "chainLatencyMs": {
+        "n": 5000,
+        "p50": 596,
+        "p95": 623,
+        "p99": 799,
+        "max": 1010
+      },
+      "actualUpstreamCalls": {
+        "asr": 5000,
+        "translation": 5000
+      },
+      "tailRequests": {
+        "asr": 0,
+        "translation": 0
+      },
+      "pods-before": {
+        "pods": 4,
+        "restarts": 0
+      },
+      "pods-after": {
+        "pods": 4,
+        "restarts": 0
+      }
+    },
+    {
+      "startedAt": "2026-10-05T15:45:57.691Z",
+      "phase": "fixed-4pods-jitter-tail",
+      "users": 100,
+      "seconds": 120,
+      "intervalMs": 1500,
+      "scheduled": 8000,
+      "dropped": 0,
+      "asr": {
+        "200": 8000
+      },
+      "translation": {
+        "200": 8000
+      },
+      "chains": 8000,
+      "failedChains": 0,
+      "errors": [],
+      "peakPending": 83,
+      "schedulerLagMaxMs": 37,
+      "elapsedMs": 135003,
+      "asrLatencyMs": {
+        "n": 8000,
+        "p50": 615,
+        "p95": 794,
+        "p99": 12004,
+        "max": 12022
+      },
+      "translationLatencyMs": {
+        "n": 8000,
+        "p50": 311,
+        "p95": 402,
+        "p99": 3003,
+        "max": 3038
+      },
+      "chainLatencyMs": {
+        "n": 8000,
+        "p50": 926,
+        "p95": 1151,
+        "p99": 12228,
+        "max": 15017
+      },
+      "actualUpstreamCalls": {
+        "asr": 8000,
+        "translation": 8000
+      },
+      "tailRequests": {
+        "asr": 80,
+        "translation": 80
+      },
+      "pods-before": {
+        "pods": 4,
+        "restarts": 0
+      },
+      "pods-after": {
+        "pods": 4,
+        "restarts": 0
+      }
+    },
+    {
+      "startedAt": "2026-10-05T15:49:04.804Z",
+      "phase": "fixed-2pods-slow",
+      "users": 100,
+      "seconds": 120,
+      "intervalMs": 1500,
+      "scheduled": 8000,
+      "dropped": 0,
+      "asr": {
+        "200": 8000
+      },
+      "translation": {
+        "200": 8000
+      },
+      "chains": 8000,
+      "failedChains": 0,
+      "errors": [],
+      "peakPending": 99,
+      "schedulerLagMaxMs": 53,
+      "elapsedMs": 135013,
+      "asrLatencyMs": {
+        "n": 8000,
+        "p50": 763,
+        "p95": 897,
+        "p99": 910,
+        "max": 12013
+      },
+      "translationLatencyMs": {
+        "n": 8000,
+        "p50": 510,
+        "p95": 601,
+        "p99": 613,
+        "max": 3018
+      },
+      "chainLatencyMs": {
+        "n": 8000,
+        "p50": 1273,
+        "p95": 1452,
+        "p99": 1513,
+        "max": 15027
+      },
+      "actualUpstreamCalls": {
+        "asr": 8000,
+        "translation": 8000
+      },
+      "tailRequests": {
+        "asr": 27,
+        "translation": 40
+      },
+      "pods-before": {
+        "pods": 4,
+        "restarts": 0
+      },
+      "pods-after": {
+        "pods": 2,
+        "restarts": 0
+      }
+    }
+  ],
+  "longRequestsCompletedAfterSIGTERM": 5,
+  "totalFixedChains": 21000,
+  "totalFixedErrors": 0
+}

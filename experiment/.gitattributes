@@ -1,0 +1,3 @@
+# Preserve captured command output and unified patches exactly.
+**/logs/** -whitespace
+**/results/** -whitespace

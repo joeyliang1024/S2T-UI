@@ -19,6 +19,7 @@ services:
     volumes:
       - ./models:/models:ro
       - gateway-data:/data
+      - ./data/template:/data/template:ro
     restart: unless-stopped
 volumes:
   gateway-data:

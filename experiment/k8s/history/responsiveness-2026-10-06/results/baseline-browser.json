@@ -1,0 +1,17 @@
+{
+  "name": "baseline",
+  "segments": 2400,
+  "openMs": 219,
+  "detailMs": 67,
+  "openedMembers": 5,
+  "nodes": 30240,
+  "groups": 480,
+  "memberRows": 2400,
+  "longTasks": [
+    {
+      "start": 1439.5,
+      "duration": 108
+    }
+  ],
+  "pageErrors": []
+}

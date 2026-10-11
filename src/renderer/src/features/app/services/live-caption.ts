@@ -3,6 +3,10 @@ import { joinCaptionText } from '../../../shared/services/transcript'
 
 export const upsertLiveCaption = (current: TranscriptEvent[], event: TranscriptEvent, _clearedThroughMs: number, _isTranslating: (id: string) => boolean): TranscriptEvent[] => {
   const existing = current.findIndex((entry) => entry.id === event.id)
+  if (event.boundaryOnly) {
+    if (existing < 0) return current
+    return current.map((entry, index) => index === existing ? { ...entry, isSentenceBoundary: true } : entry)
+  }
   if (existing < 0) {
     return [...current, { ...event, asrRevision: event.revision }].sort((a, b) => a.startMs - b.startMs)
   }

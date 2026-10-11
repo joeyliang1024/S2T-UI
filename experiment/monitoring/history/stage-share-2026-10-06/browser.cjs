@@ -1,0 +1,38 @@
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict')
+const {chromium}=require('/Users/liangzhiquan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')
+let browser
+;(async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'s2t-metrics-')),file=path.join(dir,'tone.wav'),wav=Buffer.alloc(44+16000*120*2)
+ wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(16000,24);wav.writeUInt32LE(32000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(wav.length-44,40)
+ for(let i=44;i<wav.length;i+=2){const sample=(i-44)/2;wav.writeInt16LE(sample%64000<32000?Math.round(5000*Math.sin(2*Math.PI*180*sample/16000)):0,i)}fs.writeFileSync(file,wav)
+ const origin='http://127.0.0.1:8790'
+ browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream','--use-file-for-fake-audio-capture='+file]})
+ const results=await Promise.all(Array.from({length:8},async(_,i)=>{
+  const context=await browser.newContext({permissions:['microphone']}),page=await context.newPage(),samples=[],events=[],errors=[]
+  const username='metricsbrowser'+Date.now()+i,r=await context.request.post(origin+'/api/auth/register',{data:{username,password:'metrics-browser-test-only',NT:username,Department:'Lab'}});assert.equal(r.status(),201)
+  await page.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort())
+  page.on('request',request=>{if(request.url().endsWith('/api/telemetry/captions')){const body=request.postDataJSON();samples.push(...body.samples);events.push(body.events)}})
+  page.on('pageerror',e=>errors.push(e.message))
+  await page.goto(origin+'/',{waitUntil:'networkidle'});await page.locator('.live-controls-trigger').click()
+  await page.locator('#live-sidebar-capture label').filter({hasText:/麥克風|Microphone/}).locator('select').first().selectOption('default')
+  await page.getByRole('button',{name:/開始收音|Start recording/}).click();await page.getByRole('button',{name:/暫停|Pause/}).waitFor();await page.waitForTimeout(10000)
+  if (!await page.getByRole('button',{name:/暫停|Pause/}).isVisible()) fs.writeFileSync(path.join(__dirname,'results/pre-pause-'+i+'.json'),JSON.stringify({samples,events,errors,text:(await page.locator('body').innerText()).slice(-8000)},null,2))
+  await page.getByRole('button',{name:/暫停|Pause/}).click();await page.waitForTimeout(4000)
+  const first=samples.filter(s=>s.stage==='speech_to_first_paint');assert.ok(first.length>=2,'at least two detected speech onsets must actually paint');assert.ok(first.every(s=>s.seconds>0.12&&s.seconds<20))
+  const stages=['vad_onset','chunk_wait','browser_queue','browser_preprocess','asr_roundtrip_with_retries','response_to_paint']
+  const cohorts=samples.filter(s=>s.stage==='first_word_vad_onset').length
+  assert.ok(cohorts>=2)
+  for(const stage of stages)assert.equal(samples.filter(s=>s.stage==='first_word_'+stage).length,cohorts,'every slice must measure the same cohort')
+  for(let n=0;n<samples.length;n++)if(samples[n].stage==='first_word_vad_onset'){
+   const duration=samples.slice(n,n+6).reduce((total,s)=>total+s.seconds,0)
+   assert.equal(samples[n-3].stage,'speech_to_first_paint')
+   assert.ok(Math.abs(duration-samples[n-3].seconds)<1e-8,'six slices must sum to that exact first-word observation')
+  }
+  assert.equal(errors.length,0)
+  await page.getByRole('button',{name:/停止|結束|Stop recording/}).click();await page.waitForTimeout(4000)
+  const result={browser:i,samples,events,errors};await context.close();return result
+ }))
+ fs.writeFileSync(path.join(__dirname,'results/browser.json'),JSON.stringify(results,null,2)+'\n')
+ const first=results.flatMap(r=>r.samples.filter(s=>s.stage==='speech_to_first_paint').map(s=>s.seconds)).sort((a,b)=>a-b),quantile=q=>first[Math.ceil(first.length*q)-1]
+ console.log(JSON.stringify({passed:true,browsers:8,onsetPaintSamples:first.length,p50:quantile(.5),p95:quantile(.95),p99:quantile(.99)}))
+})().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{await browser?.close()})

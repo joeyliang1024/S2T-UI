@@ -1,0 +1,1 @@
+PASS pause flush for short tails, exact chunk boundary and full slow queue; resume, idempotent flush, final drain and silent suppression

@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "records": 40,
+  "editSaveMs": 826,
+  "posts": [
+    {
+      "status": 200,
+      "encoding": "gzip",
+      "bytes": 232775
+    },
+    {
+      "status": 200,
+      "encoding": "gzip",
+      "bytes": 232806
+    }
+  ],
+  "pageErrors": []
+}

@@ -1,0 +1,11 @@
+{
+  "chains": 6000,
+  "failed": 0,
+  "dropped": 0,
+  "observations": 44,
+  "minimumReady": {
+    "test-ingress": 2,
+    "gateway": 4,
+    "audio-worker": 2
+  }
+}

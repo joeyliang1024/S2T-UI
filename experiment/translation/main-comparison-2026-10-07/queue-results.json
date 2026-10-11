@@ -1,0 +1,1298 @@
+[
+  {
+    "branch": "main",
+    "strategy": "realtime",
+    "mockModelLatencyMs": 180,
+    "requests": 24,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27
+    ],
+    "requestInputs": [
+      {
+        "at": 1700,
+        "text": "We tested the database",
+        "id": "http-0"
+      },
+      {
+        "at": 2900,
+        "text": " after a rolling update",
+        "id": "http-1"
+      },
+      {
+        "at": 4100,
+        "text": " and all accounts",
+        "id": "http-2"
+      },
+      {
+        "at": 5300,
+        "text": " retained their recordings.",
+        "id": "http-3"
+      },
+      {
+        "at": 6500,
+        "text": "We tested the database",
+        "id": "http-4"
+      },
+      {
+        "at": 7700,
+        "text": " after a rolling update",
+        "id": "http-5"
+      },
+      {
+        "at": 8900,
+        "text": " and all accounts",
+        "id": "http-6"
+      },
+      {
+        "at": 10100,
+        "text": " retained their recordings.",
+        "id": "http-7"
+      },
+      {
+        "at": 11300,
+        "text": "We tested the database",
+        "id": "http-8"
+      },
+      {
+        "at": 12500,
+        "text": " after a rolling update",
+        "id": "http-9"
+      },
+      {
+        "at": 13700,
+        "text": " and all accounts",
+        "id": "http-10"
+      },
+      {
+        "at": 14900,
+        "text": " retained their recordings.",
+        "id": "http-11"
+      },
+      {
+        "at": 16100,
+        "text": "We tested the database",
+        "id": "http-12"
+      },
+      {
+        "at": 17300,
+        "text": " after a rolling update",
+        "id": "http-13"
+      },
+      {
+        "at": 18500,
+        "text": " and all accounts",
+        "id": "http-14"
+      },
+      {
+        "at": 19700,
+        "text": " retained their recordings.",
+        "id": "http-15"
+      },
+      {
+        "at": 20900,
+        "text": "We tested the database",
+        "id": "http-16"
+      },
+      {
+        "at": 22100,
+        "text": " after a rolling update",
+        "id": "http-17"
+      },
+      {
+        "at": 23300,
+        "text": " and all accounts",
+        "id": "http-18"
+      },
+      {
+        "at": 24500,
+        "text": " retained their recordings.",
+        "id": "http-19"
+      },
+      {
+        "at": 25700,
+        "text": "We tested the database",
+        "id": "http-20"
+      },
+      {
+        "at": 26900,
+        "text": " after a rolling update",
+        "id": "http-21"
+      },
+      {
+        "at": 28100,
+        "text": " and all accounts",
+        "id": "http-22"
+      },
+      {
+        "at": 29300,
+        "text": " retained their recordings.",
+        "id": "http-23"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 200,
+      "p95": 200,
+      "max": 200
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "feature",
+    "strategy": "realtime",
+    "mockModelLatencyMs": 180,
+    "requests": 24,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27
+    ],
+    "requestInputs": [
+      {
+        "at": 1700,
+        "text": "We tested the database",
+        "id": "http-0"
+      },
+      {
+        "at": 2900,
+        "text": " after a rolling update",
+        "id": "http-1"
+      },
+      {
+        "at": 4100,
+        "text": " and all accounts",
+        "id": "http-2"
+      },
+      {
+        "at": 5300,
+        "text": " retained their recordings.",
+        "id": "http-3"
+      },
+      {
+        "at": 6500,
+        "text": "We tested the database",
+        "id": "http-4"
+      },
+      {
+        "at": 7700,
+        "text": " after a rolling update",
+        "id": "http-5"
+      },
+      {
+        "at": 8900,
+        "text": " and all accounts",
+        "id": "http-6"
+      },
+      {
+        "at": 10100,
+        "text": " retained their recordings.",
+        "id": "http-7"
+      },
+      {
+        "at": 11300,
+        "text": "We tested the database",
+        "id": "http-8"
+      },
+      {
+        "at": 12500,
+        "text": " after a rolling update",
+        "id": "http-9"
+      },
+      {
+        "at": 13700,
+        "text": " and all accounts",
+        "id": "http-10"
+      },
+      {
+        "at": 14900,
+        "text": " retained their recordings.",
+        "id": "http-11"
+      },
+      {
+        "at": 16100,
+        "text": "We tested the database",
+        "id": "http-12"
+      },
+      {
+        "at": 17300,
+        "text": " after a rolling update",
+        "id": "http-13"
+      },
+      {
+        "at": 18500,
+        "text": " and all accounts",
+        "id": "http-14"
+      },
+      {
+        "at": 19700,
+        "text": " retained their recordings.",
+        "id": "http-15"
+      },
+      {
+        "at": 20900,
+        "text": "We tested the database",
+        "id": "http-16"
+      },
+      {
+        "at": 22100,
+        "text": " after a rolling update",
+        "id": "http-17"
+      },
+      {
+        "at": 23300,
+        "text": " and all accounts",
+        "id": "http-18"
+      },
+      {
+        "at": 24500,
+        "text": " retained their recordings.",
+        "id": "http-19"
+      },
+      {
+        "at": 25700,
+        "text": "We tested the database",
+        "id": "http-20"
+      },
+      {
+        "at": 26900,
+        "text": " after a rolling update",
+        "id": "http-21"
+      },
+      {
+        "at": 28100,
+        "text": " and all accounts",
+        "id": "http-22"
+      },
+      {
+        "at": 29300,
+        "text": " retained their recordings.",
+        "id": "http-23"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 200,
+      "p95": 200,
+      "max": 200
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "main",
+    "strategy": "realtime",
+    "mockModelLatencyMs": 800,
+    "requests": 24,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27
+    ],
+    "requestInputs": [
+      {
+        "at": 1700,
+        "text": "We tested the database",
+        "id": "http-0"
+      },
+      {
+        "at": 2900,
+        "text": " after a rolling update",
+        "id": "http-1"
+      },
+      {
+        "at": 4100,
+        "text": " and all accounts",
+        "id": "http-2"
+      },
+      {
+        "at": 5300,
+        "text": " retained their recordings.",
+        "id": "http-3"
+      },
+      {
+        "at": 6500,
+        "text": "We tested the database",
+        "id": "http-4"
+      },
+      {
+        "at": 7700,
+        "text": " after a rolling update",
+        "id": "http-5"
+      },
+      {
+        "at": 8900,
+        "text": " and all accounts",
+        "id": "http-6"
+      },
+      {
+        "at": 10100,
+        "text": " retained their recordings.",
+        "id": "http-7"
+      },
+      {
+        "at": 11300,
+        "text": "We tested the database",
+        "id": "http-8"
+      },
+      {
+        "at": 12500,
+        "text": " after a rolling update",
+        "id": "http-9"
+      },
+      {
+        "at": 13700,
+        "text": " and all accounts",
+        "id": "http-10"
+      },
+      {
+        "at": 14900,
+        "text": " retained their recordings.",
+        "id": "http-11"
+      },
+      {
+        "at": 16100,
+        "text": "We tested the database",
+        "id": "http-12"
+      },
+      {
+        "at": 17300,
+        "text": " after a rolling update",
+        "id": "http-13"
+      },
+      {
+        "at": 18500,
+        "text": " and all accounts",
+        "id": "http-14"
+      },
+      {
+        "at": 19700,
+        "text": " retained their recordings.",
+        "id": "http-15"
+      },
+      {
+        "at": 20900,
+        "text": "We tested the database",
+        "id": "http-16"
+      },
+      {
+        "at": 22100,
+        "text": " after a rolling update",
+        "id": "http-17"
+      },
+      {
+        "at": 23300,
+        "text": " and all accounts",
+        "id": "http-18"
+      },
+      {
+        "at": 24500,
+        "text": " retained their recordings.",
+        "id": "http-19"
+      },
+      {
+        "at": 25700,
+        "text": "We tested the database",
+        "id": "http-20"
+      },
+      {
+        "at": 26900,
+        "text": " after a rolling update",
+        "id": "http-21"
+      },
+      {
+        "at": 28100,
+        "text": " and all accounts",
+        "id": "http-22"
+      },
+      {
+        "at": 29300,
+        "text": " retained their recordings.",
+        "id": "http-23"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 800,
+      "p95": 800,
+      "max": 800
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "feature",
+    "strategy": "realtime",
+    "mockModelLatencyMs": 800,
+    "requests": 24,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27
+    ],
+    "requestInputs": [
+      {
+        "at": 1700,
+        "text": "We tested the database",
+        "id": "http-0"
+      },
+      {
+        "at": 2900,
+        "text": " after a rolling update",
+        "id": "http-1"
+      },
+      {
+        "at": 4100,
+        "text": " and all accounts",
+        "id": "http-2"
+      },
+      {
+        "at": 5300,
+        "text": " retained their recordings.",
+        "id": "http-3"
+      },
+      {
+        "at": 6500,
+        "text": "We tested the database",
+        "id": "http-4"
+      },
+      {
+        "at": 7700,
+        "text": " after a rolling update",
+        "id": "http-5"
+      },
+      {
+        "at": 8900,
+        "text": " and all accounts",
+        "id": "http-6"
+      },
+      {
+        "at": 10100,
+        "text": " retained their recordings.",
+        "id": "http-7"
+      },
+      {
+        "at": 11300,
+        "text": "We tested the database",
+        "id": "http-8"
+      },
+      {
+        "at": 12500,
+        "text": " after a rolling update",
+        "id": "http-9"
+      },
+      {
+        "at": 13700,
+        "text": " and all accounts",
+        "id": "http-10"
+      },
+      {
+        "at": 14900,
+        "text": " retained their recordings.",
+        "id": "http-11"
+      },
+      {
+        "at": 16100,
+        "text": "We tested the database",
+        "id": "http-12"
+      },
+      {
+        "at": 17300,
+        "text": " after a rolling update",
+        "id": "http-13"
+      },
+      {
+        "at": 18500,
+        "text": " and all accounts",
+        "id": "http-14"
+      },
+      {
+        "at": 19700,
+        "text": " retained their recordings.",
+        "id": "http-15"
+      },
+      {
+        "at": 20900,
+        "text": "We tested the database",
+        "id": "http-16"
+      },
+      {
+        "at": 22100,
+        "text": " after a rolling update",
+        "id": "http-17"
+      },
+      {
+        "at": 23300,
+        "text": " and all accounts",
+        "id": "http-18"
+      },
+      {
+        "at": 24500,
+        "text": " retained their recordings.",
+        "id": "http-19"
+      },
+      {
+        "at": 25700,
+        "text": "We tested the database",
+        "id": "http-20"
+      },
+      {
+        "at": 26900,
+        "text": " after a rolling update",
+        "id": "http-21"
+      },
+      {
+        "at": 28100,
+        "text": " and all accounts",
+        "id": "http-22"
+      },
+      {
+        "at": 29300,
+        "text": " retained their recordings.",
+        "id": "http-23"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 800,
+      "p95": 800,
+      "max": 800
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "main",
+    "strategy": "realtime",
+    "mockModelLatencyMs": 2500,
+    "requests": 24,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27
+    ],
+    "requestInputs": [
+      {
+        "at": 1700,
+        "text": "We tested the database",
+        "id": "http-0"
+      },
+      {
+        "at": 2900,
+        "text": " after a rolling update",
+        "id": "http-1"
+      },
+      {
+        "at": 4250,
+        "text": " and all accounts",
+        "id": "http-2"
+      },
+      {
+        "at": 5450,
+        "text": " retained their recordings.",
+        "id": "http-3"
+      },
+      {
+        "at": 6800,
+        "text": "We tested the database",
+        "id": "http-4"
+      },
+      {
+        "at": 8000,
+        "text": " after a rolling update",
+        "id": "http-5"
+      },
+      {
+        "at": 9350,
+        "text": " and all accounts",
+        "id": "http-6"
+      },
+      {
+        "at": 10550,
+        "text": " retained their recordings.",
+        "id": "http-7"
+      },
+      {
+        "at": 11900,
+        "text": "We tested the database",
+        "id": "http-8"
+      },
+      {
+        "at": 13100,
+        "text": " after a rolling update",
+        "id": "http-9"
+      },
+      {
+        "at": 14450,
+        "text": " and all accounts",
+        "id": "http-10"
+      },
+      {
+        "at": 15650,
+        "text": " retained their recordings.",
+        "id": "http-11"
+      },
+      {
+        "at": 17000,
+        "text": "We tested the database",
+        "id": "http-12"
+      },
+      {
+        "at": 18200,
+        "text": " after a rolling update",
+        "id": "http-13"
+      },
+      {
+        "at": 19550,
+        "text": " and all accounts",
+        "id": "http-14"
+      },
+      {
+        "at": 20750,
+        "text": " retained their recordings.",
+        "id": "http-15"
+      },
+      {
+        "at": 22100,
+        "text": "We tested the database",
+        "id": "http-16"
+      },
+      {
+        "at": 23300,
+        "text": " after a rolling update",
+        "id": "http-17"
+      },
+      {
+        "at": 24650,
+        "text": " and all accounts",
+        "id": "http-18"
+      },
+      {
+        "at": 25850,
+        "text": " retained their recordings.",
+        "id": "http-19"
+      },
+      {
+        "at": 27200,
+        "text": "We tested the database",
+        "id": "http-20"
+      },
+      {
+        "at": 28400,
+        "text": " after a rolling update",
+        "id": "http-21"
+      },
+      {
+        "at": 29750,
+        "text": " and all accounts",
+        "id": "http-22"
+      },
+      {
+        "at": 30950,
+        "text": " retained their recordings.",
+        "id": "http-23"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 3400,
+      "p95": 4150,
+      "max": 4150
+    },
+    "peakConcurrent": 2
+  },
+  {
+    "branch": "feature",
+    "strategy": "realtime",
+    "mockModelLatencyMs": 2500,
+    "requests": 24,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27,
+      22,
+      23,
+      17,
+      27
+    ],
+    "requestInputs": [
+      {
+        "at": 1700,
+        "text": "We tested the database",
+        "id": "http-0"
+      },
+      {
+        "at": 2900,
+        "text": " after a rolling update",
+        "id": "http-1"
+      },
+      {
+        "at": 4250,
+        "text": " and all accounts",
+        "id": "http-2"
+      },
+      {
+        "at": 5450,
+        "text": " retained their recordings.",
+        "id": "http-3"
+      },
+      {
+        "at": 6800,
+        "text": "We tested the database",
+        "id": "http-4"
+      },
+      {
+        "at": 8000,
+        "text": " after a rolling update",
+        "id": "http-5"
+      },
+      {
+        "at": 9350,
+        "text": " and all accounts",
+        "id": "http-6"
+      },
+      {
+        "at": 10550,
+        "text": " retained their recordings.",
+        "id": "http-7"
+      },
+      {
+        "at": 11900,
+        "text": "We tested the database",
+        "id": "http-8"
+      },
+      {
+        "at": 13100,
+        "text": " after a rolling update",
+        "id": "http-9"
+      },
+      {
+        "at": 14450,
+        "text": " and all accounts",
+        "id": "http-10"
+      },
+      {
+        "at": 15650,
+        "text": " retained their recordings.",
+        "id": "http-11"
+      },
+      {
+        "at": 17000,
+        "text": "We tested the database",
+        "id": "http-12"
+      },
+      {
+        "at": 18200,
+        "text": " after a rolling update",
+        "id": "http-13"
+      },
+      {
+        "at": 19550,
+        "text": " and all accounts",
+        "id": "http-14"
+      },
+      {
+        "at": 20750,
+        "text": " retained their recordings.",
+        "id": "http-15"
+      },
+      {
+        "at": 22100,
+        "text": "We tested the database",
+        "id": "http-16"
+      },
+      {
+        "at": 23300,
+        "text": " after a rolling update",
+        "id": "http-17"
+      },
+      {
+        "at": 24650,
+        "text": " and all accounts",
+        "id": "http-18"
+      },
+      {
+        "at": 25850,
+        "text": " retained their recordings.",
+        "id": "http-19"
+      },
+      {
+        "at": 27200,
+        "text": "We tested the database",
+        "id": "http-20"
+      },
+      {
+        "at": 28400,
+        "text": " after a rolling update",
+        "id": "http-21"
+      },
+      {
+        "at": 29750,
+        "text": " and all accounts",
+        "id": "http-22"
+      },
+      {
+        "at": 30950,
+        "text": " retained their recordings.",
+        "id": "http-23"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 3400,
+      "p95": 4150,
+      "max": 4150
+    },
+    "peakConcurrent": 2
+  },
+  {
+    "branch": "main",
+    "strategy": "sentence",
+    "mockModelLatencyMs": 180,
+    "requests": 6,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+    ],
+    "requestInputs": [
+      {
+        "at": 5300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-0"
+      },
+      {
+        "at": 10100,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-4"
+      },
+      {
+        "at": 14900,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-8"
+      },
+      {
+        "at": 19700,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-12"
+      },
+      {
+        "at": 24500,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-16"
+      },
+      {
+        "at": 29300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-20"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 2600,
+      "p95": 3800,
+      "max": 3800
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "feature",
+    "strategy": "sentence",
+    "mockModelLatencyMs": 180,
+    "requests": 6,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+    ],
+    "requestInputs": [
+      {
+        "at": 5300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-0"
+      },
+      {
+        "at": 10100,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-4"
+      },
+      {
+        "at": 14900,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-8"
+      },
+      {
+        "at": 19700,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-12"
+      },
+      {
+        "at": 24500,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-16"
+      },
+      {
+        "at": 29300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-20"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 2600,
+      "p95": 3800,
+      "max": 3800
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "main",
+    "strategy": "sentence",
+    "mockModelLatencyMs": 800,
+    "requests": 6,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+    ],
+    "requestInputs": [
+      {
+        "at": 5300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-0"
+      },
+      {
+        "at": 10100,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-4"
+      },
+      {
+        "at": 14900,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-8"
+      },
+      {
+        "at": 19700,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-12"
+      },
+      {
+        "at": 24500,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-16"
+      },
+      {
+        "at": 29300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-20"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 3200,
+      "p95": 4400,
+      "max": 4400
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "feature",
+    "strategy": "sentence",
+    "mockModelLatencyMs": 800,
+    "requests": 6,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+    ],
+    "requestInputs": [
+      {
+        "at": 5300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-0"
+      },
+      {
+        "at": 10100,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-4"
+      },
+      {
+        "at": 14900,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-8"
+      },
+      {
+        "at": 19700,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-12"
+      },
+      {
+        "at": 24500,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-16"
+      },
+      {
+        "at": 29300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-20"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 3200,
+      "p95": 4400,
+      "max": 4400
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "main",
+    "strategy": "sentence",
+    "mockModelLatencyMs": 2500,
+    "requests": 6,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+    ],
+    "requestInputs": [
+      {
+        "at": 5300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-0"
+      },
+      {
+        "at": 10100,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-4"
+      },
+      {
+        "at": 14900,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-8"
+      },
+      {
+        "at": 19700,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-12"
+      },
+      {
+        "at": 24500,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-16"
+      },
+      {
+        "at": 29300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-20"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 4900,
+      "p95": 6100,
+      "max": 6100
+    },
+    "peakConcurrent": 1
+  },
+  {
+    "branch": "feature",
+    "strategy": "sentence",
+    "mockModelLatencyMs": 2500,
+    "requests": 6,
+    "completed": 24,
+    "sourceCoverageExact": true,
+    "charsPerRequest": [
+      89,
+      89,
+      89,
+      89,
+      89,
+      89
+    ],
+    "requestInputs": [
+      {
+        "at": 5300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-0"
+      },
+      {
+        "at": 10100,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-4"
+      },
+      {
+        "at": 14900,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-8"
+      },
+      {
+        "at": 19700,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-12"
+      },
+      {
+        "at": 24500,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-16"
+      },
+      {
+        "at": 29300,
+        "text": "We tested the database after a rolling update and all accounts retained their recordings.",
+        "id": "http-20"
+      }
+    ],
+    "captionToTranslationMs": {
+      "p50": 4900,
+      "p95": 6100,
+      "max": 6100
+    },
+    "peakConcurrent": 1
+  }
+]

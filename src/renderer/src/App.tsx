@@ -6,7 +6,7 @@ import { AuthGate } from './features/auth/views/AuthGate'
 import type { AuthUser } from './features/auth/services/auth-client'
 
 const AuthenticatedApp = ({ user, onLogout }: { user: AuthUser; onLogout: () => Promise<void> }): ReactElement => {
-  const controller = useAppController(user.id)
+  const controller = useAppController(user.id, user.role)
   return <AppView controller={controller} user={user} onLogout={onLogout} />
 }
 

@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict')
+const metrics=require('../../server/metrics.cjs')
+assert.equal(metrics.acceptCaptionSamples({samples:[{stage:'speech_to_first_paint',seconds:1.234}],events:{speech_detected:1}}),true)
+for(const seconds of [-1,301,NaN,Infinity,'1'])assert.equal(metrics.acceptCaptionSamples({samples:[{stage:'speech_to_first_paint',seconds}]}),false)
+assert.equal(metrics.acceptCaptionSamples({samples:[{stage:'user-private-id',seconds:1}]}),false)
+assert.equal(metrics.acceptCaptionSamples({samples:[],events:{arbitrary:1}}),false)
+assert.equal(metrics.acceptCaptionSamples({samples:Array.from({length:129},()=>({stage:'vad_onset',seconds:.12}))}),false)
+class Store{key(){return 'sync-key'}async get(){return 123}async remove(){throw new Error('expected')}}
+const store=new Store();metrics.instrumentStorage({config:store,mode:{config:'postgres'}})
+;(async()=>{assert.equal(store.key(),'sync-key');assert.equal(await store.get(),123);await assert.rejects(store.remove(),/expected/)
+ const output=metrics.render();assert.match(output,/s2t_caption_stage_duration_seconds_count\{stage="speech_to_first_paint"\} 1/);assert.match(output,/s2t_storage_operation_duration_seconds_errors_total\{service="postgres",operation="remove"\} 1/);assert.ok(!output.includes('sync-key'));console.log('PASS finite bounded telemetry, unknown labels rejected, async storage errors preserved and synchronous methods unchanged')
+})().catch(e=>{console.error(e);process.exitCode=1})

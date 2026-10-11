@@ -1,3 +1,4 @@
+import { validateAdminParameters } from '../../../../../server/admin-parameters.cjs'
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
 import { activeTranslate, supportedUiLanguages } from '../i18n'
 import { normalizeResponseSpeed } from '../../features/capture/vad'
@@ -54,7 +55,7 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
     ? [{ id: 'translation-default', name: activeTranslate('svcTranslationProfileName').replace('{model}', value.translationModel), endpoint: value.translationEndpoint, model: value.translationModel }]
     : []
   const translationProfiles = value.translationProfiles?.length ? value.translationProfiles.map((profile) => ({ ...profile, requiresApiKey: profile.requiresApiKey !== false })) : fallbackTranslationProfile
-  const summaryTemplates: SummaryTemplate[] = value.summaryTemplates?.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.name.trim() && template.content.trim() ? [{ id: template.id.slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000) }] : []) ?? []
+  const summaryTemplates: SummaryTemplate[] = value.summaryTemplates?.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.name.trim() && template.content.trim() ? [{ id: template.id.slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000), ...(typeof template.sourceFile === 'string' ? { sourceFile: template.sourceFile } : {}) }] : []) ?? []
   const templates = summaryTemplates.length ? summaryTemplates : [{ id: 'default-summary', name: activeTranslate('summaryTitle'), content: value.summaryTemplate?.trim() || defaultSummaryTemplate }]
   const selectedSummaryTemplateId = templates.some((template) => template.id === value.selectedSummaryTemplateId) ? value.selectedSummaryTemplateId! : templates[0].id
   const selectedSummaryTemplate = templates.find((template) => template.id === selectedSummaryTemplateId)!
@@ -100,7 +101,8 @@ export const normalizeSettings = (value: Partial<Settings> & { modelEndpoint?: s
   dynaudnormEnabled: value.dynaudnormEnabled === true,
   // Legacy per-parameter vadConfig values are intentionally dropped: caption
   // segmentation is expressed by the three curated response-speed tiers.
-  responseSpeed: normalizeResponseSpeed(value.responseSpeed)
+  responseSpeed: normalizeResponseSpeed(value.responseSpeed),
+  adminParameters: (() => { try { return validateAdminParameters(value.adminParameters) } catch { return undefined } })()
   }
 }
 

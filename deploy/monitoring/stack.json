@@ -1,0 +1,1080 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "ServiceAccount",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ServiceAccount",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "services",
+            "endpoints"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "prometheus",
+          "namespace": "s2t-stress-20261005"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "prometheus"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRole",
+      "metadata": {
+        "name": "s2t-stress-prometheus"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "nodes",
+            "nodes/proxy",
+            "nodes/metrics"
+          ],
+          "verbs": [
+            "get",
+            "list",
+            "watch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "ClusterRoleBinding",
+      "metadata": {
+        "name": "s2t-stress-prometheus"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "prometheus",
+          "namespace": "s2t-stress-20261005"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "ClusterRole",
+        "name": "s2t-stress-prometheus"
+      }
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "Role",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "rules": [
+        {
+          "apiGroups": [
+            ""
+          ],
+          "resources": [
+            "pods",
+            "persistentvolumeclaims"
+          ],
+          "verbs": [
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "resources": [
+            "deployments",
+            "replicasets",
+            "statefulsets",
+            "daemonsets"
+          ],
+          "verbs": [
+            "list",
+            "watch"
+          ]
+        },
+        {
+          "apiGroups": [
+            "batch"
+          ],
+          "resources": [
+            "jobs"
+          ],
+          "verbs": [
+            "list",
+            "watch"
+          ]
+        }
+      ]
+    },
+    {
+      "apiVersion": "rbac.authorization.k8s.io/v1",
+      "kind": "RoleBinding",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "subjects": [
+        {
+          "kind": "ServiceAccount",
+          "name": "kube-state-metrics",
+          "namespace": "s2t-stress-20261005"
+        }
+      ],
+      "roleRef": {
+        "apiGroup": "rbac.authorization.k8s.io",
+        "kind": "Role",
+        "name": "kube-state-metrics"
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "monitoring-api-access",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "prometheus"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "10.43.0.1/32"
+                }
+              },
+              {
+                "ipBlock": {
+                  "cidr": "192.168.5.3/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 443
+              },
+              {
+                "protocol": "TCP",
+                "port": 59119
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "monitoring-state-access",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "kube-state-metrics"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "10.43.0.1/32"
+                }
+              },
+              {
+                "ipBlock": {
+                  "cidr": "192.168.5.3/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 443
+              },
+              {
+                "protocol": "TCP",
+                "port": 59119
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "cgroup-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "collector.cjs": "// Read-only cgroup v2 collector for Docker runtimes whose kubelet omits CFS metrics.\nconst fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http')\nconst parse=value=>Object.fromEntries(value.trim().split('\\n').map(line=>line.trim().split(/\\s+/)).map(([key,v])=>[key,Number(v)]))\nasync function collect(root='/host-cgroup/kubepods') {\n const pods=[]\n async function scan(directory,depth=0) {\n  if(depth>3)return\n  let entries;try{entries=await fs.readdir(directory,{withFileTypes:true})}catch{return}\n  for(const entry of entries){if(!entry.isDirectory())continue\n   const folder=path.join(directory,entry.name),match=/^pod([a-f0-9-]+)$/.exec(entry.name)\n   if(!match){await scan(folder,depth+1);continue}\n   let periods=0,throttled=0,seconds=0,available=false\n   for(const child of await fs.readdir(folder,{withFileTypes:true})){\n    if(!child.isDirectory()||!/^[a-f0-9]{64}$/.test(child.name))continue\n    try{const values=parse(await fs.readFile(path.join(folder,child.name,'cpu.stat'),'utf8'))\n     if(!Number.isFinite(values.nr_periods)||!Number.isFinite(values.nr_throttled))continue\n     available=true;periods+=values.nr_periods;throttled+=values.nr_throttled;seconds+=(values.throttled_usec||0)/1e6\n    }catch{}\n   }\n   if(available)pods.push({uid:match[1],periods,throttled,seconds})\n  }\n }\n await scan(root)\n return pods\n}\nasync function render(root){const pods=await collect(root),lines=['# TYPE s2t_cgroup_cpu_periods_total counter','# TYPE s2t_cgroup_cpu_throttled_periods_total counter','# TYPE s2t_cgroup_cpu_throttled_seconds_total counter']\n for(const p of pods)lines.push(`s2t_cgroup_cpu_periods_total{uid=\"${p.uid}\"} ${p.periods}`,`s2t_cgroup_cpu_throttled_periods_total{uid=\"${p.uid}\"} ${p.throttled}`,`s2t_cgroup_cpu_throttled_seconds_total{uid=\"${p.uid}\"} ${p.seconds}`)\n return lines.join('\\n')+'\\n'\n}\nif(require.main===module)http.createServer(async(req,res)=>{if(req.url!='/metrics'){res.writeHead(404);return res.end()}try{res.writeHead(200,{'content-type':'text/plain; version=0.0.4'});res.end(await render())}catch{res.writeHead(503);res.end()}}).listen(9108,'0.0.0.0')\nmodule.exports={parse,collect,render}\n"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "DaemonSet",
+      "metadata": {
+        "name": "cgroup-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "matchLabels": {
+            "app": "cgroup-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "cgroup-exporter"
+            }
+          },
+          "spec": {
+            "automountServiceAccountToken": false,
+            "containers": [
+              {
+                "name": "collector",
+                "image": "node:22-bookworm-slim",
+                "command": [
+                  "node",
+                  "/collector/collector.cjs"
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9108
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "32Mi"
+                  },
+                  "limits": {
+                    "memory": "96Mi"
+                  }
+                },
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "code",
+                    "mountPath": "/collector",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "cgroups",
+                    "mountPath": "/host-cgroup",
+                    "readOnly": true
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "code",
+                "configMap": {
+                  "name": "cgroup-exporter"
+                }
+              },
+              {
+                "name": "cgroups",
+                "hostPath": {
+                  "path": "/sys/fs/cgroup",
+                  "type": "Directory"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "cgroup-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "cgroup-exporter"
+        },
+        "ports": [
+          {
+            "port": 9108,
+            "targetPort": 9108
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "monitoring-web-gateway",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app": "prometheus"
+          }
+        },
+        "policyTypes": [
+          "Egress"
+        ],
+        "egress": [
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "192.168.5.2/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 8787
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "prometheus-config",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "prometheus.yml": "global:\n  scrape_interval: 5s\n  evaluation_interval: 5s\nscrape_configs:\n  - job_name: s2t\n    kubernetes_sd_configs:\n      - role: pod\n        namespaces: {names: [s2t-stress-20261005]}\n    relabel_configs:\n      - {source_labels: [__meta_kubernetes_pod_label_app], regex: 'gateway|audio-worker', action: keep}\n      - {source_labels: [__meta_kubernetes_pod_phase], regex: Running, action: keep}\n      - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '8787', action: keep}\n      - {source_labels: [__meta_kubernetes_pod_name], target_label: pod}\n      - {source_labels: [__meta_kubernetes_pod_label_app], target_label: service}\n  - job_name: prometheus\n    static_configs: [{targets: ['localhost:9090']}]\n  - job_name: cgroups\n    static_configs: [{targets: ['cgroup-exporter:9108']}]\n  - job_name: grafana\n    static_configs: [{targets: ['grafana:3000']}]\n  - job_name: kube-state\n    static_configs: [{targets: ['kube-state-metrics:8080']}]\n  - job_name: postgres\n    static_configs: [{targets: ['postgres-exporter:9187']}]\n  - job_name: minio\n    metrics_path: /minio/v2/metrics/cluster\n    static_configs: [{targets: ['minio:9000']}]\n  - job_name: milvus\n    static_configs: [{targets: ['milvus:9091']}]\n  - job_name: etcd\n    static_configs: [{targets: ['etcd:2379']}]\n  - job_name: mock-models\n    static_configs: [{targets: ['mock-models:9090']}]\n  - job_name: redis\n    metrics_path: /scrape\n    static_configs: [{targets: ['redis-0.redis:6379', 'redis-1.redis:6379', 'redis-2.redis:6379']}]\n    relabel_configs:\n      - {source_labels: [__address__], target_label: __param_target}\n      - {source_labels: [__param_target], target_label: instance}\n      - {target_label: __address__, replacement: 'redis-exporter:9121'}\n  - job_name: sentinel\n    metrics_path: /scrape\n    static_configs: [{targets: ['sentinel-0.sentinel:26379', 'sentinel-1.sentinel:26379', 'sentinel-2.sentinel:26379']}]\n    relabel_configs:\n      - {source_labels: [__address__], target_label: __param_target}\n      - {source_labels: [__param_target], target_label: instance}\n      - {target_label: __address__, replacement: 'sentinel-exporter:9121'}\n  - job_name: kubelet-cadvisor\n    scheme: https\n    authorization: {credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token}\n    tls_config: {ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt}\n    kubernetes_sd_configs: [{role: node}]\n    relabel_configs:\n      - {target_label: __address__, replacement: 'kubernetes.default.svc:443'}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: node}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: __metrics_path__, replacement: '/api/v1/nodes/$1/proxy/metrics/cadvisor'}\n    metric_relabel_configs:\n      - {source_labels: [namespace], regex: 's2t-stress-20261005|', action: keep}\n  - job_name: kubelet\n    scheme: https\n    authorization: {credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token}\n    tls_config: {ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt}\n    kubernetes_sd_configs: [{role: node}]\n    relabel_configs:\n      - {target_label: __address__, replacement: 'kubernetes.default.svc:443'}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: node}\n      - {source_labels: [__meta_kubernetes_node_name], target_label: __metrics_path__, replacement: '/api/v1/nodes/$1/proxy/metrics'}\n  - job_name: gateway-web\n    scheme: http\n    metrics_path: \"/metrics\"\n    static_configs: [{targets: [\"192.168.5.2:8787\"], labels: {service: gateway, pod: web-gateway}}]\n  - job_name: gateway-acceptance\n    static_configs: [{targets: [\"monitoring-acceptance:8787\"], labels: {service: acceptance, pod: synthetic-acceptance}}]\n"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "prometheus-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "grafana-data",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "2Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "prometheus"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "prometheus"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "prometheus",
+                "image": "prom/prometheus:v3.5.0",
+                "args": [
+                  "--config.file=/etc/prometheus/prometheus.yml",
+                  "--storage.tsdb.path=/prometheus",
+                  "--storage.tsdb.retention.time=3d",
+                  "--storage.tsdb.retention.size=1GB"
+                ],
+                "env": [],
+                "ports": [
+                  {
+                    "containerPort": 9090
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "192Mi"
+                  },
+                  "limits": {
+                    "memory": "512Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "config",
+                    "mountPath": "/etc/prometheus"
+                  },
+                  {
+                    "name": "data",
+                    "mountPath": "/prometheus"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "config",
+                "configMap": {
+                  "name": "prometheus-config"
+                }
+              },
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "prometheus-data"
+                }
+              }
+            ],
+            "serviceAccountName": "prometheus",
+            "securityContext": {
+              "fsGroup": 65534
+            }
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "prometheus",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "prometheus"
+        },
+        "ports": [
+          {
+            "port": 9090,
+            "targetPort": 9090
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "kube-state-metrics"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "kube-state-metrics"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "kube-state-metrics",
+                "image": "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.16.0",
+                "args": [
+                  "--namespaces=s2t-stress-20261005",
+                  "--resources=pods,persistentvolumeclaims,deployments,replicasets,statefulsets,daemonsets,jobs"
+                ],
+                "env": [],
+                "ports": [
+                  {
+                    "containerPort": 8080
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "20m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": [],
+            "serviceAccountName": "kube-state-metrics"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "kube-state-metrics",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "kube-state-metrics"
+        },
+        "ports": [
+          {
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "postgres-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "postgres-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "postgres-exporter"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "postgres-exporter",
+                "image": "quay.io/prometheuscommunity/postgres-exporter:v0.17.1",
+                "args": [],
+                "env": [
+                  {
+                    "name": "DATA_SOURCE_NAME",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "postgres-dsn"
+                      }
+                    }
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9187
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "20m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "postgres-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "postgres-exporter"
+        },
+        "ports": [
+          {
+            "port": 9187,
+            "targetPort": 9187
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "redis-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "redis-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "redis-exporter"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "redis-exporter",
+                "image": "oliver006/redis_exporter:v1.88.0",
+                "args": [
+                  "--redis.addr="
+                ],
+                "env": [
+                  {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "redis-password"
+                      }
+                    }
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9121
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "redis-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "redis-exporter"
+        },
+        "ports": [
+          {
+            "port": 9121,
+            "targetPort": 9121
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "sentinel-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "sentinel-exporter"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "sentinel-exporter"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "sentinel-exporter",
+                "image": "oliver006/redis_exporter:v1.88.0",
+                "args": [
+                  "--redis.addr="
+                ],
+                "env": [
+                  {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "sentinel-password"
+                      }
+                    }
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 9121
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "10m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "128Mi"
+                  }
+                },
+                "volumeMounts": []
+              }
+            ],
+            "volumes": []
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "sentinel-exporter",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "sentinel-exporter"
+        },
+        "ports": [
+          {
+            "port": 9121,
+            "targetPort": 9121
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "monitoring-connection",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "PROMETHEUS_URL": "http://prometheus:9090"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "grafana-provisioning",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "datasources.yaml": "apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: ${PROMETHEUS_URL}\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n",
+        "dashboards.yaml": "apiVersion: 1\nproviders:\n  - name: S2T\n    type: file\n    updateIntervalSeconds: 10\n    options: {path: /var/lib/grafana/dashboards}\n"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "s2t-dashboard",
+        "namespace": "s2t-stress-20261005"
+      },
+      "data": {
+        "dashboard.json": "{\"uid\": \"s2t-overview\", \"title\": \"S2T \u00b7 \u4e00\u5f35\u7e3d\u89bd / Chunk \u5ef6\u9072\u8207\u670d\u52d9\u5065\u5eb7\", \"schemaVersion\": 41, \"version\": 1, \"timezone\": \"browser\", \"refresh\": \"5s\", \"time\": {\"from\": \"now-15m\", \"to\": \"now\"}, \"tags\": [\"S2T\", \"Web\", \"K8s\"], \"panels\": [{\"id\": 1, \"title\": \"01 \u00b7 \u6bcf\u500b chunk \u5ef6\u9072 \u2014 \u6b64 chunk \u8a9e\u97f3\u8d77\u9ede\u5230 Web \u5b57\u5e55\u9996\u6b21\u5448\u73fe \u00b7 \u4f86\u6e90\uff1a$caption_gateway\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 0, \"w\": 24, \"h\": 1}}, {\"id\": 2, \"title\": \"Chunk P50\uff08\u56fa\u5b9a\u6700\u8fd1 5m\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6b64 chunk \u7684\u8a9e\u97f3\u8d77\u9ede\u5230\u5176\u6587\u5b57\u9996\u6b21\u5728 Web UI \u5448\u73fe\u3002\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u56fa\u5b9a\u6700\u8fd1 5 \u5206\u9418\uff1b\u6c92\u6709\u65b0\u6a23\u672c\u6642\u4e0d\u4fdd\u7559\u820a\u6578\u503c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 3, \"title\": \"Chunk P95\uff08\u56fa\u5b9a\u6700\u8fd1 5m\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 8, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6b64 chunk \u7684\u8a9e\u97f3\u8d77\u9ede\u5230\u5176\u6587\u5b57\u9996\u6b21\u5728 Web UI \u5448\u73fe\u3002\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u56fa\u5b9a\u6700\u8fd1 5 \u5206\u9418\uff1b\u6c92\u6709\u65b0\u6a23\u672c\u6642\u4e0d\u4fdd\u7559\u820a\u6578\u503c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 4, \"title\": \"Chunk P99\uff08\u56fa\u5b9a\u6700\u8fd1 5m\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 16, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6b64 chunk \u7684\u8a9e\u97f3\u8d77\u9ede\u5230\u5176\u6587\u5b57\u9996\u6b21\u5728 Web UI \u5448\u73fe\u3002\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u56fa\u5b9a\u6700\u8fd1 5 \u5206\u9418\uff1b\u6c92\u6709\u65b0\u6a23\u672c\u6642\u4e0d\u4fdd\u7559\u820a\u6578\u503c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 5, \"title\": \"\u5df2\u5448\u73fe chunk \u6a23\u672c\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 5, \"w\": 24, \"h\": 3}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_caption_stage_duration_seconds_count{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"text\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 6, \"title\": \"\u6bcf\u500b chunk \u968e\u6bb5\u8017\u6642\u5360\u6bd4\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"piechart\", \"gridPos\": {\"x\": 0, \"y\": 8, \"w\": 24, \"h\": 8}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_chunk_stage_duration_seconds_sum{job=\\\"$caption_gateway\\\"}[$__range])) by (stage) / scalar(sum(increase(s2t_chunk_stage_duration_seconds_sum{job=\\\"$caption_gateway\\\"}[$__range])))\", \"legendFormat\": \"{{stage}}\", \"instant\": true, \"range\": false}], \"description\": \"\u6bcf\u500b\u5df2\u986f\u793a chunk \u7684\u540c\u4e00\u6279\u6a23\u672c\uff0c\u5404\u968e\u6bb5\u8017\u6642\u5360\u6bd4\uff1b\u4e0d\u662f P50/P95/P99 \u7684\u62c6\u5206\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"vad_onset\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"VAD \u8a9e\u97f3\u78ba\u8a8d\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"chunk_wait\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u97f3\u8a0a\u7d2f\u7a4d\uff0f\u5207\u6bb5\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"browser_queue\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u700f\u89bd\u5668\u6392\u968a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"browser_preprocess\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u97f3\u8a0a\u524d\u8655\u7406\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"asr_roundtrip_with_retries\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"ASR \u5f80\u8fd4\uff08\u542b server \u6392\u968a\u8207\u91cd\u8a66\uff09\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"response_to_paint\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"UI \u5448\u73fe\"}]}]}, \"options\": {\"pieType\": \"donut\", \"displayLabels\": [\"percent\"], \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"table\", \"placement\": \"right\", \"values\": [\"value\"], \"showLegend\": true}}}, {\"id\": 7, \"title\": \"Chunk \u5ef6\u9072\u5206\u5e03 P50 / P95 / P99\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 16, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"0\", \"expr\": \"histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"p50\"}, {\"refId\": \"1\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"p95\"}, {\"refId\": \"2\", \"expr\": \"histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"p99\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 8, \"title\": \"Web \u968e\u6bb5 p95\uff08\u5b57\u5e55 / \u7ffb\u8b6f\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 16, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage!~\\\"chunk_speech_to_paint|speech_to_first_paint|speech_to_translation_paint\\\"}[5m])) by (stage,le))\", \"legendFormat\": \"{{stage}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 9, \"title\": \"Gateway \u968e\u6bb5 p95\uff08\u8207 Web roundtrip \u91cd\u758a\uff0c\u52ff\u52a0\u7e3d\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 23, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\"}[5m])) by (stage,le))\", \"legendFormat\": \"{{stage}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 10, \"title\": \"\u53ef\u898b\u5b57\u5e55\u6bb5\u6a23\u672c / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 23, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_caption_stage_duration_seconds_count{job=\\\"$caption_gateway\\\",stage=\\\"response_to_paint\\\"}[5m]))\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 11, \"title\": \"\u8a9e\u97f3\u5075\u6e2c / \u7121\u6587\u5b57 / \u5931\u6557 / \u97f3\u8a0a\u7f3a\u53e3\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 30, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_caption_events_total{job=\\\"$caption_gateway\\\"}[5m])) by (event)\", \"legendFormat\": \"{{event}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 12, \"title\": \"\u5df2\u5075\u6e2c\u8a9e\u97f3\uff08\u76ee\u524d Pods \u7d2f\u8a08\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 30, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(s2t_caption_events_total{job=\\\"$caption_gateway\\\",event=\\\"speech_detected\\\"})\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 13, \"title\": \"02 \u00b7 Gateway / Audio worker / \u6a21\u64ec\u6a21\u578b \u00b7 \u4f86\u6e90\uff1a$caption_gateway\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 37, \"w\": 24, \"h\": 1}}, {\"id\": 14, \"title\": \"HTTP \u8def\u7531 p95\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 38, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket{job=\\\"$caption_gateway\\\"}[5m])) by (route,le))\", \"legendFormat\": \"{{route}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 15, \"title\": \"HTTP \u541e\u5410 / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 38, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_duration_seconds_count{job=\\\"$caption_gateway\\\"}[2m])) by (route)\", \"legendFormat\": \"{{route}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 16, \"title\": \"HTTP \u5931\u6557 / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 45, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_errors_total{job=\\\"$caption_gateway\\\"}[2m])) by (route)\", \"legendFormat\": \"{{route}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 17, \"title\": \"\u670d\u52d9\u9032\u884c\u4e2d\u8acb\u6c42\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 45, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_gateway_inflight_requests{job=\\\"$caption_gateway\\\"}\", \"legendFormat\": \"{{service}} {{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 18, \"title\": \"\u7a0b\u5e8f RSS\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 52, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_process_resident_memory_bytes\", \"legendFormat\": \"{{service}} {{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 19, \"title\": \"Event loop p99\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 52, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_event_loop_p99_seconds\", \"legendFormat\": \"{{service}} {{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 20, \"title\": \"Diarization \u5f85\u8655\u7406\u5de5\u4f5c / \u6700\u8001\u79d2\u6578\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 59, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"max(s2t_diarization_pending_jobs{job=\\\"$caption_gateway\\\"})\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 21, \"title\": \"Diarization \u6700\u8001\u7b49\u5f85\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 59, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"max(s2t_diarization_oldest_seconds{job=\\\"$caption_gateway\\\"})\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 22, \"title\": \"Mock \u6a21\u578b\u9032\u884c\u4e2d / \u660e\u78ba\u662f\u6a21\u64ec API\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 66, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_mock_active_requests\", \"legendFormat\": \"{{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 23, \"title\": \"Mock \u6ce8\u5165\u5ef6\u9072 / \u9577\u5c3e\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 66, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"s2t_mock_configured_delay_seconds\", \"legendFormat\": \"{{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 24, \"title\": \"03 \u00b7 \u6240\u6709\u670d\u52d9\u53ef\u7528\u6027\u8207\u5132\u5b58\u64cd\u4f5c\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 73, \"w\": 24, \"h\": 1}}, {\"id\": 25, \"title\": \"\u6240\u6709 scrape targets\uff081=\u6210\u529f\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 74, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"up\", \"legendFormat\": \"{{job}} {{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 26, \"title\": \"\u61c9\u7528\u5132\u5b58\u64cd\u4f5c p95\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 74, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket{job=\\\"$caption_gateway\\\"}[5m])) by (service,operation,le))\", \"legendFormat\": \"{{service}} {{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 27, \"title\": \"\u5132\u5b58\u64cd\u4f5c\u5931\u6557 / \u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 81, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_storage_operation_duration_seconds_errors_total{job=\\\"$caption_gateway\\\"}[5m])) by (service,operation)\", \"legendFormat\": \"{{service}} {{operation}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 28, \"title\": \"PostgreSQL \u9023\u7dda\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 81, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(pg_stat_database_numbackends) by (datname)\", \"legendFormat\": \"{{datname}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 29, \"title\": \"PostgreSQL commits / rollback \u6bcf\u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 88, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(pg_stat_database_xact_commit[5m])) by (datname)\", \"legendFormat\": \"{{datname}} commits\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"ops\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 30, \"title\": \"PostgreSQL rollback / deadlock \u6bcf\u79d2\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 88, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(pg_stat_database_xact_rollback[5m])) by (datname)\", \"legendFormat\": \"{{datname}} rollback\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"ops\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 31, \"title\": \"Redis \u8a18\u61b6\u9ad4\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 95, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_memory_used_bytes{job=\\\"redis\\\"}\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 32, \"title\": \"Redis clients / blocked\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 95, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_connected_clients{job=\\\"redis\\\"}\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 33, \"title\": \"Redis replication offset\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 102, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_master_repl_offset{job=\\\"redis\\\"}\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 34, \"title\": \"Sentinel quorum status / TILT\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 102, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_sentinel_master_ckquorum_status\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 35, \"title\": \"Sentinel TILT\uff08\u61c9\u70ba 0\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 109, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_sentinel_tilt\", \"legendFormat\": \"{{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 36, \"title\": \"Redis \u53ef\u7528\u6027\uff08\u542b\u5bc6\u78bc\u767b\u5165\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 109, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"redis_up\", \"legendFormat\": \"{{job}} {{instance}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 37, \"title\": \"MinIO \u5132\u5b58\u7528\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 116, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"minio_cluster_usage_total_bytes\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 38, \"title\": \"MinIO \u78c1\u789f\u53ef\u7528\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 116, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"minio_cluster_capacity_usable_free_bytes\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 39, \"title\": \"Milvus process RSS\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 123, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"process_resident_memory_bytes{job=\\\"milvus\\\"}\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 40, \"title\": \"Milvus \u8f09\u5165\u5411\u91cf\u6578\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 123, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"milvus_querynode_entity_num\", \"legendFormat\": \"{{collection_id}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 41, \"title\": \"etcd leader\uff081=\u6709 leader\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 130, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"etcd_server_has_leader\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 42, \"title\": \"etcd WAL fsync p95\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 130, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m])) by (le))\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 43, \"title\": \"04 \u00b7 Kubernetes Pods / \u5bb9\u91cf / \u8cc7\u6e90\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 137, \"w\": 24, \"h\": 1}}, {\"id\": 44, \"title\": \"VM node CPU cores\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 138, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(container_cpu_usage_seconds_total{id=\\\"/\\\"}[2m]))\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 45, \"title\": \"VM node memory\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 138, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"container_memory_working_set_bytes{id=\\\"/\\\"}\", \"legendFormat\": \"\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 46, \"title\": \"Pod CPU \u4f7f\u7528\u91cf\uff08cores\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 145, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(container_cpu_usage_seconds_total{namespace=\\\"s2t-stress-20261005\\\",pod!=\\\"\\\"}[2m])) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 47, \"title\": \"Pod memory working set\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 145, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(container_memory_working_set_bytes{namespace=\\\"s2t-stress-20261005\\\",pod!=\\\"\\\"}) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 48, \"title\": \"Pod ready\uff081=\u5c31\u7dd2\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 152, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"kube_pod_status_ready{condition=\\\"true\\\"}\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 49, \"title\": \"Pod \u91cd\u555f\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 152, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(kube_pod_container_status_restarts_total) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 50, \"title\": \"Deployment \u53ef\u7528 / \u671f\u671b\u526f\u672c\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 159, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"kube_deployment_status_replicas_available\", \"legendFormat\": \"{{deployment}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 51, \"title\": \"CPU throttled \u6bd4\u4f8b\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 159, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_cgroup_cpu_throttled_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace=\\\"s2t-stress-20261005\\\"}) by (pod) / clamp_min(sum(rate(s2t_cgroup_cpu_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace=\\\"s2t-stress-20261005\\\"}) by (pod), 0.000001)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 52, \"title\": \"Pod CPU \u8acb\u6c42\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 166, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(kube_pod_container_resource_requests{resource=\\\"cpu\\\"}) by (pod)\", \"legendFormat\": \"{{pod}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 53, \"title\": \"PVC \u8acb\u6c42\u5bb9\u91cf\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 166, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"kube_persistentvolumeclaim_resource_requests_storage_bytes\", \"legendFormat\": \"{{persistentvolumeclaim}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 54, \"title\": \"\u4f7f\u7528\u91cf \u00b7 \u4f7f\u7528\u8005\u8207\u7e3d\u9ad4\uff08\u4f86\u6e90\uff1a$caption_gateway\uff09\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 173, \"w\": 24, \"h\": 1}}, {\"id\": 55, \"title\": \"\u7e3d\u9ad4 API \u8acb\u6c42\u6578\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 174, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 56, \"title\": \"\u6709\u8acb\u6c42\u7684\u4f7f\u7528\u8005\u6578\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 8, \"y\": 174, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"count(sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\"}[$__range])) by (nt) > 0)\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 57, \"title\": \"\u7e3d\u9ad4 ASR \u97f3\u8a0a\u6642\u6578\uff08\u5df2\u5b8c\u6210\u53ef\u89e3\u6790 WAV \u97f3\u8a0a\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 16, \"y\": 174, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_audio_seconds_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",operation=\\\"transcriptions\\\"}[$__range])) / 3600\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"suffix:\u5c0f\u6642\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 58, \"title\": \"\u7e3d\u9ad4\u6a21\u578b\u56de\u5831\u6b0a\u6756\u6578\uff08token\uff09\uff08\u7ffb\u8b6f\uff0f\u6458\u8981\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 178, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_input_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\"}[$__range])) + sum(increase(s2t_user_output_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 59, \"title\": \"\u6a21\u578b\u672a\u56de\u5831 \u6b0a\u6756\u7528\u91cf\u7684\u5b8c\u6210\u6b21\u6578\", \"type\": \"stat\", \"gridPos\": {\"x\": 8, \"y\": 178, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_token_usage_missing_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 60, \"title\": \"\u97f3\u8a0a\u6642\u9577\u672a\u77e5\u6b21\u6578\uff08\u4e0d\u4f30\u7b97\u6210 0 \u79d2\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 16, \"y\": 178, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_audio_duration_unknown_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 61, \"title\": \"\u76ee\u524d gateway \u7a0b\u5e8f\u7d2f\u8a08 \u8acb\u6c42\uff08\u4e0d\u53d7\u6642\u9593\u7bc4\u570d\u5f71\u97ff\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 182, \"w\": 24, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\"})\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 62, \"title\": \"\u4f7f\u7528\u8005\u8acb\u6c42\u6578\u6bd4\u8f03\uff08\u4f9d NT\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 0, \"y\": 186, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (nt)\", \"legendFormat\": \"{{nt}}\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 63, \"title\": \"\u4f7f\u7528\u8005\u6b0a\u6756\u7528\u91cf\u6bd4\u8f03\uff08\u4f9d NT\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 12, \"y\": 186, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_input_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (nt) + sum(increase(s2t_user_output_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (nt)\", \"legendFormat\": \"{{nt}}\", \"instant\": true, \"range\": false}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 64, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005 \u8acb\u6c42\uff08\u542b\u5b57\u5e55\u9059\u6e2c\u8207\u8cc7\u6599 API\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 191, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 65, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005 \u8acb\u6c42\u8655\u7406\u8017\u6642\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 196, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_request_seconds_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 66, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005\u5be6\u969b\u6210\u529f\u6a21\u578b\u5b8c\u6210\u6b21\u6578\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 201, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_model_executions_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=~\\\"transcriptions|translations|summaries\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 67, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005 ASR \u97f3\u8a0a\u79d2\u6578\uff08\u5df2\u5b8c\u6210\u53ef\u89e3\u6790 WAV \u97f3\u8a0a\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 206, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_audio_seconds_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=\\\"transcriptions\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 68, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005 ASR \u97f3\u8a0a \u4f4d\u5143\u7d44\uff08\u5df2\u5b8c\u6210\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 211, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_audio_bytes_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=\\\"transcriptions\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"bytes\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 69, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005\u7ffb\u8b6f\uff0f\u6458\u8981\u8f38\u5165 \u6b0a\u6756\u6578\uff08token\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 216, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_input_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=~\\\"translations|summaries\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 70, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005\u7ffb\u8b6f\uff0f\u6458\u8981\u8f38\u51fa \u6b0a\u6756\u6578\uff08token\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 221, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_output_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=~\\\"translations|summaries\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 71, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005\u8f38\u5165\u5b57\u5143\uff08\u542b\u6a21\u578b\u63d0\u793a\u8a5e\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 226, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_input_characters_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=~\\\"translations|summaries\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 72, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005\u8f38\u51fa\u5b57\u5143\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 231, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_output_characters_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",operation=~\\\"transcriptions|translations|summaries\\\"}[$__range])) by (department,nt,operation)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 73, \"title\": \"\u6bcf\u4f4d\u4f7f\u7528\u8005 request \u7d50\u679c\uff08\u6210\u529f\uff0f4xx\uff0f5xx\uff0f\u4e2d\u65b7\uff09\", \"type\": \"table\", \"gridPos\": {\"x\": 0, \"y\": 236, \"w\": 24, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department,nt,operation,outcome)\", \"legendFormat\": \"{{nt}} \u00b7 {{operation}} \u00b7 {{outcome}}\", \"instant\": true, \"range\": false, \"format\": \"table\"}], \"description\": \"Gateway \u5df2\u9a57\u8b49\u4f7f\u7528\u8005\u7684\u64cd\u4f5c\u7d71\u8a08\uff0c\u4ee5 NT \u986f\u793a\uff1b\u8acb\u6c42\u542b\u91cd\u8a66\u3001\u62d2\u7d55\u53ca\u5feb\u53d6\u547d\u4e2d\uff0c\u6a21\u578b\u5b8c\u6210\u6b21\u6578\u53ea\u7b97\u6210\u529f\u5b8c\u6210\u7684\u5be6\u969b\u57f7\u884c\u3002Prometheus \u4fdd\u7559\u671f\u9593\u5167\u7684\u4f30\u7b97\u589e\u91cf\uff0c\u4e0d\u662f\u8a08\u8cbb\u5e33\u672c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"decimals\": 2}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"\u64cd\u4f5c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"transcriptions\": {\"text\": \"\u8a9e\u97f3\u8fa8\u8b58\"}, \"translations\": {\"text\": \"\u7ffb\u8b6f\"}, \"summaries\": {\"text\": \"\u6458\u8981\"}, \"diarizations\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\"}, \"telemetry/captions\": {\"text\": \"\u5b57\u5e55\u9059\u6e2c\"}, \"config\": {\"text\": \"\u670d\u52d9\u8a2d\u5b9a\"}, \"data/sessions\": {\"text\": \"\u6703\u8b70\u7d00\u9304\"}, \"auth/session\": {\"text\": \"\u767b\u5165\u72c0\u614b\"}, \"other\": {\"text\": \"\u5176\u4ed6\u64cd\u4f5c\"}, \"storage\": {\"text\": \"\u5132\u5b58\u670d\u52d9\"}, \"audio/object\": {\"text\": \"\u9304\u97f3\u6a94\u6848\"}, \"data/settings\": {\"text\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}, \"data/glossary\": {\"text\": \"\u8a5e\u5f59\u8868\"}, \"data/voiceprints\": {\"text\": \"\u8072\u7d0b\u8cc7\u6599\"}, \"data/diarization-jobs\": {\"text\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}, \"data/storage-status\": {\"text\": \"\u5132\u5b58\u72c0\u614b\"}, \"data/storage-audit\": {\"text\": \"\u5132\u5b58\u7a3d\u6838\"}, \"data/storage-retry\": {\"text\": \"\u5132\u5b58\u91cd\u8a66\"}, \"data/model-registry\": {\"text\": \"\u6a21\u578b\u8a2d\u5b9a\"}, \"data/model-health\": {\"text\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}, \"data/model-credentials/id\": {\"text\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}, \"data/summary-templates\": {\"text\": \"\u6458\u8981\u6a21\u677f\"}, \"auth/logout\": {\"text\": \"\u767b\u51fa\"}, \"admin/users\": {\"text\": \"\u5e33\u865f\u7ba1\u7406\"}, \"audio-processing/silero-vad\": {\"text\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}, \"audio-processing/status\": {\"text\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}, \"audio-processing/import-wav\": {\"text\": \"\u532f\u5165\u97f3\u8a0a\"}}}]}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"\u7d50\u679c\"}, \"properties\": [{\"id\": \"mappings\", \"value\": [{\"type\": \"value\", \"options\": {\"success\": {\"text\": \"\u6210\u529f\"}, \"client_error\": {\"text\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}, \"server_error\": {\"text\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}, \"aborted\": {\"text\": \"\u9023\u7dda\u4e2d\u65b7\"}}}]}]}]}, \"options\": {\"showHeader\": true}, \"transformations\": [{\"id\": \"organize\", \"options\": {\"excludeByName\": {\"Time\": true}, \"renameByName\": {\"nt\": \"\u4f7f\u7528\u8005 NT\", \"department\": \"\u90e8\u9580\", \"operation\": \"\u64cd\u4f5c\", \"outcome\": \"\u7d50\u679c\", \"Value\": \"\u7528\u91cf\"}}}]}, {\"id\": 74, \"title\": \"\u4f7f\u7528\u8005\u8acb\u6c42\u901f\u7387\uff08\u542b\u5b57\u5e55\u9059\u6e2c\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 241, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__rate_interval])) by (nt)\", \"legendFormat\": \"{{nt}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 75, \"title\": \"\u4f7f\u7528\u8005\u8acb\u6c42\u932f\u8aa4\u7387\uff08\u542b\u62d2\u7d55\uff0f\u4e2d\u65b7\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 241, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\",outcome!=\\\"success\\\"}[$__rate_interval])) by (nt) / sum(rate(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__rate_interval])) by (nt)\", \"legendFormat\": \"{{nt}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 76, \"title\": \"\u90e8\u9580\u7e3d\u9ad4\u7528\u91cf \u00b7 \u4f9d\u90e8\u9580\u5f59\u7e3d\uff08\u4f86\u6e90\uff1a$caption_gateway\uff09\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 248, \"w\": 24, \"h\": 1}}, {\"id\": 77, \"title\": \"\u5404\u90e8\u9580\u8acb\u6c42\u6578\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 0, \"y\": 249, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department)\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4ee5\u5e33\u865f\u5df2\u9a57\u8b49\u7684\u90e8\u9580\u5f59\u7e3d\uff0c\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\uff1b\u4f7f\u7528\u6240\u9078\u6642\u9593\u7bc4\u570d\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 78, \"title\": \"\u5404\u90e8\u9580\u6210\u529f\u6a21\u578b\u5b8c\u6210\u6b21\u6578\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 12, \"y\": 249, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_model_executions_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\",operation=~\\\"transcriptions|translations|summaries\\\"}[$__range])) by (department)\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4ee5\u5e33\u865f\u5df2\u9a57\u8b49\u7684\u90e8\u9580\u5f59\u7e3d\uff0c\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\uff1b\u4f7f\u7528\u6240\u9078\u6642\u9593\u7bc4\u570d\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 79, \"title\": \"\u5404\u90e8\u9580 ASR \u97f3\u8a0a\u6642\u6578\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 0, \"y\": 254, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_audio_seconds_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\",operation=\\\"transcriptions\\\"}[$__range])) by (department) / 3600\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4ee5\u5e33\u865f\u5df2\u9a57\u8b49\u7684\u90e8\u9580\u5f59\u7e3d\uff0c\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\uff1b\u4f7f\u7528\u6240\u9078\u6642\u9593\u7bc4\u570d\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"suffix:\u5c0f\u6642\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 80, \"title\": \"\u5404\u90e8\u9580\u8f38\u5165\u6b0a\u6756\u6578\uff08token\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 12, \"y\": 254, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_input_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department)\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4ee5\u5e33\u865f\u5df2\u9a57\u8b49\u7684\u90e8\u9580\u5f59\u7e3d\uff0c\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\uff1b\u4f7f\u7528\u6240\u9078\u6642\u9593\u7bc4\u570d\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 81, \"title\": \"\u5404\u90e8\u9580\u8f38\u51fa\u6b0a\u6756\u6578\uff08token\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 0, \"y\": 259, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_output_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department)\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4ee5\u5e33\u865f\u5df2\u9a57\u8b49\u7684\u90e8\u9580\u5f59\u7e3d\uff0c\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\uff1b\u4f7f\u7528\u6240\u9078\u6642\u9593\u7bc4\u570d\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 82, \"title\": \"\u5404\u90e8\u9580\u8acb\u6c42\u932f\u8aa4\u7387\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 12, \"y\": 259, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\",outcome!=\\\"success\\\"}[$__range])) by (department) / sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department)\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4ee5\u5e33\u865f\u5df2\u9a57\u8b49\u7684\u90e8\u9580\u5f59\u7e3d\uff0c\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\uff1b\u4f7f\u7528\u6240\u9078\u6642\u9593\u7bc4\u570d\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true, \"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 83, \"title\": \"\u90e8\u9580\u8207\u4f7f\u7528\u8005\u8acb\u6c42\u8da8\u52e2\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 264, \"w\": 24, \"h\": 1}}, {\"id\": 84, \"title\": \"\u90e8\u9580\u8acb\u6c42\u901f\u7387\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 265, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__rate_interval])) by (department)\", \"legendFormat\": \"{{department}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}, {\"id\": 85, \"title\": \"\u90e8\u9580\u6b0a\u6756\u4f7f\u7528\u901f\u7387\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 265, \"w\": 12, \"h\": 7}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"(sum(rate(s2t_user_input_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__rate_interval])) by (department)) + (sum(rate(s2t_user_output_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",department=~\\\"$usage_department\\\"}[$__rate_interval])) by (department))\", \"legendFormat\": \"{{department}}\"}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0}, \"overrides\": []}, \"options\": {\"legend\": {\"displayMode\": \"table\", \"placement\": \"bottom\", \"calcs\": [\"lastNotNull\"], \"height\": 170}, \"tooltip\": {\"mode\": \"multi\"}, \"reduceOptions\": {\"calcs\": [\"lastNotNull\"], \"fields\": \"\", \"values\": false}}}], \"editable\": false, \"templating\": {\"list\": [{\"name\": \"caption_gateway\", \"label\": \"\u5b57\u5e55\u91cf\u6e2c\u4f86\u6e90\", \"type\": \"custom\", \"query\": \"8787 \u7db2\u9801\u5165\u53e3 : gateway-web,K8s \u6e2c\u8a66\u7ad9 : s2t,\u9a57\u6536\u6a21\u64ec\u8cc7\u6599\uff08\u975e\u6b63\u5f0f\uff09 : gateway-acceptance\", \"current\": {\"text\": \"8787 \u7db2\u9801\u5165\u53e3\", \"value\": \"gateway-web\"}, \"options\": [{\"text\": \"8787 \u7db2\u9801\u5165\u53e3\", \"value\": \"gateway-web\", \"selected\": true}, {\"text\": \"K8s \u6e2c\u8a66\u7ad9\", \"value\": \"s2t\", \"selected\": false}, {\"text\": \"\u9a57\u6536\u6a21\u64ec\u8cc7\u6599\uff08\u975e\u6b63\u5f0f\uff09\", \"value\": \"gateway-acceptance\", \"selected\": false}], \"multi\": false, \"includeAll\": false}, {\"name\": \"usage_department\", \"label\": \"\u90e8\u9580\", \"type\": \"query\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"query\": \"label_values(s2t_user_requests_total{job=\\\"$caption_gateway\\\",department!=\\\"\\\"}, department)\", \"refresh\": 2, \"multi\": true, \"includeAll\": true, \"allValue\": \".*\", \"current\": {\"text\": \"All\", \"value\": \"$__all\"}}, {\"name\": \"usage_user\", \"label\": \"\u4f7f\u7528\u91cf NT\", \"type\": \"query\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"query\": \"label_values(s2t_user_requests_total{job=\\\"$caption_gateway\\\",department=~\\\"$usage_department\\\",department!=\\\"\\\"}, nt)\", \"refresh\": 2, \"multi\": true, \"includeAll\": true, \"allValue\": \".*\", \"current\": {\"text\": \"All\", \"value\": \"$__all\"}}]}}",
+        "oncall.json": "{\"schemaVersion\": 41, \"version\": 1, \"timezone\": \"browser\", \"refresh\": \"5s\", \"time\": {\"from\": \"now-15m\", \"to\": \"now\"}, \"tags\": [\"S2T\", \"\u503c\u73ed\"], \"editable\": false, \"templating\": {\"list\": [{\"name\": \"caption_gateway\", \"label\": \"\u5b57\u5e55\u91cf\u6e2c\u4f86\u6e90\", \"type\": \"custom\", \"query\": \"8787 \u7db2\u9801\u5165\u53e3 : gateway-web,K8s \u6e2c\u8a66\u7ad9 : s2t,\u9a57\u6536\u6a21\u64ec\u8cc7\u6599\uff08\u975e\u6b63\u5f0f\uff09 : gateway-acceptance\", \"current\": {\"text\": \"8787 \u7db2\u9801\u5165\u53e3\", \"value\": \"gateway-web\"}, \"options\": [{\"text\": \"8787 \u7db2\u9801\u5165\u53e3\", \"value\": \"gateway-web\", \"selected\": true}, {\"text\": \"K8s \u6e2c\u8a66\u7ad9\", \"value\": \"s2t\", \"selected\": false}, {\"text\": \"\u9a57\u6536\u6a21\u64ec\u8cc7\u6599\uff08\u975e\u6b63\u5f0f\uff09\", \"value\": \"gateway-acceptance\", \"selected\": false}], \"multi\": false, \"includeAll\": false}, {\"name\": \"usage_department\", \"label\": \"\u90e8\u9580\", \"type\": \"query\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"query\": \"label_values(s2t_user_requests_total{job=\\\"$caption_gateway\\\",department!=\\\"\\\"}, department)\", \"refresh\": 2, \"multi\": true, \"includeAll\": true, \"allValue\": \".*\", \"current\": {\"text\": \"All\", \"value\": \"$__all\"}}, {\"name\": \"usage_user\", \"label\": \"\u4f7f\u7528\u91cf NT\", \"type\": \"query\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"query\": \"label_values(s2t_user_requests_total{job=\\\"$caption_gateway\\\",department=~\\\"$usage_department\\\",department!=\\\"\\\"}, nt)\", \"refresh\": 2, \"multi\": true, \"includeAll\": true, \"allValue\": \".*\", \"current\": {\"text\": \"All\", \"value\": \"$__all\"}}]}, \"uid\": \"s2t-oncall\", \"title\": \"S2T \u00b7 \u503c\u73ed\u7e3d\u89bd\uff5c\u5ef6\u9072\u30fb\u4f7f\u7528\u8005\u30fb\u8acb\u6c42\", \"panels\": [{\"id\": 1, \"title\": \"01 \u00b7 \u5ef6\u9072\uff5c\u8a9e\u97f3\u5230\u5b57\u5e55\uff08\u4f86\u6e90\uff1a$caption_gateway\uff09\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 0, \"w\": 24, \"h\": 1}}, {\"id\": 2, \"title\": \"\u5b57\u5e55 P50\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u5b8c\u6574\u843d\u5728\u5373\u6642\u5b57\u5e55\u9801\u53ef\u898b\u671f\u9593\u7684 chunk \u8a9e\u97f3\u8d77\u9ede\u5230\u5b57\u5e55\u5448\u73fe\uff1b\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u7f3a\u5c11\u6a23\u672c\u6642\u986f\u793a\u7121\u8cc7\u6599\u3002\u5206\u4f4d\u6578\u662f histogram \u4f30\u7b97\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 3, \"title\": \"\u5b57\u5e55 P95\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 8, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u5b8c\u6574\u843d\u5728\u5373\u6642\u5b57\u5e55\u9801\u53ef\u898b\u671f\u9593\u7684 chunk \u8a9e\u97f3\u8d77\u9ede\u5230\u5b57\u5e55\u5448\u73fe\uff1b\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u7f3a\u5c11\u6a23\u672c\u6642\u986f\u793a\u7121\u8cc7\u6599\u3002\u5206\u4f4d\u6578\u662f histogram \u4f30\u7b97\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 4, \"title\": \"\u5b57\u5e55 P99\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 16, \"y\": 1, \"w\": 8, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u5b8c\u6574\u843d\u5728\u5373\u6642\u5b57\u5e55\u9801\u53ef\u898b\u671f\u9593\u7684 chunk \u8a9e\u97f3\u8d77\u9ede\u5230\u5b57\u5e55\u5448\u73fe\uff1b\u5305\u542b\u97f3\u8a0a\u7d2f\u7a4d\u8207\u6392\u968a\uff0c\u7f3a\u5c11\u6a23\u672c\u6642\u986f\u793a\u7121\u8cc7\u6599\u3002\u5206\u4f4d\u6578\u662f histogram \u4f30\u7b97\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 5, \"title\": \"\u5b57\u5e55\u5ef6\u9072\u8da8\u52e2\uff5cP50\uff0fP95\uff0fP99\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 5, \"w\": 16, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"0\", \"expr\": \"histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"P50\", \"range\": true, \"instant\": false}, {\"refId\": \"1\", \"expr\": \"histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"P95\", \"range\": true, \"instant\": false}, {\"refId\": \"2\", \"expr\": \"histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m])) by (le))\", \"legendFormat\": \"P99\", \"range\": true, \"instant\": false}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"s\", \"min\": 0, \"color\": {\"mode\": \"palette-classic\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 6, \"title\": \"\u6709\u6548\u5b57\u5e55\u6a23\u672c\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 16, \"y\": 5, \"w\": 8, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_caption_stage_duration_seconds_count{job=\\\"$caption_gateway\\\",stage=\\\"chunk_speech_to_paint\\\"}[5m]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u7121\u6709\u6548\u6a23\u672c\u6642\uff0c\u5ef6\u9072\u5206\u4f4d\u6578\u4e0d\u80fd\u7528\u4f86\u5224\u65b7\u670d\u52d9\u6b63\u5e38\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 7, \"title\": \"02 \u00b7 \u4f7f\u7528\u8005\uff5cNT \u8207\u90e8\u9580\uff08\u4f86\u6e90\uff1a$caption_gateway\uff09\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 10, \"w\": 24, \"h\": 1}}, {\"id\": 8, \"title\": \"\u6709\u8acb\u6c42\u7684 NT\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 11, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"count(sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\"}[5m])) by (nt) > 0)\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6700\u8fd1 5 \u5206\u9418\u6709 API \u6d3b\u52d5\u7684\u4f7f\u7528\u8005\uff0c\u975e\u76ee\u524d\u767b\u5165\u6216\u5728\u7dda\u4eba\u6578\uff1b\u5305\u542b\u5b57\u5e55\u9059\u6e2c\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 9, \"title\": \"\u6709\u6d3b\u52d5\u7684\u90e8\u9580\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 6, \"y\": 11, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"count(sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\"}[5m])) by (department) > 0)\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 10, \"title\": \"ASR \u97f3\u8a0a\u91cf\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 12, \"y\": 11, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_audio_seconds_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\",operation=\\\"transcriptions\\\"}[$__range])) / 3600\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u6210\u529f\u5b8c\u6210\u7684\u53ef\u89e3\u6790 WAV \u97f3\u8a0a\u91cf\uff1b\u672a\u77e5\u683c\u5f0f\u6642\u9577\u4e0d\u4f30\u7b97\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"suffix:\u5c0f\u6642\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 11, \"title\": \"\u6a21\u578b\u6b0a\u6756\u6578\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 18, \"y\": 11, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_input_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\"}[$__range])) + sum(increase(s2t_user_output_tokens_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\"}[$__range]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u7ffb\u8b6f\uff0f\u6458\u8981\u6a21\u578b\u56de\u5831\u7684\u8f38\u5165\u8207\u8f38\u51fa token\uff1b\u672a\u56de\u5831\u90e8\u5206\u8acb\u67e5\u770b\u8a73\u7d30\u7e3d\u89bd\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 12, \"title\": \"\u4f7f\u7528\u8005\u8acb\u6c42\u91cf\uff5c\u524d 10 \u4f4d NT\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 0, \"y\": 15, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"topk(10, sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\",nt=~\\\"$usage_user\\\",department=~\\\"$usage_department\\\"}[$__range])) by (nt))\", \"legendFormat\": \"{{nt}}\", \"instant\": true, \"range\": false}], \"description\": \"\u4f9d\u9078\u5b9a\u90e8\u9580\u8207 NT \u7be9\u9078\uff0c\u5305\u542b\u91cd\u8a66\u3001\u5feb\u53d6\u547d\u4e2d\u3001\u5b57\u5e55\u9059\u6e2c\u53ca\u8cc7\u6599 API\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}, \"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true}}, {\"id\": 13, \"title\": \"\u90e8\u9580\u7e3d\u9ad4\u8acb\u6c42\u91cf\uff08\u6240\u9078\u7bc4\u570d\uff09\", \"type\": \"bargauge\", \"gridPos\": {\"x\": 12, \"y\": 15, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(increase(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\",department=~\\\"$usage_department\\\"}[$__range])) by (department)\", \"legendFormat\": \"{{department}}\", \"instant\": true, \"range\": false}], \"description\": \"\u90e8\u9580\u52a0\u7e3d\u4e0d\u53d7 NT \u7be9\u9078\u5f71\u97ff\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}, \"orientation\": \"horizontal\", \"displayMode\": \"gradient\", \"showUnfilled\": true}}, {\"id\": 14, \"title\": \"03 \u00b7 \u8acb\u6c42\uff5c\u5165\u53e3\u5065\u5eb7\u8207\u8ca0\u8f09\uff08\u4f86\u6e90\uff1a$caption_gateway\uff09\", \"type\": \"row\", \"collapsed\": false, \"gridPos\": {\"x\": 0, \"y\": 20, \"w\": 24, \"h\": 1}}, {\"id\": 15, \"title\": \"\u76e3\u63a7\u5165\u53e3\u72c0\u614b\", \"type\": \"stat\", \"gridPos\": {\"x\": 0, \"y\": 21, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"min(up{job=\\\"$caption_gateway\\\"})\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"Prometheus \u662f\u5426\u80fd\u6293\u53d6\u6b64\u4f86\u6e90\uff1b\u53ef\u6293\u53d6\u4e0d\u7b49\u540c\u6a21\u578b\u6216\u6240\u6709\u4e0b\u6e38\u670d\u52a1\u6b63\u5e38\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}, \"mappings\": [{\"type\": \"value\", \"options\": {\"0\": {\"text\": \"\u6293\u53d6\u5931\u6557\", \"color\": \"red\"}, \"1\": {\"text\": \"\u53ef\u6293\u53d6\", \"color\": \"green\"}}}]}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 16, \"title\": \"API \u8acb\u6c42\u901f\u7387\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 6, \"y\": 21, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_duration_seconds_count{job=\\\"$caption_gateway\\\"}[5m]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u5168\u90e8 gateway API \u8acb\u6c42\uff0c\u5305\u542b\u672a\u767b\u5165\u8207\u62d2\u7d55\u7684\u8acb\u6c42\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 17, \"title\": \"API \u932f\u8aa4\u7387\uff08\u6700\u8fd1 5 \u5206\u9418\uff09\", \"type\": \"stat\", \"gridPos\": {\"x\": 12, \"y\": 21, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_errors_total{job=\\\"$caption_gateway\\\"}[5m])) / sum(rate(s2t_gateway_request_duration_seconds_count{job=\\\"$caption_gateway\\\"}[5m]))\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"4xx \u8207 5xx \u5408\u8a08\uff1b\u7121\u8acb\u6c42\u6642\u4e0d\u586b\u96f6\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"percentunit\", \"min\": 0, \"color\": {\"mode\": \"thresholds\"}, \"thresholds\": {\"mode\": \"absolute\", \"steps\": [{\"color\": \"green\", \"value\": null}, {\"color\": \"orange\", \"value\": 1e-06}]}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 18, \"title\": \"\u8655\u7406\u4e2d\u7684 HTTP \u8acb\u6c42\", \"type\": \"stat\", \"gridPos\": {\"x\": 18, \"y\": 21, \"w\": 6, \"h\": 4}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(s2t_gateway_inflight_requests{job=\\\"$caption_gateway\\\"})\", \"legendFormat\": \"\", \"instant\": true, \"range\": false}], \"description\": \"\u76ee\u524d\u8acb\u6c42\u6578\uff0c\u5305\u542b\u6b63\u5728\u57f7\u884c\u7684 metrics \u6293\u53d6\uff1b\u4e0d\u662f\u4f7f\u7528\u8005\u6578\u3002\", \"fieldConfig\": {\"defaults\": {\"unit\": \"short\", \"min\": 0, \"color\": {\"mode\": \"fixed\", \"fixedColor\": \"blue\"}}, \"overrides\": []}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 19, \"title\": \"API \u8acb\u6c42\u8da8\u52e2\uff08\u6bcf\u79d2\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 0, \"y\": 25, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_gateway_request_duration_seconds_count{job=\\\"$caption_gateway\\\"}[5m])) by (route)\", \"legendFormat\": \"{{route}}\", \"instant\": false, \"range\": true}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0, \"color\": {\"mode\": \"palette-classic\"}}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"transcriptions\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a9e\u97f3\u8fa8\u8b58\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"translations\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u7ffb\u8b6f\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"summaries\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6458\u8981\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"diarizations\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8b1b\u8005\u5206\u96e2\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"telemetry_captions\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5b57\u5e55\u9059\u6e2c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_session\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u767b\u5165\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_register\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a3b\u518a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_login\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u767b\u5165\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_logout\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u767b\u51fa\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"storage\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u670d\u52d9\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_object\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u9304\u97f3\u6a94\u6848\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_glossary\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a5e\u5f59\u8868\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_voiceprints\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8072\u7d0b\u8cc7\u6599\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_diarization_jobs\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_storage_status\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_storage_audit\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u7a3d\u6838\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_storage_retry\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u91cd\u8a66\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_model_registry\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6a21\u578b\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_model_health\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_model_credentials_id\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_summary_templates\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6458\u8981\u6a21\u677f\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_processing_silero_vad\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_processing_status\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_processing_import_wav\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u532f\u5165\u97f3\u8a0a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"config\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u670d\u52d9\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_sessions\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6703\u8b70\u7d00\u9304\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_settings\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"other\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5176\u4ed6\u64cd\u4f5c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"client_error\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"server_error\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"aborted\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u9023\u7dda\u4e2d\u65b7\"}]}]}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}, {\"id\": 20, \"title\": \"\u5df2\u767b\u5165\u8acb\u6c42\u932f\u8aa4\u5206\u985e\uff08\u6bcf\u79d2\uff09\", \"type\": \"timeseries\", \"gridPos\": {\"x\": 12, \"y\": 25, \"w\": 12, \"h\": 5}, \"datasource\": {\"type\": \"prometheus\", \"uid\": \"s2t-prometheus\"}, \"targets\": [{\"refId\": \"A\", \"expr\": \"sum(rate(s2t_user_requests_total{job=\\\"$caption_gateway\\\",nt!=\\\"\\\",department!=\\\"\\\",user_id!=\\\"__overflow__\\\",outcome!=\\\"success\\\"}[5m])) by (outcome)\", \"legendFormat\": \"{{outcome}}\", \"instant\": false, \"range\": true}], \"description\": \"\", \"fieldConfig\": {\"defaults\": {\"unit\": \"reqps\", \"min\": 0, \"color\": {\"mode\": \"palette-classic\"}}, \"overrides\": [{\"matcher\": {\"id\": \"byName\", \"options\": \"transcriptions\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a9e\u97f3\u8fa8\u8b58\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"translations\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u7ffb\u8b6f\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"summaries\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6458\u8981\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"diarizations\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8b1b\u8005\u5206\u96e2\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"telemetry_captions\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5b57\u5e55\u9059\u6e2c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_session\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u767b\u5165\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_register\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a3b\u518a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_login\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u767b\u5165\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"auth_logout\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u767b\u51fa\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"storage\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u670d\u52d9\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_object\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u9304\u97f3\u6a94\u6848\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_glossary\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a5e\u5f59\u8868\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_voiceprints\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8072\u7d0b\u8cc7\u6599\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_diarization_jobs\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8b1b\u8005\u5206\u96e2\u5de5\u4f5c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_storage_status\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_storage_audit\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u7a3d\u6838\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_storage_retry\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5132\u5b58\u91cd\u8a66\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_model_registry\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6a21\u578b\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_model_health\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6a21\u578b\u5065\u5eb7\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_model_credentials_id\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6a21\u578b\u6191\u8b49\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_summary_templates\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6458\u8981\u6a21\u677f\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_processing_silero_vad\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8a9e\u97f3\u6d3b\u52d5\u5075\u6e2c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_processing_status\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u97f3\u8a0a\u8655\u7406\u72c0\u614b\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"audio_processing_import_wav\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u532f\u5165\u97f3\u8a0a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"config\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u670d\u52d9\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_sessions\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u6703\u8b70\u7d00\u9304\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"data_settings\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u4f7f\u7528\u8005\u8a2d\u5b9a\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"other\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u5176\u4ed6\u64cd\u4f5c\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"client_error\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u8acb\u6c42\u932f\u8aa4\uff084xx\uff09\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"server_error\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u670d\u52d9\u932f\u8aa4\uff085xx\uff09\"}]}, {\"matcher\": {\"id\": \"byName\", \"options\": \"aborted\"}, \"properties\": [{\"id\": \"displayName\", \"value\": \"\u9023\u7dda\u4e2d\u65b7\"}]}]}, \"options\": {\"reduceOptions\": {\"calcs\": [\"last\"], \"fields\": \"\", \"values\": false}, \"legend\": {\"displayMode\": \"list\", \"placement\": \"bottom\"}, \"tooltip\": {\"mode\": \"multi\"}}}], \"links\": [{\"title\": \"\u8a73\u7d30\u76e3\u63a7\u8207\u7528\u91cf\", \"type\": \"link\", \"url\": \"/d/s2t-overview\", \"includeVars\": true, \"keepTime\": true, \"targetBlank\": true}], \"description\": \"\u503c\u73ed\u5feb\u901f\u5224\u8b80\uff1a\u5ef6\u9072 \u2192 NT\uff0f\u90e8\u9580\u4f7f\u7528\u60c5\u6cc1 \u2192 \u8acb\u6c42\u5065\u5eb7\u3002\u4f86\u6e90\u9078\u64c7\u5668\u5340\u5206 8787 \u771f\u5be6\u5165\u53e3\u8207\u9a57\u6536\u6a21\u64ec\u8cc7\u6599\uff1b\u4e0d\u5c07\u7f3a\u5931\u8cc7\u6599\u7576\u4f5c\u96f6\u3002\"}"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "grafana",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "grafana"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "grafana"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "grafana",
+                "image": "grafana/grafana:12.2.0",
+                "args": [],
+                "env": [
+                  {
+                    "name": "PROMETHEUS_URL",
+                    "valueFrom": {
+                      "configMapKeyRef": {
+                        "name": "monitoring-connection",
+                        "key": "PROMETHEUS_URL"
+                      }
+                    }
+                  },
+                  {
+                    "name": "GF_SECURITY_ADMIN_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "monitoring-credentials",
+                        "key": "grafana-password"
+                      }
+                    }
+                  },
+                  {
+                    "name": "GF_USERS_ALLOW_SIGN_UP",
+                    "value": "false"
+                  },
+                  {
+                    "name": "GF_AUTH_ANONYMOUS_ENABLED",
+                    "value": "true"
+                  },
+                  {
+                    "name": "GF_AUTH_ANONYMOUS_ORG_ROLE",
+                    "value": "Viewer"
+                  },
+                  {
+                    "name": "GF_ANALYTICS_REPORTING_ENABLED",
+                    "value": "false"
+                  },
+                  {
+                    "name": "GF_ANALYTICS_CHECK_FOR_UPDATES",
+                    "value": "false"
+                  },
+                  {
+                    "name": "GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH",
+                    "value": "/var/lib/grafana/dashboards/dashboard.json"
+                  }
+                ],
+                "ports": [
+                  {
+                    "containerPort": 3000
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "memory": "384Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "data",
+                    "mountPath": "/var/lib/grafana"
+                  },
+                  {
+                    "name": "provisioning",
+                    "mountPath": "/etc/grafana/provisioning/datasources/datasources.yaml",
+                    "subPath": "datasources.yaml"
+                  },
+                  {
+                    "name": "provisioning",
+                    "mountPath": "/etc/grafana/provisioning/dashboards/dashboards.yaml",
+                    "subPath": "dashboards.yaml"
+                  },
+                  {
+                    "name": "dashboards",
+                    "mountPath": "/var/lib/grafana/dashboards"
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "data",
+                "persistentVolumeClaim": {
+                  "claimName": "grafana-data"
+                }
+              },
+              {
+                "name": "provisioning",
+                "configMap": {
+                  "name": "grafana-provisioning"
+                }
+              },
+              {
+                "name": "dashboards",
+                "configMap": {
+                  "name": "s2t-dashboard"
+                }
+              }
+            ],
+            "securityContext": {
+              "fsGroup": 472,
+              "runAsUser": 472
+            }
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "grafana",
+        "namespace": "s2t-stress-20261005"
+      },
+      "spec": {
+        "selector": {
+          "app": "grafana"
+        },
+        "ports": [
+          {
+            "port": 3000,
+            "targetPort": 3000
+          }
+        ]
+      }
+    }
+  ]
+}

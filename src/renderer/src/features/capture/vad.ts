@@ -1,4 +1,5 @@
 export type VadFrame = {
+  onsetSamples: number
   speechStarted: boolean
   speechEnded: boolean
   speaking: boolean
@@ -107,6 +108,6 @@ export class EnergyVad {
       }
     } else this.silenceSamples = 0
 
-    return { speechStarted, speechEnded, speaking: this.speaking, levelDbfs }
+    return { onsetSamples: this.onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs }
   }
 }

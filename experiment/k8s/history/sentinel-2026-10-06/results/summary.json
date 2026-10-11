@@ -1,0 +1,100 @@
+{
+  "phases": [
+    {
+      "startedAt": "2026-10-05T23:50:43.049Z",
+      "phase": "fifo-2pods-jitter-tail",
+      "users": 100,
+      "seconds": 90,
+      "intervalMs": 1500,
+      "scheduled": 6000,
+      "dropped": 0,
+      "asr": {
+        "200": 6000
+      },
+      "translation": {
+        "200": 6000
+      },
+      "chains": 6000,
+      "failedChains": 0,
+      "errors": [],
+      "peakPending": 424,
+      "schedulerLagMaxMs": 33,
+      "elapsedMs": 101461,
+      "asrLatencyMs": {
+        "n": 6000,
+        "p50": 660,
+        "p95": 4689,
+        "p99": 12003,
+        "max": 17186
+      },
+      "translationLatencyMs": {
+        "n": 6000,
+        "p50": 310,
+        "p95": 399,
+        "p99": 3004,
+        "max": 6431
+      },
+      "chainLatencyMs": {
+        "n": 6000,
+        "p50": 970,
+        "p95": 5173,
+        "p99": 12208,
+        "max": 17544
+      },
+      "actualModelCalls": {
+        "asr": 6000,
+        "translation": 6000
+      }
+    },
+    {
+      "startedAt": "2026-10-05T23:48:15.338Z",
+      "phase": "fifo-4pods-jitter-tail",
+      "users": 100,
+      "seconds": 90,
+      "intervalMs": 1500,
+      "scheduled": 6000,
+      "dropped": 0,
+      "asr": {
+        "200": 6000
+      },
+      "translation": {
+        "200": 6000
+      },
+      "chains": 6000,
+      "failedChains": 0,
+      "errors": [],
+      "peakPending": 357,
+      "schedulerLagMaxMs": 15,
+      "elapsedMs": 101522,
+      "asrLatencyMs": {
+        "n": 6000,
+        "p50": 645,
+        "p95": 3347,
+        "p99": 12003,
+        "max": 17470
+      },
+      "translationLatencyMs": {
+        "n": 6000,
+        "p50": 307,
+        "p95": 400,
+        "p99": 3004,
+        "max": 7119
+      },
+      "chainLatencyMs": {
+        "n": 6000,
+        "p50": 952,
+        "p95": 4036,
+        "p99": 12216,
+        "max": 17787
+      },
+      "actualModelCalls": {
+        "asr": 6000,
+        "translation": 6000
+      }
+    }
+  ],
+  "totalChains": 12000,
+  "totalErrors": 0,
+  "modelRetries": 0,
+  "capacityUpperBound": 64
+}

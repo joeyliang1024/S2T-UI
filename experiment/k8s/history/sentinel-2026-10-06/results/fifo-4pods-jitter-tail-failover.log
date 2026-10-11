@@ -1,0 +1,10 @@
+OK
+2
+fault-start 2026-10-05T23:48:25Z
+stopping master redis-2 redis-2.redis.s2t-stress-20261005.svc.cluster.local
+86518ec87d89
+promoted redis-0.redis.s2t-stress-20261005.svc.cluster.local elapsedSeconds=4
+present
+86518ec87d89
+OK 3 usable Sentinels. Quorum and failover authorization can be reached
+fault-end 2026-10-05T23:48:35Z

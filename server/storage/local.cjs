@@ -1,7 +1,7 @@
 const { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } = require('node:fs/promises')
 const { randomUUID } = require('node:crypto')
 const { createReadStream } = require('node:fs')
-const { join, resolve, relative, sep } = require('node:path')
+const { join, dirname, resolve, relative, sep } = require('node:path')
 
 const safePart = (value, label) => {
   if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/.test(value)) throw new Error(`無效的 ${label}`)
@@ -166,6 +166,7 @@ class LocalConfigStore {
       const now = new Date().toISOString()
       let job = jobs.find(j => j.userId === userId && j.sessionId === sessionId && j.audioKey === audioKey)
       if (!job) { job = { id, userId, sessionId, audioKey, createdAt: now, leaseGeneration: 0 }; jobs.push(job) }
+      if (payload?.processingToken && job.payload?.processingToken === payload.processingToken) return { ...job }
       Object.assign(job, { payload, state: 'queued', attempts: 0, leaseOwner: null, leaseUntil: null, error: null, updatedAt: now })
       return { ...job }
     })
@@ -208,11 +209,40 @@ class LocalConfigStore {
     safePart(id, 'job id'); safePart(owner, 'job owner')
     if (!Number.isSafeInteger(generation) || generation < 1) throw new Error('無效的工作租約 generation')
     await this.mutateDiarizationJobs(jobs => {
-      const job = jobs.find(j => j.id === id && j.leaseOwner === owner && j.leaseGeneration === generation)
+      const job = jobs.find(j => j.id === id && j.state === 'running' && j.leaseUntil > Date.now() && j.leaseOwner === owner && j.leaseGeneration === generation)
       if (!job) return
       const retry = typeof error === 'string' && error.startsWith('retry:')
       Object.assign(job, { state: retry ? 'queued' : error ? 'failed' : 'completed', error: error ? String(error).replace(/^retry:/, '').slice(0, 1000) : null, leaseOwner: null, leaseUntil: retry ? Date.now() + Math.min(60, Math.max(5, job.attempts * 5)) * 1000 : null, updatedAt: new Date().toISOString() })
     })
+  }
+  async commitDiarizationJob(id, owner, generation, userId, expectedVersion, value) {
+    safePart(id, 'job id'); safePart(owner, 'owner'); safePart(userId, 'user id')
+    if (!Number.isSafeInteger(generation) || generation < 1 || !Number.isSafeInteger(expectedVersion) || expectedVersion < 0) throw new Error('無效的工作或資料版本')
+    return mutateFile(this.file, async () => {
+      const records = await this.records()
+      const jobsKey = this.key('diarization-system', 'jobs')
+      const job = records[jobsKey]?.value?.jobs?.find(j => j.id === id && j.userId === userId && j.state === 'running' && j.leaseOwner === owner && j.leaseGeneration === generation && j.leaseUntil > Date.now())
+      if (!job) return 'lost'
+      const key = this.key(userId, 'sessions')
+      if (!records[key] || (records[key].value?.version ?? 0) !== expectedVersion) return 'conflict'
+      const updatedAt = new Date().toISOString()
+      records[key] = { value, updatedAt }
+      Object.assign(job, { state: 'completed', error: null, leaseOwner: null, leaseUntil: null, updatedAt })
+      await atomicJson(this.file, records)
+      return 'committed'
+    })
+  }
+  async pruneExpiredRequests() {
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); let changed = false
+      for (const [key, entry] of Object.entries(records)) if (/^[^:]+:request-[a-f0-9]{64}$/.test(key) && entry.value?.expiresAt < Date.now()) { delete records[key]; changed = true }
+      if (changed) await atomicJson(this.file, records)
+    })
+  }
+  async diarizationBacklog() {
+    const jobs = (await this.get('diarization-system', 'jobs'))?.jobs || []
+    const pending = jobs.filter(j => ['queued', 'running'].includes(j.state))
+    return { pending: pending.length, audioSeconds: pending.reduce((sum, job) => sum + (Number.isFinite(job.payload?.audioSeconds) ? job.payload.audioSeconds : 60), 0), oldest: pending.length ? Math.max(0, (Date.now() - Math.min(...pending.map(j => Date.parse(j.createdAt)))) / 1000) : 0 }
   }
   async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
     const records = await this.records()
@@ -240,7 +270,17 @@ class LocalBlobStore {
     const temporary = join(this.root, `.tmp-${randomUUID()}`)
     try { await writeFile(temporary, bytes, { mode: 0o600 }); await rename(temporary, target) } finally { await rm(temporary, { force: true }) }
   }
+  async putStream(scope, key, stream) {
+    const { pipeline } = require('node:stream/promises')
+    const { createWriteStream } = require('node:fs')
+    const file = this.path(scope, key)
+    await mkdir(dirname(file), { recursive: true })
+    const temporary = `${file}.${randomUUID()}.tmp`
+    try { await pipeline(stream, createWriteStream(temporary)); await rename(temporary, file) }
+    finally { await rm(temporary, { force: true }) }
+  }
   async get(scope, key) { try { return await readFile(this.path(scope, key)) } catch (error) { if (error && error.code === 'ENOENT') return null; throw error } }
+  async readStream(scope, key) { const file = this.path(scope, key); try { await stat(file); return createReadStream(file) } catch (error) { if (error.code === 'ENOENT') return null; throw error } }
   stream(scope, key) { return createReadStream(this.path(scope, key)) }
   async remove(scope, key) { await rm(this.path(scope, key), { force: true }) }
   async list(scope, prefix = '') {

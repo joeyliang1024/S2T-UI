@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "url": "http://127.0.0.1:13000/d/s2t-oncall?from=now-15m&to=now&refresh=5s&var-caption_gateway=gateway-acceptance&var-usage_user=$__all&var-usage_department=$__all",
+  "queriesChecked": 19,
+  "rowOrder": [
+    "01 · 延遲｜語音到字幕（來源：$caption_gateway）",
+    "02 · 使用者｜NT 與部門（來源：$caption_gateway）",
+    "03 · 請求｜入口健康與負載（來源：$caption_gateway）"
+  ],
+  "browserErrors": []
+}

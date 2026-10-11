@@ -1,0 +1,7 @@
+{
+  "testAudioObjectsRemoved": 2,
+  "testBucketRemoved": true,
+  "testCollectionRemovedOrAbsent": true,
+  "testDatabaseRemoved": true,
+  "testGatewayAndServiceRemoved": true
+}

@@ -1,0 +1,8 @@
+{
+  "phase": "fixed",
+  "capturedSamples": 9600,
+  "requestsBeforeResume": 1,
+  "captionsBeforeResume": 1,
+  "closed": true,
+  "totalSentSamples": 9600
+}

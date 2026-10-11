@@ -1,0 +1,30 @@
+{
+  "before": {
+    "id": "82dcd9ab-f920-4638-b243-f458f26499a3",
+    "role": "admin"
+  },
+  "after": {
+    "id": "82dcd9ab-f920-4638-b243-f458f26499a3",
+    "role": "admin"
+  },
+  "existingAdminPreserved": true,
+  "schemaDiagnostics": [
+    {
+      "status": 503,
+      "body": {
+        "ready": false,
+        "role": "api",
+        "error": "Storage schema \u7f3a\u5931\uff1a\u8acb\u57f7\u884c node scripts/storage/recover-storage.cjs\uff0c\u5b8c\u6210\u5f8c\u91cd\u65b0\u555f\u52d5 Gateway \u8207 worker\uff1b\u5df2\u522a\u8cc7\u6599\u9700\u5f9e\u5099\u4efd\u9084\u539f\u3002"
+      }
+    },
+    {
+      "status": 503,
+      "body": {
+        "ready": false,
+        "role": "api",
+        "error": "Storage schema \u7f3a\u5931\uff1a\u8acb\u57f7\u884c node scripts/storage/recover-storage.cjs\uff0c\u5b8c\u6210\u5f8c\u91cd\u65b0\u555f\u52d5 Gateway \u8207 worker\uff1b\u5df2\u522a\u8cc7\u6599\u9700\u5f9e\u5099\u4efd\u9084\u539f\u3002"
+      }
+    }
+  ],
+  "readyPodsAfter": 2
+}

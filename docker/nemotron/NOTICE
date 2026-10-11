@@ -1,0 +1,12 @@
+Nemotron 3 Diarization model: NVIDIA CORPORATION & AFFILIATES.
+Model source: https://huggingface.co/nvidia/Nemotron-3-Diarization
+Model revision: f667ed73aee57d40cc39428eb768b4fd87a0a29e
+Q8_0 SHA256: 08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1
+Model license: OpenMDW-1.1; full text in MODEL-LICENSE.
+Native runtime: NVIDIA/NeMo-Speech.cpp v0.2.0, Linux x86_64 / AArch64 CPU.
+Runtime source: https://github.com/NVIDIA/NeMo-Speech.cpp/releases/tag/v0.2.0
+Runtime Apache-2.0 and bundled third-party notices are preserved at
+/opt/nemotron/runtime/share/licenses/nemo-speech/.
+This package adds a Docker wrapper and the S2T-tested diarization geometry.
+No NVIDIA affiliation or endorsement is implied.
+Linux x86_64 CPU archive SHA256: f396057150f1b774935c7414fd32ebc04195a795a34120d78d8c9ecefa1b7507

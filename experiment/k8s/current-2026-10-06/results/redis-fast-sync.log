@@ -1,0 +1,102 @@
+2026-10-06T12:42:20.345903378Z 1:M 06 Oct 2026 12:42:20.345 * 100 changes in 300 seconds. Saving...
+2026-10-06T12:42:20.347428900Z 1:M 06 Oct 2026 12:42:20.347 * Background saving started by pid 7835
+2026-10-06T12:42:20.352843254Z 7835:C 06 Oct 2026 12:42:20.352 * DB saved on disk
+2026-10-06T12:42:20.352892801Z 7835:C 06 Oct 2026 12:42:20.352 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+2026-10-06T12:42:20.458344448Z 1:M 06 Oct 2026 12:42:20.448 * Background saving terminated with success
+2026-10-06T12:43:21.036971227Z 1:M 06 Oct 2026 12:43:21.035 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:43:21.040116997Z 1:M 06 Oct 2026 12:43:21.039 * Background saving started by pid 7980
+2026-10-06T12:43:21.070094778Z 7980:C 06 Oct 2026 12:43:21.055 * DB saved on disk
+2026-10-06T12:43:21.070119280Z 7980:C 06 Oct 2026 12:43:21.056 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 1 MB
+2026-10-06T12:43:21.143218137Z 1:M 06 Oct 2026 12:43:21.142 * Background saving terminated with success
+2026-10-06T12:44:22.090599549Z 1:M 06 Oct 2026 12:44:22.090 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:44:22.094100609Z 1:M 06 Oct 2026 12:44:22.093 * Background saving started by pid 8134
+2026-10-06T12:44:22.100750160Z 8134:C 06 Oct 2026 12:44:22.100 * DB saved on disk
+2026-10-06T12:44:22.100973094Z 8134:C 06 Oct 2026 12:44:22.100 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+2026-10-06T12:44:22.195179266Z 1:M 06 Oct 2026 12:44:22.195 * Background saving terminated with success
+2026-10-06T12:45:23.008124253Z 1:M 06 Oct 2026 12:45:23.007 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:45:23.015712480Z 1:M 06 Oct 2026 12:45:23.015 * Background saving started by pid 8283
+2026-10-06T12:45:23.023436425Z 8283:C 06 Oct 2026 12:45:23.022 * DB saved on disk
+2026-10-06T12:45:23.023444759Z 8283:C 06 Oct 2026 12:45:23.023 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 1 MB
+2026-10-06T12:45:23.119058464Z 1:M 06 Oct 2026 12:45:23.117 * Background saving terminated with success
+2026-10-06T12:46:24.032648716Z 1:M 06 Oct 2026 12:46:24.032 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:46:24.033932211Z 1:M 06 Oct 2026 12:46:24.033 * Background saving started by pid 8429
+2026-10-06T12:46:24.039160989Z 8429:C 06 Oct 2026 12:46:24.039 * DB saved on disk
+2026-10-06T12:46:24.039301539Z 8429:C 06 Oct 2026 12:46:24.039 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+2026-10-06T12:46:24.135648843Z 1:M 06 Oct 2026 12:46:24.135 * Background saving terminated with success
+2026-10-06T12:47:25.088499123Z 1:M 06 Oct 2026 12:47:25.087 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:47:25.089991913Z 1:M 06 Oct 2026 12:47:25.089 * Background saving started by pid 8573
+2026-10-06T12:47:25.093443518Z 8573:C 06 Oct 2026 12:47:25.093 * DB saved on disk
+2026-10-06T12:47:25.093677072Z 8573:C 06 Oct 2026 12:47:25.093 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+2026-10-06T12:47:25.190943678Z 1:M 06 Oct 2026 12:47:25.190 * Background saving terminated with success
+2026-10-06T12:47:27.307901307Z 1:M 06 Oct 2026 12:47:27.307 * Connection with replica redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 lost.
+2026-10-06T12:47:28.262223565Z 1:M 06 Oct 2026 12:47:28.262 * Connection with replica redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 lost.
+2026-10-06T12:47:38.309960015Z 1:S 06 Oct 2026 12:47:38.309 * Before turning into a replica, using my own master parameters to synthesize a cached master: I may be able to synchronize with the new master with just a partial transfer.
+2026-10-06T12:47:38.310009059Z 1:S 06 Oct 2026 12:47:38.309 * Connecting to MASTER redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379
+2026-10-06T12:47:38.311010363Z 1:S 06 Oct 2026 12:47:38.310 * MASTER <-> REPLICA sync started
+2026-10-06T12:47:38.311118369Z 1:S 06 Oct 2026 12:47:38.311 * REPLICAOF redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 enabled (user request from 'id=1840 addr=10.42.0.223:60036 laddr=10.42.0.224:6379 fd=12 name=sentinel-47ae4d36-cmd age=10 idle=0 flags=x db=0 sub=0 psub=0 ssub=0 multi=4 watch=0 qbuf=239 qbuf-free=20235 argv-mem=4 multi-mem=219 rbs=1024 rbp=1024 obl=45 oll=0 omem=0 tot-mem=22743 events=r cmd=exec user=default redir=-1 resp=2 lib-name= lib-ver=')
+2026-10-06T12:47:38.311461512Z 1:S 06 Oct 2026 12:47:38.311 * Non blocking connect for SYNC fired the event.
+2026-10-06T12:47:38.311652939Z 1:S 06 Oct 2026 12:47:38.311 * Master replied to PING, replication can continue...
+2026-10-06T12:47:38.311708858Z 1:S 06 Oct 2026 12:47:38.311 * Trying a partial resynchronization (request 1ce2ac2226bb7ef99d6e044e1857d22f09a8b348:42633919).
+2026-10-06T12:47:43.614085843Z 1:S 06 Oct 2026 12:47:43.613 * Full resync from master: fe819901e58bc8769b659db8d0af741bd5c7a13b:43968946
+2026-10-06T12:47:43.631325338Z 1:S 06 Oct 2026 12:47:43.630 * MASTER <-> REPLICA sync: receiving streamed RDB from master with EOF to disk
+2026-10-06T12:47:43.632078919Z 1:S 06 Oct 2026 12:47:43.631 * Discarding previously cached master state.
+2026-10-06T12:47:43.632083669Z 1:S 06 Oct 2026 12:47:43.631 * MASTER <-> REPLICA sync: Flushing old data
+2026-10-06T12:47:43.633017969Z 1:S 06 Oct 2026 12:47:43.632 * MASTER <-> REPLICA sync: Loading DB in memory
+2026-10-06T12:47:43.636288517Z 1:S 06 Oct 2026 12:47:43.636 * Loading RDB produced by version 7.4.11
+2026-10-06T12:47:43.636332477Z 1:S 06 Oct 2026 12:47:43.636 * RDB age 0 seconds
+2026-10-06T12:47:43.636352478Z 1:S 06 Oct 2026 12:47:43.636 * RDB memory usage when created 3.21 Mb
+2026-10-06T12:47:43.637059433Z 1:S 06 Oct 2026 12:47:43.636 * Done loading RDB, keys loaded: 203, keys expired: 0.
+2026-10-06T12:47:43.637232525Z 1:S 06 Oct 2026 12:47:43.637 * MASTER <-> REPLICA sync: Finished with success
+2026-10-06T12:47:43.637248067Z 1:S 06 Oct 2026 12:47:43.637 * Creating AOF incr file temp-appendonly.aof.incr on background rewrite
+2026-10-06T12:47:43.638755939Z 1:S 06 Oct 2026 12:47:43.638 * Background append only file rewriting started by pid 8620
+2026-10-06T12:47:43.642176828Z 8620:C 06 Oct 2026 12:47:43.642 * Successfully created the temporary AOF base file temp-rewriteaof-bg-8620.aof
+2026-10-06T12:47:43.642312710Z 8620:C 06 Oct 2026 12:47:43.642 * Fork CoW for AOF rewrite: current 1 MB, peak 1 MB, average 0 MB
+2026-10-06T12:47:43.656956818Z 1:S 06 Oct 2026 12:47:43.656 * Background AOF rewrite terminated with success
+2026-10-06T12:47:43.656974569Z 1:S 06 Oct 2026 12:47:43.656 * Successfully renamed the temporary AOF base file temp-rewriteaof-bg-8620.aof into appendonly.aof.11.base.rdb
+2026-10-06T12:47:43.656975944Z 1:S 06 Oct 2026 12:47:43.656 * Successfully renamed the temporary AOF incr file temp-appendonly.aof.incr into appendonly.aof.11.incr.aof
+2026-10-06T12:47:43.659628501Z 1:S 06 Oct 2026 12:47:43.658 * Removing the history file appendonly.aof.10.incr.aof in the background
+2026-10-06T12:47:43.659638668Z 1:S 06 Oct 2026 12:47:43.658 * Removing the history file appendonly.aof.10.base.rdb in the background
+2026-10-06T12:47:43.664170116Z 1:S 06 Oct 2026 12:47:43.664 * Background AOF rewrite finished successfully
+2026-10-06T12:48:26.068741565Z 1:S 06 Oct 2026 12:48:26.068 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:48:26.072704426Z 1:S 06 Oct 2026 12:48:26.069 * Background saving started by pid 8718
+2026-10-06T12:48:26.075119752Z 8718:C 06 Oct 2026 12:48:26.075 * DB saved on disk
+2026-10-06T12:48:26.075291969Z 8718:C 06 Oct 2026 12:48:26.075 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 0 MB
+2026-10-06T12:48:26.172768152Z 1:S 06 Oct 2026 12:48:26.172 * Background saving terminated with success
+2026-10-06T12:49:27.047893624Z 1:S 06 Oct 2026 12:49:27.047 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:49:27.049661368Z 1:S 06 Oct 2026 12:49:27.049 * Background saving started by pid 8870
+2026-10-06T12:49:27.057225116Z 8870:C 06 Oct 2026 12:49:27.056 * DB saved on disk
+2026-10-06T12:49:27.057241491Z 8870:C 06 Oct 2026 12:49:27.056 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+2026-10-06T12:49:27.150156437Z 1:S 06 Oct 2026 12:49:27.150 * Background saving terminated with success
+2026-10-06T12:50:18.076104810Z 1:M 06 Oct 2026 12:50:18.075 * Connection with master lost.
+2026-10-06T12:50:18.076209772Z 1:M 06 Oct 2026 12:50:18.075 * Caching the disconnected master state.
+2026-10-06T12:50:18.076213397Z 1:M 06 Oct 2026 12:50:18.075 * Discarding previously cached master state.
+2026-10-06T12:50:18.076214897Z 1:M 06 Oct 2026 12:50:18.075 * Setting secondary replication ID to fe819901e58bc8769b659db8d0af741bd5c7a13b, valid up to offset: 49782851. New replication ID is 0d7f7ac613b8108eac7d2e8e7ed1000c527520bc
+2026-10-06T12:50:18.076216397Z 1:M 06 Oct 2026 12:50:18.075 * MASTER MODE enabled (user request from 'id=1854 addr=10.42.0.227:36208 laddr=10.42.0.224:6379 fd=13 name=sentinel-e90163d8-cmd age=160 idle=0 flags=x db=0 sub=0 psub=0 ssub=0 multi=4 watch=0 qbuf=188 qbuf-free=20286 argv-mem=4 multi-mem=169 rbs=2048 rbp=1024 obl=45 oll=0 omem=0 tot-mem=23717 events=r cmd=exec user=default redir=-1 resp=2 lib-name= lib-ver=')
+2026-10-06T12:50:19.006085173Z 1:M 06 Oct 2026 12:50:19.004 * Replica redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 asks for synchronization
+2026-10-06T12:50:19.006113049Z 1:M 06 Oct 2026 12:50:19.004 * Partial resynchronization not accepted: Requested offset for second ID was 49814375, but I can reply up to 49782851
+2026-10-06T12:50:19.006120175Z 1:M 06 Oct 2026 12:50:19.004 * Starting BGSAVE for SYNC with target: replicas sockets
+2026-10-06T12:50:19.009275301Z 1:M 06 Oct 2026 12:50:19.009 * Background RDB transfer started by pid 8994
+2026-10-06T12:50:19.010867698Z 8994:C 06 Oct 2026 12:50:19.010 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 0 MB
+2026-10-06T12:50:19.010882281Z 1:M 06 Oct 2026 12:50:19.010 * Diskless rdb transfer, done reading from pipe, 1 replicas still up.
+2026-10-06T12:50:19.016887271Z 1:M 06 Oct 2026 12:50:19.014 * Background RDB transfer terminated with success
+2026-10-06T12:50:19.016895230Z 1:M 06 Oct 2026 12:50:19.014 * Streamed RDB transfer with replica redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 succeeded (socket). Waiting for REPLCONF ACK from replica to enable streaming
+2026-10-06T12:50:19.016896688Z 1:M 06 Oct 2026 12:50:19.014 * Synchronization with replica redis-1.redis.s2t-stress-20261005.svc.cluster.local:6379 succeeded
+2026-10-06T12:50:28.030374344Z 1:M 06 Oct 2026 12:50:28.030 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:50:28.033527468Z 1:M 06 Oct 2026 12:50:28.033 * Background saving started by pid 9019
+2026-10-06T12:50:28.036967728Z 9019:C 06 Oct 2026 12:50:28.036 * DB saved on disk
+2026-10-06T12:50:28.037082524Z 9019:C 06 Oct 2026 12:50:28.037 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 0 MB
+2026-10-06T12:50:28.134147880Z 1:M 06 Oct 2026 12:50:28.134 * Background saving terminated with success
+2026-10-06T12:50:29.104435915Z 1:M 06 Oct 2026 12:50:29.101 * Replica redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 asks for synchronization
+2026-10-06T12:50:29.104484876Z 1:M 06 Oct 2026 12:50:29.101 * Partial resynchronization not accepted: Requested offset for second ID was 49817430, but I can reply up to 49782851
+2026-10-06T12:50:29.104487084Z 1:M 06 Oct 2026 12:50:29.101 * Starting BGSAVE for SYNC with target: replicas sockets
+2026-10-06T12:50:29.113522480Z 1:M 06 Oct 2026 12:50:29.105 * Background RDB transfer started by pid 9020
+2026-10-06T12:50:29.119081990Z 9020:C 06 Oct 2026 12:50:29.118 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 1 MB
+2026-10-06T12:50:29.119106033Z 1:M 06 Oct 2026 12:50:29.118 * Diskless rdb transfer, done reading from pipe, 1 replicas still up.
+2026-10-06T12:50:29.137414251Z 1:M 06 Oct 2026 12:50:29.137 * Background RDB transfer terminated with success
+2026-10-06T12:50:29.137451877Z 1:M 06 Oct 2026 12:50:29.137 * Streamed RDB transfer with replica redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 succeeded (socket). Waiting for REPLCONF ACK from replica to enable streaming
+2026-10-06T12:50:29.137458169Z 1:M 06 Oct 2026 12:50:29.137 * Synchronization with replica redis-0.redis.s2t-stress-20261005.svc.cluster.local:6379 succeeded
+2026-10-06T12:51:29.014528360Z 1:M 06 Oct 2026 12:51:29.014 * 10000 changes in 60 seconds. Saving...
+2026-10-06T12:51:29.015872949Z 1:M 06 Oct 2026 12:51:29.015 * Background saving started by pid 9162
+2026-10-06T12:51:29.021150260Z 9162:C 06 Oct 2026 12:51:29.020 * DB saved on disk
+2026-10-06T12:51:29.021564900Z 9162:C 06 Oct 2026 12:51:29.021 * Fork CoW for RDB: current 1 MB, peak 1 MB, average 0 MB
+2026-10-06T12:51:29.116490124Z 1:M 06 Oct 2026 12:51:29.116 * Background saving terminated with success

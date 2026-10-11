@@ -1,0 +1,53 @@
+# Examples only: calibrate targets and maximum replicas from capacity measurements.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: s2t-gateway
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: s2t-gateway}
+  minReplicas: 2
+  maxReplicas: 6
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 65}
+    - type: Pods
+      pods:
+        metric: {name: s2t_gateway_inflight_requests}
+        target: {type: AverageValue, averageValue: "16"}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: s2t-audio-service
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: s2t-audio-service}
+  minReplicas: 2
+  maxReplicas: 4
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 65}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: s2t-audio-worker
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: s2t-audio-worker}
+  minReplicas: 1
+  maxReplicas: 4
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}
+  metrics:
+    - type: Object
+      object:
+        describedObject: {apiVersion: v1, kind: Service, name: s2t-gateway}
+        metric: {name: s2t_diarization_pending_audio_seconds}
+        target: {type: AverageValue, averageValue: "120"}

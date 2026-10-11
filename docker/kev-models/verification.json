@@ -1,0 +1,17 @@
+{
+  "verified_files": 26,
+  "bytes": 1835470044,
+  "all_sha256_match": true,
+  "external_symlinks": false,
+  "provenance": {
+    "checkpoint": "jaredpalmer/kev-0.8b",
+    "checkpoint_revision": "bf75a6a8848ea6960ff2ed108d9ed44c2941174f",
+    "base": "Qwen/Qwen3.5-0.8B-Base",
+    "base_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68"
+  },
+  "extracted_weights_loaded_offline": true,
+  "runtime_included": false,
+  "image_layers": 1,
+  "published_image": "joeyliang1024/s2t-kev-models:0.8b-v1.0",
+  "published_digest": "sha256:99c199745322f3eb9cda6d8157754408182b5ef19c3fa0c4be9581eaee63bb7b"
+}
