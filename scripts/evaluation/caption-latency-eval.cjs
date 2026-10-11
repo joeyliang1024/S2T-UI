@@ -60,6 +60,9 @@ const { defaultVadConfig } = loadTs(path.join('src', 'renderer', 'src', 'feature
 const { SileroBoundaryVad } = loadTs(path.join('src', 'renderer', 'src', 'features', 'capture', 'silero-vad.ts'))
 const { canMergeHttpCaption } = loadTs(path.join('src', 'renderer', 'src', 'features', 'app', 'services', 'translation-policy.ts'))
 const { createSileroScorer } = require(path.join(__dirname, 'silero-probabilities.cjs'))
+// CER／WER 共用指標：WER 以 Intl.Segmenter（ICU 字典分詞）切 zh-TW 詞邊界，
+// 與 CER 同為正規化後計算；事後比較腳本共用同一模組，算法一致。
+const { normalize, editDistance, corpusRates, sentenceRates } = require(path.join(__dirname, 'text-metrics.cjs'))
 
 // 調整前的舊預設值，用來跟新預設做對照。
 // overlapMs/sampleRate 為尚未產品化的準度與延遲槓桿（見檔頭說明）。
@@ -134,21 +137,6 @@ const percentile = (values, value) => {
 }
 const stats = (values) => ({ n: values.length, p50: percentile(values, .5), p95: percentile(values, .95), max: values.length ? Math.round(Math.max(...values)) : null })
 const mean = (values) => values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length * 100) / 100 : null
-
-const normalize = (text) => text.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase()
-const editDistance = (left, right) => {
-  let previous = new Uint32Array(right.length + 1)
-  for (let index = 0; index <= right.length; index += 1) previous[index] = index
-  for (let i = 1; i <= left.length; i += 1) {
-    const current = new Uint32Array(right.length + 1)
-    current[0] = i
-    for (let j = 1; j <= right.length; j += 1) {
-      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1))
-    }
-    previous = current
-  }
-  return previous[right.length]
-}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -356,9 +344,14 @@ const runPreset = async (name, preset, sentences) => {
     const overlappingFinals = finals.filter((event) => event.startMs < sentence.endMs && event.endMs > sentence.startMs)
     const hyp = overlappingFinals.map((event) => event.sourceText).join('')
     const overlapping = merged.filter((caption) => caption.startMs < sentence.endMs && caption.endMs > sentence.startMs)
-    const reference = normalize(sentence.text)
-    const sentenceCer = reference.length ? editDistance(reference, normalize(hyp)) / reference.length : null
-    const common = { segments: overlapping.length, hyp, sentenceCerPct: sentenceCer === null ? null : Math.round(sentenceCer * 10_000) / 100 }
+    const rates = sentenceRates(sentence.text, hyp)
+    const common = {
+      segments: overlapping.length,
+      hyp,
+      sentenceCerPct: rates.cer === null ? null : Math.round(rates.cer * 10_000) / 100,
+      sentenceWerPct: rates.wer === null ? null : Math.round(rates.wer * 10_000) / 100,
+      sentenceRefWords: rates.refWords
+    }
     if (!record) return { ...base, status: 'not-sent', ...common }
     if (record.dropped) return { ...base, status: 'dropped', ...common }
     const event = findEvent(record)
@@ -378,16 +371,23 @@ const runPreset = async (name, preset, sentences) => {
     }
   })
 
-  // 語料級 CER（整曲標準答案 vs 整曲字幕，時間序拼接）
+  // 語料級 CER／WER（整曲標準答案 vs 整曲字幕，時間序拼接）
   const overlapsSentence = (caption) => sentences.some((sentence) => caption.startMs < sentence.endMs && caption.endMs > sentence.startMs)
-  const reference = normalize(sentences.map((sentence) => sentence.text).join(''))
-  const hypothesis = normalize(merged.filter(overlapsSentence).map((caption) => caption.sourceText).join(''))
-  const distance = editDistance(reference, hypothesis)
-  const cer = reference.length ? distance / reference.length : null
+  const corpus = corpusRates(
+    sentences.map((sentence) => sentence.text).join(''),
+    merged.filter(overlapsSentence).map((caption) => caption.sourceText).join('')
+  )
   // 逐句 CER 字數加權彙總
   const sentenceCerSum = sentenceResults.reduce((sum, result) => {
     const refChars = normalize(result.text).length
     const dist = result.sentenceCerPct === null || refChars === 0 ? 0 : Math.round(result.sentenceCerPct / 100 * refChars)
+    return sum + dist
+  }, 0)
+  // 逐句 WER 詞數加權彙總
+  const sentenceRefWordsTotal = sentenceResults.reduce((sum, result) => sum + (result.sentenceRefWords || 0), 0)
+  const sentenceWerSum = sentenceResults.reduce((sum, result) => {
+    const refWords = result.sentenceRefWords || 0
+    const dist = result.sentenceWerPct === null || refWords === 0 ? 0 : Math.round(result.sentenceWerPct / 100 * refWords)
     return sum + dist
   }, 0)
 
@@ -439,10 +439,14 @@ const runPreset = async (name, preset, sentences) => {
       within2500AllPct: sentenceResults.length ? Math.round(shown.filter((result) => result.latencyMs <= TARGET_MS).length / sentenceResults.length * 10_000) / 100 : null
     },
     accuracy: {
-      corpusCerPct: cer === null ? null : Math.round(cer * 10_000) / 100,
-      corpusRefChars: reference.length,
-      corpusDistance: distance,
-      sentenceCerPct: reference.length ? Math.round(sentenceCerSum / reference.length * 10_000) / 100 : null
+      corpusCerPct: corpus.cer === null ? null : Math.round(corpus.cer * 10_000) / 100,
+      corpusRefChars: corpus.refChars,
+      corpusDistance: corpus.cerDistance,
+      corpusWerPct: corpus.wer === null ? null : Math.round(corpus.wer * 10_000) / 100,
+      corpusRefWords: corpus.refWords,
+      corpusWerDistance: corpus.werDistance,
+      sentenceCerPct: corpus.refChars ? Math.round(sentenceCerSum / corpus.refChars * 10_000) / 100 : null,
+      sentenceWerPct: sentenceRefWordsTotal ? Math.round(sentenceWerSum / sentenceRefWordsTotal * 10_000) / 100 : null
     },
     fragmentation: {
       displayedCaptions: merged.length,
@@ -470,7 +474,7 @@ const printSummary = (report) => {
   console.log(`ASR 推論: p50 ${asrMs.p50} ms / p95 ${asrMs.p95} ms / max ${asrMs.max} ms (n=${asrMs.n}) | 排隊 p95 ${queueWaitMs.p95} ms`)
   console.log(`句子: ${sentences.total} 句 → 上屏 ${sentences.shown} / 丟棄 ${sentences.dropped} / 無文字 ${sentences.emptyText} / 失敗 ${sentences.requestFailed} / 未送出 ${sentences.notSent}`)
   console.log(`延遲(說話→上屏): p50 ${latencyMs.p50} ms / p95 ${latencyMs.p95} ms / max ${latencyMs.max} ms | ≤${TARGET_MS}ms: 已上屏 ${latencyMs.within2500ShownPct}% / 全部 ${latencyMs.within2500AllPct}%`)
-  console.log(`準度: 語料CER ${accuracy.corpusCerPct}% (${accuracy.corpusDistance}/${accuracy.corpusRefChars}) | 逐句CER ${accuracy.sentenceCerPct}%`)
+  console.log(`準度: 語料CER ${accuracy.corpusCerPct}% (${accuracy.corpusDistance}/${accuracy.corpusRefChars}字) | 逐句CER ${accuracy.sentenceCerPct}% | 語料WER ${accuracy.corpusWerPct}% (${accuracy.corpusWerDistance}/${accuracy.corpusRefWords}詞) | 逐句WER ${accuracy.sentenceWerPct}%`)
   console.log(`碎片化: 字幕 ${fragmentation.displayedCaptions} 行 (原始事件 ${fragmentation.rawFinalEvents} → 合併 ${fragmentation.mergeOperations} 次) | 平均 ${fragmentation.meanCaptionChars} 字/行 | 每句 ${fragmentation.segmentsPerSentenceMean} 段 (max ${fragmentation.segmentsPerSentenceMax}, 被切開 ${fragmentation.sentencesSplit} 句) | ASR 錯誤 ${errors.count}`)
   console.log(`最慢 3 句:`)
   report.detail.filter((result) => result.status === 'shown').sort((left, right) => right.latencyMs - left.latencyMs).slice(0, 3)
@@ -495,7 +499,7 @@ const main = async () => {
   }
   if (reports.length > 1) {
     console.log('\n=== 對比 ===')
-    const header = ['preset', '重疊', 'sr', 'chunks', 'ASR p95', '延遲 p50', '延遲 p95', `≤${TARGET_MS}ms`, '逐句CER', '語料CER', '字幕行', '句/段', '被切句']
+    const header = ['preset', '重疊', 'sr', 'chunks', 'ASR p95', '延遲 p50', '延遲 p95', `≤${TARGET_MS}ms`, '逐句CER', '語料CER', '逐句WER', '語料WER', '字幕行', '句/段', '被切句']
     const rows = reports.map((report) => [
       report.preset,
       `${report.overlapMs}ms`,
@@ -507,6 +511,8 @@ const main = async () => {
       `${report.latencyMs.within2500AllPct}%`,
       `${report.accuracy.sentenceCerPct}%`,
       `${report.accuracy.corpusCerPct}%`,
+      `${report.accuracy.sentenceWerPct ?? '-'}%`,
+      `${report.accuracy.corpusWerPct ?? '-'}%`,
       report.fragmentation.displayedCaptions,
       report.fragmentation.segmentsPerSentenceMean,
       report.fragmentation.sentencesSplit
