@@ -120,11 +120,25 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
     await recovery.click(); await page.waitForTimeout(3500)
     assert.equal(translatedCalls, 1, 'one click remains one attempt after failure'); assert.equal(jobPollCalls, 0, 'manual recovery never polls the old failed job');
     await recovery.click(); await page.waitForTimeout(3500); assert.equal(translatedCalls, 2, 'a second click starts exactly one new attempt');
-    failTranslation = false; await recovery.click(); await page.waitForTimeout(900)
+    failTranslation = false
+    await page.evaluate(() => {
+      window.__storageDuringProcessing = []
+      window.__storageObserver = new MutationObserver(() => {
+        for (const item of document.querySelectorAll('.session-item')) {
+          if (item.querySelector('.session-processing-state.running')) window.__storageDuringProcessing.push(item.querySelector('.session-storage-state')?.textContent)
+        }
+      })
+      window.__storageObserver.observe(document.querySelector('.session-list'), { subtree: true, childList: true, characterData: true, attributes: true })
+    })
+    await recovery.click(); await page.waitForTimeout(900)
+    const storageDuringProcessing = await page.evaluate(() => { window.__storageObserver.disconnect(); return window.__storageDuringProcessing })
+    assert.ok(storageDuringProcessing.length > 0)
+    assert.ok(storageDuringProcessing.every(value => value === 'Local, pending sync'), 'running badges never alternate between pending and both')
+
     assert.equal(translatedCalls, 3); assert.equal(asrCalls, 0); assert.equal(diarizationCalls, 0)
     assert.equal(await page.getByRole('button', { name: 'Error recovery: retry failed steps', exact: true }).count(), 0)
     assert.equal(await page.locator('.session-actions > button').filter({ hasText: 'Quality correction' }).count(), 0, 'quality correction stays inside More actions')
     assert.deepEqual(errors, [])
-    console.log(JSON.stringify({ legacyRecordRecoverySelectable: true, manualTitleGenerationAndFailure: true, streamedSummaryRendered: true, noStaleWarning: true, customTemplateSavedAndReloaded: true, fileTemplateEditsCreatePersonalCopy: true, templateEditingOnlyInSettings: true, templateEditPreservesIdentity: true, recoveryOnlyRetriesFailedTranslation: true, recoveryIconHasTooltip: true, failedRecoveryStopsUntilNextClick: true, oldJobNotPolledDuringRecovery: true, blankNameDoesNotCrash: true, failedRecordingCanSummarize: true, summaryFailureThenRetry: true, failedRegenerationPreservesPrevious: true, completedCanSummarize: true, interruptedSummaryRecoverable: true, pageErrors: errors }))
+    console.log(JSON.stringify({ storageBadgeStableWhileProcessing: true, legacyRecordRecoverySelectable: true, manualTitleGenerationAndFailure: true, streamedSummaryRendered: true, noStaleWarning: true, customTemplateSavedAndReloaded: true, fileTemplateEditsCreatePersonalCopy: true, templateEditingOnlyInSettings: true, templateEditPreservesIdentity: true, recoveryOnlyRetriesFailedTranslation: true, recoveryIconHasTooltip: true, failedRecoveryStopsUntilNextClick: true, oldJobNotPolledDuringRecovery: true, blankNameDoesNotCrash: true, failedRecordingCanSummarize: true, summaryFailureThenRetry: true, failedRegenerationPreservesPrevious: true, completedCanSummarize: true, interruptedSummaryRecoverable: true, pageErrors: errors }))
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }
 })().catch(e => { console.error(e); process.exitCode = 1 })

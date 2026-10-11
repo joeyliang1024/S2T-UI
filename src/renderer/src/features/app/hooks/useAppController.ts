@@ -1,3 +1,4 @@
+import { sessionStorageStatesForSnapshot } from '../services/session-storage-state'
 import { readSummaryStream } from '../services/summary-stream'
 import { recoverSession, sessionRecoveryStages } from '../services/session-recovery'
 import { registerCaptionTiming, setCaptionMeasurementActive } from '../../../shared/services/caption-metrics'
@@ -11,7 +12,7 @@ import { modelEndpoint, defaultWebSocketCapabilities, defaultHttpCapabilities, d
 import { speedToVadConfig } from '../../capture/vad'
 import { HttpServiceError, readJsonResponse } from '../../../shared/services/http'
 import { browserDownload } from '../../../shared/services/download'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from '../../models/model-adapter'
 import { assignSpeakersByOverlap, parseSpeakerEmbeddings, parseSpeakerTurns, stabilizeSpeakerTurns, type SpeakerTurn } from '../../speakers/diarization'
 import { voiceprintStorage, type Voiceprint } from '../../speakers/services/voiceprint-storage'
@@ -199,6 +200,7 @@ useEffect(() => {
 const [sessionStorageStates, setSessionStorageStates] = useState<Record<string, 'local' | 'remote' | 'both' | 'pending'>>({})
 
 const remoteSessionsVersionRef = useRef<number | null>(null)
+const committedRemoteSessionsRef = useRef<SavedSession[]>([])
 // Coalesce rapid React state updates into ordered remote writes. Without this,
 // two effects can submit the same optimistic version and create a needless 409.
 const pendingRemoteSessionsRef = useRef<SavedSession[] | null>(null)
@@ -787,6 +789,7 @@ useEffect(() => {
       if (canceled) return
       const localSessions = local.status === 'fulfilled' ? local.value ?? [] : []
       const remoteSessions = remote.status === 'fulfilled' ? remote.value.sessions : []
+      committedRemoteSessionsRef.current = remoteSessions
       remoteSessionsVersionRef.current = remote.status === 'fulfilled' ? remote.value.version : null
       setRemoteSessionSyncState(remote.status === 'fulfilled' ? 'ready' : 'paused')
       const recoveredDraft = draft.status === 'fulfilled' ? draft.value : undefined
@@ -828,10 +831,10 @@ useEffect(() => {
 
 const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
   pendingRemoteSessionsRef.current = snapshot
+  setSessionStorageStates(current => sessionStorageStatesForSnapshot(snapshot, committedRemoteSessionsRef.current, current))
   if (remoteSessionsSyncingRef.current || remoteSessionsVersionRef.current === null) return
   remoteSessionsSyncingRef.current = true
   setRemoteSessionSyncState('syncing')
-  setSessionStorageStates((current) => Object.fromEntries(snapshot.map((session) => [session.id, current[session.id] === 'remote' ? 'remote' : 'pending'])))
   void (async () => {
     let lastSnapshot: SavedSession[] | null = null
     try {
@@ -849,6 +852,7 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
           } catch (error) {
             if (!(error instanceof Error) || !/遠端記錄已有更新|HTTP 409/.test(error.message)) throw error
             const remote = await remoteSessionStorage.load()
+            committedRemoteSessionsRef.current = remote.sessions
             const newest = pendingRemoteSessionsRef.current
             pendingRemoteSessionsRef.current = null
             next = mergeSessions(newest ?? next, remote.sessions)
@@ -856,7 +860,8 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
             setSessions(next)
           }
         }
-        setSessionStorageStates((current) => ({ ...current, ...Object.fromEntries(next.map((session) => [session.id, 'both' as const])) }))
+        committedRemoteSessionsRef.current = next
+        if (!pendingRemoteSessionsRef.current) setSessionStorageStates(() => sessionStorageStatesForSnapshot(next, next, Object.fromEntries(next.map(entry => [entry.id, 'both' as const]))))
       }
     } catch (error) {
       // Keep the newest snapshot in memory for a later explicit reload/retry;
@@ -864,7 +869,7 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
       if (!pendingRemoteSessionsRef.current && lastSnapshot) pendingRemoteSessionsRef.current = lastSnapshot
       remoteSessionsVersionRef.current = null
       setRemoteSessionSyncState('paused')
-      setSessionStorageStates((current) => Object.fromEntries(Object.entries(current).map(([id, state]) => [id, state === 'remote' ? state : 'pending'])))
+      setSessionStorageStates(current => sessionStorageStatesForSnapshot(pendingRemoteSessionsRef.current ?? snapshot, committedRemoteSessionsRef.current, current))
       setStatus(error instanceof Error ? activeTranslate('stRemoteSyncErrorLocalKept').replace('{error}', String(error.message)) : activeTranslate('stRemoteSyncFailedLocalKept'))
       scheduleRemoteSessionRetry()
     } finally {
@@ -877,6 +882,7 @@ const enqueueRemoteSessionSave = (snapshot: SavedSession[]): void => {
 const retryRemoteSessionSync = async (): Promise<void> => {
   try {
     const remote = await remoteSessionStorage.load()
+    committedRemoteSessionsRef.current = remote.sessions
     remoteSessionsVersionRef.current = remote.version
     setRemoteSessionSyncState('ready')
     const recovered = recoverStaleProcessing(mergeSessions(pendingRemoteSessionsRef.current ?? sessions, remote.sessions),
@@ -2901,7 +2907,9 @@ const summarizeTranscript = async (transcript: string, onText?: (text: string) =
 }
 
 const generateSessionTitle = async (sessionId: string, transcript: string): Promise<void> => {
-    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return
+    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim() || titleActiveRef.current.has(sessionId)) return
+    titleActiveRef.current.add(sessionId)
+    setTitleGeneratingIds(current => [...current, sessionId])
     const language = ({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: 'English', ja: '日本語', de: 'Deutsch' } as const)[resolveUiLanguage(settings.uiLanguage)]
     try {
       const result = await completeSummary([
@@ -2915,6 +2923,10 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
         : title
       setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, title: visible } : entry))
     } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
+    finally {
+      titleActiveRef.current.delete(sessionId)
+      setTitleGeneratingIds(current => current.filter(id => id !== sessionId))
+    }
   }
 
 const regenerateSessionTitle = async (entry: SavedSession): Promise<void> => {
@@ -3123,6 +3135,10 @@ const renameSession = (id: string): void => {
     setRenamingSessionId(null)
   }
 
+const visibleSessionStorageStates = useMemo(() => !window.s2t && sessionsHydrated
+  ? sessionStorageStatesForSnapshot(sessions, committedRemoteSessionsRef.current, sessionStorageStates)
+  : sessionStorageStates, [sessions, sessionsHydrated, sessionStorageStates])
+
 return {
 isFloatingCaptionWindow,
 devices,
@@ -3310,7 +3326,7 @@ retryRemoteSessionSync,
 retryFailedSession,
 retryStorageCompensations,
 cleanOrphanAudio,
-sessionStorageStates
+sessionStorageStates: visibleSessionStorageStates
 }
 }
 

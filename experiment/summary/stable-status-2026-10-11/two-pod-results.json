@@ -1,0 +1,14 @@
+[
+  {
+    "pod": "gateway-f44db9f89-5mdr2",
+    "ready": true,
+    "asset": "/assets/index-D4dWKZzL.js",
+    "stableStatus": true
+  },
+  {
+    "pod": "gateway-f44db9f89-wdzhf",
+    "ready": true,
+    "asset": "/assets/index-D4dWKZzL.js",
+    "stableStatus": true
+  }
+]
