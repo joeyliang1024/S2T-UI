@@ -57,7 +57,7 @@
                     }
                   }
                 ],
-                "image": "s2t-stress:20261008-summary-fix",
+                "image": "s2t-stress:20261011-recovery-final",
                 "imagePullPolicy": "IfNotPresent",
                 "lifecycle": {
                   "preStop": {
@@ -168,7 +168,7 @@
                     }
                   }
                 ],
-                "image": "s2t-stress:20261008-summary-fix",
+                "image": "s2t-stress:20261011-recovery-final",
                 "imagePullPolicy": "IfNotPresent",
                 "name": "audio-worker",
                 "ports": [

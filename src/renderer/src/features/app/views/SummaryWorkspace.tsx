@@ -13,14 +13,7 @@ type Props = {
   settings: Settings
   sessionId: string | null
   setSessionId: Dispatch<SetStateAction<string | null>>
-  isCreatingTemplate: boolean
-  setIsCreatingTemplate: Dispatch<SetStateAction<boolean>>
-  templateName: string
-  setTemplateName: Dispatch<SetStateAction<string>>
-  templateContent: string
-  setTemplateContent: Dispatch<SetStateAction<string>>
   selectTemplate: (id: string) => void
-  addTemplate: () => void
   openSettings: () => void
   summarizeSession: (session: SavedSession) => Promise<void>
   translateSummary: (session: SavedSession, targetLanguage?: string) => Promise<void>
@@ -30,7 +23,7 @@ type Props = {
 
 /** The summary page is intentionally isolated from the shell so its state and output rules stay local. */
 export function SummaryWorkspace(props: Props): ReactElement {
-  const { ui, sessions, settings, sessionId, setSessionId, isCreatingTemplate, setIsCreatingTemplate, templateName, setTemplateName, templateContent, setTemplateContent, selectTemplate, addTemplate, openSettings, summarizeSession, translateSummary, copySummary, openSummaryDownload } = props
+  const { ui, sessions, settings, sessionId, setSessionId, selectTemplate, openSettings, summarizeSession, translateSummary, copySummary, openSummaryDownload } = props
   const session = sessions.find((entry) => entry.id === sessionId) ?? null
   const outdated = Boolean(session?.summary && (!session.summarySourceSignature || session.summarySourceSignature !== transcriptSignature(session.transcript) || (session.summarySourceVersionId && session.summarySourceVersionId !== session.activeAudioVersionId)))
   const [summaryTab, setSummaryTab] = useState<'original' | 'translation'>('original')
@@ -73,10 +66,9 @@ export function SummaryWorkspace(props: Props): ReactElement {
     <div className="summary-workspace-grid">
       <section className="summary-setup">
         <label>{ui('selectRecord')}<select value={sessionId ?? ''} onChange={(event) => setSessionId(event.target.value || null)}><option value="">{ui('chooseHistoryRecord')}</option>{sessions.map((entry) => <option key={entry.id} value={entry.id}>{entry.title} · {new Date(entry.createdAt).toLocaleDateString(resolveUiLanguage(settings.uiLanguage))}</option>)}</select></label>
-        <label>{ui('summaryTemplate')}<select value={isCreatingTemplate ? 'custom' : settings.selectedSummaryTemplateId} onChange={(event) => { if (event.target.value === 'custom') { setIsCreatingTemplate(true); setTemplateName(''); setTemplateContent(['# ' + ui('summaryTitle'), '', '## ' + ui('keyPoints'), '- ', '', '## ' + ui('decisions'), '- ', '', '## ' + ui('actionItems'), '- '].join(String.fromCharCode(10))) } else { setIsCreatingTemplate(false); selectTemplate(event.target.value) } }}><option value="custom">{ui('customTemplate')}</option>{settings.summaryTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
-        {isCreatingTemplate && <div className="summary-custom-template"><label>{ui('templateName')}<input value={templateName} placeholder={ui('templateNamePlaceholder')} onChange={(event) => setTemplateName(event.target.value)} /></label><label>{ui('markdownTemplate')}<textarea value={templateContent} onChange={(event) => setTemplateContent(event.target.value)} /></label><button className="secondary" onClick={addTemplate}>{ui('saveCustomTemplate')}</button></div>}
+        <label>{ui('summaryTemplate')}<select value={settings.selectedSummaryTemplateId} onChange={event => selectTemplate(event.target.value)}>{settings.summaryTemplates.map(template => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
         <p className="summary-language-hint">{ui('summaryLanguageHint')}</p>
-        <div className="summary-template-preview"><span>{ui('currentTemplate')}</span><pre>{isCreatingTemplate ? templateContent : settings.summaryTemplate}</pre></div>
+        <div className="summary-template-preview"><span>{ui('currentTemplate')}</span><pre>{settings.summaryTemplate}</pre></div>
         <button className="secondary" onClick={openSettings}>{ui('manageTemplates')}</button>
         {session?.processingError && <p role="status">{session.processingError}</p>}
         {session?.summaryError && <p className="summary-translation-error" role="alert">{session.summaryError}</p>}

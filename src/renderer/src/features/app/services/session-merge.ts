@@ -52,7 +52,7 @@ export const recoverStaleProcessing = (
     if (finishing && finishing.id === session.id && finishing.token === session.processingToken) return session
     if (durableJobs && session.diarizationJobId) return session
     recovered = true
-    return { ...session, processingState: 'failed' as const, processingStage: undefined, processingError: activeTranslate('svcInterruptedProcessing') }
+    return { ...session, processingState: 'failed' as const, processingFailures: session.processingFailures?.length ? session.processingFailures : session.processingStage ? [session.processingStage] : undefined, processingStage: undefined, processingError: activeTranslate('svcInterruptedProcessing') }
   })
   // Same reference when nothing changed: setSessions must not schedule a save
   // (or a re-render) just because the app was opened.

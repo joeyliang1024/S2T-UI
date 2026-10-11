@@ -20,6 +20,6 @@ const finalizeDiarizationSession = (session, job, turns) => {
   const transcript = segments.filter(entry => entry.status === 'final').map(entry => `[${timestamp(entry.startMs)}] ${entry.speaker?.trim() || '未標記講者'}：${entry.sourceText}${entry.translatedText ? `\n${entry.translatedText}` : ''}`).join('\n\n')
   const audioVersions = session.audioVersions?.map(item => item.id === (session.activeAudioVersionId || 'original') ? { ...item, segments, transcript } : item)
   return { ...session, segments, transcript, ...(audioVersions ? { audioVersions } : {}),
-    processingState: session.processingError ? 'failed' : 'completed', processingStage: undefined }
+    processingState: session.processingError || session.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined }
 }
 module.exports = { matchesJob, finalizeDiarizationSession }

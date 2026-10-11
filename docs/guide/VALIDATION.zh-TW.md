@@ -108,3 +108,5 @@ npm run dev
 - 自動說話者分離、批次大檔、MP3/M4A、打包簽署與 Windows 實機。
 
 全部待辦、原始需求對照與唯一優先順序請見 [Enhancement.md](../Enhancement.md)；本文件只維護驗收操作與證據，模型傳輸協定見 [MODEL_ADAPTER.md](../reference/MODEL_ADAPTER.md)。
+
+2026-10-11 補驗：`session-recovery-smoke-test.cjs`、`session-recovery-handlers-smoke-test.cjs` 與 `summary-ui-recovery-smoke-test.cjs` 驗證失敗步驟單獨重試、部分成功結果保留、WAV 備份補救、刷新圖示與文字提示，以及設定頁模板新增／編輯／重載。瀏覽器與 handler 測試全用假 API，不代表真實模型品質評估。

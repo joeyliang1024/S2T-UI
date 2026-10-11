@@ -51,6 +51,7 @@ export type SavedSession = {
   /** Missing state on older records means completed. */
   processingState?: 'running' | 'completed' | 'failed'
   processingStage?: 'asr' | 'translation' | 'saving' | 'diarization'
+  processingFailures?: Array<NonNullable<SavedSession['processingStage']>>
   processingToken?: string
   processingError?: string
   diarizationJobId?: string

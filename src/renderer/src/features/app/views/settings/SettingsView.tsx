@@ -1,3 +1,4 @@
+import { SummaryTemplateManager } from './SummaryTemplateManager'
 import { AdminSettingsPanel } from './AdminSettingsPanel'
 import type { AuthUser } from '../../../auth/services/auth-client'
 import { type ReactElement, type ReactNode, useEffect, useRef, useState } from 'react'
@@ -73,6 +74,7 @@ export interface SettingsViewProps {
   onDirtyChange: (dirty: boolean) => void
   summaryTemplate: {
     select: (id: string) => void
+    save: (name: string, content: string, id?: string) => boolean
     remove: () => void
   }
 }
@@ -84,7 +86,7 @@ export function SettingsView({ controller, user, settingsReturnView, onNavigate,
     storageCompensations, storageOrphanAudio, sileroVadAvailable, modelHealth,
     retryRemoteSessionSync, retryStorageCompensations, cleanOrphanAudio
   } = controller
-  const [category, setCategory] = useState<SettingsCategory>('asr')
+  const [category, setCategory] = useState<SettingsCategory>(settingsReturnView === 'summary' ? 'summary' : 'asr')
   const [glossarySearch, setGlossarySearch] = useState('')
   const [newGlossaryTerm, setNewGlossaryTerm] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -243,15 +245,9 @@ export function SettingsView({ controller, user, settingsReturnView, onNavigate,
       </>}
 
       {category === 'summary' && (
-        <SettingsCard eyebrow="TEMPLATES" title={ui('savedTemplates')} className="summary-template-manager" aside={<button className="text-button danger" onClick={summaryTemplate.remove}>{ui('deleteCurrentTemplate')}</button>}>
+        <SettingsCard eyebrow="TEMPLATES" title={ui('savedTemplates')} className="summary-template-manager">
           <p className="settings-card-sub">{ui('templateManagementHint')}</p>
-          <div className="summary-template-body">
-            <section className="saved-template-list" aria-label={ui('savedTemplates')}>
-              <span>{ui('currentTemplate')}</span>
-              <div>{settings.summaryTemplates.map((template) => <button key={template.id} className={template.id === settings.selectedSummaryTemplateId ? 'active' : ''} aria-current={template.id === settings.selectedSummaryTemplateId ? 'true' : undefined} onClick={() => summaryTemplate.select(template.id)}><span>▤</span>{template.name}</button>)}</div>
-            </section>
-            <div className="summary-template-preview"><span>{ui('templatePreview')}</span><pre>{settings.summaryTemplate}</pre></div>
-          </div>
+          <SummaryTemplateManager settings={settings} ui={ui} {...summaryTemplate} />
         </SettingsCard>
       )}
 

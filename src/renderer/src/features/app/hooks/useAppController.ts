@@ -1,3 +1,4 @@
+import { recoverSession, sessionRecoveryStages } from '../services/session-recovery'
 import { registerCaptionTiming, setCaptionMeasurementActive } from '../../../shared/services/caption-metrics'
 import { applyEnvironmentSettings } from '../services/environment-settings'
 import { importExtensions } from '../../transcript/import-formats'
@@ -96,6 +97,7 @@ const [qualityCorrectionProgress, setQualityCorrectionProgress] = useState<Recor
   stage: 'loading' | 'asr' | 'diarization' | 'completed' | 'failed'; completed: number; total: number; error?: string
 }>>({})
 const qualityCorrectionActiveRef = useRef(new Set<string>())
+const recoveryActiveRef = useRef(new Set<string>())
 const savedLiveSnapshotRef = useRef<TranscriptEvent[] | null>(null)
 const finishingSessionRef = useRef<{ id: string; token: string } | null>(null)
 
@@ -160,7 +162,7 @@ useEffect(() => {
           if (finished) {
             remoteSessionsVersionRef.current = remote.version
             setSessions((current) => current.map((entry) => entry.id === job.id && entry.processingToken === job.token
-              ? { ...finished, processingState: finished.processingError ? 'failed' : 'completed', processingStage: undefined } : entry))
+              ? { ...finished, processingState: finished.processingError || finished.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined } : entry))
           } else {
             // The job answered but the record it belongs to was removed or
             // replaced by another tab. Leaving the poller running would
@@ -171,7 +173,7 @@ useEffect(() => {
           }
         } else if (result.job?.state === 'failed') {
           setSessions((current) => current.map((entry) => entry.id === job.id && entry.processingToken === job.token
-            ? { ...entry, processingState: 'failed', processingStage: undefined, processingError: result.job?.error || activeTranslate('stFinalDiarizationJobFailed') } : entry))
+            ? { ...entry, processingState: 'failed', processingStage: undefined, processingFailures: [...new Set([...(entry.processingFailures || []), 'diarization' as const])], processingError: result.job?.error || activeTranslate('stFinalDiarizationJobFailed') } : entry))
         }
       } catch (error) {
         // Only failures a retry can still resolve stay pending. A job row that
@@ -179,7 +181,7 @@ useEffect(() => {
         // therefore unactionable — for as long as the tab stays open.
         if (error instanceof HttpServiceError && error.status === 404 && !disposed) {
           setSessions((current) => current.map((entry) => entry.id === job.id && entry.processingToken === job.token
-            ? { ...entry, processingState: 'failed', processingStage: undefined, processingError: activeTranslate('stBackgroundDiarizationJobGone') } : entry))
+            ? { ...entry, processingState: 'failed', processingStage: undefined, processingFailures: [...new Set([...(entry.processingFailures || []), 'diarization' as const])], processingError: activeTranslate('stBackgroundDiarizationJobGone') } : entry))
           continue
         }
         /* A transient connection failure retains the durable job and is retried. */
@@ -1794,7 +1796,8 @@ const stopCapture = async (): Promise<void> => {
         savedToDisk: Boolean(desktopSession?.audioPath), audioUnavailable: !audioAvailable,
         segments: finalSegments, summary: undefined, summarySourceSignature: undefined,
         summarySourceVersionId: undefined, summaryTranslation: undefined, processingError,
-        processingState: finalDiarizationRequired && finalSegments.length ? 'running' : processingError ? 'failed' : 'completed',
+        processingFailures: [...(translationDrainTimedOut || finalSegments.some(entry => entry.translationStatus === 'failed') ? ['translation' as const] : []), ...(audioFailures.length ? ['saving' as const] : []), ...(finalSegments.some(entry => entry.status === 'gap') ? ['asr' as const] : [])],
+        processingState: finalDiarizationRequired && finalSegments.length ? 'running' : processingError || finalSegments.some(entry => entry.status === 'gap') ? 'failed' : 'completed',
         processingStage: finalDiarizationRequired && finalSegments.length ? 'diarization' : undefined })
       finishingSessionRef.current = null
       if (continuation) {
@@ -1834,7 +1837,7 @@ const stopCapture = async (): Promise<void> => {
               }
               patchProcessing({ diarizationJobId: jobId })
             } catch (error) {
-              patchProcessing({ processingState: 'failed', processingStage: undefined, processingError: error instanceof Error ? error.message : activeTranslate('stDiarizationJobFailed') })
+              patchProcessing({ processingState: 'failed', processingStage: undefined, processingFailures: [...new Set([...(sessionsRef.current.find(entry => entry.id === sessionId)?.processingFailures || []), 'diarization' as const])], processingError: error instanceof Error ? error.message : activeTranslate('stDiarizationJobFailed') })
               setStatus(error instanceof Error ? activeTranslate('stRecordingSavedDiarizationJobFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stRecordingSavedDiarizationJobFailed'))
             }
           })()
@@ -1855,16 +1858,16 @@ const stopCapture = async (): Promise<void> => {
               const segments = assignSpeakersByOverlap(currentEntry.segments, turns)
               const updatedTranscript = makeTranscriptText(segments)
               const audioVersions = currentEntry.audioVersions?.map((item) => item.id === targetVersionId ? { ...item, segments, transcript: updatedTranscript } : item)
-              return { ...currentEntry, segments, transcript: updatedTranscript, processingState: currentEntry.processingError ? 'failed' : 'completed', processingStage: undefined, ...(audioVersions ? { audioVersions } : {}) }
+              return { ...currentEntry, segments, transcript: updatedTranscript, processingState: currentEntry.processingError || currentEntry.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined, ...(audioVersions ? { audioVersions } : {}) }
             }))
           } catch (error) {
-            patchProcessing({ processingState: 'failed', processingStage: undefined, processingError: error instanceof Error ? error.message : activeTranslate('stDiarizationFailed') })
+            patchProcessing({ processingState: 'failed', processingStage: undefined, processingFailures: [...new Set([...(sessionsRef.current.find(entry => entry.id === sessionId)?.processingFailures || []), 'diarization' as const])], processingError: error instanceof Error ? error.message : activeTranslate('stDiarizationFailed') })
             setStatus(error instanceof Error ? activeTranslate('stRecordingSavedDiarizationFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stRecordingSavedDiarizationFailed'))
           }
         })()
       }
     } catch (error) {
-      patchProcessing({ processingState: 'failed', processingStage: undefined, processingError: error instanceof Error ? error.message : activeTranslate('stSessionSaveFailed') })
+      patchProcessing({ processingState: 'failed', processingFailures: [...new Set([...(sessionsRef.current.find(entry => entry.id === sessionId)?.processingFailures || []), sessionsRef.current.find(entry => entry.id === sessionId)?.processingStage || 'saving'])], processingStage: undefined, processingError: error instanceof Error ? error.message : activeTranslate('stSessionSaveFailed') })
       if (electronRecordingIdRef.current) await window.s2t?.abortPcmRecording(electronRecordingIdRef.current).catch(() => undefined)
       continuationTargetRef.current = null
       activeModelSnapshotRef.current = null
@@ -2313,6 +2316,110 @@ const loadSessionAudio = async (entry: SavedSession): Promise<Blob | undefined> 
     if (entry.nativeAudioPath && window.s2t && version.audioKey === entry.audioKey) return new Blob([await window.s2t.readAudio(entry.nativeAudioPath)], { type: 'audio/wav' })
     if (!window.s2t) return remoteSessionStorage.loadAudio(version.audioKey)
     return remoteSessionStorage.loadAudio(version.audioKey)
+  }
+const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<void> => {
+    if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id) || recoveryActiveRef.current.has(entry.id)) return
+    const token = crypto.randomUUID()
+    recoveryActiveRef.current.add(entry.id)
+    let audio: Blob | undefined
+    const audioForRecovery = async (): Promise<Blob> => {
+      if (!audio) audio = backup || await loadSessionAudio(entry)
+      if (!audio) throw new Error(activeTranslate('recoveryAudioRequired'))
+      return audio
+    }
+    const patch = (updated: SavedSession): void => setSessions(current => current.map(item => item.id === entry.id && (item.processingToken === token || item.processingToken === entry.processingToken) ? updated : item))
+    const withSegments = (current: SavedSession, segments: TranscriptEvent[]): SavedSession => {
+      const transcript = makeTranscriptText(segments)
+      return { ...current, segments, transcript, audioVersions: current.audioVersions?.map(version => version.id === (current.activeAudioVersionId || 'original') ? { ...version, segments, transcript } : version) }
+    }
+    try {
+      if (!entry.processingFailures && entry.processingState === 'failed' && entry.diarizationJobId && !window.s2t) {
+        const response = await authFetch(`/api/data/diarization-jobs?id=${encodeURIComponent(entry.diarizationJobId)}`)
+        const payload = await response.json() as { job?: { state?: string }; error?: string }
+        if (!response.ok && response.status !== 404) throw new Error(payload.error || `HTTP ${response.status}`)
+        if (payload.job?.state === 'pending' || payload.job?.state === 'running') {
+          setSessions(current => current.map(item => item.id === entry.id ? { ...item, processingState: 'running', processingStage: 'diarization' } : item))
+          return
+        }
+        entry = { ...entry, processingFailures: [...new Set([...sessionRecoveryStages(entry), ...(response.status === 404 || payload.job?.state === 'failed' ? ['diarization' as const] : [])])] }
+      }
+      const result = await recoverSession({ ...entry, processingToken: token }, {
+        saving: async (current, publish) => {
+          if (current.audioUnavailable !== false || backup) {
+            const recovered = await audioForRecovery()
+            if (backup) {
+              const layout = await readPcmWavFileLayout(backup)
+              const duration = layout.dataBytes / layout.bytesPerFrame / layout.sampleRate * 1000
+              if (Math.abs(duration - entry.durationMs) > Math.max(2000, entry.durationMs * .05)) throw new Error('WAV duration does not match this recording.')
+            }
+            if (!window.s2t) await remoteSessionStorage.saveAudio(activeAudioVersionFor(current).audioKey, recovered)
+            else {
+              const saved = await window.s2t.saveSession({ name: current.title, overwriteAudioPath: current.nativeAudioPath, audio: await recovered.arrayBuffer(), transcript: current.transcript, segments: current.segments, createdAt: current.createdAt, durationMs: current.durationMs, source: current.source })
+              current = { ...current, nativeAudioPath: saved.audioPath }
+            }
+            current = { ...current, audioUnavailable: false }; publish(current)
+          }
+          if (!window.s2t) {
+            const response = await authFetch('/api/data/storage-retry', { method: 'POST' })
+            if (!response.ok) throw new Error((await response.json()).error || `HTTP ${response.status}`)
+          }
+          return current
+        },
+        asr: async (current, publish) => {
+          const gaps = current.segments.filter(segment => segment.status === 'gap')
+          if (!gaps.length) throw new Error(activeTranslate('recoveryNoAsrRange'))
+          if (selectedModel.kind !== 'openai-http') throw new Error(activeTranslate('stSelectOpenAiCompatibleAsrModel'))
+          const file = new File([await audioForRecovery()], 'recovery.wav', { type: 'audio/wav' })
+          const layout = await readPcmWavFileLayout(file)
+          for (const gap of gaps) {
+            if (gap.startMs < 0 || gap.endMs <= gap.startMs || gap.endMs > layout.dataBytes / layout.bytesPerFrame / layout.sampleRate * 1000 + 50) throw new Error('Failed audio range is outside the recording.')
+            for (let start = gap.startMs; start < gap.endMs; start += 30000) {
+              const startByte = Math.floor(start * layout.sampleRate / 1000) * layout.bytesPerFrame
+              if (startByte >= layout.dataBytes) throw new Error('Failed audio range is outside the recording.')
+              const chunk = await readPcmWavFileChunk(file, layout, startByte, Math.min(30000, gap.endMs - start))
+              const rate = chooseModelSampleRate(layout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? [])
+              const data = rate === layout.sampleRate ? chunk.audio : await resampleAudioForAsr(chunk.audio, rate)
+              const payload = window.s2t ? await window.s2t.transcribeAudioChunk({ profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model, audio: data, contentType: 'audio/wav', requiresApiKey: selectedModel.requiresApiKey !== false, language: asrLanguage(settings.sourceLanguage), prompt: settings.glossary || undefined }) : await readJsonResponse<{ text?: string }>(await requestBrowserAsr({ method: 'POST', headers: { 'content-type': 'audio/wav', ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}), ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {}) }, body: data }), activeTranslate('stFinalAsrServiceLabel'))
+              if (!payload.text?.trim()) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
+              const recovered: TranscriptEvent = { id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: payload.text }
+              const remainingGap: TranscriptEvent[] = chunk.endMs < gap.endMs ? [{ ...gap, startMs: chunk.endMs }] : []
+              current = { ...withSegments(current, current.segments.flatMap(segment => segment.id === gap.id ? [recovered, ...remainingGap] : [segment])), summary: undefined, summaryTranslation: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined }
+              publish(current)
+            }
+          }
+          return { ...current, summary: undefined, summaryTranslation: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined }
+        },
+        translation: async (current, publish) => {
+          if (!translationReady) throw new Error(activeTranslate('stWebTranslationGateway') + ': model not configured')
+          const segments = [...current.segments]
+          for (let index = 0; index < segments.length; index++) {
+            const segment = segments[index]
+            if (segment.status !== 'final' || (segment.translatedText && segment.translationStatus !== 'failed')) continue
+            if (shouldSkipTranslation(segment.detectedLanguage, resolveTranslationTarget(segment.detectedLanguage, settings.targetLanguage))) {
+              segments[index] = { ...segment, translationStatus: 'completed', translationAttempts: undefined }
+              current = withSegments(current, [...segments]); publish(current)
+              continue
+            }
+            const text = await translationTransportRef.current!(segment, new AbortController().signal)
+            if (!text.trim()) throw new Error('Translation service returned no text.')
+            segments[index] = { ...segment, translatedText: text, translationStatus: 'completed', translationAttempts: undefined }
+            current = withSegments(current, [...segments]); publish(current)
+          }
+          return current
+        },
+        diarization: async current => {
+          const recovered = await audioForRecovery()
+          const local = settings.diarizationProfiles?.some(profile => profile.model === settings.diarizationModel && profile.endpoint === settings.diarizationEndpoint)
+          const payload = window.s2t ? await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio: await recovered.arrayBuffer() }) : await readJsonResponse<unknown>(await authFetch('/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(local ? { 'x-s2t-diarization-model': settings.diarizationModel } : settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: recovered, signal: AbortSignal.timeout(120000) }), activeTranslate('stDiarizationServiceLabel'))
+          const turns = parseSpeakerTurns(payload)
+          if (!turns.length) throw new Error(activeTranslate('stDiarizationNoSegments'))
+          const assigned = assignSpeakersByOverlap(current.segments, turns)
+          return { ...withSegments(current, assigned.map((segment, index) => current.segments[index].speakerManuallyEdited ? current.segments[index] : segment)), diarizationJobId: undefined }
+        }
+      }, patch)
+      setStatus(result.processingState === 'failed' ? result.processingError || activeTranslate('errorRecovery') : activeTranslate('recordProcessingCompleted'))
+    } catch (error) { setStatus(error instanceof Error ? error.message === 'session-recovery-unknown-stage' ? activeTranslate('recoveryUnknownStage') : error.message : activeTranslate('errorRecovery')) }
+    finally { recoveryActiveRef.current.delete(entry.id) }
   }
 const finalizeSession = async (entry: SavedSession): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessing')); return }
@@ -3146,6 +3253,7 @@ clearCaptions,
 loadSessionIntoLive,
 renameSession,
 retryRemoteSessionSync,
+retryFailedSession,
 retryStorageCompensations,
 cleanOrphanAudio,
 sessionStorageStates
