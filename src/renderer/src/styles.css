@@ -951,3 +951,7 @@ button.session-processing-state:focus-visible { outline: 2px solid currentColor;
 
 .session-title-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .session-title-generate { flex: 0 0 auto; padding: 4px; display: inline-flex; align-items: center; justify-content: center; }
+
+.legacy-recovery-options { border: 1px solid #536885; border-radius: 8px; margin: 10px 0; padding: 12px; }
+.legacy-recovery-options p { margin: 0 0 10px; }
+.legacy-recovery-options .hint { margin: 10px 0 0; }

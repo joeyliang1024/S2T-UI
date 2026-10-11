@@ -1,0 +1,1 @@
+PASS production handlers: failed translation only, ASR gap ranges only, partial ASR progress retained, speaker manual labels preserved, audio backup restore, metadata retry does not repeat upload; legacy explicit recovery and failed retries retain steps; no real API calls

@@ -1,0 +1,14 @@
+[
+  {
+    "pod": "gateway-77567db785-s97km",
+    "ready": true,
+    "asset": "/assets/index-BT4Lv2I3.js",
+    "legacyRecovery": true
+  },
+  {
+    "pod": "gateway-77567db785-tf92f",
+    "ready": true,
+    "asset": "/assets/index-BT4Lv2I3.js",
+    "legacyRecovery": true
+  }
+]

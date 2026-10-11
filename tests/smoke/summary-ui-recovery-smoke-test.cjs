@@ -14,6 +14,7 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
   const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
   const sessions = [
     { id: 'failed', title: '', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: '', audioKey: 'fixture', processingState: 'failed', processingError: 'Translation fixture failure', diarizationJobId: 'old-failed-job', processingFailures: ['translation'], segments: [{ id: 'segment', status: 'final', revision: 1, startMs: 0, endMs: 1000, sourceText: 'Meeting decision: ship tomorrow.', translationStatus: 'failed' }] },
+    { id: 'legacy', title: 'Legacy failure', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: 'Legacy transcript', audioKey: 'legacy', processingState: 'failed', processingError: 'Legacy error', segments: [] },
     { id: 'completed', title: 'Completed recording', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: 'Completed meeting transcript', audioKey: 'complete', processingState: 'completed', segments: [] },
     { id: 'interrupted', title: 'Interrupted summary', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: 'Recover this transcript', audioKey: 'interrupted', processingState: 'completed', segments: [], summary: '正在產生摘要…' }
   ]
@@ -101,6 +102,16 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
     failSummary = false; await titleButton.click(); await page.waitForTimeout(1000)
     assert.equal(calls, beforeTitle + 2); assert.equal(await page.getByText('Untitled record', { exact: true }).count(), 0)
     assert.equal(await page.locator('.summary-stale').count(), 0)
+    const legacyCard = page.locator('.session-item').filter({ hasText: 'Legacy failure' })
+    const beforeLegacy = translatedCalls
+    await legacyCard.getByRole('button', { name: 'Error recovery: retry failed steps', exact: true }).click()
+    await page.getByRole('region', { name: 'Choose recovery action' }).waitFor()
+    assert.equal(translatedCalls, beforeLegacy, 'opening choices does not invoke a model')
+    failTranslation = false
+    await page.getByRole('button', { name: 'Translate transcript again', exact: true }).click()
+    await page.waitForTimeout(900)
+    assert.equal(translatedCalls, beforeLegacy + 1); assert.equal(asrCalls, 0)
+    failTranslation = true; translatedCalls = 0
     const recovery = page.getByRole('button', { name: 'Error recovery: retry failed steps', exact: true })
     await recovery.hover(); await page.getByRole('tooltip').filter({ hasText: 'Error recovery: retry failed steps' }).waitFor()
     const rectangles = []
@@ -114,6 +125,6 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
     assert.equal(await page.getByRole('button', { name: 'Error recovery: retry failed steps', exact: true }).count(), 0)
     assert.equal(await page.locator('.session-actions > button').filter({ hasText: 'Quality correction' }).count(), 0, 'quality correction stays inside More actions')
     assert.deepEqual(errors, [])
-    console.log(JSON.stringify({ manualTitleGenerationAndFailure: true, streamedSummaryRendered: true, noStaleWarning: true, customTemplateSavedAndReloaded: true, fileTemplateEditsCreatePersonalCopy: true, templateEditingOnlyInSettings: true, templateEditPreservesIdentity: true, recoveryOnlyRetriesFailedTranslation: true, recoveryIconHasTooltip: true, failedRecoveryStopsUntilNextClick: true, oldJobNotPolledDuringRecovery: true, blankNameDoesNotCrash: true, failedRecordingCanSummarize: true, summaryFailureThenRetry: true, failedRegenerationPreservesPrevious: true, completedCanSummarize: true, interruptedSummaryRecoverable: true, pageErrors: errors }))
+    console.log(JSON.stringify({ legacyRecordRecoverySelectable: true, manualTitleGenerationAndFailure: true, streamedSummaryRendered: true, noStaleWarning: true, customTemplateSavedAndReloaded: true, fileTemplateEditsCreatePersonalCopy: true, templateEditingOnlyInSettings: true, templateEditPreservesIdentity: true, recoveryOnlyRetriesFailedTranslation: true, recoveryIconHasTooltip: true, failedRecoveryStopsUntilNextClick: true, oldJobNotPolledDuringRecovery: true, blankNameDoesNotCrash: true, failedRecordingCanSummarize: true, summaryFailureThenRetry: true, failedRegenerationPreservesPrevious: true, completedCanSummarize: true, interruptedSummaryRecoverable: true, pageErrors: errors }))
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }
 })().catch(e => { console.error(e); process.exitCode = 1 })

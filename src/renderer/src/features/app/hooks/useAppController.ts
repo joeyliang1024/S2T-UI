@@ -2321,8 +2321,16 @@ const loadSessionAudio = async (entry: SavedSession, attempts = 3): Promise<Blob
     if (!window.s2t) return remoteSessionStorage.loadAudio(version.audioKey, attempts)
     return remoteSessionStorage.loadAudio(version.audioKey, attempts)
   }
-const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<void> => {
+const retryFailedSession = async (entry: SavedSession, backup?: File, legacyStage?: 'asr' | 'translation' | 'diarization' | 'saving'): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id) || recoveryActiveRef.current.has(entry.id)) return
+    const fullAsr = (legacyStage === 'asr' && !sessionRecoveryStages(entry).length) || entry.recoveryFullAsr === true
+    if (legacyStage && !sessionRecoveryStages(entry).length) {
+      if (legacyStage === 'translation' && !entry.segments.some(segment => segment.status === 'final')) {
+        if (!entry.transcript?.trim()) { setStatus(activeTranslate('titleTranscriptRequired')); return }
+        entry = { ...entry, segments: [{ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: 0, endMs: Math.max(1, entry.durationMs), sourceText: entry.transcript }] }
+      }
+      entry = { ...entry, processingFailures: [legacyStage], recoveryFullAsr: fullAsr, processingStage: undefined, diarizationJobId: undefined, ...(legacyStage === 'translation' ? { segments: entry.segments.map(segment => segment.status === 'final' ? { ...segment, translationStatus: 'failed' as const } : segment) } : {}) }
+    }
     const token = crypto.randomUUID()
     recoveryActiveRef.current.add(entry.id)
     let audio: Blob | undefined
@@ -2349,7 +2357,7 @@ const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<v
       }
       const result = await recoverSession({ ...entry, processingToken: token, diarizationJobId: undefined }, {
         saving: async (current, publish) => {
-          if (current.audioUnavailable !== false || backup) {
+          if (current.audioUnavailable === true || backup) {
             const recovered = await audioForRecovery()
             if (backup) {
               const layout = await readPcmWavFileLayout(backup)
@@ -2370,11 +2378,21 @@ const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<v
           return current
         },
         asr: async (current, publish) => {
-          const gaps = current.segments.filter(segment => segment.status === 'gap')
-          if (!gaps.length) throw new Error(activeTranslate('recoveryNoAsrRange'))
+          let gaps = current.segments.filter(segment => segment.status === 'gap')
+          if (!gaps.length && !fullAsr) throw new Error(activeTranslate('recoveryNoAsrRange'))
           if (selectedModel.kind !== 'openai-http') throw new Error(activeTranslate('stSelectOpenAiCompatibleAsrModel'))
           const file = new File([await audioForRecovery()], 'recovery.wav', { type: 'audio/wav' })
           const layout = await readPcmWavFileLayout(file)
+          if (fullAsr) {
+            const durationMs = layout.dataBytes / layout.bytesPerFrame / layout.sampleRate * 1000
+            if (!durationMs) throw new Error(activeTranslate('recoveryNoAsrRange'))
+            const versionId = crypto.randomUUID()
+            gaps = [{ id: crypto.randomUUID(), revision: 1, status: 'gap', startMs: 0, endMs: durationMs, sourceText: '' }]
+            // Persist retry ranges before calling the provider. Preserve the
+            // previous transcript as a selectable audio version.
+            current = { ...current, recoveryFullAsr: false, activeAudioVersionId: versionId, segments: gaps, audioVersions: [...audioVersionsFor(current), { id: versionId, audioKey: activeAudioVersionFor(current).audioKey, nativeAudioPath: activeAudioVersionFor(current).nativeAudioPath, createdAt: new Date().toISOString(), label: activeTranslate('legacyRecoverAsr'), parentId: current.activeAudioVersionId || 'original', segments: gaps, transcript: '' }] }
+            publish(current)
+          }
           for (const gap of gaps) {
             if (gap.startMs < 0 || gap.endMs <= gap.startMs || gap.endMs > layout.dataBytes / layout.bytesPerFrame / layout.sampleRate * 1000 + 50) throw new Error('Failed audio range is outside the recording.')
             for (let start = gap.startMs; start < gap.endMs; start += 30000) {
