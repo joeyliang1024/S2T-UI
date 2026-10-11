@@ -161,9 +161,48 @@ Silero 找到了 EnergyVad 在 BGM 下找不到的句界（0 → 66～85 個）�
 - **Phase 1（Silero 決定切點）判定為負面結果，不產品化**。維持 EnergyVad 切段；Silero 只保留既有的「無語音否決閘門」用途。
 - 後續可再試的調參方向（未驗證，另開實驗）：把 `minSilenceMs` 拉長（400–600 ms）過濾 BGM 短暫低點；或句界需同時滿足機率低＋能量低（雙訊號）；或用 server 端 Silero 否決閘門先行剔除純音樂 chunk 再評 CER。
 
+## 失效模式與業界解法（2026-10-12 查證）
+
+針對評測暴露的三類錯誤，逐一查證業界做法（來源均已抓原文驗證）：
+
+### 失效一：純音樂 chunk → ASR 幻覺（CER 爆炸的主因）
+
+實測證據：從對話素材取 5 秒純 BGM 送現有 ASR 端點，回 `{"text": "Let's play."}`——幻覺，且**回應只有 `text`，沒有 `no_speech_prob`／`avg_logprob`／`compression_ratio`**。這代表 Whisper 家族的原生幻覺過濾（`openai/whisper` transcribe.py 預設 `compression_ratio_threshold=2.4`、`logprob_threshold=-1.0`、`no_speech_threshold=0.6`，重複迴圈時升溫重解碼）在我們的端點上**拿不到原料**。
+
+業界的通用解法依序是：
+
+1. **送 ASR 前先用 VAD 剔除非語音**（WhisperX README：「VAD preprocessing, reduces hallucination & batching with no WER degradation」；faster-whisper `vad_filter` 同理）。**這正是我們已存在的 server 端 Silero 否決閘門**（`model-adapter.ts` `sileroVadEnabled` → `/api/audio-processing/silero-vad`，threshold 0.5／minSilence 300ms）——評測時沒開，產品預設也不是 BGM 場景。上表的幻覺本來就可以被它擋掉。
+2. **ASR 端信心度過濾**（whisper 的 no_speech／logprob 三閾值）→ 我們端點無此欄位，改為**客戶端文字層幻覺偵測**：zlib 壓縮比 >2.4（whisper 同款啟發式，等價偵測「滴滴滴…」迴圈）或 n-gram 重複 ≥3 次即丟棄，純 JS 幾行可做。
+3. **切斷幻覺的自我延續**：WhisperX 把 `condition_on_previous_text` 預設為 `False`（README：reduces hallucination）；whisper 官方文件也警告前段文字餵回 prompt 會「get stuck in a failure loop, such as repetition looping」。我們的 rolling prompt 正是此機制——**被否決或疑似幻覺的 chunk 不應進入 rolling context**。
+
+### 失效二：BGM 低點被當句界（切太碎、切在不該切的地方）
+
+faster-whisper 的 `vad.py`（擷自 Silero 官方 wrapper）給了業界預設值，與我們的評測設定對比：
+
+| 參數 | faster-whisper 預設 | 我們評測值 | 差距 |
+| --- | --- | --- | --- |
+| `min_silence_duration_ms` | **2000** | 150–250 | 業界保守 8–13 倍 |
+| `neg_threshold`（結束閾值） | threshold−0.15（起 0.5／止 ≤0.35 雙閾值遲滯） | 單一閾值 0.5 | 無結束遲滞，易在低點抖動 |
+| `speech_pad_ms` | 400（兩側補償） | 0 | 語音尾巴易被切掉 |
+| `min_silence_at_max_speech` | 98ms＋超長時切在「最長的真實靜音處」而非盲切 | 超長即強制切 | 切點品質 |
+
+即**業界對 Silero 機率的用法是「保守靜音＋雙閾值遲滯＋補償」，我們評測時用的是最激進的設定**。修正方向：結束閾值降 0.15、minSilence 拉到 400–600ms（串流場景比離線 2000ms 短但仍遠高於 150）、兩側 pad 200–400ms。smart-turn（pipecat）則代表更進一步的思路：VAD 停頓後再跑一個內容感知模型確認「句子真的講完了」（Silero 停頓期才執行，CPU 版 8MB、~10–100ms 推論），等價於把句界判定從「聲學低點」升級為「語意完成」——屬 Phase 3 級投入。
+
+### 失效三：乾淨素材延遲 +200ms（切點網格相位改變）
+
+whisper_streaming（IJCNLP 2023 demo）的核心是 **LocalAgreement-n**：文字在連續 n 次更新達成一致前綴時才提交上屏，**延遲與切點位置解耦**——切在哪裡不再直接決定上屏時間，延遲自適應語音複雜度（論文實測 3.3 秒）。我們目前「每 chunk 一次定稿」的架構讓切點網格直接決定延遲，這是 +200ms 的結構性來源。這是較大的架構改動（另一條產品線等級），記錄為後續方向；同作者 2025 年的後繼專案 SimulStreaming 可一併追蹤。
+
+### 對應到我們的修正優先序
+
+1. **開 Silero 否決閘門**（已存在，零新碼）——直接對應失效一，業界驗證過的最大項。
+2. **客戶端幻覺偵測**（壓縮比／n-gram 迴圈，數行 JS）——補端點無信心度欄位的缺口。
+3. **句界參數向業界預設看齊**（neg_threshold 遲滯＋minSilence 400–600ms＋pad）——對應失效二，config 級改動。
+4. rolling context 衛生化（被否決 chunk 不進 context）——斬斷幻覺延續。
+5. （另案）LocalAgreement 增量提交——對應失效三的結構性解法。
+
 ## 參考來源
 
 - 本專案：`docs/reports/CAPTION_LATENCY.zh-TW.md`、`experiment/diarization/comparison-2026-10-04/研究與實驗報告.md`、`docs/guide/SILERO_VAD.zh-TW.md`、`docs/reference/DIARIZATION_API.zh-TW.md`
 - 論文：WhisperX（arXiv 2303.00747）、Whisper-Streaming（arXiv 2307.14743／IJCNLP 2023 demo）、Turn-to-Diarize（arXiv 2109.11641）、DIART（arXiv 2109.06483）、線上 diarization 延遲評估（arXiv 2407.04293）、Streaming Sortformer（arXiv 2507.18446）
-- Repo：ufal/whisper_streaming、QuentinFuxa/WhisperLiveKit、bhargavchippada/faster-whisper-dictation、pipecat-ai/smart-turn
+- Repo：ufal/whisper_streaming（含 LocalAgreement／VAC，後繼 SimulStreaming）、QuentinFuxa/WhisperLiveKit、bhargavchippada/faster-whisper-dictation、pipecat-ai/smart-turn、SYSTRAN/faster-whisper（`vad.py` 閾值實作）、openai/whisper（`transcribe.py` 幻覺過濾三閾值）、m-bain/whisperX（VAD 前處理減幻覺、`condition_on_previous_text=False`）
 - 官方文件：NVIDIA Nemotron 3 Diarization（Hugging Face blog 2026-09，含延遲參數表）、pyannote streaming 架構文（2026-10）、LiveKit turn detection 文件
