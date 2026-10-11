@@ -8,13 +8,22 @@ const translations = new Map<string, { started: number; response: number }>()
 // Only paints of newly received captions in the live view form a latency sample.
 // Navigation/hidden tabs must never replay an old response as a fresh paint.
 let liveViewActive = false
+let visibleSince = Infinity
+const clearPaints = (): void => { pending.clear(); translationOrigins.clear(); translations.clear() }
+const resetMeasurementWindow = (): void => {
+  clearPaints()
+  visibleSince = liveViewActive && document.visibilityState === 'visible' ? performance.now() : Infinity
+}
+// A request crossing a navigation/visibility boundary is not a live latency sample.
+const withinMeasurementWindow = (started: number): boolean => canMeasurePaint() && started >= visibleSince
 export const setCaptionMeasurementActive = (active: boolean): void => {
+  if (liveViewActive === active) return
   liveViewActive = active
-  if (!active) { pending.clear(); translationOrigins.clear(); translations.clear() }
+  resetMeasurementWindow()
 }
 const canMeasurePaint = (): boolean => liveViewActive && document.visibilityState === 'visible'
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') { pending.clear(); translationOrigins.clear(); translations.clear() }
+  resetMeasurementWindow()
 })
 export const discardCaptionPaint = (ids: string[], translation = false): void => {
   for (const id of ids) {
@@ -23,7 +32,7 @@ export const discardCaptionPaint = (ids: string[], translation = false): void =>
   }
 }
 export const registerTranslationTiming = (id: string, started: number, response: number): void => {
-  if (!canMeasurePaint()) return
+  if (!withinMeasurementWindow(started)) return
   translations.set(id, { started, response })
   if (translations.size > 1000) translations.delete(translations.keys().next().value!)
 }
@@ -37,7 +46,7 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
     samples.push({ stage: 'translation_roundtrip', seconds: (timing.response - timing.started) / 1000 }, { stage: 'translation_response_to_paint', seconds: (paintedAt - timing.response) / 1000 })
     if (origin) {
       samples.push({ stage: 'translation_schedule_wait', seconds: (timing.started - origin.responseAt) / 1000 })
-      if (origin.speechAt !== undefined) samples.push({ stage: 'speech_to_translation_paint', seconds: (paintedAt - origin.speechAt) / 1000 })
+      if (origin.speechAt !== undefined && withinMeasurementWindow(origin.speechAt)) samples.push({ stage: 'speech_to_translation_paint', seconds: (paintedAt - origin.speechAt) / 1000 })
     }
   }
   if (samples.length) enqueue(samples.filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
@@ -55,13 +64,15 @@ export const attachCaptionTiming = (event: object, timing: CaptionTiming): void 
 export const registerCaptionTiming = (id: string, event: object): void => {
   const timing = timings.get(event)
   if (!timing) return
-  // Arrival-side timings end at receipt, independent of navigation and RAF.
+  timings.delete(event)
+  if (!withinMeasurementWindow(timing.chunkSpeechAt ?? timing.queuedAt)) return
+  // Hidden/frozen tabs can delay fetch callbacks as well as animation frames.
+  // Only requests entirely within this live window form browser latency samples.
   enqueue([
     { stage: 'browser_queue', seconds: (timing.dequeuedAt - timing.queuedAt) / 1000 },
     { stage: 'browser_preprocess', seconds: (timing.requestAt - timing.dequeuedAt) / 1000 },
     { stage: 'asr_roundtrip_with_retries', seconds: (timing.responseAt - timing.requestAt) / 1000 }
   ].filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
-  if (!canMeasurePaint()) return
   pending.set(id, timing)
   translationOrigins.set(id, timing)
   if (translationOrigins.size > 1000) translationOrigins.delete(translationOrigins.keys().next().value!)
@@ -90,12 +101,12 @@ export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
       const seconds = (end - start) / 1000
       if (Number.isFinite(seconds) && seconds >= 0 && seconds <= 300) samples.push({ stage, seconds })
     }
-    if (timing.speechAt !== undefined && timing.detectedAt !== undefined) {
+    if (timing.speechAt !== undefined && timing.detectedAt !== undefined && withinMeasurementWindow(timing.speechAt)) {
       add('speech_to_first_paint', timing.speechAt, paintedAt)
       add('vad_onset', timing.speechAt, timing.detectedAt)
       add('chunk_wait', timing.detectedAt, timing.queuedAt)
     }
-    samples.push(...buildFirstWordBreakdown(timing, paintedAt))
+    if (timing.speechAt !== undefined && withinMeasurementWindow(timing.speechAt)) samples.push(...buildFirstWordBreakdown(timing, paintedAt))
     const chunkSlices = buildFirstWordBreakdown({ ...timing, speechAt: timing.chunkSpeechAt, detectedAt: timing.chunkDetectedAt }, paintedAt)
     if (chunkSlices.length) {
       add('chunk_speech_to_paint', timing.chunkSpeechAt!, paintedAt)

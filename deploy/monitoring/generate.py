@@ -126,6 +126,10 @@ deploy('postgres-exporter','quay.io/prometheuscommunity/postgres-exporter:v0.17.
 for name,key in [('redis-exporter','redis-password'),('sentinel-exporter','sentinel-password')]:
     deploy(name,'oliver006/redis_exporter:v1.88.0',9121,args=['--redis.addr='],env=[secretEnv('REDIS_PASSWORD',key)],cpu='10m')
 cm('monitoring-connection', {'PROMETHEUS_URL': 'http://prometheus:9090'})
+# The acceptance installer patches the live config; keep regeneration consistent.
+for obj in items:
+    if obj['kind'] == 'ConfigMap' and obj['metadata']['name'] == 'prometheus-config':
+        obj['data']['prometheus.yml'] += '  - job_name: gateway-acceptance\n    static_configs: [{targets: ["monitoring-acceptance:8787"], labels: {service: acceptance, pod: synthetic-acceptance}}]\n'
 cm('grafana-provisioning',{'datasources.yaml':'apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: ${PROMETHEUS_URL}\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n','dashboards.yaml':'apiVersion: 1\nproviders:\n  - name: S2T\n    type: file\n    updateIntervalSeconds: 10\n    options: {path: /var/lib/grafana/dashboards}\n'})
 # The single dashboard deliberately separates measured UI latency from server-only load.
 panels=[]; y=0; ident=1
@@ -182,7 +186,70 @@ pair(('VM node CPU cores','sum(rate(container_cpu_usage_seconds_total{id="/"}[2m
 pair(('Pod CPU 使用量（cores）','sum(rate(container_cpu_usage_seconds_total{namespace="'+N+'",pod!=""}[2m])) by (pod)','short','{{pod}}'),('Pod memory working set','sum(container_memory_working_set_bytes{namespace="'+N+'",pod!=""}) by (pod)','bytes','{{pod}}'))
 pair(('Pod ready（1=就緒）','kube_pod_status_ready{condition="true"}','short','{{pod}}'),('Pod 重啟','sum(kube_pod_container_status_restarts_total) by (pod)','short','{{pod}}'))
 pair(('Deployment 可用 / 期望副本','kube_deployment_status_replicas_available','short','{{deployment}}'),('CPU throttled 比例','sum(rate(s2t_cgroup_cpu_throttled_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace="'+N+'"}) by (pod) / clamp_min(sum(rate(s2t_cgroup_cpu_periods_total[2m]) * on(uid) group_left(pod) kube_pod_info{namespace="'+N+'"}) by (pod), 0.000001)','percentunit','{{pod}}'))
-pair(('Pod CPU requests','sum(kube_pod_container_resource_requests{resource="cpu"}) by (pod)','short','{{pod}}'),('PVC 請求容量','kube_persistentvolumeclaim_resource_requests_storage_bytes','bytes','{{persistentvolumeclaim}}'))
+pair(('Pod CPU 請求','sum(kube_pod_container_resource_requests{resource="cpu"}) by (pod)','short','{{pod}}'),('PVC 請求容量','kube_persistentvolumeclaim_resource_requests_storage_bytes','bytes','{{persistentvolumeclaim}}'))
+row('使用量 · 使用者與總體（來源：$caption_gateway）')
+usage_description = 'Gateway 已驗證使用者的操作統計，以 NT 顯示；請求含重試、拒絕及快取命中，模型完成次數只算成功完成的實際執行。Prometheus 保留期間內的估算增量，不是計費帳本。'
+def usage_stat(title, expr, unit='short', width=8, x=0):
+    panel(title, expr, unit, width=width, height=4, x=x, typ='stat', description=usage_description)
+    panels[-1]['targets'][0].update({'instant':True,'range':False})
+    panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'blue'}
+usage_stat('總體 API 請求數（所選範圍）', 'sum(increase(s2t_user_requests_total{job="$caption_gateway"}[$__range]))')
+usage_stat('有請求的使用者數（所選範圍）', 'count(sum(increase(s2t_user_requests_total{job="$caption_gateway",user_id!="__overflow__"}[$__range])) by (nt) > 0)', x=8)
+usage_stat('總體 ASR 音訊時數（已完成可解析 WAV 音訊）', 'sum(increase(s2t_user_audio_seconds_total{job="$caption_gateway",operation="transcriptions"}[$__range])) / 3600', 'suffix:小時', x=16)
+y+=4
+usage_stat('總體模型回報權杖數（token）（翻譯／摘要）', 'sum(increase(s2t_user_input_tokens_total{job="$caption_gateway"}[$__range])) + sum(increase(s2t_user_output_tokens_total{job="$caption_gateway"}[$__range]))')
+usage_stat('模型未回報 權杖用量的完成次數', 'sum(increase(s2t_user_token_usage_missing_total{job="$caption_gateway"}[$__range]))', x=8)
+usage_stat('音訊時長未知次數（不估算成 0 秒）', 'sum(increase(s2t_user_audio_duration_unknown_total{job="$caption_gateway"}[$__range]))', x=16)
+y+=4
+usage_stat('目前 gateway 程序累計 請求（不受時間範圍影響）', 'sum(s2t_user_requests_total{job="$caption_gateway"})', width=24)
+y+=4
+for x, (title, expression) in enumerate([
+    ('使用者請求數比較（依 NT）', 'sum(increase(s2t_user_requests_total{job="$caption_gateway",nt=~"$usage_user",department=~"$usage_department"}[$__range])) by (nt)'),
+    ('使用者權杖用量比較（依 NT）', 'sum(increase(s2t_user_input_tokens_total{job="$caption_gateway",nt=~"$usage_user",department=~"$usage_department"}[$__range])) by (nt) + sum(increase(s2t_user_output_tokens_total{job="$caption_gateway",nt=~"$usage_user",department=~"$usage_department"}[$__range])) by (nt)')]):
+    panel(title, expression, 'short', '{{nt}}', width=12, height=5, typ='bargauge', x=x*12, description=usage_description)
+    panels[-1]['targets'][0].update({'instant':True,'range':False})
+    panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'blue'}
+    panels[-1]['options']={'orientation':'horizontal','displayMode':'gradient','showUnfilled':True,'reduceOptions':{'calcs':['last'],'fields':'','values':False}}
+y+=5
+for title, metric_name, unit in [('每位使用者 請求（含字幕遙測與資料 API）', 'requests', 'short'), ('每位使用者 請求處理耗時', 'request_seconds', 's'), ('每位使用者實際成功模型完成次數', 'model_executions', 'short'), ('每位使用者 ASR 音訊秒數（已完成可解析 WAV 音訊）', 'audio_seconds', 's'), ('每位使用者 ASR 音訊 位元組（已完成）', 'audio_bytes', 'bytes'), ('每位使用者翻譯／摘要輸入 權杖數（token）', 'input_tokens', 'short'), ('每位使用者翻譯／摘要輸出 權杖數（token）', 'output_tokens', 'short'), ('每位使用者輸入字元（含模型提示詞）', 'input_characters', 'short'), ('每位使用者輸出字元', 'output_characters', 'short')]:
+    operation_filter = {'model_executions':',operation=~"transcriptions|translations|summaries"', 'audio_seconds':',operation="transcriptions"', 'audio_bytes':',operation="transcriptions"', 'input_tokens':',operation=~"translations|summaries"', 'output_tokens':',operation=~"translations|summaries"', 'input_characters':',operation=~"translations|summaries"', 'output_characters':',operation=~"transcriptions|translations|summaries"'}.get(metric_name, '')
+    panel(title, f'sum(increase(s2t_user_{metric_name}_total{{job="$caption_gateway",nt=~"$usage_user",nt!="",department=~"$usage_department",department!=""{operation_filter}}}[$__range])) by (department,nt,operation)', unit, '{{nt}} · {{operation}}', width=24, height=5, typ='table', description=usage_description)
+    panels[-1]['targets'][0].update({'instant':True,'range':False,'format':'table'})
+    panels[-1]['options']={'showHeader':True}
+    y+=5
+panel('每位使用者 request 結果（成功／4xx／5xx／中斷）', 'sum(increase(s2t_user_requests_total{job="$caption_gateway",nt=~"$usage_user",nt!="",department=~"$usage_department",department!=""}[$__range])) by (department,nt,operation,outcome)', 'short', '{{nt}} · {{operation}} · {{outcome}}', width=24, height=5, typ='table', description=usage_description)
+panels[-1]['targets'][0].update({'instant':True,'range':False,'format':'table'})
+panels[-1]['options']={'showHeader':True}
+y+=5
+pair(('使用者請求速率（含字幕遙測）', 'sum(rate(s2t_user_requests_total{job="$caption_gateway",nt=~"$usage_user",nt!="",department=~"$usage_department",department!=""}[$__rate_interval])) by (nt)', 'reqps', '{{nt}}'), ('使用者請求錯誤率（含拒絕／中斷）', 'sum(rate(s2t_user_requests_total{job="$caption_gateway",nt=~"$usage_user",nt!="",department=~"$usage_department",department!="",outcome!="success"}[$__rate_interval])) by (nt) / sum(rate(s2t_user_requests_total{job="$caption_gateway",nt=~"$usage_user",nt!="",department=~"$usage_department",department!=""}[$__rate_interval])) by (nt)', 'percentunit', '{{nt}}'))
+row('部門總體用量 · 依部門彙總（來源：$caption_gateway）')
+for index, (title, expression, unit) in enumerate([
+    ('各部門請求數（所選範圍）', 'sum(increase(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__range])) by (department)', 'short'),
+    ('各部門成功模型完成次數', 'sum(increase(s2t_user_model_executions_total{job="$caption_gateway",department=~"$usage_department",department!="",operation=~"transcriptions|translations|summaries"}[$__range])) by (department)', 'short'),
+    ('各部門 ASR 音訊時數', 'sum(increase(s2t_user_audio_seconds_total{job="$caption_gateway",department=~"$usage_department",department!="",operation="transcriptions"}[$__range])) by (department) / 3600', 'suffix:小時'),
+    ('各部門輸入權杖數（token）', 'sum(increase(s2t_user_input_tokens_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__range])) by (department)', 'short'),
+    ('各部門輸出權杖數（token）', 'sum(increase(s2t_user_output_tokens_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__range])) by (department)', 'short'),
+    ('各部門請求錯誤率', 'sum(increase(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!="",outcome!="success"}[$__range])) by (department) / sum(increase(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__range])) by (department)', 'percentunit')]):
+    panel(title, expression, unit, '{{department}}', width=12, height=5, typ='bargauge', description='以帳號已驗證的部門彙總，不受 NT 篩選影響；使用所選時間範圍。', x=(index % 2)*12)
+    panels[-1]['targets'][0].update({'instant':True,'range':False})
+    panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'blue'}
+    panels[-1]['options']={'orientation':'horizontal','displayMode':'gradient','showUnfilled':True,'reduceOptions':{'calcs':['last'],'fields':'','values':False}}
+    if panels[-1]['gridPos']['x'] == 12: y+=5
+# Keep the following rows below the last gauge pair.
+y = max(y, max(entry['gridPos']['y']+entry['gridPos']['h'] for entry in panels))
+row('部門與使用者請求趨勢')
+pair(('部門請求速率', 'sum(rate(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__rate_interval])) by (department)', 'reqps', '{{department}}'), ('部門權杖使用速率', '(sum(rate(s2t_user_input_tokens_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__rate_interval])) by (department)) + (sum(rate(s2t_user_output_tokens_total{job="$caption_gateway",department=~"$usage_department",department!=""}[$__rate_interval])) by (department))', 'short', '{{department}}'))
+for entry in panels:
+    for target in entry.get('targets', []):
+        if 's2t_user_' in target['expr']:
+            target['expr'] = target['expr'].replace(',nt!=""', '').replace(',department!=""', '').replace('job="$caption_gateway"', 'job="$caption_gateway",nt!="",department!=""')
+    if entry['type'] == 'table' and 's2t_user_' in entry['targets'][0]['expr']:
+        entry['transformations'] = [{'id':'organize','options':{'excludeByName':{'Time':True},'renameByName':{'nt':'使用者 NT','department':'部門','operation':'操作','outcome':'結果','Value':'用量'}}}]
+        entry['fieldConfig']['defaults']['decimals'] = 2
+        entry['fieldConfig']['overrides'] += [
+            {'matcher':{'id':'byName','options':'操作'},'properties':[{'id':'mappings','value':[{'type':'value','options':{key:{'text':text} for key,text in [('transcriptions','語音辨識'),('translations','翻譯'),('summaries','摘要'),('diarizations','講者分離'),('telemetry/captions','字幕遙測'),('config','服務設定'),('data/sessions','會議紀錄'),('auth/session','登入狀態'),('other','其他操作'),('storage','儲存服務'),('audio/object','錄音檔案'),('data/settings','使用者設定'),('data/glossary','詞彙表'),('data/voiceprints','聲紋資料'),('data/diarization-jobs','講者分離工作'),('data/storage-status','儲存狀態'),('data/storage-audit','儲存稽核'),('data/storage-retry','儲存重試'),('data/model-registry','模型設定'),('data/model-health','模型健康狀態'),('data/model-credentials/id','模型憑證設定'),('data/summary-templates','摘要模板'),('auth/logout','登出'),('admin/users','帳號管理'),('audio-processing/silero-vad','語音活動偵測'),('audio-processing/status','音訊處理狀態'),('audio-processing/import-wav','匯入音訊')]}}]}]},
+            {'matcher':{'id':'byName','options':'結果'},'properties':[{'id':'mappings','value':[{'type':'value','options':{key:{'text':text} for key,text in [('success','成功'),('client_error','請求錯誤（4xx）'),('server_error','服務錯誤（5xx）'),('aborted','連線中斷')]}}]}]}
+        ]
 dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / Chunk 延遲與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','Web','K8s'],'panels':panels,'editable':False}
 # Caption panels must never combine real users with the isolated load generator.
 import re
@@ -191,9 +258,14 @@ for entry in panels:
         target['expr'] = re.sub(r'(s2t_(?:caption_stage_duration_seconds|chunk_stage_duration_seconds|caption_events_total|server_stage_duration_seconds|gateway_request_duration_seconds|gateway_request_errors_total|gateway_inflight_requests|diarization_pending_jobs|diarization_oldest_seconds|storage_operation_duration_seconds)(?:_bucket|_sum|_count|_errors_total)?)(\{)?', lambda match: match.group(1) + '{job="$caption_gateway"' + (',' if match.group(2) else '}'), target['expr'])
     if entry['type'] == 'row' and entry['title'].startswith(('01 ', '02 ')):
         entry['title'] += ' · 來源：$caption_gateway'
-dashboard['templating'] = {'list': [{'name': 'caption_gateway', 'label': '字幕量測來源', 'type': 'custom', 'query': '8787 網頁入口 : gateway-web,K8s 測試站 : s2t', 'current': {'text': '8787 網頁入口' if external_gateway else 'K8s 測試站', 'value': 'gateway-web' if external_gateway else 's2t'}, 'options': [{'text': '8787 網頁入口', 'value': 'gateway-web', 'selected': bool(external_gateway)}, {'text': 'K8s 測試站', 'value': 's2t', 'selected': not bool(external_gateway)}], 'multi': False, 'includeAll': False}]}
+dashboard['templating'] = {'list': [{'name': 'caption_gateway', 'label': '字幕量測來源', 'type': 'custom', 'query': '8787 網頁入口 : gateway-web,K8s 測試站 : s2t,驗收模擬資料（非正式） : gateway-acceptance', 'current': {'text': '8787 網頁入口' if external_gateway else 'K8s 測試站', 'value': 'gateway-web' if external_gateway else 's2t'}, 'options': [{'text': '8787 網頁入口', 'value': 'gateway-web', 'selected': bool(external_gateway)}, {'text': 'K8s 測試站', 'value': 's2t', 'selected': not bool(external_gateway)}, {'text':'驗收模擬資料（非正式）','value':'gateway-acceptance','selected':False}], 'multi': False, 'includeAll': False}]}
+dashboard['templating']['list'].append({'name':'usage_department','label':'部門','type':'query','datasource':{'type':'prometheus','uid':'s2t-prometheus'},'query':'label_values(s2t_user_requests_total{job="$caption_gateway",department!=""}, department)','refresh':2,'multi':True,'includeAll':True,'allValue':'.*','current':{'text':'All','value':'$__all'}})
+dashboard['templating']['list'].append({'name':'usage_user','label':'使用量 NT','type':'query','datasource':{'type':'prometheus','uid':'s2t-prometheus'},'query':'label_values(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!=""}, nt)','refresh':2,'multi':True,'includeAll':True,'allValue':'.*','current':{'text':'All','value':'$__all'}})
 Path(__file__).with_name('dashboard.json').write_text(json.dumps(dashboard,ensure_ascii=False,indent=2)+'\n')
-cm('s2t-dashboard',{'dashboard.json':json.dumps(dashboard,ensure_ascii=False)})
+from oncall import build_oncall
+oncall = build_oncall(dashboard)
+Path(__file__).with_name('oncall.json').write_text(json.dumps(oncall,ensure_ascii=False,indent=2)+'\n')
+cm('s2t-dashboard',{'dashboard.json':json.dumps(dashboard,ensure_ascii=False),'oncall.json':json.dumps(oncall,ensure_ascii=False)})
 deploy('grafana','grafana/grafana:12.2.0',3000,env=[{'name':'PROMETHEUS_URL','valueFrom':{'configMapKeyRef':{'name':'monitoring-connection','key':'PROMETHEUS_URL'}}},secretEnv('GF_SECURITY_ADMIN_PASSWORD','grafana-password'),{'name':'GF_USERS_ALLOW_SIGN_UP','value':'false'},{'name':'GF_AUTH_ANONYMOUS_ENABLED','value':'true'},{'name':'GF_AUTH_ANONYMOUS_ORG_ROLE','value':'Viewer'},{'name':'GF_ANALYTICS_REPORTING_ENABLED','value':'false'},{'name':'GF_ANALYTICS_CHECK_FOR_UPDATES','value':'false'},{'name':'GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH','value':'/var/lib/grafana/dashboards/dashboard.json'}],volumes=[{'name':'data','persistentVolumeClaim':{'claimName':'grafana-data'}},{'name':'provisioning','configMap':{'name':'grafana-provisioning'}},{'name':'dashboards','configMap':{'name':'s2t-dashboard'}}],mounts=[{'name':'data','mountPath':'/var/lib/grafana'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/datasources/datasources.yaml','subPath':'datasources.yaml'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/dashboards/dashboards.yaml','subPath':'dashboards.yaml'},{'name':'dashboards','mountPath':'/var/lib/grafana/dashboards'}],cpu='100m',mem='128Mi')
 items[-2]['spec']['template']['spec']['securityContext']={'fsGroup':472,'runAsUser':472}
 Path(__file__).with_name('stack.json').write_text(json.dumps({'apiVersion':'v1','kind':'List','items':items},indent=2)+'\n')

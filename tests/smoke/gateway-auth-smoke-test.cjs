@@ -5,7 +5,7 @@ const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 
 const request = async (base, path, options = {}) => {
-  const response = await fetch(`${base}${path}`, options)
+  const response = await fetch(`${base}${path}`, { ...options, signal: options.signal || AbortSignal.timeout(10000) })
   const body = response.status === 204 ? null : await response.json().catch(() => null)
   return { response, body }
 }
@@ -22,12 +22,11 @@ const main = async () => {
   const directory = await mkdtemp(join(tmpdir(), 's2t-gateway-auth-'))
   const port = 19000 + Math.floor(Math.random() * 1000)
   const base = `http://127.0.0.1:${port}`
-  const child = spawn(process.execPath, ['server/index.cjs'], {
-    cwd: join(__dirname, '..', '..'),
-    // Keep this test independent from a developer's remote-storage .env.
-    // dotenv does not override already-defined empty values, so the gateway
-    // reliably selects the local adapters used by this isolated smoke test.
-    env: { ...process.env, S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
+  const child = spawn(process.execPath, [join(__dirname, '..', '..', 'server/index.cjs')], {
+    cwd: directory,
+    // Run outside the repository with a minimal environment so developer
+    // dotenv/remote audio-service/Redis settings cannot leak into this test.
+    env: { PATH: process.env.PATH, S2T_MODELS_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let output = ''

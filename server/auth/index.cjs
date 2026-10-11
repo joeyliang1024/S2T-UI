@@ -1,3 +1,4 @@
+const usageMetrics = require('../usage-metrics.cjs')
 const { randomBytes } = require('node:crypto')
 const { mkdir, readFile, rename, writeFile } = require('node:fs/promises')
 const { join } = require('node:path')
@@ -108,7 +109,11 @@ const createAuth = async (storage, environment = process.env, limits = require('
       } catch { /* An expired or invalid token is already unusable. */ }
     },
     async requireUser(request) {
-      return this.session(requestToken(request))
+      if (Object.hasOwn(request, 's2tAuthUser')) return request.s2tAuthUser
+      const user = await this.session(requestToken(request))
+      request.s2tAuthUser = user
+      if (user) { request.s2tUserId = user.id; usageMetrics.registerUser(user) }
+      return user
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
@@ -155,7 +160,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
         return true
       }
       if (request.method === 'GET' && url === '/api/auth/session') {
-        const user = await this.session(requestToken(request))
+        const user = await this.requireUser(request)
         send(response, user ? 200 : 401, user ? { user } : { error: '登入狀態已失效' }); return true
       }
       if (request.method === 'POST' && url === '/api/auth/logout') {

@@ -1,5 +1,6 @@
 const { validateAdminParameters } = require('./admin-parameters.cjs')
 const metrics = require('./metrics.cjs')
+const usageMetrics = require('./usage-metrics.cjs')
 const { loadSessionSnapshot } = require('./session-snapshot.cjs')
 const { readSessionPayload, createSessionWriteGate } = require('./session-payload.cjs')
 const withSessionWrite = createSessionWriteGate()
@@ -184,7 +185,7 @@ const prometheusMetrics = () => {
     lines.push(`s2t_sherpa_op_rtf{op="${op}"} ${value.rtf ?? 0}`)
   }
   lines.push('# TYPE s2t_gateway_inflight_requests gauge', `s2t_gateway_inflight_requests ${activeHttpRequests}`)
-  return `${lines.join('\n')}\n` + metrics.render()
+  return `${lines.join('\n')}\n` + metrics.render() + usageMetrics.render()
 }
 const languageNames = { auto: '自动检测（中文、英语、日语或德语）', 'zh-TW': '繁体中文', 'en-US': '英语', en: '英语', 'ja-JP': '日语', ja: '日语', 'de-DE': '德语', de: '德语' }
 const supportedTranslationSourceLanguages = new Set(['auto', 'zh-TW', 'en-US', 'ja-JP', 'de-DE'])
@@ -223,10 +224,12 @@ const normalizeDetectedLanguage = (value) => {
   if (language.startsWith('de')) return 'de-DE'
   return undefined
 }
-const completeText = async (value, messages, maxRetries = 1, temperature = 0.2) => {
+const completeText = async (value, messages, maxRetries = 1, temperature = 0.2, usageContext) => {
   const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries })
   const result = await client.chat.completions.create({ model: value.model, temperature, messages })
-  return result.choices[0]?.message.content?.trim() || ''
+  const text = result.choices[0]?.message.content?.trim() || ''
+  if (usageContext) usageMetrics.observeExecution(usageContext.userId, usageContext.operation, { input: messages.map(message => message.content).join(''), output: text, usage: result.usage })
+  return text
 }
 const credentialKey = (secret) => createHash('sha256').update(`${secret}:s2t-model-credentials:v1`).digest()
 const encryptCredential = (secret, plaintext) => {
@@ -774,7 +777,16 @@ const handleHttpRequest = async (request, response) => {
   try { auth = await authReady } catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'storage 尚未就緒，無法處理請求' }) }
   const requestPath = new URL(request.url, 'http://localhost').pathname
   const startedAt = performance.now()
-  response.once('finish', () => observeRequest(requestPath, response.statusCode, startedAt))
+  let requestObserved = false
+  const recordRequest = (aborted = false) => {
+    if (requestObserved) return
+    requestObserved = true
+    observeRequest(requestPath, response.statusCode, startedAt)
+    usageMetrics.observeRequest(request.s2tUserId, requestPath.slice(5), response.statusCode, (performance.now() - startedAt) / 1000, aborted)
+  }
+  response.once('finish', () => recordRequest())
+  response.once('close', () => recordRequest(!response.writableFinished))
+  if (requestPath.startsWith('/api/')) await auth.requireUser(request)
   if (await auth.handle(request, response, send)) return
   if (request.method === 'POST' && request.url === '/api/telemetry/captions') {
     const user = await auth.requireUser(request)
@@ -1254,6 +1266,7 @@ const handleHttpRequest = async (request, response) => {
         ...(requestedLanguage ? { language: requestedLanguage } : {}),
         ...(request.headers['x-s2t-prompt'] ? { prompt: decodedHeaderValue(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
       }))
+      usageMetrics.observeExecution(user.id, 'transcriptions', { audio, output: result.text || '' })
       logger.debug('asr.completed', { profileId, model: selectedAsr.model, durationMs: Date.now() - asrStartedAt, audioBytes: asrAudioBytes, chars: (result.text || '').length })
       return { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) }
       }))
@@ -1300,7 +1313,7 @@ const handleHttpRequest = async (request, response) => {
       const translationStartedAt = Date.now()
       const accountSettings = user.role === 'admin' ? await storage.config.get(user.id, 'app-settings') : undefined
       const translationTemperature = requestedTemperature ?? validateAdminParameters(accountSettings?.settings?.adminParameters)?.translationTemperature ?? 0.2
-      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, temperature: translationTemperature, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0, translationTemperature))))
+      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, temperature: translationTemperature, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0, translationTemperature, { userId: user.id, operation: 'translations' }))))
       logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
       return send(response, 200, { text: textResult })
     } catch (error) {
@@ -1322,7 +1335,7 @@ const handleHttpRequest = async (request, response) => {
       const input = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
       const messages = Array.isArray(input.messages) ? input.messages.filter((item) => item && (item.role === 'system' || item.role === 'user') && typeof item.content === 'string').slice(0, 8) : []
       if (!messages.length) return send(response, 400, { error: 'Messages are required.' })
-      return send(response, 200, { text: await completeText(selectedSummary, messages) })
+      return send(response, 200, { text: await completeText(selectedSummary, messages, 1, 0.2, { userId: user.id, operation: 'summaries' }) })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'Summary request failed' })
     }
