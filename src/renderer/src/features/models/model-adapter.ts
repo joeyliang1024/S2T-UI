@@ -1,5 +1,5 @@
 import { attachCaptionTiming, recordCaptionEvent, type CaptionTiming } from '../../shared/services/caption-metrics'
-import { EnergyVad, type VadConfig } from '../capture/vad'
+import { type BoundaryVad, EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
 import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
 import { activeTranslate } from '../../shared/i18n'
@@ -268,7 +268,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private readonly gatewayTimeoutMs = 30_000
   readonly diagnostics = { requests: 0, completed: 0, rateLimited: 0, gaps: 0, inFlight: 0, maximumQueued: 0, totalRequestMs: 0, totalQueueWaitMs: 0, maximumPendingMs: 0 }
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean }) {
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean; vadFactory?: (sampleRate: number, config?: VadConfig) => BoundaryVad }) {
     this.prompt = profile.prompt
     this.vadConfig = profile.vadConfig
   }
@@ -289,7 +289,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.sequence = 0
     this.stopped = false
     this.queuedChunks = 0
-    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    this.vad = this.createVad()
     this.pendingContainsSpeech = false
     this.pendingBoundaries = []
     this.explicitBoundaries.clear()
@@ -300,6 +300,12 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.overflowGap = undefined
     this.activeGatewayRequests.clear()
     Object.keys(this.diagnostics).forEach((key) => { this.diagnostics[key as keyof typeof this.diagnostics] = 0 })
+  }
+
+  /** The boundary detector is swappable so evaluations can compare detectors
+   * (e.g. Silero probabilities) against the default RMS EnergyVad. */
+  private createVad(): BoundaryVad {
+    return this.profile.vadFactory ? this.profile.vadFactory(this.sampleRate, this.vadConfig) : new EnergyVad(this.sampleRate, this.vadConfig)
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
@@ -416,7 +422,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     if (input.prompt !== undefined) this.prompt = input.prompt || undefined
     if (input.vadConfig) {
       this.vadConfig = input.vadConfig
-      this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+      this.vad = this.createVad()
     }
   }
 

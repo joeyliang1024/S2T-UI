@@ -56,7 +56,9 @@ const loadTs = (entry) => {
 }
 const { OpenAiChunkedModelAdapter } = loadTs(path.join('src', 'renderer', 'src', 'features', 'models', 'model-adapter.ts'))
 const { defaultVadConfig } = loadTs(path.join('src', 'renderer', 'src', 'features', 'capture', 'vad.ts'))
+const { SileroBoundaryVad } = loadTs(path.join('src', 'renderer', 'src', 'features', 'capture', 'silero-vad.ts'))
 const { canMergeHttpCaption } = loadTs(path.join('src', 'renderer', 'src', 'features', 'app', 'services', 'translation-policy.ts'))
+const { createSileroScorer } = require(path.join(__dirname, 'silero-probabilities.cjs'))
 
 // 調整前的舊預設值，用來跟新預設做對照。
 // overlapMs/sampleRate 為尚未產品化的準度與延遲槓桿（見檔頭說明）。
@@ -81,7 +83,13 @@ const PRESETS = {
   old: { vadConfig: { minSpeechMs: 120, minSilenceMs: 500, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 1_000, chunkMaxMs: 2_400 }, overlapMs: 0, sampleRate: 48_000 },
   new: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000 },
   newov: { vadConfig: { ...defaultVadConfig }, overlapMs: OVERLAP_MS, sampleRate: 48_000 },
-  new16k: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 16_000 }
+  new16k: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 16_000 },
+  // Silero 邊界對照組：vadConfig 與 EnergyVad 對照組（fastv2／new）完全相同，
+  // 只把句界偵測器換成 Silero 框率狀態機——差異全部來自偵測器本身。
+  // 框率在 preset 開跑前以 scripts/evaluation/silero-probabilities.cjs 預先算妥
+  // （即時產品碼的框率會晚 ~32 ms 到達，切點 sample 位置不受影響）。
+  fastSilero: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero' },
+  newSilero: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, vad: 'silero' }
 }
 
 const decodeCache = new Map()
@@ -164,7 +172,7 @@ const stripOverlapDuplicate = (previous, next) => {
 }
 
 const runPreset = async (name, preset, sentences) => {
-  const { vadConfig, overlapMs, sampleRate: sr } = preset
+  const { vadConfig, overlapMs, sampleRate: sr, vad: vadKind } = preset
   const samples = decodeAudio(sr)
   const records = [] // enqueue 順序，含被 queue-overflow 丟棄的 chunk
   const events = [] // 所有 transcript/gap 事件＋實際上屏 wall time
@@ -189,7 +197,16 @@ const runPreset = async (name, preset, sentences) => {
 
   global.window = { setTimeout, s2t: { hasModelApiKey: async () => true, transcribeAudioChunk: realTranscribe } }
 
-  const adapter = new OpenAiChunkedModelAdapter({ id: 'eval-asr', endpoint, model, requiresApiKey: false, vadConfig })
+  // Silero 對照：先把整段 16 kHz 解碼逐視窗打分（每個 preset 獨立 scorer/state），
+  // 機率交給 renderer 的 SileroBoundaryVad 狀態機；EnergyVad 對照組不經過這段。
+  const sileroProbabilities = vadKind === 'silero'
+    ? await (await createSileroScorer()).probabilities16k(decodeAudio(16_000))
+    : undefined
+  const vadFactory = sileroProbabilities
+    ? (factorySampleRate, factoryConfig) => new SileroBoundaryVad(factorySampleRate, factoryConfig ?? { ...defaultVadConfig }, sileroProbabilities)
+    : undefined
+
+  const adapter = new OpenAiChunkedModelAdapter({ id: 'eval-asr', endpoint, model, requiresApiKey: false, vadConfig, vadFactory })
   const originalEnqueue = Object.getPrototypeOf(adapter).enqueue
   const originalRetry = Object.getPrototypeOf(adapter).transcribeWithRetry
   adapter.enqueue = function (audio, startSample, isSentenceBoundary) {
@@ -313,6 +330,7 @@ const runPreset = async (name, preset, sentences) => {
   const segmentsPerSentence = sentenceResults.map((result) => result.segments)
   const report = {
     preset: name,
+    vadKind: vadKind || 'energy',
     vadConfig,
     overlapMs,
     sampleRate: sr,

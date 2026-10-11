@@ -6,6 +6,16 @@ export type VadFrame = {
   levelDbfs: number
 }
 
+/**
+ * The synchronous contract OpenAiChunkedModelAdapter needs from any boundary
+ * detector. EnergyVad (RMS) and SileroBoundaryVad (ML) both satisfy it, and
+ * the adapter accepts a factory so evaluations or future on-device runtimes
+ * can swap the detector without touching the chunking logic.
+ */
+export interface BoundaryVad {
+  process(samples: Float32Array): VadFrame
+}
+
 export type VadConfig = {
   minSpeechMs: number
   minSilenceMs: number
@@ -63,7 +73,7 @@ export const speedToVadConfig = (speed: ResponseSpeed): VadConfig => ({ ...respo
  * An app-side VAD for a request/response ASR service. It chooses better HTTP
  * chunk boundaries and suppresses room tone; it does not claim word timing.
  */
-export class EnergyVad {
+export class EnergyVad implements BoundaryVad {
   private speaking = false
   private onsetSamples = 0
   private silenceSamples = 0
