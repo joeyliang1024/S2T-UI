@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { assessVoiceprintSample, sherpaWorkerPool } = require('../../server/sherpa-worker-pool.cjs')
+const { assessVoiceprintSample, sherpaWorkerPool, sileroVadStatus } = require('../../server/sherpa-worker-pool.cjs')
 
 const makeWav = ({ seconds = 3.2, sampleRate = 16_000 } = {}) => {
   const frames = Math.floor(seconds * sampleRate)
@@ -16,6 +16,13 @@ const makeWav = ({ seconds = 3.2, sampleRate = 16_000 } = {}) => {
   const quality = await assessVoiceprintSample(makeWav())
   assert.ok(quality.durationMs >= 3_000)
   assert.ok(quality.rmsDbfs > -45)
+  // VAD must land on its own pool, not behind voiceprint work on interactive.
+  const vad = await sileroVadStatus()
+  assert.equal(typeof vad.available, 'boolean')
+  const stats = sherpaWorkerPool.stats()
+  assert.ok(stats.pools.silero, 'silero pool is reported')
+  assert.equal(stats.pools.silero.configured, Number(process.env.S2T_SILERO_VAD_WORKERS || 1))
+  assert.equal(stats.pools.silero.ops.sileroStatus?.count, 1, 'sileroVadStatus ran on the silero pool')
   await sherpaWorkerPool.close()
   console.log('sherpa worker smoke test passed')
 })().catch(async (error) => {

@@ -1,16 +1,22 @@
-# Silero VAD（同 Pod CPU worker）
+# Silero VAD（獨立 pool，可調 worker 數）
 
-Web gateway 的 Silero VAD 不在 HTTP 主執行緒執行。它跑在**互動池**（`S2T_SHERPA_FAST_WORKERS`，與聲紋註冊、status 共用），與 heavy 池（diarization／聲紋區塊）分離，因此長任務不會卡住 VAD 與註冊請求：
+Web gateway 的 Silero VAD 不在 HTTP 主執行緒執行，也不與其他工作共用佇列。自 2026-10 起它跑在**專屬 pool**（`S2T_SILERO_VAD_WORKERS`，每 worker 一個 ONNX session），與互動池（聲紋註冊／dynaudnorm／status）和 heavy 池（diarization／聲紋區塊）分離，因此長任務不會卡住 VAD 請求，VAD 也不會排在聲紋註冊後面：
 
 ```env
-S2T_SHERPA_FAST_WORKERS=1
-S2T_SHERPA_WORKERS=1
+S2T_SILERO_VAD_WORKERS=1        # 提高以增加並發 VAD 吞吐（先確認 CPU 夠）
+S2T_SILERO_VAD_MAX_QUEUE=32
+S2T_SILERO_VAD_JOB_TIMEOUT_BASE_MS=10000
+S2T_SILERO_VAD_JOB_TIMEOUT_MS=30000
+S2T_SHERPA_FAST_WORKERS=1       # 互動池（聲紋註冊等），與 VAD 數量無關
+S2T_SHERPA_WORKERS=1            # 重型池（diarization）
 S2T_SHERPA_MAX_QUEUE=8
 S2T_MODELS_DIR=/models
 # Optional per-file override:
 # S2T_SILERO_VAD_MODEL=/models/silero-vad/silero_vad.onnx
 S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3
 ```
+
+**HA 與任務分配**：pool 依序把 VAD 請求派給空閒 worker（任務分配）；worker 崩潰自動重生、逾時 worker 被隔離（其餘 worker 繼續服務）、佇列滿明確拒絕而不是靜默卡住。`S2T_SILERO_VAD_WORKERS=2` 即兩倍並發且單一 worker 掛掉不中斷服務；提高前先確認 Pod CPU 夠（workers × 每 worker 推論執行緒）。觀測：`sherpaWorkerPool.stats().pools.silero` 含每操作次數、平均耗時與 RTF。warmup（`S2T_AUDIO_WARMUP=silero`）逐一預熱每個 worker，部署後沒有冷啟動。
 
 模型固定為 upstream `snakers4/silero-vad` `v6.2.1` 的 ONNX opset 16 artifact。應在映像建置或受控的 init job 完成下載與 checksum 驗證；服務請求不會下載模型。預設路徑是 `models/silero-vad/silero_vad.onnx`，環境變數可覆寫為 Pod 掛載的唯讀路徑。
 
