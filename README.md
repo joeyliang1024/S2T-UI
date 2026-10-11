@@ -24,7 +24,7 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 | --- | --- |
 | 操作指南 `guide` | [部署、Storage 與遷移](docs/guide/DEPLOYMENT.zh-TW.md)、[環境設定](docs/guide/ENVIRONMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)、[sherpa-onnx 安裝](docs/guide/SHERPA_ONNX.zh-TW.md)、[Silero VAD worker](docs/guide/SILERO_VAD.zh-TW.md)、[Kubernetes 多副本](docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)、[K8s 容量測試](docs/guide/CAPACITY_TEST.zh-TW.md)、[監控指南](docs/guide/OBSERVABILITY.zh-TW.md) |
 | 契約與架構 `reference` | [程式目錄責任](docs/reference/ARCHITECTURE.zh-TW.md)、[模型接入契約](docs/reference/MODEL_ADAPTER.md)、[Web Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質與取樣率](docs/reference/AUDIO_QUALITY.zh-TW.md) |
-| 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[背景處理生命週期](docs/research/SESSION_LIFECYCLE.zh-TW.md) |
+| 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[Chunking 自動切分可行性（1011）](docs/research/AUTO_CHUNKING.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[背景處理生命週期](docs/research/SESSION_LIFECYCLE.zh-TW.md) |
 | 量測報告 `reports` | [字幕延遲調校（P95 ≤ 2.5 秒）](docs/reports/CAPTION_LATENCY.zh-TW.md)、[字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[五分鐘字幕比較與顯示修正](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)；已套用的修正與環境盤點見 [docs/README.md](docs/README.md) 的「修正與盤點記錄」 |
 
 研究類文件為歷史參考，不覆蓋 Enhancement.md 的決策。
