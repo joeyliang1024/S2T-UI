@@ -1,5 +1,5 @@
 export type CaptionMetricSample = { stage: string; seconds: number }
-export type CaptionMetricEvent = 'speech_detected' | 'asr_empty' | 'asr_failed' | 'audio_gap' | 'telemetry_dropped'
+export type CaptionMetricEvent = 'speech_detected' | 'asr_empty' | 'asr_failed' | 'audio_gap' | 'silero_veto' | 'silero_failed' | 'telemetry_dropped'
 export type CaptionMetricPayload = { samples: CaptionMetricSample[]; events: Partial<Record<CaptionMetricEvent, number>> }
 
 /** Best-effort metrics must not create a second unbounded request pipeline. */

@@ -450,9 +450,22 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const dequeuedAt = performance.now()
       const wav = wavFromFloat32(audio, this.sampleRate)
-      if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) {
-        if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
-        return
+      if (this.profile.sileroVadEnabled) {
+        let hasSpeech = true
+        try {
+          hasSpeech = await this.hasSileroSpeech(wav)
+        } catch (error) {
+          // An auxiliary gate failure degrades to the ungated path so a
+          // Silero outage cannot silence captions; the distinct event keeps
+          // the failure rate visible instead of counting it as ASR failure.
+          recordCaptionEvent('silero_failed')
+          this.emitError(error instanceof Error ? error.message : activeTranslate('svcSileroGatewayFailed').replace('{status}', '?'))
+        }
+        if (!hasSpeech) {
+          recordCaptionEvent('silero_veto')
+          if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
+          return
+        }
       }
       const requestAt = performance.now()
       const response = await this.transcribeWithRetry(wav)

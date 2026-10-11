@@ -1,4 +1,4 @@
-import { CaptionMetricTransport, type CaptionMetricSample } from './caption-metric-transport'
+import { CaptionMetricTransport, type CaptionMetricSample, type CaptionMetricEvent } from './caption-metric-transport'
 import { authFetch } from '../../features/auth/services/auth-client'
 export type CaptionTiming = { speechAt?: number; detectedAt?: number; chunkSpeechAt?: number; chunkDetectedAt?: number; queuedAt: number; dequeuedAt: number; requestAt: number; responseAt: number }
 const timings = new WeakMap<object, CaptionTiming>()
@@ -56,10 +56,10 @@ const transport = new CaptionMetricTransport(async payload => {
   const response = await authFetch('/api/telemetry/captions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(3000) })
   return response.ok
 })
-const enqueue = (samples: Sample[] = [], event?: 'speech_detected' | 'asr_empty' | 'asr_failed' | 'audio_gap'): void => {
+const enqueue = (samples: Sample[] = [], event?: CaptionMetricEvent): void => {
   if (!window.s2t) transport.enqueue(samples, event)
 }
-export const recordCaptionEvent = (event: 'speech_detected' | 'asr_empty' | 'asr_failed' | 'audio_gap'): void => enqueue([], event)
+export const recordCaptionEvent = (event: CaptionMetricEvent): void => enqueue([], event)
 export const attachCaptionTiming = (event: object, timing: CaptionTiming): void => { timings.set(event, timing) }
 export const registerCaptionTiming = (id: string, event: object): void => {
   const timing = timings.get(event)

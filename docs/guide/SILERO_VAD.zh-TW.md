@@ -22,6 +22,20 @@ S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d
 
 在 Web「ASR／VAD」設定開啟「使用 Silero VAD」後，下一次收音先查 `/api/audio-processing/status`。模型檔、checksum 或 ONNX Runtime 任一項不健康時，收音不會假裝啟用它。每個待送 ASR 的短 WAV 會先由 worker 判斷；無語音就不發出 ASR 請求。這是可選的額外 CPU 工作，ASR／翻譯仍應以獨立模型 Deployment 擴容。
 
+## 指標監控（Prometheus，`GET /metrics`）
+
+Silero 相關的觀測面分三層，皆免额外設定：
+
+| 指標 | 內容 |
+| --- | --- |
+| `s2t_sherpa_worker_jobs{pool="silero",state=...}` | pool 量能：`configured`／`workers`／`busy`／`queued`／`inFlight`／`maxQueue`。佇列持續堆高＝ worker 不足或有 worker 掛掉 |
+| `s2t_sherpa_op_*{op="sileroVad"}`（另有 `sileroStatus`／`sileroWarmup`） | 操作次數、耗時分布、音訊秒數與 **RTF**。RTF 漂高＝ CPU 不足 |
+| `s2t_caption_events_total{event="silero_veto"\|"silero_failed"}` | 字幕閘門決策（Web 收音路徑）：`silero_veto`＝ chunk 被判定無語音、未送 ASR；`silero_failed`＝ 閘門請求失敗（此時**降級放行**——故障的輔助閘門不應讓字幕整段消失），失敗率持續 > 0 要查 pool 健康 |
+
+另可 `GET /api/audio-processing/status` 查模型檔／checksum／ONNX Runtime 健康（`sileroVad.available`）。注意 caption 遙測只在 Web 收音路徑發送（桌面端由 `window.s2t` 橋接，不走瀏覽器量測）；pool／op 指標則兩種部署都會匯出。
+
+判讀基準（2026-10 實測，300 s 對話素材）：閘門否決率約 7–10 % 屬正常（BGM 段）；乾淨旁白素材應趨近 0——若 `silero_veto` 在乾淨素材上持續出現，等於在丟真語音，要回頭調 Silero 閾值。
+
 ## 喂法契約：每幀 576 樣本（64 context + 512 window）
 
 官方 wrapper 每次推論餵的是**前一幀的 64 樣本尾巴 + 本幀 512 樣本**（16 kHz，共 576），並把 2×1×128 的 recurrent state 帶到下一幀。只餵 512 樣本**不會報錯**，但 state 追不到語音，所有機率會塌到 ~0.003（upstream 原話：*probabilities stay near zero*）。本專案過去就是這種餵法，等於：

@@ -4,7 +4,7 @@ const firstWordStages = new Set(['vad_onset', 'chunk_wait', 'browser_queue', 'br
 const buckets = [.025, .05, .1, .15, .25, .4, .6, .8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120, 300]
 const histograms = new Map()
 const events = new Map()
-const allowedEvents = new Set(['speech_detected', 'asr_empty', 'asr_failed', 'audio_gap', 'telemetry_dropped'])
+const allowedEvents = new Set(['speech_detected', 'asr_empty', 'asr_failed', 'audio_gap', 'telemetry_dropped', 'silero_veto', 'silero_failed'])
 // Expose zero baselines before the first browser sample, so a first scrape
 // does not silently lose the initial observation when Prometheus calculates rate.
 for (const stage of stages) {

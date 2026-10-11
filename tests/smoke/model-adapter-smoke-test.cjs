@@ -71,6 +71,51 @@ const main = async () => {
   assert.equal(webRequests[0].headers['x-s2t-prompt'], undefined, 'the first web chunk has no rolling context yet')
   assert.ok(decodeURIComponent(String(webRequests[1].headers['x-s2t-prompt'] || '')).includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
   assert.deepEqual(webErrors, [])
+  // Silero gate observability: vetoes report silero_veto and drop the chunk;
+  // a failing gate fails open (chunk still transcribed) with silero_failed.
+  const gate = { silero: [], asr: 0, telemetry: [] }
+  global.window = { setTimeout, clearTimeout }
+  global.fetch = async (url, init) => {
+    const path = String(url)
+    if (path.includes('/api/telemetry/captions')) { gate.telemetry.push(JSON.parse(init.body)); return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }) }
+    if (path.includes('/api/audio-processing/silero-vad')) {
+      const reply = gate.silero.shift() || { status: 200, body: { speech: [] } }
+      return new Response(JSON.stringify(reply.body), { status: reply.status, headers: { 'content-type': 'application/json' } })
+    }
+    gate.asr += 1
+    return new Response(JSON.stringify({ text: '閘門字幕' }), { status: 200, headers: { 'content-type': 'application/json' } })
+  }
+  const pushSpeech = async (adapter) => {
+    await adapter.start({ sampleRate: 48_000, language: 'zh-TW', targetLanguage: 'en' })
+    for (let offset = 0; offset < 48_000 * 3; offset += 128) {
+      adapter.pushAudio(Float32Array.from({ length: 128 }, (_, index) => .02 * Math.sin(2 * Math.PI * 180 * (offset + index) / 48_000)), offset)
+    }
+    await new Promise((resolve) => setImmediate(resolve))
+    await adapter.stop()
+  }
+  const vetoTranscripts = []
+  for (let chunk = 0; chunk < 8; chunk += 1) gate.silero.push({ status: 200, body: { speech: [] } })
+  const veto = new OpenAiChunkedModelAdapter({ id: 'gate-veto', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
+  veto.onTranscript((entry) => vetoTranscripts.push(entry))
+  await pushSpeech(veto)
+  assert.equal(gate.asr, 0, 'vetoed chunks must not reach ASR')
+  assert.equal(vetoTranscripts.length, 0, 'vetoed chunks must not emit captions')
+  await new Promise((resolve) => setTimeout(resolve, 700))
+  assert.ok(gate.telemetry.some((payload) => (payload.events?.silero_veto || 0) >= 1), 'gate vetoes must report the silero_veto metric')
+  gate.asr = 0
+  gate.silero = []
+  for (let chunk = 0; chunk < 8; chunk += 1) gate.silero.push({ status: 500, body: { error: 'silero-down' } })
+  const failOpenErrors = []
+  const failOpenTranscripts = []
+  const failOpen = new OpenAiChunkedModelAdapter({ id: 'gate-fail-open', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
+  failOpen.onTranscript((entry) => failOpenTranscripts.push(entry))
+  failOpen.onError((message) => failOpenErrors.push(message))
+  await pushSpeech(failOpen)
+  assert.ok(gate.asr > 0, 'a failing gate must fail open instead of losing chunks')
+  assert.ok(failOpenTranscripts.some((entry) => entry.sourceText === '閘門字幕'), 'fail-open chunks must still be transcribed')
+  assert.ok(failOpenErrors.length > 0, 'the gate failure must surface to the user')
+  await new Promise((resolve) => setTimeout(resolve, 700))
+  assert.ok(gate.telemetry.some((payload) => (payload.events?.silero_failed || 0) >= 1), 'gate failures must report the silero_failed metric')
   console.log('Model adapter smoke test passed.')
 }
 
