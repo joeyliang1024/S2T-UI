@@ -1,0 +1,573 @@
+{
+  "preset": "fastSileroInd",
+  "vadKind": "silero",
+  "gate": true,
+  "hallucFilter": true,
+  "endThreshold": 0.35,
+  "vadConfig": {
+    "minSpeechMs": 120,
+    "minSilenceMs": 500,
+    "preRollMs": 300,
+    "noiseFloorOffsetDb": 12,
+    "chunkMinMs": 700,
+    "chunkMaxMs": 1200
+  },
+  "overlapMs": 0,
+  "sampleRate": 48000,
+  "audio": "music/別再照抄別人的理財方法了！你在第幾階，決定你該怎麼變有錢｜財富階梯 Wealth Ladder｜啾啾鞋.mp3",
+  "audioSeconds": 300,
+  "tsv": "music/別再照抄別人的理財方法了！你在第幾階，決定你該怎麼變有錢｜財富階梯 Wealth Ladder｜啾啾鞋_句級Speaker時間軸.tsv",
+  "endpointHost": "submissions-enter-audit-workstation.trycloudflare.com",
+  "model": "Breeze-ASR-25",
+  "startedAt": "2026-10-11T17:19:39.174Z",
+  "chunks": {
+    "enqueued": 251,
+    "sent": 250,
+    "droppedQueue": 0,
+    "emptyText": 1,
+    "gateVetoed": 1,
+    "hallucVetoed": 0,
+    "requestFailed": 0,
+    "avgAudioMs": 1195,
+    "vadBoundaries": 2,
+    "forcedBoundaries": 249
+  },
+  "asrMs": {
+    "n": 250,
+    "p50": 538,
+    "p95": 1132,
+    "max": 2569
+  },
+  "queueWaitMs": {
+    "n": 250,
+    "p50": 3,
+    "p95": 20,
+    "max": 1374
+  },
+  "errors": {
+    "count": 0,
+    "unique": []
+  },
+  "sentences": {
+    "total": 18,
+    "shown": 18,
+    "dropped": 0,
+    "emptyText": 0,
+    "requestFailed": 0,
+    "notSent": 0
+  },
+  "latencyMs": {
+    "n": 18,
+    "p50": 1214,
+    "p95": 1728,
+    "max": 1728,
+    "within2500ShownPct": 100,
+    "within2500AllPct": 100
+  },
+  "accuracy": {
+    "corpusCerPct": 13.12,
+    "corpusRefChars": 1616,
+    "corpusDistance": 212,
+    "corpusWerPct": 18.86,
+    "corpusRefWords": 965,
+    "corpusWerDistance": 182,
+    "sentenceCerPct": 17.51,
+    "sentenceWerPct": 23.42
+  },
+  "fragmentation": {
+    "displayedCaptions": 28,
+    "rawFinalEvents": 250,
+    "mergeOperations": 222,
+    "meanCaptionChars": 55.75,
+    "segmentsPerSentenceMean": 2.5,
+    "segmentsPerSentenceMax": 4,
+    "sentencesSplit": 15
+  },
+  "drainMs": 1678,
+  "captions": [
+    {
+      "startMs": 0,
+      "endMs": 10800,
+      "text": "嘿大家好 我是朱俊賢今天要跟大家分享的是這本書你可馬助力的財富階梯如果你之前有看過我介紹持續買進那應該會對這個作者有印象啊財富"
+    },
+    {
+      "startMs": 10800,
+      "endMs": 21600,
+      "text": "這支這本書呢我覺得最有趣的地方是它把一般人在追逐台富過程中的那種很迷茫又無助鏡頭的那種迷失感 明確畫定出來你現在到底在"
+    },
+    {
+      "startMs": 21600,
+      "endMs": 32400,
+      "text": "哪一節有人說你想要變有錢就要先從神前開始啊每天少喝一杯咖啡少吃點外食每一筆花費都要記帳下來很多人說不要浪費"
+    },
+    {
+      "startMs": 32400,
+      "endMs": 43200,
+      "text": "時間省那種小錢你應該投資進提高收入去創業投資去買資產那到底誰對呢這麼說的回答是你可能都對它只是適用於不同階段"
+    },
+    {
+      "startMs": 43200,
+      "endMs": 50400,
+      "text": "的財富階梯把人的資產分成六個階段該在的事情不一樣花錢方式不一樣"
+    },
+    {
+      "startMs": 51600,
+      "endMs": 62400,
+      "text": "投資方式也不一樣這些是作者從小到大的人生經驗也包含他擔任財富顧問接觸過每個財富階段的人總結出來的所以今天這幾年我想日本書"
+    },
+    {
+      "startMs": 62400,
+      "endMs": 73200,
+      "text": "來回答三個問題第一台富JT的六個階段是什麼各個階段該做什麼為什麼同個理財建議對不同人會完全不一樣第三 人生"
+    },
+    {
+      "startMs": 73200,
+      "endMs": 84000,
+      "text": "真的該在金錢財富上一直往上爬嗎還是該思考更廣一點人生財富呢當然不會只單從轉述書中的內容我會結合一些我自己在各"
+    },
+    {
+      "startMs": 84000,
+      "endMs": 94800,
+      "text": "個階層的經驗來跟你分享首先來看第一個問題財富階梯分成哪六節這個是書中的圖表第一階是淨資產不到 1 萬美元也就是大概"
+    },
+    {
+      "startMs": 94800,
+      "endMs": 105600,
+      "text": "30萬台幣內這一切的關鍵字呢生存在第一階很多時候生活中的小麻煩都被放大可能不只是情境起天價而是收入直接中斷"
+    },
+    {
+      "startMs": 105600,
+      "endMs": 116400,
+      "text": "甚至可能連家人的工作都受影響比如我自己在大二的時候那時候我爸生了一場大病那他是自己開一間小公司就是一人公司所以他那時候住院就等於公司"
+    },
+    {
+      "startMs": 116400,
+      "endMs": 127200,
+      "text": "沒人顧了開過公司就知道你一段時間小時客戶就去找別人而且等你回來他們可能也都跑光了所以那時候就是我跟我哥還有親戚一起幫忙扛"
+    },
+    {
+      "startMs": 127200,
+      "endMs": 138000,
+      "text": "每天要出車去外面送貨這樣啦那我爸那時候也才開始跟我們講家裡的財務狀況因為公司的貨款都是進進出出的所以累積下來我們家有的資產也差不多"
+    },
+    {
+      "startMs": 138000,
+      "endMs": 148800,
+      "text": "真的就是第一家到第二節這個節所以對第一節專業人來說很多常見的理財建議其實是錯位的喔叫他趕快去研究投資當然不是完全沒有啊"
+    },
+    {
+      "startMs": 148800,
+      "endMs": 159600,
+      "text": "它的收入太少它連緊急預備力都沒有 它的人生容錯率太低作者說這段真正重要的是提高收入和降低出墜入性"
+    },
+    {
+      "startMs": 159600,
+      "endMs": 170400,
+      "text": "分工作兼差或是學一個能直接加薪的實用技能或學會處理債務建立基本的緩衝它們才是這一階段的主線任務第二節是淨資產"
+    },
+    {
+      "startMs": 170400,
+      "endMs": 181200,
+      "text": "1萬到 10 萬美元大概是台幣30萬到 300 萬作者把這件稱為雜貨自由意思是你去超市買東西不用每個景象都斤斤計較"
+    },
+    {
+      "startMs": 181200,
+      "endMs": 192000,
+      "text": "你可能會看價格但是不會因為說今天多買了一盒雞蛋多拿了一瓶牛奶人生財務完蛋了這間已經被 DJ 問你有緩衝嗎不再是每一個"
+    },
+    {
+      "startMs": 192000,
+      "endMs": 202800,
+      "text": "都會把你打回原形可是這一屆呢你很容易被誤導因為你終於開始存到一點錢了所以就會很想問說我是不是剛改過想問投資是不是應該趕快找報酬率更高的標的呢"
+    },
+    {
+      "startMs": 202800,
+      "endMs": 213600,
+      "text": "作者的提醒是在第二節你最大的資產通常不是什麼投資組合是你自己第二屆老實說本經還不夠大但投資報酬率很好絕對金額也有限"
+    },
+    {
+      "startMs": 213600,
+      "endMs": 224400,
+      "text": "你有 30 萬報酬率年化 7％一年 3 萬塊3 塊很好但它不太可能是直接改變你的人生可是如果你能透過技能或是職涯選擇讓年收入"
+    },
+    {
+      "startMs": 224400,
+      "endMs": 235200,
+      "text": "多個 30 萬那你想就完全不同了所以第二這段的核心任務呢就是具體的去找三件事的交集你擅長什麼你願意參行去做什麼"
+    },
+    {
+      "startMs": 235200,
+      "endMs": 246120,
+      "text": "最重要的是常願意為什麼而付錢什麼而付錢第三階是淨資產10萬到 100 萬美元大概是台幣300萬到 3000萬 做的把它稱為餐廳自由"
+    },
+    {
+      "startMs": 246120,
+      "endMs": 256920,
+      "text": "也就是你去餐廳點餐的時候不會完全被價格綁架當然你還是會看一下價錢正常人都會看但是你不會得到東西就行很痛這樣開始投資"
+    },
+    {
+      "startMs": 256920,
+      "endMs": 267720,
+      "text": "真的變重要囉你的本質已經有一定規模了 時間開始可以幫你工作你再累積會深淺的在這裡呢作者的建議很接近他在持續買"
+    },
+    {
+      "startMs": 267720,
+      "endMs": 278520,
+      "text": "裡面的精神就是買進身材的資產分散投資持續投入讓時間慢慢發揮作用假設一個人每年投資 1 萬美元連續投資 4"
+    },
+    {
+      "startMs": 278520,
+      "endMs": 289320,
+      "text": "年 年化報酬率是 7％圖表畫出來就會發現最早投入的那些錢因為有最長的時間去滾複利嘛所以到最後的結果貢獻是最大的甚至前十年"
+    },
+    {
+      "startMs": 289320,
+      "endMs": 300000,
+      "text": "的投入對最後投資組合的貢獻超過一半喔這就是為什麼到第三階段之後啊拖延投資的待機價會越來越大所以第三階段的任務商前開"
+    }
+  ],
+  "detail": [
+    {
+      "startMs": 224,
+      "endMs": 22688,
+      "speaker": "reference",
+      "text": "大家好我是JJ協今天要跟大家分享的是這本書尼克馬朱利的財富階梯如果你之前有看過我介紹持續買進那應該會對這個作者有印象啊而財富階梯這本書呢我覺得最有趣的地方是它把一般人在追逐財富過程中的那種很迷茫永無盡頭的那種迷失感明確劃定出來你現在到底站在哪一節",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 652,
+      "displayOffsetMs": 1835,
+      "latencyMs": 1611,
+      "segments": 3,
+      "hyp": "嘿大家好 我是朱俊賢今天要跟大家分享的是這本書你可馬助力的財富階梯如果你之前有看過我介紹持續買進那應該會對這個作者有印象啊財富這支這本書呢我覺得最有趣的地方是它把一般人在追逐台富過程中的那種很迷茫又無助鏡頭的那種迷失感 明確畫定出來你現在到底在哪一節",
+      "sentenceCerPct": 13.82,
+      "sentenceWerPct": 24,
+      "sentenceRefWords": 75
+    },
+    {
+      "startMs": 22944,
+      "endMs": 43616,
+      "speaker": "reference",
+      "text": "有人說你想要變有錢就要先從省錢開始每天少喝一杯咖啡少吃點外食每一筆花費都要記帳下來可是也有人說不要浪費時間省那種小錢你應該投資自己提高收入去創業投資去買資產那到底誰對呢這麼說的回答是他們可能都對只是適用於不同階段的人",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 3,
+      "asrMs": 639,
+      "displayOffsetMs": 24622,
+      "latencyMs": 1678,
+      "segments": 3,
+      "hyp": "有人說你想要變有錢就要先從神前開始啊每天少喝一杯咖啡少吃點外食每一筆花費都要記帳下來很多人說不要浪費時間省那種小錢你應該投資進提高收入去創業投資去買資產那到底誰對呢這麼說的回答是你可能都對它只是適用於不同階段的財富階梯",
+      "sentenceCerPct": 14.81,
+      "sentenceWerPct": 15.87,
+      "sentenceRefWords": 63
+    },
+    {
+      "startMs": 43872,
+      "endMs": 68872,
+      "speaker": "reference",
+      "text": "財富階梯把人的資產分成六個階段每一個階段該在意的事情不一樣花錢方式不一樣賺錢方式不一樣投資方式也不一樣這些是作者從小到大的人生經驗也包含他擔任財富顧問期間接觸過每個財富階段的人而總結出來的所以今天這集我想用這本書來回答三個問題第一財富階梯的六個階段是什麼各個階段該做什麼第二",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 653,
+      "displayOffsetMs": 45034,
+      "latencyMs": 1162,
+      "segments": 3,
+      "hyp": "的財富階梯把人的資產分成六個階段該在的事情不一樣花錢方式不一樣投資方式也不一樣這些是作者從小到大的人生經驗也包含他擔任財富顧問接觸過每個財富階段的人總結出來的所以今天這幾年我想日本書來回答三個問題第一台富JT的六個階段是什麼各個階段該做什麼為什麼同個",
+      "sentenceCerPct": 21.17,
+      "sentenceWerPct": 24.68,
+      "sentenceRefWords": 77
+    },
+    {
+      "startMs": 68872,
+      "endMs": 79328,
+      "speaker": "reference",
+      "text": "同一個理財建議對不同人會完全不一樣第三人生真的該在金錢財富上一直往上爬嗎還是該思考更廣義的人生財富呢",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 399,
+      "displayOffsetMs": 69983,
+      "latencyMs": 1111,
+      "segments": 2,
+      "hyp": "為什麼同個理財建議對不同人會完全不一樣第三 人生真的該在金錢財富上一直往上爬嗎還是該思考更廣一點人生財富呢當然不會只單",
+      "sentenceCerPct": 24,
+      "sentenceWerPct": 25,
+      "sentenceRefWords": 32
+    },
+    {
+      "startMs": 79712,
+      "endMs": 81568,
+      "speaker": "reference",
+      "text": "當然我不會只單純轉述書中的內容啦",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 5,
+      "asrMs": 443,
+      "displayOffsetMs": 80829,
+      "latencyMs": 1117,
+      "segments": 1,
+      "hyp": "當然不會只單從轉述書中的內容",
+      "sentenceCerPct": 18.75,
+      "sentenceWerPct": 30,
+      "sentenceRefWords": 10
+    },
+    {
+      "startMs": 81888,
+      "endMs": 87616,
+      "speaker": "reference",
+      "text": "我會結合一些我自己在各個階層的經驗來跟你分享好首先來看第一個問題",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 520,
+      "displayOffsetMs": 83304,
+      "latencyMs": 1416,
+      "segments": 2,
+      "hyp": "我會結合一些我自己在各個階層的經驗來跟你分享首先來看第一個問題財富階梯",
+      "sentenceCerPct": 15.63,
+      "sentenceWerPct": 15,
+      "sentenceRefWords": 20
+    },
+    {
+      "startMs": 88000,
+      "endMs": 90080,
+      "speaker": "reference",
+      "text": "財富階梯分成哪六階",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 528,
+      "displayOffsetMs": 89314,
+      "latencyMs": 1314,
+      "segments": 1,
+      "hyp": "財富階梯分成哪六節這個是書中",
+      "sentenceCerPct": 66.67,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 5
+    },
+    {
+      "startMs": 90368,
+      "endMs": 115368,
+      "speaker": "reference",
+      "text": "這個是書中的圖表第一階是淨資產不到一萬美元也就是大概三十萬台幣以內這一階的關鍵字生存在第一階很多時候生活中的小麻煩都被放大生一場病可能不只是情急天下而是收入直接中斷甚至可能連家人的工作都受影響比如我自己在大二的時候那時候我爸生了一場大病那他是自己開一間小公司就是一人公司那種所以他那時候住",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 7,
+      "asrMs": 405,
+      "displayOffsetMs": 91593,
+      "latencyMs": 1225,
+      "segments": 3,
+      "hyp": "這個是書中的圖表第一階是淨資產不到 1 萬美元也就是大概30萬台幣內這一切的關鍵字呢生存在第一階很多時候生活中的小麻煩都被放大可能不只是情境起天價而是收入直接中斷甚至可能連家人的工作都受影響比如我自己在大二的時候那時候我爸生了一場大病那他是自己開一間小公司就是一人公司所以他那時候住院就等於公司",
+      "sentenceCerPct": 14.58,
+      "sentenceWerPct": 22.35,
+      "sentenceRefWords": 85
+    },
+    {
+      "startMs": 115368,
+      "endMs": 140368,
+      "speaker": "reference",
+      "text": "就等於公司沒人顧了但開過公司就知道你一段時間消失客戶就去找別人而且等你回來他們可能也都跑光了所以那時候就是我跟我哥還有親戚一起幫忙扛就是每天要出車去外面送貨這樣我爸那時候也才開始跟我們講家裡的財務狀況因為公司的貨款都是進進出出的所以累積下來的我們家有的資產也差不多真的就是第一階到第二階這個階層",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 533,
+      "displayOffsetMs": 116915,
+      "latencyMs": 1547,
+      "segments": 4,
+      "hyp": "住院就等於公司沒人顧了開過公司就知道你一段時間小時客戶就去找別人而且等你回來他們可能也都跑光了所以那時候就是我跟我哥還有親戚一起幫忙扛每天要出車去外面送貨這樣啦那我爸那時候也才開始跟我們講家裡的財務狀況因為公司的貨款都是進進出出的所以累積下來我們家有的資產也差不多真的就是第一家到第二節這個節",
+      "sentenceCerPct": 9.52,
+      "sentenceWerPct": 12.5,
+      "sentenceRefWords": 88
+    },
+    {
+      "startMs": 140368,
+      "endMs": 159040,
+      "speaker": "reference",
+      "text": "所以對第一階段的人來說很多常見的理財建議其實是錯位的你叫他趕快去研究投資當然不是完全沒用但是他的收入太少了他連緊急預備金都沒有他的人生容錯率太低了作者說這階段真正重要的是提高收入和降低脆弱性",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 938,
+      "displayOffsetMs": 141321,
+      "latencyMs": 953,
+      "segments": 2,
+      "hyp": "到第二節這個節所以對第一節專業人來說很多常見的理財建議其實是錯位的喔叫他趕快去研究投資當然不是完全沒有啊它的收入太少它連緊急預備力都沒有 它的人生容錯率太低作者說這段真正重要的是提高收入和降低出墜入性",
+      "sentenceCerPct": 25.26,
+      "sentenceWerPct": 38.18,
+      "sentenceRefWords": 55
+    },
+    {
+      "startMs": 159520,
+      "endMs": 176896,
+      "speaker": "reference",
+      "text": "換工作兼差或是學一個能直接加薪的實用技能或學會處理債務建立起一個基本的緩衝它們才是這一階段的主線任務第二階是淨資產 1 萬到 10 萬美元大概是台幣 30 萬到 300 萬作者把這一階稱為雜貨自由",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 5,
+      "asrMs": 347,
+      "displayOffsetMs": 159934,
+      "latencyMs": 414,
+      "segments": 3,
+      "hyp": "墜入性分工作兼差或是學一個能直接加薪的實用技能或學會處理債務建立基本的緩衝它們才是這一階段的主線任務第二節是淨資產1萬到 10 萬美元大概是台幣30萬到 300 萬作者把這件稱為雜貨自由意思是",
+      "sentenceCerPct": 14.44,
+      "sentenceWerPct": 20.75,
+      "sentenceRefWords": 53
+    },
+    {
+      "startMs": 177152,
+      "endMs": 202152,
+      "speaker": "reference",
+      "text": "意思是你去超市買東西的時候不用每個品項都斤斤計較你可能會看價格但是不會因為說今天多買了一盒雞蛋或多拿了一瓶牛奶你覺得人生財務就完蛋了這間已經比第一間穩一點了你有緩衝了不再是每一個意外都會把你打回原形了可是這一間也很容易被誤導因為你終於開始存到一點錢了所以就會很想問說我是不是該改觀投資是不是該趕快找報酬率更高的標準",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 465,
+      "displayOffsetMs": 178050,
+      "latencyMs": 898,
+      "segments": 3,
+      "hyp": "自由意思是你去超市買東西不用每個景象都斤斤計較你可能會看價格但是不會因為說今天多買了一盒雞蛋多拿了一瓶牛奶人生財務完蛋了這間已經被 DJ 問你有緩衝嗎不再是每一個都會把你打回原形可是這一屆呢你很容易被誤導因為你終於開始存到一點錢了所以就會很想問說我是不是剛改過想問投資是不是應該趕快找報酬率更高的標的呢",
+      "sentenceCerPct": 21.66,
+      "sentenceWerPct": 29.17,
+      "sentenceRefWords": 96
+    },
+    {
+      "startMs": 202152,
+      "endMs": 227152,
+      "speaker": "reference",
+      "text": "作者的提醒是在第二階你最大的資產通常不是什麼投資組合是你自己因為第二階老實說本金還不夠大就算投資報酬率很好絕對金額也有限你有 30 萬報酬率年化 10％一年 3 萬塊3 萬塊很好但它不太可能是直接改變你的人生可是如果你能透過技能或是職涯選擇讓年收入多個 30 萬那影響就完全不同了",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 583,
+      "displayOffsetMs": 203366,
+      "latencyMs": 1214,
+      "segments": 4,
+      "hyp": "更高的標的呢作者的提醒是在第二節你最大的資產通常不是什麼投資組合是你自己第二屆老實說本經還不夠大但投資報酬率很好絕對金額也有限你有 30 萬報酬率年化 7％一年 3 萬塊3 塊很好但它不太可能是直接改變你的人生可是如果你能透過技能或是職涯選擇讓年收入多個 30 萬那你想就完全不同了所以第二",
+      "sentenceCerPct": 16.79,
+      "sentenceWerPct": 20.25,
+      "sentenceRefWords": 79
+    },
+    {
+      "startMs": 227152,
+      "endMs": 231744,
+      "speaker": "reference",
+      "text": "所以第二階段的核心任務是具體的去找三件事的交集",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 550,
+      "displayOffsetMs": 228533,
+      "latencyMs": 1381,
+      "segments": 1,
+      "hyp": "不同了所以第二這段的核心任務呢就是具體的去找三件事的交集你擅長什麼",
+      "sentenceCerPct": 47.83,
+      "sentenceWerPct": 50,
+      "sentenceRefWords": 16
+    },
+    {
+      "startMs": 232032,
+      "endMs": 238368,
+      "speaker": "reference",
+      "text": "你擅長什麼你願意長期去做什麼以及最重要的市場願意為什麼而付錢",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 497,
+      "displayOffsetMs": 233281,
+      "latencyMs": 1249,
+      "segments": 2,
+      "hyp": "你擅長什麼你願意參行去做什麼最重要的是常願意為什麼而付錢什麼而付錢",
+      "sentenceCerPct": 36.67,
+      "sentenceWerPct": 47.06,
+      "sentenceRefWords": 17
+    },
+    {
+      "startMs": 238944,
+      "endMs": 263944,
+      "speaker": "reference",
+      "text": "第三階是淨資產 10 萬到 100 萬美元大概是台幣 300 萬到 3 千萬做得把它稱為餐廳自由也就是你去餐廳點餐的時候不會完全被價格綁架當然你還是會看一下價錢正常人都會看但是你不會每點一道東西就心很痛這樣這些階段開始投資真的變重要囉因為你的本金已經有一定規模了時間開始可以幫你工作了你是在累積會生錢的",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 3,
+      "asrMs": 569,
+      "displayOffsetMs": 240672,
+      "latencyMs": 1728,
+      "segments": 3,
+      "hyp": "第三階是淨資產10萬到 100 萬美元大概是台幣300萬到 3000萬 做的把它稱為餐廳自由也就是你去餐廳點餐的時候不會完全被價格綁架當然你還是會看一下價錢正常人都會看但是你不會得到東西就行很痛這樣開始投資真的變重要囉你的本質已經有一定規模了 時間開始可以幫你工作你再累積會深淺的",
+      "sentenceCerPct": 14.69,
+      "sentenceWerPct": 18.18,
+      "sentenceRefWords": 88
+    },
+    {
+      "startMs": 263944,
+      "endMs": 288944,
+      "speaker": "reference",
+      "text": "資產在這裡作者的建議很接近他在持續買進裡面的精神就是買進生財的資產分散投資持續投入讓時間慢慢發揮作用假設一個人每年投資 1 萬美元連續投資 40 年年化報酬率是 7.7％圖表畫出來就會發現最早投入的那些錢因為有最長的時間去滾複利所以對最後的結果貢獻是最大的甚至",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 1,
+      "asrMs": 606,
+      "displayOffsetMs": 264708,
+      "latencyMs": 764,
+      "segments": 3,
+      "hyp": "會深淺的在這裡呢作者的建議很接近他在持續買裡面的精神就是買進身材的資產分散投資持續投入讓時間慢慢發揮作用假設一個人每年投資 1 萬美元連續投資 4年 年化報酬率是 7％圖表畫出來就會發現最早投入的那些錢因為有最長的時間去滾複利嘛所以到最後的結果貢獻是最大的甚至前十年",
+      "sentenceCerPct": 12.2,
+      "sentenceWerPct": 18.06,
+      "sentenceRefWords": 72
+    },
+    {
+      "startMs": 288944,
+      "endMs": 300000,
+      "speaker": "reference",
+      "text": "前十年的投入對最後投資組合的貢獻超過一半這就是為什麼到第三階段之後拖延投資的代價會越來越大所以第三階段的任務是讓錢開",
+      "status": "shown",
+      "chunkMs": 1200,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 571,
+      "displayOffsetMs": 289875,
+      "latencyMs": 931,
+      "segments": 2,
+      "hyp": "甚至前十年的投入對最後投資組合的貢獻超過一半喔這就是為什麼到第三階段之後啊拖延投資的待機價會越來越大所以第三階段的任務商前開",
+      "sentenceCerPct": 15.52,
+      "sentenceWerPct": 26.47,
+      "sentenceRefWords": 34
+    }
+  ]
+}
