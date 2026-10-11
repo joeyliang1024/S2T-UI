@@ -78,6 +78,8 @@ LiveKit turn-detector、pipecat smart-turn、AssemblyAI endpointing 等，在 VA
 
 ## 建議路線
 
+> **實作狀態（2026-10-11）**：依決策「Diarization 先不做」，Phase 2／3 暫緩；Phase 1 已在分支 `feature/silero-vad-chunking` 開工，以 WER（中文以 CER 呈現）＋延遲雙指標對比驗收。實作紀錄見文末。
+
 ### Phase 0：離線模擬（零產品碼，先行）
 
 目的：不改一行產品碼，先知道方案 B 的收益上限。素材與工具都已存在：
@@ -118,6 +120,15 @@ LiveKit turn-detector、pipecat smart-turn、AssemblyAI endpointing 等，在 VA
 3. 與 ASR 共用 CPU 的實測不存在（外部與內部皆未測）；Web 瀏覽器／低階裝置的 wasm 或 gateway round-trip 成本未知。
 4. Nemotron 0.32 s 檔在 macOS CPU＋GGUF 的實際 lag／DER 未測。
 5. 檔案匯入改切法會影響既有的 import-checkpoint 續跑條件（chunk 邊界變了，checkpoint 匹配邏輯需一併考慮）。
+
+## 實作紀錄（2026-10-11，分支 `feature/silero-vad-chunking`）
+
+Phase 1 已實作並通過 `typecheck`／`vad:smoke`／`model-adapter:smoke`：
+
+- **產品碼接縫（最小改動）**：`vad.ts` 新增 `BoundaryVad` 介面（`process(samples): VadFrame` 同步契約），`EnergyVad` 實作之；`OpenAiChunkedModelAdapter` profile 新增可選 `vadFactory`，未注入時行為與現況完全一致。
+- **`silero-vad.ts`（renderer 安全）**：`SileroBoundaryVad` 不含任何 ONNX import——機率以 Float32Array 注入（每 512 樣本@16 kHz 一個視窗，與上游 wrapper 同窗格）。遲滯契約與 EnergyVad 相同（`minSpeechMs` 起音、`minSilenceMs` 停頓），三速預設值可直接沿用，對比時唯一變數就是偵測器。設計要點：**視窗只在被推入樣本完整覆蓋時計分**（128@48 kHz 批次不對齊 16k 窗界，跨窗重複計分會讓起音提前）；最後不足一窗的尾巴不計分，由 `flush()` 顯式收尾。
+- **評測**：`caption-latency-eval.cjs` 新增 `newSilero`／`fastSilero` preset（config 與 EnergyVad 對照組 `new`／`fastv2` 完全相同）；機率由 `scripts/evaluation/silero-probabilities.cjs` 預先整段算妥，餵法契約（576＝64 context＋512、state 延續）與 `server/silero-vad.cjs` 逐行一致。
+- **已知限制**：評測的機率是預先計算的；產品化後機率會晚約 32 ms 到達（切點為 sample 索引、位置不受影響，但 Electron main IPC／wasm 的實際接線與共用 CPU 成本尚未做）。指標以 CER 呈現（中文素材，評測正規化後去空白，與 WER 同為字元級編輯距離）。
 
 ## 參考來源
 
