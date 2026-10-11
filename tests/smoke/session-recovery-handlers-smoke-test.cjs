@@ -5,7 +5,7 @@ const source=fs.readFileSync('src/renderer/src/features/app/hooks/useAppControll
 const code=transformSync(fragment,{loader:'ts',target:'es2022'}).code
 const data=Buffer.alloc(44+64000);data.write('RIFF');data.writeUInt32LE(data.length-8,4);data.write('WAVEfmt ',8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(16000,24);data.writeUInt32LE(32000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write('data',36);data.writeUInt32LE(64000,40);const audio=new Blob([data],{type:'audio/wav'})
 const good={id:'good',status:'final',startMs:1000,endMs:2000,sourceText:'kept',translatedText:'keep translation',translationStatus:'completed',speaker:'manual',speakerManuallyEdited:true}
-const base={id:'record',title:'test',audioKey:'record',durationMs:2000,createdAt:'2026-10-11',source:'test',processingState:'failed',processingError:'failed',segments:[good],transcript:'kept'}
+const base={diarizationJobId:'old-job',id:'record',title:'test',audioKey:'record',durationMs:2000,createdAt:'2026-10-11',source:'test',processingState:'failed',processingError:'failed',segments:[good],transcript:'kept'}
 async function run(entry,options={}){
  let sessions=[entry],requests=[],asr=0,translations=0,uploads=0,status=[]
  const context={...recovery,...wav,...http,crypto:require('node:crypto').webcrypto,window:{},File,Blob,AbortSignal,
@@ -13,7 +13,7 @@ async function run(entry,options={}){
  loadSessionAudio:async()=>audio,activeAudioVersionFor:e=>({audioKey:e.audioKey}),activeTranslate:key=>key,
  setSessions:update=>{sessions=update(sessions)},setStatus:message=>status.push(message),makeTranscriptText:entries=>entries.filter(e=>e.status==='final').map(e=>e.sourceText).join('\n'),chooseModelSampleRate:rate=>rate,resampleAudioForAsr:async a=>a,asrLanguage:()=> 'en',headerValue:encodeURIComponent,
  shouldSkipTranslation:()=>false,resolveTranslationTarget:()=> 'zh-TW',translationTransportRef:{current:async e=>{translations++;return 'recovered '+e.sourceText}},
- remoteSessionStorage:{saveAudio:async()=>{uploads++}},authFetch:async(path,init)=>{requests.push(path);if(path.includes('diarizations'))return new Response(JSON.stringify({turns:[{start:0,end:2,speaker:'fixed'}]}));return new Response(JSON.stringify(options.saveFails?{error:'storage retry failed'}:{}),{status:options.saveFails?503:200})},
+ remoteSessionStorage:{saveAudio:async(id,audio,attempts)=>{assert.equal(attempts,1);uploads++}},authFetch:async(path,init)=>{requests.push(path);if(path.includes('diarizations'))return new Response(JSON.stringify({turns:[{start:0,end:2,speaker:'fixed'}]}));return new Response(JSON.stringify(options.saveFails?{error:'storage retry failed'}:{}),{status:options.saveFails?503:200})},
  requestBrowserAsr:async init=>{asr++;const layout=await wav.readPcmWavFileLayout(new File([init.body],'chunk.wav'));assert.ok(layout.dataBytes<=32000,'only failed one-second audio range is sent');if(options.asrFailsAt===asr)throw Error('ASR retry failed');return new Response(JSON.stringify({text:'recovered range'}))},
  parseSpeakerTurns:p=>p.turns,assignSpeakersByOverlap:entries=>entries.map(e=>({...e,speaker:'fixed'}))}
  const retry=new Function(...Object.keys(context),code+';return retryFailedSession')(...Object.values(context))
@@ -22,7 +22,7 @@ async function run(entry,options={}){
 }
 ;(async()=>{
  const translation=await run({...base,processingFailures:['translation'],segments:[good,{id:'bad',status:'final',startMs:0,endMs:1000,sourceText:'bad',translatedText:'old failed translation',translationStatus:'failed'}]})
- assert.equal(translation.translations,1);assert.equal(translation.asr,0);assert.deepEqual(translation.requests,[]);assert.equal(translation.session.segments[0],good);assert.equal(translation.session.processingState,'completed')
+ assert.equal(translation.translations,1);assert.equal(translation.asr,0);assert.deepEqual(translation.requests,[]);assert.equal(translation.session.segments[0],good);assert.equal(translation.session.processingState,'completed');assert.equal(translation.session.diarizationJobId,undefined)
  const gap={id:'gap',status:'gap',gapReason:'request-failed',startMs:0,endMs:1000,sourceText:''}
  const asr=await run({...base,segments:[gap,good],processingFailures:['asr']});assert.equal(asr.asr,1);assert.equal(asr.translations,0);assert.equal(asr.session.segments[1],good);assert.equal(asr.session.processingState,'completed')
  const partial=await run({...base,processingFailures:['asr'],segments:[gap,{...gap,id:'gap2',startMs:1000,endMs:2000}]},{asrFailsAt:2});assert.equal(partial.session.segments[0].status,'final');assert.equal(partial.session.segments[1].status,'gap');assert.equal(partial.session.processingState,'failed');const retried=await run(partial.session);assert.equal(retried.asr,1,'completed first range is not repeated')

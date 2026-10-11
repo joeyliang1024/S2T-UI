@@ -2,7 +2,7 @@
 
 只操作 `colima-s2t-stress`／`s2t-stress-20261005`。`core.json` 是唯一 Storage／Gateway／worker 模板：Gateway 和 worker 各至少兩個 Pod；Redis 3＋Sentinel 3、PVC、經修正的認證 PING probes。`fixtures.json` 是 mock API 與負載 client；來源位於 scripts/testing。
 
-先以 Dockerfile.web 建置 `s2t-stress:20261011-recovery-final`。映像需能由本機 Colima Docker runtime 取得，不能直接套用至其他 cluster。
+先以 Dockerfile.web 建置 `s2t-stress:20261011-summary-stream`。映像需能由本機 Colima Docker runtime 取得，不能直接套用至其他 cluster。
 
 ```sh
 python3 deploy/test/bootstrap.py
@@ -19,3 +19,5 @@ bootstrap 先啟動 Storage、跑 migration，再啟動應用；已存在的 Sec
 目前已驗證模板的 Kubernetes server dry-run 與既有叢集相容；尚未完成空白叢集的完整 bootstrap 驗證。
 
 負載測試使用版本控管的 `scripts/testing/load-test.cjs`，預設經由 `http://test-ingress:8080`。從專案根目錄執行 `python3 experiment/k8s/current-2026-10-06/run-load.py <phase> <gateway-replicas>`；先準備 load-client 中的測試帳號。工具不覆寫既有帳號，會記錄實際目標並驗證每個必要 Deployment 至少兩個 Ready Pods。
+
+摘要檔案放在專案 `data/template`；以 `python3 deploy/test/sync-summary-templates.py` 同步到雙 Gateway 的 `/data/template`。首次 bootstrap 會先同步模板，再建立 Gateway。

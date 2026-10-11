@@ -48,6 +48,10 @@
                   {
                     "name": "REDIS_SENTINEL_USERNAME",
                     "value": "default"
+                  },
+                  {
+                    "name": "S2T_SUMMARY_TEMPLATES_DIR",
+                    "value": "/data/template"
                   }
                 ],
                 "envFrom": [
@@ -57,7 +61,7 @@
                     }
                   }
                 ],
-                "image": "s2t-stress:20261011-recovery-final",
+                "image": "s2t-stress:20261011-summary-stream",
                 "imagePullPolicy": "IfNotPresent",
                 "lifecycle": {
                   "preStop": {
@@ -109,14 +113,35 @@
                   "timeoutSeconds": 3
                 },
                 "terminationMessagePath": "/dev/termination-log",
-                "terminationMessagePolicy": "File"
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "name": "summary-templates",
+                    "mountPath": "/data/template",
+                    "readOnly": true
+                  }
+                ]
               }
             ],
             "dnsPolicy": "ClusterFirst",
             "restartPolicy": "Always",
             "schedulerName": "default-scheduler",
             "securityContext": {},
-            "terminationGracePeriodSeconds": 60
+            "terminationGracePeriodSeconds": 60,
+            "volumes": [
+              {
+                "name": "summary-templates",
+                "configMap": {
+                  "name": "s2t-summary-templates",
+                  "items": [
+                    {
+                      "key": "md-46746cab62fe4293",
+                      "path": "\u6703\u8b70\u6458\u8981.md"
+                    }
+                  ]
+                }
+              }
+            ]
           }
         }
       }
@@ -168,7 +193,7 @@
                     }
                   }
                 ],
-                "image": "s2t-stress:20261011-recovery-final",
+                "image": "s2t-stress:20261011-summary-stream",
                 "imagePullPolicy": "IfNotPresent",
                 "name": "audio-worker",
                 "ports": [

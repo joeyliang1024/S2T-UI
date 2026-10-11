@@ -35,8 +35,8 @@ export const remoteSessionStorage = {
     if (!Number.isSafeInteger(body.version) || body.version! < 1) throw new Error(activeTranslate('svcRemoteInvalidVersion'))
     return body.version!
   },
-  async saveAudio(id: string, audio: Blob): Promise<void> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }); await check(response) },
-  async loadAudio(id: string): Promise<Blob | undefined> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`); if (response.status === 404) return undefined; await check(response); return response.blob() },
+  async saveAudio(id: string, audio: Blob, attempts = 3): Promise<void> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }, attempts); await check(response) },
+  async loadAudio(id: string, attempts = 3): Promise<Blob | undefined> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, {}, attempts); if (response.status === 404) return undefined; await check(response); return response.blob() },
   async deleteAudio(id: string): Promise<void> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (response.status !== 404) await check(response) },
   async loadLiveDraft(): Promise<LiveTranscriptDraft | undefined> { const response = await retryableAuthFetch('/api/data/live-draft'); await check(response); const body = await response.json() as { value?: LiveTranscriptDraft }; return body.value?.id && Array.isArray(body.value.segments) ? body.value : undefined },
   async saveLiveDraft(value: LiveTranscriptDraft): Promise<void> { await check(await retryableAuthFetch('/api/data/live-draft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ value }) })) },

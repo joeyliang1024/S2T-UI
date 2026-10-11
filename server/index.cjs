@@ -1,3 +1,5 @@
+const { streamSummary } = require('./summary-stream.cjs')
+const { FILE_PREFIX, loadFileTemplates, mergeTemplateSources } = require('./summary-template-files.cjs')
 const { validateAdminParameters } = require('./admin-parameters.cjs')
 const metrics = require('./metrics.cjs')
 const usageMetrics = require('./usage-metrics.cjs')
@@ -1120,15 +1122,20 @@ const handleHttpRequest = async (request, response) => {
     try {
       if (request.method === 'GET') {
         const stored = await storage.config.get(user.id, 'summary-templates')
-        return send(response, 200, stored && Array.isArray(stored.templates) && Number.isSafeInteger(stored.version) ? stored : { templates: [], selectedTemplateId: null, version: 0 })
+        const templates = mergeTemplateSources(Array.isArray(stored?.templates) ? stored.templates : [], await loadFileTemplates())
+        const selectedTemplateId = templates.some(template => template.id === stored?.selectedTemplateId) ? stored.selectedTemplateId : templates[0]?.id || null
+        return send(response, 200, { templates, selectedTemplateId, version: Number.isSafeInteger(stored?.version) ? stored.version : 0 })
       }
       const body = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
       if (!Array.isArray(body.templates) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'templates 與 version 必須有效' })
       const templates = body.templates.flatMap((template) => typeof template?.id === 'string' && typeof template.name === 'string' && typeof template.content === 'string' && template.id.trim() && template.name.trim() && template.content.trim()
         ? [{ id: template.id.trim().slice(0, 100), name: template.name.trim().slice(0, 100), content: template.content.slice(0, 20_000) }] : [])
-      if (!templates.length || templates.length > 100) return send(response, 400, { error: '至少需保留一個有效模板，且最多 100 個' })
-      const selectedTemplateId = templates.some((template) => template.id === body.selectedTemplateId) ? body.selectedTemplateId : templates[0].id
-      const value = { templates, selectedTemplateId, version: body.version + 1 }
+      const fileTemplates = await loadFileTemplates()
+      const personalTemplates = templates.filter(template => !template.id.startsWith(FILE_PREFIX))
+      const allTemplates = mergeTemplateSources(personalTemplates, fileTemplates)
+      if (!allTemplates.length || personalTemplates.length > 100) return send(response, 400, { error: '至少需保留一個有效模板，且最多 100 個' })
+      const selectedTemplateId = allTemplates.some(template => template.id === body.selectedTemplateId) ? body.selectedTemplateId : allTemplates[0].id
+      const value = { templates: personalTemplates, selectedTemplateId, version: body.version + 1 }
       if (!await storage.config.compareAndSwap(user.id, 'summary-templates', body.version, value)) return send(response, 409, { error: '摘要模板已被其他視窗更新；請重新載入後再儲存。' })
       return send(response, 200, { saved: true, version: value.version })
     } catch (error) { return storageFailure(response, error, '無法保存摘要模板') }
@@ -1335,7 +1342,8 @@ const handleHttpRequest = async (request, response) => {
       const input = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
       const messages = Array.isArray(input.messages) ? input.messages.filter((item) => item && (item.role === 'system' || item.role === 'user') && typeof item.content === 'string').slice(0, 8) : []
       if (!messages.length) return send(response, 400, { error: 'Messages are required.' })
-      return send(response, 200, { text: await completeText(selectedSummary, messages, 1, 0.2, { userId: user.id, operation: 'summaries' }) })
+      if (input.stream === true) return streamSummary(request, response, selectedSummary, messages, baseUrl(selectedSummary.endpoint), (text, usage) => usageMetrics.observeExecution(user.id, 'summaries', { input: messages.map(message => message.content).join(''), output: text, usage }))
+      return send(response, 200, { text: await completeText(selectedSummary, messages, input.singleAttempt === true ? 0 : 1, 0.2, { userId: user.id, operation: 'summaries' }) })
     } catch (error) {
       return send(response, 502, { error: error instanceof Error ? error.message : 'Summary request failed' })
     }

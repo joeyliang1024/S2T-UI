@@ -17,13 +17,13 @@ export const mergeSessions = (primary: SavedSession[], fallback: SavedSession[])
     if (previous) {
       // A server-owned final speaker pass must not be overwritten by a stale
       // running snapshot on a CAS rebase. A new capture token remains authoritative.
-      if (previous.processingState === 'running' && previous.processingStage === 'diarization'
+      if (previous.diarizationJobId && previous.processingState === 'running' && previous.processingStage === 'diarization'
         && previous.processingToken && previous.processingToken === session.processingToken
         && (session.processingState === 'completed' || session.processingState === 'failed' && !session.processingStage)) entries.set(id, { ...session, id })
       continue
     }
     // Do not retain historical UI-only conflict labels after migrating.
-    entries.set(id, { ...session, id, title: session.title.replace(/（遠端衝突版本）+$/u, '') })
+    entries.set(id, { ...session, id, title: (session.title || '').replace(/（遠端衝突版本）+$/u, '') })
   }
   return [...entries.values()].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 }
@@ -43,12 +43,12 @@ export const mergeSessions = (primary: SavedSession[], fallback: SavedSession[])
  */
 export const recoverStaleProcessing = (
   sessions: SavedSession[],
-  options: { finishing?: { id: string; token: string } | null; durableJobs?: boolean } = {}
+  options: { finishing?: { id: string; token: string } | null; durableJobs?: boolean; activeRecoveries?: ReadonlySet<string> } = {}
 ): SavedSession[] => {
   const { finishing = null, durableJobs = false } = options
   let recovered = false
   const next = sessions.map((session) => {
-    if (session.processingState !== 'running') return session
+    if (session.processingState !== 'running' || options.activeRecoveries?.has(session.id)) return session
     if (finishing && finishing.id === session.id && finishing.token === session.processingToken) return session
     if (durableJobs && session.diarizationJobId) return session
     recovered = true

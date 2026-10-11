@@ -13,14 +13,15 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
   const origin = `http://127.0.0.1:${server.address().port}`
   const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
   const sessions = [
-    { id: 'failed', title: 'Errored recording', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: '', audioKey: 'fixture', processingState: 'failed', processingError: 'Translation fixture failure', processingFailures: ['translation'], segments: [{ id: 'segment', status: 'final', revision: 1, startMs: 0, endMs: 1000, sourceText: 'Meeting decision: ship tomorrow.', translationStatus: 'failed' }] },
+    { id: 'failed', title: '', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: '', audioKey: 'fixture', processingState: 'failed', processingError: 'Translation fixture failure', diarizationJobId: 'old-failed-job', processingFailures: ['translation'], segments: [{ id: 'segment', status: 'final', revision: 1, startMs: 0, endMs: 1000, sourceText: 'Meeting decision: ship tomorrow.', translationStatus: 'failed' }] },
     { id: 'completed', title: 'Completed recording', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: 'Completed meeting transcript', audioKey: 'complete', processingState: 'completed', segments: [] },
     { id: 'interrupted', title: 'Interrupted summary', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: 'Recover this transcript', audioKey: 'interrupted', processingState: 'completed', segments: [], summary: '正在產生摘要…' }
   ]
-  let templates = [{ id: 'base', name: 'Base', content: '# Summary' }], selectedTemplateId = 'base', templateVersion = 0, sessionVersion = 0, failSummary = true, calls = 0, translatedCalls = 0, asrCalls = 0, diarizationCalls = 0
+  const fileTemplate = { id: 'file-summary-fixture', name: 'File default', content: '# File baseline', sourceFile: 'fixture.md' }
+  let templates = [{ id: 'base', name: 'Base', content: '# Summary' }], selectedTemplateId = 'base', templateVersion = 0, sessionVersion = 0, failSummary = true, failTranslation = true, jobPollCalls = 0, calls = 0, translatedCalls = 0, asrCalls = 0, diarizationCalls = 0
   const errors = []
   try {
-    const page = await browser.newPage(); page.on('pageerror', e => errors.push(e.message))
+    const page = await browser.newPage(); await page.emulateMedia({ colorScheme: 'dark' }); page.on('pageerror', e => errors.push(e.message))
     await page.route('**/api/**', async route => {
       const req = route.request(), pathname = new URL(req.url()).pathname; const post = req.method() === 'POST'; const body = post && req.postData() ? JSON.parse(req.postData()) : {}
       let response = {}, status = 200
@@ -29,16 +30,17 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
       else if (pathname === '/api/data/settings') response = post ? { version: 1 } : { settings: { uiLanguage: 'en' }, version: 0 }
       else if (pathname === '/api/data/summary-templates') {
         if (post) { assert.equal(body.version, templateVersion, 'template writes use latest committed version'); await new Promise(r => setTimeout(r, 600)); templates = body.templates; selectedTemplateId = body.selectedTemplateId; templateVersion++; response = { version: templateVersion } }
-        else response = { templates, selectedTemplateId, version: templateVersion }
+        else response = { templates: [fileTemplate, ...templates], selectedTemplateId, version: templateVersion }
       } else if (pathname === '/api/data/sessions') {
         if (post) { sessions.splice(0, sessions.length, ...body.sessions); response = { version: ++sessionVersion } }
         else response = { sessions, version: sessionVersion }
       } else if (pathname === '/api/data/model-registry') response = { models: [], version: 0 }
       else if (pathname === '/api/data/voiceprints') response = { voiceprints: [] }
-      else if (pathname === '/api/translations') { translatedCalls++; response = { text: 'Recovered translation' } }
+      else if (pathname === '/api/translations') { translatedCalls++; await new Promise(r => setTimeout(r, 250)); if (failTranslation) { status = 503; response = { error: 'Recovery fixture failure' } } else response = { text: 'Recovered translation' } }
+      else if (pathname === '/api/data/diarization-jobs') { jobPollCalls++; response = { job: { state: 'failed', error: 'Old job failure' } } }
       else if (pathname === '/api/transcriptions') { asrCalls++; response = { text: 'Unexpected ASR retry' } }
       else if (pathname === '/api/diarizations') { diarizationCalls++; response = { exclusive_diarization: [{ start: 0, end: 1, speaker: 'fixture' }] } }
-      else if (pathname === '/api/summaries') { calls++; if (failSummary) { status = 502; response = { error: 'Mock summary unavailable' } } else response = { text: '# Recovered summary\nDecision: ship tomorrow.' } }
+      else if (pathname === '/api/summaries') { calls++; if (failSummary) { status = 502; response = { error: 'Mock summary unavailable' } } else if (body.stream) { return route.fulfill({ status: 200, contentType: 'application/x-ndjson', body: [JSON.stringify({delta:'# Recovered summary'}), JSON.stringify({delta:'\nDecision: ship tomorrow.'}), JSON.stringify({done:true})].join('\n') + '\n' }) } else { assert.equal(body.singleAttempt, true); response = { text: 'Generated title' } } }
       else if (pathname === '/api/data/storage-status') response = { audioPending: 0, voiceprintPending: 0 }
       else if (pathname === '/api/data/storage-audit') response = { orphanAudio: 0 }
       await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(response) })
@@ -47,25 +49,31 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
     await page.waitForTimeout(500) // first slow template save is already in flight
     const selects = page.locator('.summary-setup select')
     assert.equal(await selects.nth(1).locator('option[value="custom"]').count(), 0, 'summary only selects saved templates')
-    assert.equal(await page.locator('.summary-custom-template').count(), 0)
+    assert.equal(await page.locator('.summary-template-editor').count(), 0)
     await page.locator('.summary-setup button.secondary').click()
     await page.locator('.summary-template-manager').waitFor() // Manage templates opens its settings category directly
-    await page.locator('.summary-template-manager .saved-template-list button.secondary').click()
-    await page.locator('.summary-custom-template button.secondary').click() // blank validation stays in UI
-    assert.equal(await page.locator('.summary-custom-template').count(), 1)
-    await page.locator('.summary-custom-template input').fill('Custom persisted')
-    await page.locator('.summary-custom-template textarea').fill('# Custom\n## Decisions')
-    await page.locator('.summary-custom-template button.secondary').click()
+    await page.locator('.summary-template-manager .summary-template-list > button.secondary').click()
+    await page.locator('.summary-template-editor button.primary').click() // blank validation stays in UI
+    assert.equal(await page.locator('.summary-template-editor').count(), 1)
+    await page.locator('.summary-template-editor input').fill('Custom persisted')
+    await page.locator('.summary-template-editor textarea').fill('# Custom\n## Decisions')
+    await page.locator('.summary-template-editor button.primary').click()
     await page.waitForTimeout(1600)
     assert.ok(templates.some(t => t.name === 'Custom persisted'))
     const createdId = templates.find(t => t.name === 'Custom persisted').id
-    await page.locator('.summary-custom-template input').fill('Custom edited')
-    await page.locator('.summary-custom-template textarea').fill('# Edited\n## Decisions')
-    await page.locator('.summary-custom-template button.secondary').click()
+    await page.locator('.summary-template-editor input').fill('Custom edited')
+    await page.locator('.summary-template-editor textarea').fill('# Edited\n## Decisions')
+    await page.locator('.summary-template-editor button.primary').click()
     await page.waitForTimeout(1600)
     assert.equal(templates.length, 2)
     assert.equal(templates.find(t => t.name === 'Custom edited').id, createdId, 'editing preserves template identity')
     await page.screenshot({ path: '/tmp/s2t-template-settings.png', fullPage: false })
+    await page.locator('.saved-template-list button').filter({ hasText: 'File default' }).click()
+    await page.getByRole('button', { name: 'Save as personal template', exact: true }).waitFor()
+    await page.locator('.summary-template-editor textarea').fill('# Private copy')
+    await page.locator('.summary-template-editor button.primary').click(); await page.waitForTimeout(1600)
+    assert.equal(fileTemplate.content, '# File baseline'); assert.equal(templates.length, 3); assert.ok(templates.some(t => t.content === '# Private copy' && !t.sourceFile));
+    await page.locator('.saved-template-list button').filter({ hasText: 'Custom edited' }).click(); await page.waitForTimeout(1600)
     await page.goto(origin + '/summary'); await page.locator('.summary-setup').waitFor()
     await selects.nth(1).getByText('Custom edited', { exact: true }).waitFor({ state: 'attached' })
     await selects.nth(0).selectOption('failed')
@@ -84,16 +92,28 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
     await selects.nth(0).selectOption('completed'); await page.locator('.summary-setup button.primary').click(); await page.getByRole('heading', { name: 'Recovered summary', exact: true }).waitFor()
     await selects.nth(0).selectOption('interrupted'); assert.equal(await page.locator('.summary-setup button.primary').isEnabled(), true)
     await page.goto(origin + '/history'); await page.locator('.session-actions').first().waitFor()
+    const failedCard = page.locator('.session-details').filter({ has: page.getByRole('button', { name: /^Recording title:\s*$/, exact: true }) })
+    await failedCard.getByText('Untitled record', { exact: true }).waitFor()
+    const titleButton = failedCard.getByRole('button', { name: 'Generate title', exact: true })
+    failSummary = true; const beforeTitle = calls
+    await titleButton.click(); await page.waitForTimeout(1500)
+    assert.equal(calls, beforeTitle + 1); await failedCard.getByText('Untitled record', { exact: true }).waitFor()
+    failSummary = false; await titleButton.click(); await page.waitForTimeout(1000)
+    assert.equal(calls, beforeTitle + 2); assert.equal(await page.getByText('Untitled record', { exact: true }).count(), 0)
+    assert.equal(await page.locator('.summary-stale').count(), 0)
     const recovery = page.getByRole('button', { name: 'Error recovery: retry failed steps', exact: true })
     await recovery.hover(); await page.getByRole('tooltip').filter({ hasText: 'Error recovery: retry failed steps' }).waitFor()
     const rectangles = []
     for (let index = 0; index < 4; index++) { rectangles.push(await recovery.boundingBox()); await page.waitForTimeout(100) }
     assert.ok(Math.abs(rectangles[3].y - rectangles[2].y) < .1, 'record layout settles before interaction')
-    await recovery.click(); await page.waitForTimeout(900)
-    assert.equal(translatedCalls, 1); assert.equal(asrCalls, 0); assert.equal(diarizationCalls, 0)
+    await recovery.click(); await page.waitForTimeout(3500)
+    assert.equal(translatedCalls, 1, 'one click remains one attempt after failure'); assert.equal(jobPollCalls, 0, 'manual recovery never polls the old failed job');
+    await recovery.click(); await page.waitForTimeout(3500); assert.equal(translatedCalls, 2, 'a second click starts exactly one new attempt');
+    failTranslation = false; await recovery.click(); await page.waitForTimeout(900)
+    assert.equal(translatedCalls, 3); assert.equal(asrCalls, 0); assert.equal(diarizationCalls, 0)
     assert.equal(await page.getByRole('button', { name: 'Error recovery: retry failed steps', exact: true }).count(), 0)
     assert.equal(await page.locator('.session-actions > button').filter({ hasText: 'Quality correction' }).count(), 0, 'quality correction stays inside More actions')
     assert.deepEqual(errors, [])
-    console.log(JSON.stringify({ customTemplateSavedAndReloaded: true, templateEditingOnlyInSettings: true, templateEditPreservesIdentity: true, recoveryOnlyRetriesFailedTranslation: true, recoveryIconHasTooltip: true, blankNameDoesNotCrash: true, failedRecordingCanSummarize: true, summaryFailureThenRetry: true, failedRegenerationPreservesPrevious: true, completedCanSummarize: true, interruptedSummaryRecoverable: true, pageErrors: errors }))
+    console.log(JSON.stringify({ manualTitleGenerationAndFailure: true, streamedSummaryRendered: true, noStaleWarning: true, customTemplateSavedAndReloaded: true, fileTemplateEditsCreatePersonalCopy: true, templateEditingOnlyInSettings: true, templateEditPreservesIdentity: true, recoveryOnlyRetriesFailedTranslation: true, recoveryIconHasTooltip: true, failedRecoveryStopsUntilNextClick: true, oldJobNotPolledDuringRecovery: true, blankNameDoesNotCrash: true, failedRecordingCanSummarize: true, summaryFailureThenRetry: true, failedRegenerationPreservesPrevious: true, completedCanSummarize: true, interruptedSummaryRecoverable: true, pageErrors: errors }))
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }
 })().catch(e => { console.error(e); process.exitCode = 1 })

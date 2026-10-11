@@ -7,7 +7,7 @@ export type AudioDevice = { deviceId: string; label: string }
 
 export type View = 'live' | 'history' | 'summary' | 'import' | 'models' | 'voiceprints' | 'settings'
 
-export type SummaryTemplate = { id: string; name: string; content: string }
+export type SummaryTemplate = { id: string; name: string; content: string; sourceFile?: string }
 
 /** An immutable audio asset retained for a session. The active version is used for playback and export. */
 /** Audio and its matching caption snapshot are selected as one version. */

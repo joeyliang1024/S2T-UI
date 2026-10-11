@@ -1,0 +1,4302 @@
+[
+  {
+    "at": 1791723963.2413492,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723965.657872,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723967.790255,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723970.010551,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723972.154736,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723974.301548,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723976.425653,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723978.603675,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723980.897068,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723983.014915,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723985.157164,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723987.282592,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723989.416821,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723991.583796,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723993.7591832,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723995.8769548,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791723998.014902,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724000.167731,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724002.302154,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724004.4599302,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724006.568869,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724008.722812,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724010.8680289,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724012.9838898,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724015.107197,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724017.270299,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724019.4013922,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724021.550105,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724023.701426,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724025.990762,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724028.129136,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724030.307381,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724032.4178162,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724034.550686,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724036.702734,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724039.0847712,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724041.3216782,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724043.487318,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724045.621873,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724047.752455,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724049.941747,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724052.074477,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  {
+    "at": 1791724053.846844,
+    "deployments": [
+      {
+        "name": "audio-worker",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "gateway",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      },
+      {
+        "name": "test-ingress",
+        "replicas": 2,
+        "ready": 2,
+        "updated": 2,
+        "available": 2
+      }
+    ],
+    "pods": [
+      {
+        "pod": "audio-worker-78686cd57b-5m7zq",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "audio-worker-78686cd57b-6bgvn",
+        "app": "audio-worker",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-79p9v",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "gateway-5b5d4bcc48-sdm44",
+        "app": "gateway",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-0",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-1",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "redis-2",
+        "app": "redis",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-0",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-1",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "sentinel-2",
+        "app": "sentinel",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-bf279",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "pod": "test-ingress-786865ff66-ntqm8",
+        "app": "test-ingress",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  }
+]

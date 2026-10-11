@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path')
+const {loadFileTemplates,mergeTemplateSources}=require('../../server/summary-template-files.cjs')
+;(async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'s2t-file-templates-'));try{
+ await fs.writeFile(path.join(dir,'會議.md'),'# Meeting\n## Decisions');await fs.writeFile(path.join(dir,'Notes.markdown'),'# Notes');await fs.writeFile(path.join(dir,'ignore.txt'),'ignored');await fs.writeFile(path.join(dir,'empty.md'),' ');await fs.symlink(path.join(dir,'會議.md'),path.join(dir,'link.md'))
+ const first=await loadFileTemplates(dir);assert.equal(first.length,2);assert.ok(first.every(t=>t.sourceFile&&t.id.startsWith('file-summary-')))
+ const meeting=first.find(t=>t.name==='會議');await fs.writeFile(path.join(dir,'會議.md'),'# Updated');const updated=await loadFileTemplates(dir);assert.equal(updated.find(t=>t.name==='會議').id,meeting.id);assert.equal(updated.find(t=>t.name==='會議').content,'# Updated')
+ const merged=mergeTemplateSources([{...meeting,content:'stale copy'},{id:'personal',name:'Mine',content:'# Mine'}],updated);assert.equal(merged.length,3);assert.equal(merged.find(t=>t.id===meeting.id).content,'# Updated')
+ assert.deepEqual(await loadFileTemplates(path.join(dir,'missing')),[])
+ const renamed={id:'default-summary',name:'My renamed template',content:'# 會議摘要\n\n## 重點\n\n## 決策\n\n## 待辦事項\n'};assert.ok(mergeTemplateSources([renamed],updated).some(t=>t.id==='default-summary'),'renamed personal templates are never hidden')
+ const projected=path.join(dir,'projected');await fs.mkdir(path.join(projected,'..version'),{recursive:true});await fs.writeFile(path.join(projected,'..version','shared.md'),'# Projected');await fs.symlink('..version',path.join(projected,'..data'));await fs.symlink('..data/shared.md',path.join(projected,'shared.md'));assert.equal((await loadFileTemplates(projected))[0].content,'# Projected')
+ await fs.writeFile(path.join(dir,'too-big.md'),'x'.repeat(20001));await assert.rejects(()=>loadFileTemplates(dir),/20,000/)
+ console.log('PASS one Markdown file per shared template, stable filename IDs, live file updates, personal templates preserved, missing directory fallback, bounded files, non-Markdown/empty/symlink files skipped')
+ }finally{await fs.rm(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1})

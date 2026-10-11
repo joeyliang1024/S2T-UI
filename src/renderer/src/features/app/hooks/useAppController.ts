@@ -1,3 +1,4 @@
+import { readSummaryStream } from '../services/summary-stream'
 import { recoverSession, sessionRecoveryStages } from '../services/session-recovery'
 import { registerCaptionTiming, setCaptionMeasurementActive } from '../../../shared/services/caption-metrics'
 import { applyEnvironmentSettings } from '../services/environment-settings'
@@ -98,6 +99,8 @@ const [qualityCorrectionProgress, setQualityCorrectionProgress] = useState<Recor
 }>>({})
 const qualityCorrectionActiveRef = useRef(new Set<string>())
 const recoveryActiveRef = useRef(new Set<string>())
+const titleActiveRef = useRef(new Set<string>())
+const [titleGeneratingIds, setTitleGeneratingIds] = useState<string[]>([])
 const savedLiveSnapshotRef = useRef<TranscriptEvent[] | null>(null)
 const finishingSessionRef = useRef<{ id: string; token: string } | null>(null)
 
@@ -444,6 +447,7 @@ const translationTransportRef = useRef<TranslateCaption | null>(null)
 // A newer request for the same saved session wins. This prevents a slow first
 // request from replacing a manually requested regeneration.
 const summaryGenerationRef = useRef(new Map<string, number>())
+const [summaryGeneratingIds, setSummaryGeneratingIds] = useState<string[]>([])
 
 const cancelImportRef = useRef(false)
 
@@ -876,7 +880,7 @@ const retryRemoteSessionSync = async (): Promise<void> => {
     remoteSessionsVersionRef.current = remote.version
     setRemoteSessionSyncState('ready')
     const recovered = recoverStaleProcessing(mergeSessions(pendingRemoteSessionsRef.current ?? sessions, remote.sessions),
-      { finishing: finishingSessionRef.current, durableJobs: !window.s2t })
+      { finishing: finishingSessionRef.current, durableJobs: !window.s2t, activeRecoveries: recoveryActiveRef.current })
     setSessions(recovered)
     // Save the recovered snapshot, not the raw merge: otherwise the stale
     // `running` state is written straight back and survives the next load.
@@ -1061,12 +1065,12 @@ useEffect(() => {
     let canceled = false
     if (window.s2t) { setSummaryTemplatesHydrated(true); return }
     void authFetch('/api/data/summary-templates').then(async (response) => {
-      if (!response.ok) return
+      if (!response.ok) throw new Error((await response.json().catch(() => ({})) as { error?: string }).error || `HTTP ${response.status}`)
       const payload = await response.json() as { templates?: Settings['summaryTemplates']; selectedTemplateId?: string; version?: number }
       summaryTemplateVersionRef.current = Number.isSafeInteger(payload.version) && payload.version! >= 0 ? payload.version! : 0
       if (canceled || !Array.isArray(payload.templates) || !payload.templates.length) return
       setSettings((current) => normalizeSettings({ ...current, summaryTemplates: payload.templates, selectedSummaryTemplateId: payload.selectedTemplateId }))
-    }).catch(() => undefined).finally(() => { if (!canceled) setSummaryTemplatesHydrated(true) })
+    }).catch((error: unknown) => { if (!canceled) setStatus(error instanceof Error ? error.message : activeTranslate('stSummaryTemplateSaveFailed')) }).finally(() => { if (!canceled) setSummaryTemplatesHydrated(true) })
     return () => { canceled = true }
   }, [userId])
 
@@ -1096,7 +1100,7 @@ useEffect(() => {
       summaryTemplateSaveRef.current = summaryTemplateSaveRef.current.then(async () => {
         const version = summaryTemplateVersionRef.current
         if (version === null) return
-        await retryableAuthFetch('/api/data/summary-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templates: settings.summaryTemplates, selectedTemplateId: settings.selectedSummaryTemplateId, version }) }).then(async (response) => {
+        await retryableAuthFetch('/api/data/summary-templates', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ templates: settings.summaryTemplates.filter(template => !template.sourceFile), selectedTemplateId: settings.selectedSummaryTemplateId, version }) }).then(async (response) => {
           if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
           const saved = await response.json() as { version?: number }
           if (!Number.isSafeInteger(saved.version) || saved.version! < 1) throw new Error(activeTranslate('stServerNoValidTemplateVersion'))
@@ -2310,12 +2314,12 @@ const cancelImport = (): void => {
 
 const audioVersionsFor = (entry: SavedSession): AudioVersion[] => entry.audioVersions?.length ? entry.audioVersions : [{ id: 'original', audioKey: entry.audioKey, createdAt: entry.createdAt, label: activeTranslate('stOriginalRecording'), segments: entry.segments, transcript: entry.transcript }]
 const activeAudioVersionFor = (entry: SavedSession): AudioVersion => audioVersionsFor(entry).find((version) => version.id === entry.activeAudioVersionId) ?? audioVersionsFor(entry)[0]
-const loadSessionAudio = async (entry: SavedSession): Promise<Blob | undefined> => {
+const loadSessionAudio = async (entry: SavedSession, attempts = 3): Promise<Blob | undefined> => {
     const version = activeAudioVersionFor(entry)
     if (version.nativeAudioPath && window.s2t) return new Blob([await window.s2t.readAudio(version.nativeAudioPath)], { type: 'audio/wav' })
     if (entry.nativeAudioPath && window.s2t && version.audioKey === entry.audioKey) return new Blob([await window.s2t.readAudio(entry.nativeAudioPath)], { type: 'audio/wav' })
-    if (!window.s2t) return remoteSessionStorage.loadAudio(version.audioKey)
-    return remoteSessionStorage.loadAudio(version.audioKey)
+    if (!window.s2t) return remoteSessionStorage.loadAudio(version.audioKey, attempts)
+    return remoteSessionStorage.loadAudio(version.audioKey, attempts)
   }
 const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id) || recoveryActiveRef.current.has(entry.id)) return
@@ -2323,7 +2327,7 @@ const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<v
     recoveryActiveRef.current.add(entry.id)
     let audio: Blob | undefined
     const audioForRecovery = async (): Promise<Blob> => {
-      if (!audio) audio = backup || await loadSessionAudio(entry)
+      if (!audio) audio = backup || await loadSessionAudio(entry, 1)
       if (!audio) throw new Error(activeTranslate('recoveryAudioRequired'))
       return audio
     }
@@ -2343,7 +2347,7 @@ const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<v
         }
         entry = { ...entry, processingFailures: [...new Set([...sessionRecoveryStages(entry), ...(response.status === 404 || payload.job?.state === 'failed' ? ['diarization' as const] : [])])] }
       }
-      const result = await recoverSession({ ...entry, processingToken: token }, {
+      const result = await recoverSession({ ...entry, processingToken: token, diarizationJobId: undefined }, {
         saving: async (current, publish) => {
           if (current.audioUnavailable !== false || backup) {
             const recovered = await audioForRecovery()
@@ -2352,7 +2356,7 @@ const retryFailedSession = async (entry: SavedSession, backup?: File): Promise<v
               const duration = layout.dataBytes / layout.bytesPerFrame / layout.sampleRate * 1000
               if (Math.abs(duration - entry.durationMs) > Math.max(2000, entry.durationMs * .05)) throw new Error('WAV duration does not match this recording.')
             }
-            if (!window.s2t) await remoteSessionStorage.saveAudio(activeAudioVersionFor(current).audioKey, recovered)
+            if (!window.s2t) await remoteSessionStorage.saveAudio(activeAudioVersionFor(current).audioKey, recovered, 1)
             else {
               const saved = await window.s2t.saveSession({ name: current.title, overwriteAudioPath: current.nativeAudioPath, audio: await recovered.arrayBuffer(), transcript: current.transcript, segments: current.segments, createdAt: current.createdAt, durationMs: current.durationMs, source: current.source })
               current = { ...current, nativeAudioPath: saved.audioPath }
@@ -2833,12 +2837,13 @@ const stopVoiceprintCapture = async (): Promise<void> => {
     setStatus(activeTranslate('stVoiceprintSampleRecorded'))
   }
 
-const completeSummary = async (messages: Array<{ role: 'system' | 'user'; content: string }>): Promise<{ text: string }> => {
+const completeSummary = async (messages: Array<{ role: 'system' | 'user'; content: string }>, singleAttempt = false, onText?: (text: string) => void): Promise<{ text: string }> => {
     if (window.s2t) return window.s2t.completeText({ profileId: 'summary', endpoint: textEndpoint(settings.summaryEndpoint), model: settings.summaryModel, messages })
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 30_000)
     try {
-      const response = await authFetch('/api/summaries', { method: 'POST', headers: { 'content-type': 'application/json', ...(!window.s2t && settings.summaryEndpoint && settings.summaryEndpoint !== '/api/summaries' ? { 'x-s2t-model-id': 'managed-summary' } : {}) }, body: JSON.stringify({ messages }), signal: controller.signal })
+      const response = await authFetch('/api/summaries', { method: 'POST', headers: { 'content-type': 'application/json', ...(!window.s2t && settings.summaryEndpoint && settings.summaryEndpoint !== '/api/summaries' ? { 'x-s2t-model-id': 'managed-summary' } : {}) }, body: JSON.stringify({ messages, singleAttempt, stream: Boolean(onText) }), signal: controller.signal })
+      if (response.headers.get('content-type')?.includes('application/x-ndjson')) return readSummaryStream(response, onText ?? (() => {}))
       const result = await readJsonResponse<{ text: string; error?: string }>(response, activeTranslate('stSummaryService'))
       if (!response.ok) throw new Error(result.error || activeTranslate('stSummaryRequestFailed'))
       return result
@@ -2850,9 +2855,9 @@ const completeSummary = async (messages: Array<{ role: 'system' | 'user'; conten
 
 const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(resolveUiLanguage('system'))}輸出，保留標題結構並填入內容。\n\n模板：\n${settings.summaryTemplate}`
 
-const summarizeTranscript = async (transcript: string): Promise<string> => {
+const summarizeTranscript = async (transcript: string, onText?: (text: string) => void): Promise<string> => {
   const chunks = summaryChunks(transcript)
-  if (chunks.length === 1) return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: chunks[0] }])).text
+  if (chunks.length === 1) return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: chunks[0] }], false, onText)).text
   const partials: string[] = []
   for (const [index, chunk] of chunks.entries()) partials.push((await completeSummary([{ role: 'system', content: `請只整理第 ${index + 1}/${chunks.length} 段會議逐字稿的事實、決策與待辦，使用簡潔 Markdown。` }, { role: 'user', content: chunk }])).text)
   let merged = partials
@@ -2874,7 +2879,7 @@ const summarizeTranscript = async (transcript: string): Promise<string> => {
     merged = await Promise.all(batches.map(async (batch, index) => (await completeSummary([{ role: 'system', content: `請合併第 ${index + 1}/${batches.length} 組分段摘要，保留事實、決策與待辦，去除重複。` }, { role: 'user', content: batch.join('\n\n---\n\n') }])).text))
     compressionPasses = 0
   }
-  return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: `以下是已分層合併的會議整理，請套用模板：\n\n${merged[0] || ''}` }])).text
+  return (await completeSummary([{ role: 'system', content: summaryInstruction() }, { role: 'user', content: `以下是已分層合併的會議整理，請套用模板：\n\n${merged[0] || ''}` }], false, onText)).text
 }
 
 const generateSessionTitle = async (sessionId: string, transcript: string): Promise<void> => {
@@ -2894,8 +2899,34 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
     } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
   }
 
+const regenerateSessionTitle = async (entry: SavedSession): Promise<void> => {
+  if (titleActiveRef.current.has(entry.id)) return
+  const transcript = entry.transcript?.trim() || makeTranscriptText(entry.segments)
+  if (!transcript.trim()) { setStatus(activeTranslate('titleTranscriptRequired')); return }
+  if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim()) { setStatus(activeTranslate('titleModelRequired')); return }
+  titleActiveRef.current.add(entry.id)
+  setTitleGeneratingIds(current => [...current, entry.id])
+  try {
+    const result = await completeSummary([
+      { role: 'system', content: `請使用${languageName(resolveUiLanguage(settings.uiLanguage))}為逐字稿生成精準標題。只輸出標題，不要 Markdown 或說明，最多 ${maximumGeneratedSessionTitleLength} 個字元。` },
+      { role: 'user', content: transcript.slice(0, 24_000) }
+    ], true)
+    const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()
+    if (!title) throw new Error(activeTranslate('stSummaryServiceEmpty'))
+    const visible = title.length > maximumGeneratedSessionTitleLength ? `${title.slice(0, maximumGeneratedSessionTitleLength - 1)}…` : title
+    setSessions(current => current.map(item => item.id === entry.id && item.title === entry.title && (item.transcript?.trim() || makeTranscriptText(item.segments)) === transcript ? { ...item, title: visible } : item))
+  } catch (error) {
+    setStatus(activeTranslate('titleGenerationFailed').replace('{error}', error instanceof Error ? error.message : String(error)))
+  } finally {
+    titleActiveRef.current.delete(entry.id)
+    setTitleGeneratingIds(current => current.filter(id => id !== entry.id))
+  }
+}
+
 const createSessionSummary = async (sessionId: string, transcript: string): Promise<boolean> => {
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return false
+    if (summaryGeneratingIds.includes(sessionId)) return false
+    setSummaryGeneratingIds(current => [...current, sessionId])
     const generation = (summaryGenerationRef.current.get(sessionId) ?? 0) + 1
     summaryGenerationRef.current.set(sessionId, generation)
     const previous = sessions.find(entry => entry.id === sessionId)
@@ -2905,7 +2936,9 @@ const createSessionSummary = async (sessionId: string, transcript: string): Prom
       return { ...entry, ...(!entry.transcript.trim() ? { transcript, audioVersions: entry.audioVersions?.map(version => version.id === sourceVersionId ? { ...version, transcript } : version) } : {}), summary: '正在產生摘要…', summaryError: undefined, summaryTranslation: undefined }
     }))
     try {
-      const text = await summarizeTranscript(transcript)
+      const text = await summarizeTranscript(transcript, text => {
+        if (summaryGenerationRef.current.get(sessionId) === generation) setSessions(current => current.map(entry => entry.id === sessionId ? { ...entry, summary: text } : entry))
+      })
       if (summaryGenerationRef.current.get(sessionId) !== generation) return false
       setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || undefined, summaryError: text ? undefined : activeTranslate('stSummaryServiceEmpty'), summarySourceSignature: text ? transcriptSignature(transcript) : undefined, summarySourceVersionId: text ? sourceVersionId : undefined, summaryTranslation: undefined } : entry))
       if (!text) setStatus(activeTranslate('stSummaryServiceEmpty'))
@@ -2916,7 +2949,7 @@ const createSessionSummary = async (sessionId: string, transcript: string): Prom
       setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: previous?.summary === '正在產生摘要…' ? undefined : previous?.summary, summarySourceSignature: previous?.summarySourceSignature, summarySourceVersionId: previous?.summarySourceVersionId, summaryTranslation: previous?.summaryTranslation, summaryError: message } : entry))
       setStatus(message)
       return false
-    }
+    } finally { setSummaryGeneratingIds(current => current.filter(id => id !== sessionId)) }
   }
 
 const summaryTranslationRef = useRef(new Map<string, number>())
@@ -2960,7 +2993,7 @@ const createSummary = async (): Promise<void> => {
     }
     setSummaryStatus(activeTranslate('stGeneratingMeetingNotes'))
     try {
-      const text = await summarizeTranscript(transcript)
+      const text = await summarizeTranscript(transcript, setSummaryText)
       setSummaryText(text)
       setSummaryStatus(text ? activeTranslate('stMeetingNotesGenerated') : activeTranslate('stSummaryServiceEmpty'))
     } catch (error) { setSummaryStatus(error instanceof Error ? error.message : activeTranslate('stSummaryCreationFailed')) }
@@ -3252,6 +3285,9 @@ renderedLiveTranscripts,
 clearCaptions,
 loadSessionIntoLive,
 renameSession,
+regenerateSessionTitle,
+titleGeneratingIds,
+summaryGeneratingIds,
 retryRemoteSessionSync,
 retryFailedSession,
 retryStorageCompensations,

@@ -34,6 +34,14 @@ app={
 'S2T_ASR_MAX_INFLIGHT':'64','S2T_TRANSLATION_MAX_INFLIGHT':'64','S2T_STORAGE_MIGRATIONS':'verify','S2T_WEB_ORIGINS':'http://127.0.0.1:8790,http://localhost:8790'}
 secret('s2t-stress-config',app)
 core=json.loads(Path('deploy/test/core.json').read_text())
+# Shared Markdown defaults are a separate ConfigMap, present before Gateway Pods.
+subprocess.run(['python3','deploy/test/sync-summary-templates.py'],check=True)
+paths=json.loads(subprocess.check_output(['node','-e',"require('./server/summary-template-files.cjs').loadFileTemplates('data/template').then(x=>process.stdout.write(JSON.stringify(x.map(t=>t.sourceFile))))"],text=True))
+import hashlib
+for item in core['items']:
+ if item.get('kind')=='Deployment' and item['metadata']['name']=='gateway':
+  for volume in item['spec']['template']['spec'].get('volumes',[]):
+   if volume['name']=='summary-templates':volume['configMap']['items']=[{'key':'md-'+hashlib.sha256(name.encode()).hexdigest()[:16],'path':name} for name in paths]
 # Start real Storage first; application images must already exist in this Docker context.
 storage=[i for i in core['items'] if i['metadata']['name'] not in ['gateway','audio-worker']]
 apply({'apiVersion':'v1','kind':'List','items':storage})
@@ -43,7 +51,7 @@ fixtures=json.loads(Path('deploy/test/fixtures.json').read_text());apply({'apiVe
 print(run(['rollout','status','deployment/mock-models','--timeout=60s']))
 # Verify schema with an ephemeral named Job, keeping no credentials in the manifest.
 if not exists('job','s2t-test-schema-migration'):
- job={'apiVersion':'batch/v1','kind':'Job','metadata':{'name':'s2t-test-schema-migration','namespace':NS},'spec':{'backoffLimit':2,'template':{'spec':{'restartPolicy':'Never','containers':[{'name':'migration','image':'s2t-stress:20261011-recovery-final','command':['node','scripts/storage/migrate-schema.cjs'],'envFrom':[{'secretRef':{'name':'s2t-stress-config'}}],'env':[{'name':'S2T_STORAGE_MIGRATIONS','value':'auto'}]}]}}}}
+ job={'apiVersion':'batch/v1','kind':'Job','metadata':{'name':'s2t-test-schema-migration','namespace':NS},'spec':{'backoffLimit':2,'template':{'spec':{'restartPolicy':'Never','containers':[{'name':'migration','image':'s2t-stress:20261011-summary-stream','command':['node','scripts/storage/migrate-schema.cjs'],'envFrom':[{'secretRef':{'name':'s2t-stress-config'}}],'env':[{'name':'S2T_STORAGE_MIGRATIONS','value':'auto'}]}]}}}}
  apply(job)
 print(run(['wait','--for=condition=complete','job/s2t-test-schema-migration','--timeout=60s']))
 apply({'apiVersion':'v1','kind':'List','items':[i for i in core['items'] if i['metadata']['name'] in ['gateway','audio-worker']]})
