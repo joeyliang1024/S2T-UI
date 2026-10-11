@@ -128,7 +128,38 @@ Phase 1 已實作並通過 `typecheck`／`vad:smoke`／`model-adapter:smoke`：
 - **產品碼接縫（最小改動）**：`vad.ts` 新增 `BoundaryVad` 介面（`process(samples): VadFrame` 同步契約），`EnergyVad` 實作之；`OpenAiChunkedModelAdapter` profile 新增可選 `vadFactory`，未注入時行為與現況完全一致。
 - **`silero-vad.ts`（renderer 安全）**：`SileroBoundaryVad` 不含任何 ONNX import——機率以 Float32Array 注入（每 512 樣本@16 kHz 一個視窗，與上游 wrapper 同窗格）。遲滯契約與 EnergyVad 相同（`minSpeechMs` 起音、`minSilenceMs` 停頓），三速預設值可直接沿用，對比時唯一變數就是偵測器。設計要點：**視窗只在被推入樣本完整覆蓋時計分**（128@48 kHz 批次不對齊 16k 窗界，跨窗重複計分會讓起音提前）；最後不足一窗的尾巴不計分，由 `flush()` 顯式收尾。
 - **評測**：`caption-latency-eval.cjs` 新增 `newSilero`／`fastSilero` preset（config 與 EnergyVad 對照組 `new`／`fastv2` 完全相同）；機率由 `scripts/evaluation/silero-probabilities.cjs` 預先整段算妥，餵法契約（576＝64 context＋512、state 延續）與 `server/silero-vad.cjs` 逐行一致。
-- **已知限制**：評測的機率是預先計算的；產品化後機率會晚約 32 ms 到達（切點為 sample 索引、位置不受影響，但 Electron main IPC／wasm 的實際接線與共用 CPU 成本尚未做）。指標以 CER 呈現（中文素材，評測正規化後去空白，與 WER 同為字元級編輯距離）。
+- **已知限制**：評測的機率是預先計算的；產品化後機率會晚約 32 ms 到達（切點為 sample 索引、位置不受影響，但 Electron main IPC／wasm 的實際接線與共用 CPU 成本尚未做）。指標以 CER 呈現（中文素材，評測正規化後去空白，與 WER 同為字元級編辑距離）。
+
+### 評測結果（2026-10-12，各素材前 300 秒，Breeze-ASR-25）
+
+對照設計：`new` vs `newSilero`、`fastv2` vs `fastSilero`（config 完全相同，唯一變數是切點偵測器）。延遲＝句子起話 → 上屏。
+
+**對話素材（含 BGM，32 句）——Silero 明確劣化：**
+
+| preset | 延遲 p50 | p95 | ≤2500ms | 逐句CER | 語料CER | VAD句界/強制 | 空chunk | 字幕行 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| new（EnergyVad） | 1112 ms | 1789 ms | 100% | 38.63% | 35.01% | 0 / 200 | 4 | 30 |
+| newSilero | 1225 ms | 1868 ms | 96.9% | 61.00% ❌ | 53.10% ❌ | 16 / 150 | 22 | 31 |
+| fastv2（EnergyVad） | 782 ms | 1592 ms | 96.9% | 37.44% | 35.16% | 0 / 250 | 17 | 32 |
+| fastSilero | 981 ms | 1477 ms | 96.9% | 42.98% ❌ | 41.43% ❌ | 85 / 181 | 22 | 45 |
+
+Silero 找到了 EnergyVad 在 BGM 下找不到的句界（0 → 66～85 個），但這些句界**傷害了 CER**：BGM 中人聲暫停的機率低點不等於句子邊界，切出的短 chunk 更常只含音樂，ASR 在純音樂段產生重複幻覺（例：標準「在睡覺」→ 字幕「你該睡覺你該睡覺」；一例整段「滴滴滴…」迴圈，CER 250%），空 chunk 也從 4 個升到 22 個。
+
+**旁白素材（無 BGM，18 句）——CER 微幅改善但延遲劣化：**
+
+| preset | 延遲 p50 | p95 | ≤2500ms | 逐句CER | 語料CER | VAD句界/強制 |
+| --- | --- | --- | --- | --- | --- | --- |
+| new（EnergyVad） | 1264 ms | 1904 ms | 100% | 17.14% | 11.76% | 3 / 198 |
+| newSilero | 1600 ms ❌ | 2598 ms ❌ | 88.9% ❌ | 14.54% ✓ | 11.08% ✓ | 11 / 193 |
+
+逐句配對（n=18）：CER 中位變化 −0.8 pp（10 句改善／8 句劣化）；延遲中位 **+200 ms**（13 句變慢）。CER 的小幅優勢來自更完整的句尾覆蓋，但**沒有達到可接受的延遲**。
+
+### 結論
+
+- **BGM 素材：CER 與延遲雙輸** → 不可用。
+- **乾淨素材：CER 小贏（語料 −0.68 pp）但延遲輸（p50 +200 ms、≤2500ms 100%→89%）** → 依「WER 與延遲都要考量」的驗收標準，不通過。
+- **Phase 1（Silero 決定切點）判定為負面結果，不產品化**。維持 EnergyVad 切段；Silero 只保留既有的「無語音否決閘門」用途。
+- 後續可再試的調參方向（未驗證，另開實驗）：把 `minSilenceMs` 拉長（400–600 ms）過濾 BGM 短暫低點；或句界需同時滿足機率低＋能量低（雙訊號）；或用 server 端 Silero 否決閘門先行剔除純音樂 chunk 再評 CER。
 
 ## 參考來源
 
