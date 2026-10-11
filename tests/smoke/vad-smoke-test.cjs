@@ -68,6 +68,22 @@ for (const sampleRate of [16_000, 44_100, 48_000]) {
   assert.ok(started, 'silero: voiced windows must start speech at 48 kHz')
   const quiet = new SileroBoundaryVad(48_000, config, new Float32Array(64))
   for (let offset = 0; offset < 48_000; offset += 128) assert.equal(quiet.process(new Float32Array(128)).speaking, false)
+
+  // endThreshold 雙閾值遲滯（faster-whisper neg_threshold 語意）：說話中，
+  // 介於 endThreshold 與 threshold 之間的框率低點不算停頓。
+  const dip = Float32Array.from([.9, .9, .4, .4, .4, .4])
+  const single = new SileroBoundaryVad(16_000, config, dip)
+  single.process(silence)
+  assert.equal(single.process(silence).speechStarted, true, 'single threshold: speech starts after two voiced windows')
+  single.process(silence)
+  single.process(silence)
+  assert.equal(single.process(silence).speechEnded, true, 'single threshold: a 0.4 dip counts as silence and ends the sentence')
+  const hysteresis = new SileroBoundaryVad(16_000, config, dip, 0.5, 0.35)
+  hysteresis.process(silence)
+  let last = hysteresis.process(silence)
+  assert.equal(last.speechStarted, true, 'endThreshold: speech starts')
+  for (let count = 0; count < 4; count += 1) last = hysteresis.process(silence)
+  assert.equal(last.speaking, true, 'endThreshold: a 0.4 dip above 0.35 keeps the sentence open')
 }
 
 console.log('VAD smoke test passed.')

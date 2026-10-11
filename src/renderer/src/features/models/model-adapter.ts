@@ -251,7 +251,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private stopped = false
   private queuedChunks = 0
   private readonly maximumQueuedChunks = 4
-  private vad: EnergyVad | null = null
+  private vad: BoundaryVad | null = null
   private pendingContainsSpeech = false
   private pendingBoundaries: number[] = []
   private explicitBoundaries = new Set<number>()

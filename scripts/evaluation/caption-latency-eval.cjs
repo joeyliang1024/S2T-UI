@@ -19,6 +19,7 @@
 // 需要 .env 提供 S2T_ASR_ENDPOINT / S2T_ASR_MODEL / S2T_ASR_API_KEY。
 const { spawnSync } = require('node:child_process')
 const { mkdirSync, readFileSync, writeFileSync } = require('node:fs')
+const zlib = require('node:zlib')
 const path = require('node:path')
 const { buildSync } = require('esbuild')
 
@@ -89,7 +90,20 @@ const PRESETS = {
   // 框率在 preset 開跑前以 scripts/evaluation/silero-probabilities.cjs 預先算妥
   // （即時產品碼的框率會晚 ~32 ms 到達，切點 sample 位置不受影響）。
   fastSilero: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero' },
-  newSilero: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, vad: 'silero' }
+  newSilero: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, vad: 'silero' },
+  // 修正組（2026-10-12，對應負面結果的三項業界修正，見
+  // docs/research/AUTO_CHUNKING.zh-TW.md「失效模式與業界解法」）：
+  //   gate = 送 ASR 前先用 Silero 框率否決純音樂 chunk（WhisperX VAD
+  //     preprocessing 同款；實測 Breeze 端點對純 BGM 回 "Let's play." 幻覺
+  //     且無信心度欄位，ASR 端過濾拿不到原料）
+  //   hallucFilter = 客戶端重複迴圈／壓縮比幻覺偵測（whisper
+  //     compression_ratio 啟發式移植到文字層）
+  //   SileroInd = 業界參數：endThreshold 0.35 雙閾值遲滯（faster-whisper
+  //     neg_threshold）＋minSilence 500ms（串流折衷，離線預設為 2000ms）
+  newHyg: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true },
+  fastHyg: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true },
+  newSileroInd: { vadConfig: { ...defaultVadConfig, minSilenceMs: 500 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true },
+  fastSileroInd: { vadConfig: { minSpeechMs: 120, minSilenceMs: 500, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true }
 }
 
 const decodeCache = new Map()
@@ -171,8 +185,32 @@ const stripOverlapDuplicate = (previous, next) => {
   return next
 }
 
+// 客戶端幻覺偵測（whisper compression_ratio≈2.4 啟發式移植到文字層）：
+// Breeze 端點只回 text，沒有 no_speech_prob／avg_logprob，ASR 端的幻覺
+// 過濾拿不到原料，只能在收到的文字上偵測。兩個訊號：
+//   1) 極端壓縮比——重複迴圈（「滴滴滴…」）壓到正常中文（~0.4-0.6）的 1/3 以下
+//   2) 連續重複——同一 2-8 字詞連 >=4 次、或單一非空白字連 >=8 次
+const isHallucination = (text) => {
+  if (!text || text.length < 12) return false
+  const bytes = Buffer.byteLength(text)
+  if (bytes >= 24 && zlib.gzipSync(Buffer.from(text)).length / bytes < 0.2) return true
+  for (let size = 2; size <= 8; size += 1) {
+    for (let index = 0; index + size * 4 <= text.length; index += 1) {
+      const unit = text.slice(index, index + size)
+      let repeated = 1
+      while (repeated < 4 && text.slice(index + size * repeated, index + size * (repeated + 1)) === unit) repeated += 1
+      if (repeated >= 4) return true
+    }
+  }
+  for (let index = 0; index + 8 <= text.length; index += 1) {
+    const character = text[index]
+    if (character.trim() && text.slice(index, index + 8).split('').every((item) => item === character)) return true
+  }
+  return false
+}
+
 const runPreset = async (name, preset, sentences) => {
-  const { vadConfig, overlapMs, sampleRate: sr, vad: vadKind } = preset
+  const { vadConfig, overlapMs, sampleRate: sr, vad: vadKind, gate: gateEnabled, hallucFilter: hallucFilterEnabled, endThreshold } = preset
   const samples = decodeAudio(sr)
   const records = [] // enqueue 順序，含被 queue-overflow 丟棄的 chunk
   const events = [] // 所有 transcript/gap 事件＋實際上屏 wall time
@@ -180,6 +218,8 @@ const runPreset = async (name, preset, sentences) => {
   let pointer = 0
   let startedAtWall = 0
   let lastFinalText = '' // 重疊去重的比對基準
+  let gateVetoCount = 0 // Silero 否決閘門擋下的純音樂 chunk
+  let hallucVetoCount = 0 // 客戶端幻覺偵測丟棄的文字
 
   const realTranscribe = async (request) => {
     const form = new FormData()
@@ -192,6 +232,10 @@ const runPreset = async (name, preset, sentences) => {
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(`ASR ${response.status}: ${payload.error?.message || payload.error || response.statusText}`)
     const text = typeof payload.text === 'string' ? payload.text : ''
+    if (hallucFilterEnabled && isHallucination(text)) {
+      hallucVetoCount += 1
+      return { text: '' }
+    }
     return { text }
   }
 
@@ -199,12 +243,25 @@ const runPreset = async (name, preset, sentences) => {
 
   // Silero 對照：先把整段 16 kHz 解碼逐視窗打分（每個 preset 獨立 scorer/state），
   // 機率交給 renderer 的 SileroBoundaryVad 狀態機；EnergyVad 對照組不經過這段。
-  const sileroProbabilities = vadKind === 'silero'
+  const sileroProbabilities = (vadKind === 'silero' || gateEnabled)
     ? await (await createSileroScorer()).probabilities16k(decodeAudio(16_000))
     : undefined
-  const vadFactory = sileroProbabilities
-    ? (factorySampleRate, factoryConfig) => new SileroBoundaryVad(factorySampleRate, factoryConfig ?? { ...defaultVadConfig }, sileroProbabilities)
+  const vadFactory = sileroProbabilities && vadKind === 'silero'
+    ? (factorySampleRate, factoryConfig) => new SileroBoundaryVad(factorySampleRate, factoryConfig ?? { ...defaultVadConfig }, sileroProbabilities, 0.5, endThreshold)
     : undefined
+
+  // Chunk 級 Silero 否決閘門（產品 sileroVadEnabled 的評測等價版）：chunk 的
+  // 16k 框率窗若湊不出 >=120 ms 的連續語音（起 0.5／止 0.35 雙閾值遲滯，同
+  // faster-whisper neg_threshold 語意），整 chunk 不送 ASR。只計被推入樣本
+  // 完整覆蓋的窗（與切點 VAD 同一契約）。實測這會擋下 BGM 獨奏段的幻覺。
+  const gateHasSpeech = (windows) => {
+    let voicedMs = 0
+    for (const probability of windows) {
+      voicedMs = probability >= (voicedMs > 0 ? 0.35 : 0.5) ? voicedMs + 32 : 0
+      if (voicedMs >= 120) return true
+    }
+    return false
+  }
 
   const adapter = new OpenAiChunkedModelAdapter({ id: 'eval-asr', endpoint, model, requiresApiKey: false, vadConfig, vadFactory })
   const originalEnqueue = Object.getPrototypeOf(adapter).enqueue
@@ -226,6 +283,16 @@ const runPreset = async (name, preset, sentences) => {
     while (records[pointer] && records[pointer].dropped) pointer += 1
     const record = records[pointer]
     pointer += 1
+    if (record && gateEnabled) {
+      const chunkSamples = Math.floor((audio.byteLength - 44) / 2)
+      const fromWindow = Math.ceil(record.startSample * 16_000 / sr / 512)
+      const toWindow = Math.floor((record.startSample + chunkSamples) * 16_000 / sr / 512)
+      if (!gateHasSpeech(sileroProbabilities.subarray(fromWindow, Math.max(fromWindow, toWindow)))) {
+        gateVetoCount += 1
+        record.gateVetoed = true
+        return { text: '' }
+      }
+    }
     const callStartedAt = performance.now()
     if (record) {
       record.asrStartWall = callStartedAt
@@ -331,6 +398,9 @@ const runPreset = async (name, preset, sentences) => {
   const report = {
     preset: name,
     vadKind: vadKind || 'energy',
+    gate: Boolean(gateEnabled),
+    hallucFilter: Boolean(hallucFilterEnabled),
+    endThreshold: endThreshold ?? null,
     vadConfig,
     overlapMs,
     sampleRate: sr,
@@ -345,6 +415,8 @@ const runPreset = async (name, preset, sentences) => {
       sent: sent.length,
       droppedQueue: records.filter((record) => record.dropped).length,
       emptyText: sent.filter((record) => !findEvent(record)).length,
+      gateVetoed: gateVetoCount,
+      hallucVetoed: hallucVetoCount,
       requestFailed: sent.filter((record) => { const event = findEvent(record); return event && event.status === 'gap' }).length,
       avgAudioMs: records.length ? Math.round(records.reduce((sum, record) => sum + record.audioMs, 0) / records.length) : 0,
       vadBoundaries: records.filter((record) => record.isSentenceBoundary).length,
@@ -390,9 +462,11 @@ const runPreset = async (name, preset, sentences) => {
 
 const printSummary = (report) => {
   const { chunks, asrMs, queueWaitMs, sentences, latencyMs, accuracy, fragmentation, errors } = report
-  const knobs = `minSilence ${report.vadConfig.minSilenceMs} / chunk ${report.vadConfig.chunkMinMs}-${report.vadConfig.chunkMaxMs} / 滾動prompt(產品) / 重疊 ${report.overlapMs}ms / ${report.sampleRate / 1000}kHz`
+  const extras = [report.gate ? 'gate' : null, report.hallucFilter ? '幻覺濾' : null].filter(Boolean)
+  const knobs = `minSilence ${report.vadConfig.minSilenceMs} / chunk ${report.vadConfig.chunkMinMs}-${report.vadConfig.chunkMaxMs} / 滾動prompt(產品) / 重疊 ${report.overlapMs}ms / ${report.sampleRate / 1000}kHz${extras.length ? ` / ${extras.join('+')}` : ''}`
   console.log(`\n=== preset ${report.preset} (${knobs}, ${report.audioSeconds}s 音檔) ===`)
-  console.log(`chunks: 入隊 ${chunks.enqueued} / 送出 ${chunks.sent} / overflow 丟棄 ${chunks.droppedQueue} / 無文字 ${chunks.emptyText} | VAD句界 ${chunks.vadBoundaries} / 強制 ${chunks.forcedBoundaries} | 平均 ${chunks.avgAudioMs} ms`)
+  const vetoNote = (chunks.gateVetoed || chunks.hallucVetoed) ? ` | 否決: 閘門 ${chunks.gateVetoed || 0} / 幻覺 ${chunks.hallucVetoed || 0}` : ''
+  console.log(`chunks: 入隊 ${chunks.enqueued} / 送出 ${chunks.sent} / overflow 丟棄 ${chunks.droppedQueue} / 無文字 ${chunks.emptyText} | VAD句界 ${chunks.vadBoundaries} / 強制 ${chunks.forcedBoundaries} | 平均 ${chunks.avgAudioMs} ms${vetoNote}`)
   console.log(`ASR 推論: p50 ${asrMs.p50} ms / p95 ${asrMs.p95} ms / max ${asrMs.max} ms (n=${asrMs.n}) | 排隊 p95 ${queueWaitMs.p95} ms`)
   console.log(`句子: ${sentences.total} 句 → 上屏 ${sentences.shown} / 丟棄 ${sentences.dropped} / 無文字 ${sentences.emptyText} / 失敗 ${sentences.requestFailed} / 未送出 ${sentences.notSent}`)
   console.log(`延遲(說話→上屏): p50 ${latencyMs.p50} ms / p95 ${latencyMs.p95} ms / max ${latencyMs.max} ms | ≤${TARGET_MS}ms: 已上屏 ${latencyMs.within2500ShownPct}% / 全部 ${latencyMs.within2500AllPct}%`)
@@ -426,7 +500,7 @@ const main = async () => {
       report.preset,
       `${report.overlapMs}ms`,
       `${report.sampleRate / 1000}k`,
-      `${report.chunks.sent}/${report.chunks.enqueued}`,
+      `${report.chunks.sent}/${report.chunks.enqueued}${report.chunks.gateVetoed ? ` v${report.chunks.gateVetoed}` : ''}${report.chunks.hallucVetoed ? ` h${report.chunks.hallucVetoed}` : ''}`,
       `${report.asrMs.p95}ms`,
       `${report.latencyMs.p50}ms`,
       `${report.latencyMs.p95}ms`,

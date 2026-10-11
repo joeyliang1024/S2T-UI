@@ -29,11 +29,19 @@ export class SileroBoundaryVad implements BoundaryVad {
     private readonly config: VadConfig,
     /** Per-window Silero probability at 16 kHz, in playback order. */
     private readonly probabilities: Float32Array,
-    private readonly threshold = 0.5
+    private readonly threshold = 0.5,
+    /**
+     * End-of-speech threshold (faster-whisper `neg_threshold` semantics):
+     * while speaking, only windows below this deeper threshold count as
+     * silence, so a probability dip between `endThreshold` and `threshold`
+     * cannot flap an utterance end. Defaults to `threshold` (single-
+     * threshold behaviour, unchanged).
+     */
+    private readonly endThreshold?: number
   ) {
-    this.rateRatio = 16_000 / sampleRate
-    this.minimumVoiced = Math.max(this.windowSamples, Math.floor(16_000 * config.minSpeechMs / 1_000))
-    this.minimumSilent = Math.max(this.windowSamples, Math.floor(16_000 * config.minSilenceMs / 1_000))
+    this.rateRatio = 16_000 / this.sampleRate
+    this.minimumVoiced = Math.max(this.windowSamples, Math.floor(16_000 * this.config.minSpeechMs / 1_000))
+    this.minimumSilent = Math.max(this.windowSamples, Math.floor(16_000 * this.config.minSilenceMs / 1_000))
   }
 
   process(samples: Float32Array): VadFrame {
@@ -53,7 +61,10 @@ export class SileroBoundaryVad implements BoundaryVad {
     // deliberately never scored — flush() closes the tail explicitly.
     while ((this.nextWindow + 1) * this.windowSamples <= end16k) {
       const windowStart = this.nextWindow * this.windowSamples
-      const voiced = (this.probabilities[this.nextWindow] ?? 0) >= this.threshold
+      const probability = this.probabilities[this.nextWindow] ?? 0
+      // While speaking, silence needs the deeper endThreshold (hysteresis);
+      // between endThreshold and threshold a window still counts as voiced.
+      const voiced = probability >= (this.speaking ? (this.endThreshold ?? this.threshold) : this.threshold)
       this.nextWindow += 1
       if (voiced) {
         if (this.speaking) { this.silentSamples = 0; continue }
