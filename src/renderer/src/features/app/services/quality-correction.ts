@@ -1,38 +1,28 @@
 import type { TranscriptEvent } from '../../models/model-adapter'
-import { captionGroupSignature, type LiveCaptionGroup } from './live-caption'
+import { captionGroupSignature, groupLiveCaptions, type LiveCaptionGroup } from './live-caption'
 import { joinCaptionText } from '../../../shared/services/transcript'
 
-/** Sentence planning has no display-row length limit or fixed audio duration. */
-export const correctionGroups = (entries: TranscriptEvent[], includeOpen = false): LiveCaptionGroup[] => {
-  const groups: LiveCaptionGroup[] = []
-  for (const entry of entries) {
-    const previous = groups[groups.length - 1]
-    const last = previous?.members[previous.members.length - 1]
-    const terminal = last && (last.isSentenceBoundary || /[。！？.!?][」”"']?$/.test(last.sourceText.trim()))
-    if (previous && entry.status === 'final' && previous.status === 'final' && !terminal &&
-        entry.startMs - previous.endMs < 600 && entry.startMs >= previous.startMs &&
-        Boolean(entry.speakerManuallyEdited && !entry.speaker) === Boolean(previous.speakerManuallyEdited && !previous.speaker) &&
-        (entry.speaker === previous.speaker ||
-          (!entry.speaker && !entry.speakerManuallyEdited) || (!previous.speaker && !previous.speakerManuallyEdited)) &&
-        entry.detectedLanguage === previous.detectedLanguage) {
-      previous.members.push(entry)
-      previous.sourceText = joinCaptionText(previous.sourceText, entry.sourceText)
-      previous.endMs = Math.max(previous.endMs, entry.endMs)
-      previous.isSentenceBoundary = entry.isSentenceBoundary
-      if (!previous.speaker && entry.speaker) previous.speaker = entry.speaker
-      if (entry.speakerManuallyEdited) previous.speakerManuallyEdited = true
-      if (entry.translatedText) previous.translatedText = joinCaptionText(previous.translatedText ?? '', entry.translatedText)
-    } else groups.push({ ...entry, members: [entry] })
-  }
-  return groups.filter((group, index) => group.status === 'final' && group.sourceText.trim() &&
+/**
+ * One correction unit = one merged caption row (合併句) exactly as the viewer
+ * sees it: re-transcribing row by row can never collapse two visible rows into
+ * one or split a row back into pieces. Row membership already carries the
+ * display locks (`captionGroupId`), speaker/language rules and the 10-second /
+ * 70-character display limits, so grouping here must not be looser than the
+ * screen. Sentence planning has no fixed audio duration of its own.
+ */
+export const correctionGroups = (entries: TranscriptEvent[], includeOpen = false): LiveCaptionGroup[] =>
+  groupLiveCaptions(entries).filter((group, index, groups) =>
+    group.status === 'final' && group.sourceText.trim() &&
     (includeOpen || index < groups.length - 1 || group.isSentenceBoundary || /[。！？.!?][」”"']?$/.test(group.sourceText.trim())))
-}
 
 export const correctedCaption = (group: LiveCaptionGroup, text: string): TranscriptEvent => {
   const { members: _, ...entry } = group
   const changed = text !== group.sourceText
   return { ...entry, sourceText: text, correctionOriginalText: group.members.reduce((previous, member) => joinCaptionText(previous, member.correctionOriginalText ?? member.sourceText), ''),
     revision: entry.revision + 1, isSentenceBoundary: true, captionGroupId: entry.captionGroupId ?? entry.id,
+    // The merged row carries the joined label; a manual blank anywhere in the
+    // row must keep blocking later automatic relabelling of the replacement.
+    speakerManuallyEdited: group.members.some(member => member.speakerManuallyEdited),
     ...(changed ? { translatedText: undefined, translationStatus: undefined, translationAttempts: undefined,
       translationContentRevision: (entry.translationContentRevision ?? 0) + 1 } : {}) }
 }

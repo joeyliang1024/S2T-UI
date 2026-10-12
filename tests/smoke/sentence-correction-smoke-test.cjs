@@ -6,14 +6,23 @@ const code = buildSync({ stdin: { contents: `export * from './src/renderer/src/f
 const mod = { exports: {} }; new Function('module', 'exports', 'require', code)(mod, mod.exports, require)
 const { correctionGroups, correctedCaption, applySentenceCorrection, correctionRuns, CorrectionAudioBuffer, captionGroupSignature, makeWav, readPcmWavFileLayout, readPcmWavSentence, CorrectedText } = mod.exports
 const caption = (id, startMs, endMs, sourceText, closed = false) => ({ id, startMs, endMs, sourceText, status: 'final', revision: 1, isSentenceBoundary: closed })
-const entries = [caption('a', 0, 6000, '今天討論'), caption('b', 6000, 12000, '模型部署'), caption('c', 12000, 18000, '與成本。', true)]
+const entries = [caption('a', 0, 2000, '今天討論'), caption('b', 2000, 4000, '模型部署'), caption('c', 4000, 6000, '與成本。', true)]
 const group = correctionGroups(entries)[0]
-assert.equal(correctionGroups(entries).length, 1, 'a whole sentence exceeds the ten-second display limit')
+assert.equal(correctionGroups(entries).length, 1, 'one merged caption row is one correction unit')
 assert.equal(group.members.length, 3)
+// The display never shows more than ten seconds per row, so correction must
+// follow those rows instead of collapsing the whole stretch into one caption.
+const long = [caption('a', 0, 6000, '今天討論'), caption('b', 6000, 12000, '模型部署'), caption('c', 12000, 18000, '與成本。', true)]
+const longRows = correctionGroups(long, true)
+assert.equal(longRows.length, 3, 'a whole sentence exceeding the ten-second display limit stays three rows')
+let rowByRow = long
+for (const row of longRows) rowByRow = applySentenceCorrection(rowByRow, row, row.sourceText)
+assert.equal(rowByRow.length, 3, 'correcting row by row never merges caption rows')
+assert.deepEqual(rowByRow.map(entry => entry.captionGroupId), ['a', 'b', 'c'], 'each corrected row keeps its own display lock')
 assert.equal(correctionGroups([caption('open', 0, 5000, '尚未說完')]).length, 0, 'open tail waits')
 const replaced = applySentenceCorrection(entries, group, '今天討論模型部署與效能。')
 assert.equal(replaced.length, 1)
-assert.equal(replaced[0].startMs, 0); assert.equal(replaced[0].endMs, 18000)
+assert.equal(replaced[0].startMs, 0); assert.equal(replaced[0].endMs, 6000)
 assert.equal(replaced[0].correctionOriginalText, group.sourceText)
 assert.equal(replaced[0].translatedText, undefined)
 const edited = entries.map(entry => entry.id === 'b' ? { ...entry, sourceText: '手動修改', revision: 2 } : entry)
@@ -25,7 +34,7 @@ assert.equal(afterTranslation[0].translatedText, undefined, 'changed source inva
 const latestSpeaker = entries.map(entry => entry.id === 'b' ? { ...entry, speaker: 'Alice', speakerManuallyEdited: true } : entry)
 const labelled = applySentenceCorrection(latestSpeaker, group, '今天討論模型部署與效能。')
 assert.equal(labelled[0].speaker, 'Alice'); assert.equal(labelled[0].speakerManuallyEdited, true)
-assert.equal(correctionGroups([caption('p1', 0, 1000, '前半'), { ...caption('p2', 1000, 2000, '後半', true), speakerManuallyEdited: true }]).length, 2, 'manually blank speaker is an explicit boundary')
+assert.equal(correctionGroups([caption('p1', 0, 1000, '前半'), { ...caption('p2', 1000, 2000, '後半', true), speakerManuallyEdited: true }]).length, 1, 'correction follows the single visible row even for a manually blank speaker')
 const tail = new CorrectionAudioBuffer(16000)
 tail.push(new Float32Array(3128).fill(.1))
 assert.equal(tail.slice(0, 196).length, 3128, 'rounded ASR endpoint may exceed actual samples by less than 1ms')

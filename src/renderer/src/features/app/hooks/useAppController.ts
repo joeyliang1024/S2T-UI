@@ -3150,15 +3150,24 @@ const clearCaptions = async (): Promise<void> => {
     if (captureState === 'starting' || captureState === 'saving') return
     // Finish the current recording before releasing its session identity.
     // stopCapture drains ASR/translation and preserves the recording in history.
-    if (captureState === 'recording' || captureState === 'paused') await stopCapture()
-    translationQueueRef.current!.reset()
-    translationQueueRef.current!.paused = false
-    unsubscribeModelRef.current?.()
-    unsubscribeModelErrorRef.current?.()
+    // A failed stop is reported after the reset below; the caller swallows the
+    // promise (`void clearCaptions()`), so it must never reject unhandled.
+    let stopError: unknown
+    try {
+      if (captureState === 'recording' || captureState === 'paused') await stopCapture()
+    } catch (error) { stopError = error }
+    // The identity reset runs even when stopping fails: a surviving session
+    // id is what kept offering 接續收音 after the screen was cleared.
     liveSessionIdRef.current = null
     continuationTargetRef.current = null
     continuationEventIdsRef.current.clear()
     savedLiveSnapshotRef.current = null
+    try {
+      translationQueueRef.current?.reset()
+      if (translationQueueRef.current) translationQueueRef.current.paused = false
+      unsubscribeModelRef.current?.()
+      unsubscribeModelErrorRef.current?.()
+    } catch (error) { console.error('s2t.clear.cleanup', error) }
     transcriptsRef.current = []
     setTranscripts([])
     sampleOffsetRef.current = 0
@@ -3167,6 +3176,14 @@ const clearCaptions = async (): Promise<void> => {
     setElapsedMs(0); setCaptionTimerOffsetMs(0)
     setSummaryText(''); setSummaryStatus('')
     setEditingTranscriptId(null); setTranscriptSearch(''); setFollowingCaptions(true)
+    // Re-initialise the workspace itself, not just the caption list.
+    setCaptureState('idle')
+    setStatus(stopError instanceof Error ? stopError.message : stopError ? String(stopError) : activeTranslate('stReady'))
+    setViewingSessionId(null)
+    if (playbackUrlRef.current) URL.revokeObjectURL(playbackUrlRef.current)
+    playbackUrlRef.current = null
+    setPlaybackUrl(null); setPlayingSessionId(null)
+    setImportError(''); setImportProgress(null)
     setView('live')
   }
 
