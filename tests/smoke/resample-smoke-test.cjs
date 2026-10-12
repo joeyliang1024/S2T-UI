@@ -16,19 +16,21 @@ loaded._compile(result.outputFiles[0].text, loaded.filename)
 const { StreamingResampler, chooseModelSampleRate } = loaded.exports
 
 const samples = (size) => Float32Array.from({ length: size }, (_, index) => Math.sin(index / 17))
-for (const [sourceRate, targetRate] of [[48_000, 16_000], [44_100, 16_000], [48_000, 48_000]]) {
+for (const [sourceRate, targetRate] of [[48_000, 16_000], [44_100, 16_000], [96_000, 16_000], [48_000, 48_000]]) {
   const input = samples(sourceRate * 2)
   const onceResampler = new StreamingResampler(sourceRate, targetRate)
   const once = onceResampler.process(input)
   const onceFinal = Float32Array.from([...once, ...onceResampler.flush()])
+  for (const frameSize of [127, 128, 512]) {
   const streaming = new StreamingResampler(sourceRate, targetRate)
   const parts = []
-  for (let offset = 0; offset < input.length; offset += 127) parts.push(streaming.process(input.slice(offset, offset + 127)))
+  for (let offset = 0; offset < input.length; offset += frameSize) parts.push(streaming.process(input.slice(offset, offset + frameSize)))
   parts.push(streaming.flush())
   const split = Float32Array.from(parts.flatMap((part) => [...part]))
   assert.ok(Math.abs(onceFinal.length - Math.round(input.length * targetRate / sourceRate)) <= 1, `${sourceRate} -> ${targetRate}: output length`)
   assert.equal(split.length, onceFinal.length, `${sourceRate} -> ${targetRate}: chunking changed output length`)
   for (let index = 0; index < split.length; index += 1) assert.ok(Math.abs(split[index] - onceFinal[index]) < .0001, `${sourceRate} -> ${targetRate}: chunking changed sample ${index}`)
+  }
 }
 const kaiser = new StreamingResampler(48_000, 16_000, { kaiserWindow: true })
 const kaiserOutput = Float32Array.from([...kaiser.process(samples(48_000)), ...kaiser.flush()])

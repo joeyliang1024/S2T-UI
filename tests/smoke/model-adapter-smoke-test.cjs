@@ -47,6 +47,20 @@ const main = async () => {
   assert.equal(shortEvents.length,1,'a 200ms utterance is sent at its silence boundary without waiting for stop')
   assert.equal(shortEvents[0].isSentenceBoundary,true)
   await short.stop()
+  const adminRequests = []
+  global.window = { s2t: { transcribeAudioChunk: async request => { adminRequests.push(request); return { text: 'admin caption' } } } }
+  const admin = new OpenAiChunkedModelAdapter({ id: 'admin', endpoint: '/test', model: 'local', requiresApiKey: false, strictChunkLimits: true, vadConfig: { minSpeechMs: 120, minSilenceMs: 250, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1500 } })
+  await admin.start({ sampleRate: 16000, language: 'zh-TW', targetLanguage: 'en' })
+  for (let offset = 0; offset < 8000; offset += 160) admin.pushAudio(new Float32Array(160).fill(offset < 3200 ? .1 : 0), offset)
+  await admin.queued
+  assert.equal(adminRequests.length, 0, 'admin minimum holds short natural boundaries')
+  for (let offset = 8000; offset < 11200; offset += 160) admin.pushAudio(new Float32Array(160), offset)
+  await admin.queued
+  assert.equal(adminRequests.length, 1)
+  assert.equal((adminRequests[0].audio.byteLength - 44) / 2, 11200, 'admin minimum is applied')
+  for (let offset = 11200; offset < 11200 + 16000 * 10; offset += 160) admin.pushAudio(new Float32Array(160).fill(.1), offset)
+  await admin.stop()
+  assert.ok(adminRequests.every(request => (request.audio.byteLength - 44) / 2 <= 24000), 'backlog and stop obey admin maximum')
   const naturalRequests = []
   const naturalEvents = []
   global.window = { setTimeout, s2t: { transcribeAudioChunk: async request => { naturalRequests.push(request); return { text: '完整的一句' } } } }

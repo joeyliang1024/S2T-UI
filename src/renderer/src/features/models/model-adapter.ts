@@ -13,6 +13,7 @@ export type TranscriptEvent = {
   status: 'partial' | 'final' | 'gap'
   startMs: number
   endMs: number
+  correctionOriginalText?: string
   sourceText: string
   translatedText?: string
   speaker?: string
@@ -45,7 +46,7 @@ export interface ModelAdapter {
   onTranscript(listener: (event: TranscriptEvent) => void): () => void
   onError(listener: (message: string) => void): () => void
   /** Applies settings to audio received after this call; it never restarts capture. */
-  updateLiveSettings?(input: { language?: string; prompt?: string; vadConfig?: VadConfig }): void
+  updateLiveSettings?(input: { language?: string; prompt?: string; vadConfig?: VadConfig; strictChunkLimits?: boolean }): void
 }
 
 /**
@@ -283,7 +284,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private readonly gatewayTimeoutMs = 30_000
   readonly diagnostics = { requests: 0, completed: 0, rateLimited: 0, gaps: 0, inFlight: 0, maximumQueued: 0, totalRequestMs: 0, totalQueueWaitMs: 0, maximumPendingMs: 0 }
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean; vadFactory?: (sampleRate: number, config?: VadConfig) => BoundaryVad }) {
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; strictChunkLimits?: boolean; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean; vadFactory?: (sampleRate: number, config?: VadConfig) => BoundaryVad }) {
     this.prompt = profile.prompt
     this.vadConfig = profile.vadConfig ?? { ...defaultVadConfig }
   }
@@ -367,9 +368,11 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     while (this.pendingBoundaries.length && this.pendingBoundaries[0] <= this.pendingStart) this.pendingBoundaries.shift()
     this.pendingContainsSpeech = this.vadSpeaking || this.pendingStart < this.lastSpeechSample || this.pendingBoundaries.length > 0
     while (this.pendingSamples && this.pendingContainsSpeech && this.queuedChunks < this.maximumQueuedChunks) {
-      const maximum = Math.floor(this.sampleRate * Math.min(6000, configuredMaximum * (this.queuedChunks >= 2 ? 2 : 1)) / 1000)
+      const maximum = Math.floor(this.sampleRate * Math.min(6000, configuredMaximum * (!this.profile.strictChunkLimits && this.queuedChunks >= 2 ? 2 : 1)) / 1000)
       const boundary = this.pendingBoundaries[0]
-      const toBoundary = boundary === undefined ? Infinity : boundary - this.pendingStart
+      const minimum = this.profile.strictChunkLimits ? Math.floor(this.sampleRate * (this.vadConfig?.chunkMinMs ?? 700) / 1000) : 0
+      const explicit = boundary !== undefined && this.explicitBoundaries.has(boundary)
+      const toBoundary = boundary === undefined ? Infinity : Math.max(explicit ? 0 : minimum, boundary - this.pendingStart)
       if (this.pendingSamples < maximum && toBoundary > this.pendingSamples) break
       const size = Math.min(maximum, toBoundary, this.pendingSamples)
       const natural = size === toBoundary
@@ -411,7 +414,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const start = this.pendingStart
       while (this.pendingBoundaries.length && this.pendingBoundaries[0] <= start) this.pendingBoundaries.shift()
       const boundary = this.pendingBoundaries[0]
-      const size = Math.min(this.pendingSamples, this.sampleRate * 6, boundary === undefined ? Infinity : boundary - start)
+      const stopMaximum = this.profile.strictChunkLimits ? (this.vadConfig?.chunkMaxMs ?? 6000) / 1000 : 6
+      const size = Math.min(this.pendingSamples, this.sampleRate * stopMaximum, boundary === undefined ? Infinity : boundary - start)
       const final = size === this.pendingSamples
       const natural = boundary === start + size
       if (natural) this.pendingBoundaries.shift()
@@ -433,7 +437,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.errorListeners.add(listener)
     return () => this.errorListeners.delete(listener)
   }
-  updateLiveSettings(input: { language?: string; prompt?: string; vadConfig?: VadConfig }): void {
+  updateLiveSettings(input: { language?: string; prompt?: string; vadConfig?: VadConfig; strictChunkLimits?: boolean }): void {
+    if (input.strictChunkLimits !== undefined) this.profile.strictChunkLimits = input.strictChunkLimits
     if (input.language !== undefined) this.language = input.language === 'auto' ? '' : input.language.split('-')[0]
     if (input.prompt !== undefined) this.prompt = input.prompt || undefined
     if (input.vadConfig) {

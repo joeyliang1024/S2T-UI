@@ -1,3 +1,4 @@
+import { correctionGroups, correctedCaption, applySentenceCorrection, CorrectionAudioBuffer } from '../services/quality-correction'
 import { sessionStorageStatesForSnapshot } from '../services/session-storage-state'
 import { readSummaryStream } from '../services/summary-stream'
 import { recoverSession, sessionRecoveryStages } from '../services/session-recovery'
@@ -6,7 +7,7 @@ import { applyEnvironmentSettings } from '../services/environment-settings'
 import { importExtensions } from '../../transcript/import-formats'
 import { openCaptionPopout, type CaptionPopout } from '../services/caption-popout'
 import { type CaptureState, type AudioDevice, type View, type SavedSession, type Settings, type ModelProfile, type ModelCapabilities, type TextModelProfile, type AudioVersion, type CaptureModelSnapshot } from '../../../shared/types'
-import { dbfs, meterPercent, makeWav, pcm16, BufferedPcmWriter } from '../../../shared/services/audio'
+import { dbfs, meterPercent, makeWav, pcm16, BufferedPcmWriter, pcmRecordingBufferLimits } from '../../../shared/services/audio'
 import { makeVtt, makeTranscriptText, makeTranscriptCsv, timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, defaultWebSocketCapabilities, defaultHttpCapabilities, defaultModelProfile, languageName, normalizeSettings, initialSettings, textEndpoint, asrLanguage } from '../../../shared/services/settings'
 import { speedToVadConfig } from '../../capture/vad'
@@ -16,7 +17,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { NoopModelAdapter, OpenAiChunkedModelAdapter, WebSocketModelAdapter, type ModelAdapter, type TranscriptEvent } from '../../models/model-adapter'
 import { assignSpeakersByOverlap, parseSpeakerEmbeddings, parseSpeakerTurns, stabilizeSpeakerTurns, type SpeakerTurn } from '../../speakers/diarization'
 import { voiceprintStorage, type Voiceprint } from '../../speakers/services/voiceprint-storage'
-import { joinOverlappedText, nextPcmWavChunkStart, pcmWavChunkCount, readPcmWavFileChunk, readPcmWavFileLayout } from '../../transcript/wav-batch'
+import { readPcmWavSentence, joinOverlappedText, nextPcmWavChunkStart, pcmWavChunkCount, readPcmWavFileChunk, readPcmWavFileLayout } from '../../transcript/wav-batch'
 import { importFileFingerprint, importModelSnapshot, matchesImportCheckpoint } from '../../transcript/import-checkpoint'
 import { StreamingResampler, chooseModelSampleRate } from '../../capture/resample'
 import { remoteSessionStorage } from '../services/remote-session-storage'
@@ -98,6 +99,12 @@ const setSessions = useCallback((update: SavedSession[] | ((current: SavedSessio
 const [qualityCorrectionProgress, setQualityCorrectionProgress] = useState<Record<string, {
   stage: 'loading' | 'asr' | 'diarization' | 'completed' | 'failed'; completed: number; total: number; error?: string
 }>>({})
+const liveCorrectionAudioRef = useRef<CorrectionAudioBuffer | null>(null)
+const liveCorrectionEpochRef = useRef(0)
+const liveCorrectionBusyRef = useRef(false)
+const liveCorrectionDoneRef = useRef(new Set<string>())
+const liveCorrectionFailuresRef = useRef(new Map<string, number>())
+const liveCorrectionRunnerRef = useRef<() => Promise<void>>(async () => {})
 const qualityCorrectionActiveRef = useRef(new Set<string>())
 const recoveryActiveRef = useRef(new Set<string>())
 const titleActiveRef = useRef(new Set<string>())
@@ -386,6 +393,7 @@ const opfsRecordingIdRef = useRef<string | null>(null)
 // the browser's full PCM array for live diarization. Keep only a bounded
 // rolling window for that preview path.
 const liveDiarizationChunksRef = useRef<Float32Array[]>([])
+const liveDiarizationHeadRef = useRef(0)
 const liveDiarizationStartSampleRef = useRef(0)
 const liveDiarizationSamplesRef = useRef(0)
 const liveSpeakerTurnsRef = useRef<SpeakerTurn[]>([])
@@ -541,6 +549,11 @@ const receiveTranscript = useCallback((event: TranscriptEvent): void => {
 
 const adminParameters = userRole === 'admin' ? settings.adminParameters : undefined
 const effectiveVadConfig = { ...speedToVadConfig(settings.responseSpeed), ...Object.fromEntries(Object.entries(adminParameters || {}).filter(([key]) => ['minSpeechMs','minSilenceMs','preRollMs','noiseFloorOffsetDb','chunkMinMs','chunkMaxMs'].includes(key))) }
+// A partial admin override takes precedence over the response-speed preset.
+if (effectiveVadConfig.chunkMinMs > effectiveVadConfig.chunkMaxMs) {
+  if (adminParameters?.chunkMaxMs !== undefined) effectiveVadConfig.chunkMinMs = effectiveVadConfig.chunkMaxMs
+  else effectiveVadConfig.chunkMaxMs = effectiveVadConfig.chunkMinMs
+}
 useEffect(() => {
   translationQueueRef.current?.configure({ concurrency: adminParameters?.translationConcurrency, sentenceWaitMs: adminParameters?.translationSentenceWaitMs })
 }, [adminParameters?.translationConcurrency, adminParameters?.translationSentenceWaitMs])
@@ -638,7 +651,8 @@ useEffect(() => {
       setStatus(activeTranslate('stLiveAsrSettingsUnsupported'))
       return
     }
-    modelRef.current.updateLiveSettings({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), vadConfig: effectiveVadConfig })
+    modelRef.current.updateLiveSettings({ language: settings.sourceLanguage, prompt: settings.glossary.trim(), vadConfig: effectiveVadConfig, strictChunkLimits: Boolean(adminParameters) })
+    if (activeModelSnapshotRef.current) activeModelSnapshotRef.current = { ...activeModelSnapshotRef.current, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary.trim() }
     setStatus(activeTranslate('stLiveAsrSettingsNextChunk'))
   }, [captureState, settings.glossary, settings.sourceLanguage, settings.responseSpeed, settings.adminParameters, userRole])
 
@@ -665,7 +679,7 @@ useEffect(() => {
 useEffect(() => {
     if (captureState !== 'recording' || !settings.diarizationModel || !settings.diarizationPreviewEnabled) return
     const timer = window.setInterval(() => {
-      const chunks = liveDiarizationChunksRef.current
+      const chunks = liveDiarizationChunksRef.current.slice(liveDiarizationHeadRef.current)
       if (liveDiarizationRunningRef.current || chunks.length === 0 || Date.now() < liveDiarizationRetryAtRef.current) return
       const captureId = liveDraftRef.current?.id
       const clipStartMs = (continuationTargetRef.current?.baseDurationMs ?? 0) + liveDiarizationStartSampleRef.current / sampleRateRef.current * 1000
@@ -1175,6 +1189,8 @@ useEffect(() => {
   }, [remoteSettingsHydrated, userId])
 
 const cleanUpCapture = useCallback(() => {
+    liveCorrectionEpochRef.current += 1
+    liveCorrectionAudioRef.current = null
     if (meterFrameRef.current) cancelAnimationFrame(meterFrameRef.current)
     if (timerRef.current) window.clearInterval(timerRef.current)
     meterFrameRef.current = null
@@ -1416,7 +1432,7 @@ const startCapture = async (): Promise<void> => {
       unsubscribeModelRef.current?.()
       unsubscribeModelErrorRef.current?.()
       modelRef.current = captureModel.kind === 'openai-http'
-        ? new OpenAiChunkedModelAdapter({ ...captureModel, gatewayProfileId: captureGatewayProfileId ?? undefined, prompt: capturePrompt.trim() || undefined, vadConfig: effectiveVadConfig, sileroVadEnabled: captureSileroVadEnabled, dynaudnormEnabled: captureDynaudnormEnabled })
+        ? new OpenAiChunkedModelAdapter({ ...captureModel, gatewayProfileId: captureGatewayProfileId ?? undefined, prompt: capturePrompt.trim() || undefined, vadConfig: effectiveVadConfig, strictChunkLimits: Boolean(adminParameters), sileroVadEnabled: captureSileroVadEnabled, dynaudnormEnabled: captureDynaudnormEnabled })
         : captureModel.endpoint.trim()
           ? new WebSocketModelAdapter(captureModel.endpoint.trim())
           : new NoopModelAdapter()
@@ -1457,9 +1473,14 @@ const startCapture = async (): Promise<void> => {
       // operate in the processor branch and cannot pause the user-facing bar.
       microphoneAnalyser.connect(meterSinkGain); systemAnalyser.connect(meterSinkGain)
       meterSinkGain.connect(context.destination)
+      liveCorrectionEpochRef.current += 1
+      liveCorrectionDoneRef.current.clear()
+      liveCorrectionFailuresRef.current.clear()
+      liveCorrectionAudioRef.current = new CorrectionAudioBuffer(modelSampleRate)
       sampleOffsetRef.current = 0
       liveDiarizationStartSampleRef.current = 0
       liveDiarizationChunksRef.current = []
+      liveDiarizationHeadRef.current = 0
       liveDiarizationSamplesRef.current = 0
       liveDiarizationGroupsRef.current.clear()
       liveDiarizationRetryAtRef.current = 0
@@ -1487,14 +1508,19 @@ const startCapture = async (): Promise<void> => {
           liveDiarizationChunksRef.current.push(samples)
           const maximumPreviewSamples = Math.floor(sampleRateRef.current * 45)
           liveDiarizationSamplesRef.current += samples.length
-          while (liveDiarizationSamplesRef.current > maximumPreviewSamples && liveDiarizationChunksRef.current.length > 1) {
-            const removed = liveDiarizationChunksRef.current.shift()!
+          while (liveDiarizationSamplesRef.current > maximumPreviewSamples && liveDiarizationChunksRef.current.length - liveDiarizationHeadRef.current > 1) {
+            const removed = liveDiarizationChunksRef.current[liveDiarizationHeadRef.current++]
             liveDiarizationSamplesRef.current -= removed.length
             liveDiarizationStartSampleRef.current += removed.length
+          }
+          if (liveDiarizationHeadRef.current >= 4096 && liveDiarizationHeadRef.current >= liveDiarizationChunksRef.current.length / 2) {
+            liveDiarizationChunksRef.current = liveDiarizationChunksRef.current.slice(liveDiarizationHeadRef.current)
+            liveDiarizationHeadRef.current = 0
           }
         }
         const modelSamples = resampler.process(samples)
         if (!modelSamples.length) return
+        liveCorrectionAudioRef.current?.push(modelSamples)
         modelRef.current.pushAudio(modelSamples, sampleOffsetRef.current)
         sampleOffsetRef.current += modelSamples.length
       }
@@ -1566,8 +1592,17 @@ const startCapture = async (): Promise<void> => {
       }
       if (opfsRecordingRef.current) {
         const recording = opfsRecordingRef.current
+        const remoteRecording = remotePcmRecordingRef.current
+        const limits = pcmRecordingBufferLimits(context.sampleRate, Boolean(remoteRecording))
+        let writeStage: 'idle' | 'browser' | 'remote' = 'idle'
         pcmWriterRef.current = new BufferedPcmWriter(
-          async (audio) => { await recording.append(audio); await remotePcmRecordingRef.current?.append(audio) },
+          async (audio) => {
+            try {
+              writeStage = 'browser'
+              await recording.append(audio)
+              if (remoteRecording) { writeStage = 'remote'; await remoteRecording.append(audio) }
+            } finally { writeStage = 'idle' }
+          },
           (active) => {
             const recorder = recorderRef.current
             if (active) {
@@ -1577,7 +1612,7 @@ const startCapture = async (): Promise<void> => {
               pauseStartedAtRef.current = Date.now()
               if (recorder?.state === 'recording') recorder.pause()
               setCaptureState('paused')
-              setStatus(activeTranslate('stBrowserStagingWriteSlowPaused'))
+              setStatus(activeTranslate(writeStage === 'remote' ? 'stRecordingUploadSlowPaused' : 'stBrowserStagingWriteSlowPaused'))
               return
             }
             if (!pcmWriterPausedRef.current) return
@@ -1598,8 +1633,8 @@ const startCapture = async (): Promise<void> => {
             setCaptureState('paused')
             setStatus(activeTranslate('stBrowserRecordingWriteFailedDetail').replace('{error}', String(error.message)))
           },
-          remotePcmRecordingRef.current ? context.sampleRate * 2 : 24_000,
-          remotePcmRecordingRef.current ? context.sampleRate * 8 : 192_000
+          limits.batchBytes,
+          limits.maximumPendingBytes
         )
       }
       if (stream) attachInput(stream, context)
@@ -2449,6 +2484,47 @@ const retryFailedSession = async (entry: SavedSession, backup?: File, legacyStag
     } catch (error) { setStatus(error instanceof Error ? error.message === 'session-recovery-unknown-stage' ? activeTranslate('recoveryUnknownStage') : error.message : activeTranslate('errorRecovery')) }
     finally { recoveryActiveRef.current.delete(entry.id) }
   }
+const transcribeCorrection = async (data: ArrayBuffer, model = selectedModel, language = settings.sourceLanguage, prompt = settings.glossary): Promise<{ text: string }> => {
+    const profileId = gatewayAsrProfileId(model.id)
+    return window.s2t ? await window.s2t.transcribeAudioChunk({ profileId: model.id, endpoint: model.endpoint, model: model.model, language: asrLanguage(language), requiresApiKey: model.requiresApiKey !== false, prompt: prompt || undefined, filename: `correction.wav`, contentType: 'audio/wav', audio: data }) : await requestBrowserAsr({ method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-filename': headerValue(`correction.wav`), ...(profileId ? { 'x-s2t-model-id': profileId } : {}), ...(asrLanguage(language) ? { 'x-s2t-language': asrLanguage(language) } : {}), ...(prompt ? { 'x-s2t-prompt': headerValue(prompt) } : {}) }, body: data }).then(async (response) => { const body = await readJsonResponse<{ text?: string; error?: string }>(response, activeTranslate('stFinalAsrServiceLabel')); if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`); return { text: body.text || '' } })
+  }
+
+liveCorrectionRunnerRef.current = async (): Promise<void> => {
+    const buffer = liveCorrectionAudioRef.current
+    const model = activeModelSnapshotRef.current
+    if (isFloatingCaptionWindow || liveCorrectionBusyRef.current || captureState !== 'recording' ||
+        !buffer || buffer.samples / buffer.sampleRate < 30 || model?.kind !== 'openai-http') return
+    const epoch = liveCorrectionEpochRef.current
+    const baseMs = continuationTargetRef.current?.baseDurationMs ?? 0
+    const groups = correctionGroups(transcriptsRef.current).filter(group => group.startMs >= baseMs &&
+      !liveCorrectionDoneRef.current.has(captionGroupSignature(group)) && group.members.every(member => member.correctionOriginalText === undefined))
+    const group = groups.find(item => (liveCorrectionFailuresRef.current.get(captionGroupSignature(item)) ?? 0) <= Date.now())
+    if (!group) return
+    const signature = captionGroupSignature(group)
+    const samples = buffer.slice(group.startMs - baseMs, group.endMs - baseMs)
+    if (!samples) { liveCorrectionDoneRef.current.add(signature); setStatus('品質校正：句子音訊已超出背景緩衝範圍，請於停止後執行品質校正'); return }
+    liveCorrectionBusyRef.current = true
+    try {
+      const wav = await makeWav([samples], buffer.sampleRate).arrayBuffer()
+      const result = await transcribeCorrection(wav, { ...selectedModel, ...model }, model.sourceLanguage, model.prompt)
+      if (epoch !== liveCorrectionEpochRef.current) return
+      if (!result.text.trim()) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
+      setTranscripts(current => applySentenceCorrection(current, group, result.text.trim()))
+      liveCorrectionDoneRef.current.add(signature)
+    } catch (error) {
+      if (epoch === liveCorrectionEpochRef.current) {
+        liveCorrectionFailuresRef.current.set(signature, Date.now() + 30_000)
+        setStatus(activeTranslate('stQualityCorrectionFailedDetail').replace('{error}', error instanceof Error ? error.message : String(error)))
+      }
+    } finally { liveCorrectionBusyRef.current = false }
+  }
+
+useEffect(() => {
+    if (captureState !== 'recording' || isFloatingCaptionWindow) return
+    const timer = window.setInterval(() => void liveCorrectionRunnerRef.current(), 1000)
+    return () => window.clearInterval(timer)
+  }, [captureState, isFloatingCaptionWindow])
+
 const finalizeSession = async (entry: SavedSession): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessing')); return }
     if (selectedModel.kind !== 'openai-http') { setStatus(activeTranslate('stSelectOpenAiCompatibleAsrModel')); return }
@@ -2461,28 +2537,34 @@ const finalizeSession = async (entry: SavedSession): Promise<void> => {
       const audio = await loadSessionAudio(entry)
       if (!audio) throw new Error(activeTranslate('stFullWavRecordingNotFound'))
       const file = new File([audio], 'finalization.wav', { type: 'audio/wav' })
-      const layout = await readPcmWavFileLayout(file); const total = pcmWavChunkCount(layout)
+      const layout = await readPcmWavFileLayout(file)
+      const groups = correctionGroups(entry.segments, true)
+      if (!groups.length) throw new Error('沒有可供品質校正的分句結果')
+      const total = groups.length
       progress('asr', 0, total + 1)
-      let offset = 0; let merged = ''; let segments: TranscriptEvent[] = []
+      let segments: TranscriptEvent[] = []
       for (let index = 0; index < total; index += 1) {
-        setStatus(activeTranslate('stCorrectingWithFullRecording').replace('{index}', String(index + 1)).replace('{total}', String(total)))
-        const chunk = await readPcmWavFileChunk(file, layout, offset); offset = nextPcmWavChunkStart(layout, offset)
+        const group = groups[index]
+        const chunk = await readPcmWavSentence(file, layout, group.startMs, group.endMs)
         const rate = chooseModelSampleRate(layout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? [])
         const data = rate === layout.sampleRate ? chunk.audio : await resampleAudioForAsr(chunk.audio, rate)
-        const asr = window.s2t ? await window.s2t.transcribeAudioChunk({ profileId: selectedModel.id, endpoint: selectedModel.endpoint, model: selectedModel.model, language: asrLanguage(settings.sourceLanguage), requiresApiKey: selectedModel.requiresApiKey !== false, prompt: settings.glossary || undefined, filename: `final-${index}.wav`, contentType: 'audio/wav', audio: data }) : await requestBrowserAsr({ method: 'POST', headers: { 'content-type': 'audio/wav', 'x-s2t-filename': headerValue(`final-${index}.wav`), ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}), ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}), ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {}) }, body: data }).then(async (response) => { const body = await readJsonResponse<{ text?: string; error?: string }>(response, activeTranslate('stFinalAsrServiceLabel')); if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`); return { text: body.text || '' } })
-        const next = joinOverlappedText(merged, asr.text || ''); const appended = next.slice(merged.length).trim()
-        if (appended) segments.push({ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: appended })
-        merged = next
+        const asr = await transcribeCorrection(data)
+        if (!asr.text.trim()) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
+        segments.push(correctedCaption(group, asr.text.trim()))
         progress('asr', index + 1, total + 1)
       }
+      // Preserve gap evidence and incomplete records outside the correction groups.
+      const groupedIds = new Set(groups.flatMap(group => group.members.map(member => member.id)))
+      segments = [...segments, ...entry.segments.filter(segment => !groupedIds.has(segment.id))].sort((a, b) => a.startMs - b.startMs)
       if (!segments.length) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
       progress('diarization', total, total + 1)
-      const diarized = window.s2t
+      const diarized = !settings.diarizationModel ? null : window.s2t
         ? await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio: await audio.arrayBuffer() })
         : await readJsonResponse<unknown>(await authFetch('/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }), activeTranslate('stFinalDiarizationServiceLabel'))
-      segments = assignSpeakersByOverlap(segments, parseSpeakerTurns(diarized))
+      if (diarized) segments = assignSpeakersByOverlap(segments, parseSpeakerTurns(diarized)).map((segment, index) => segments[index].speakerManuallyEdited ? { ...segment, speaker: segments[index].speaker } : segment)
       const transcript = makeTranscriptText(segments)
-      setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, qualityCorrectionState: 'completed', qualityCorrectionError: undefined, title: automaticSessionTitle(transcript, item.createdAt), transcript, segments, audioVersions: [...audioVersionsFor(item), { id: crypto.randomUUID(), audioKey: activeAudioVersionFor(item).audioKey, createdAt: new Date().toISOString(), label: activeTranslate('qualityCorrection'), parentId: activeAudioVersionFor(item).id, segments, transcript }], activeAudioVersionId: item.activeAudioVersionId } : item))
+      const correctedVersionId = crypto.randomUUID()
+      setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, qualityCorrectionState: 'completed', qualityCorrectionError: undefined, title: automaticSessionTitle(transcript, item.createdAt), transcript, segments, audioVersions: [...audioVersionsFor(item), { ...activeAudioVersionFor(item), id: correctedVersionId, audioKey: activeAudioVersionFor(item).audioKey, createdAt: new Date().toISOString(), label: activeTranslate('qualityCorrection'), parentId: activeAudioVersionFor(item).id, segments, transcript }], activeAudioVersionId: correctedVersionId } : item))
       void generateSessionTitle(entry.id, transcript)
       progress('completed', total + 1, total + 1)
       setStatus(activeTranslate('stFullRecordingCorrectionCompleted'))
@@ -3064,12 +3146,28 @@ const searchedTranscripts = visibleTranscripts.filter((entry) => `${entry.source
 // while preventing a long unattended recording from growing the live DOM without bound.
 const renderedLiveTranscripts = renderedLiveCaptionWindow(searchedTranscripts, Boolean(transcriptSearch.trim()))
 
-const clearCaptions = (): void => {
-    const boundary = Math.max(sampleOffsetRef.current / modelSampleRateRef.current * 1000, ...transcripts.map((entry) => entry.endMs), 0)
-    clearBoundaryRef.current = boundary
-    setClearedThroughMs(boundary)
-    setCaptionTimerOffsetMs(elapsedMs)
-    setEditingTranscriptId(null); setTranscriptSearch('')
+const clearCaptions = async (): Promise<void> => {
+    if (captureState === 'starting' || captureState === 'saving') return
+    // Finish the current recording before releasing its session identity.
+    // stopCapture drains ASR/translation and preserves the recording in history.
+    if (captureState === 'recording' || captureState === 'paused') await stopCapture()
+    translationQueueRef.current!.reset()
+    translationQueueRef.current!.paused = false
+    unsubscribeModelRef.current?.()
+    unsubscribeModelErrorRef.current?.()
+    liveSessionIdRef.current = null
+    continuationTargetRef.current = null
+    continuationEventIdsRef.current.clear()
+    savedLiveSnapshotRef.current = null
+    transcriptsRef.current = []
+    setTranscripts([])
+    sampleOffsetRef.current = 0
+    clearBoundaryRef.current = -1
+    setClearedThroughMs(-1)
+    setElapsedMs(0); setCaptionTimerOffsetMs(0)
+    setSummaryText(''); setSummaryStatus('')
+    setEditingTranscriptId(null); setTranscriptSearch(''); setFollowingCaptions(true)
+    setView('live')
   }
 
 const saveLiveCaptionsBeforeSwitch = async (): Promise<void> => {

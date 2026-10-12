@@ -1,7 +1,9 @@
 const assert=require('node:assert/strict');
 const {validateAdminParameters}=require('../../server/admin-parameters.cjs');
-for(const value of [{unknown:1},{toString:1},{constructor:1},{translationConcurrency:0},{translationConcurrency:9},{translationTemperature:NaN},{chunkMinMs:3001},{chunkMaxMs:400},{minSpeechMs:1},[],null])assert.throws(()=>validateAdminParameters(value));
+for(const value of [{unknown:1},{toString:1},{constructor:1},{translationConcurrency:0},{translationConcurrency:9},{translationTemperature:NaN},{chunkMinMs:2000,chunkMaxMs:400},{minSpeechMs:1},[],null])assert.throws(()=>validateAdminParameters(value));
 assert.deepEqual(validateAdminParameters({chunkMinMs:700,chunkMaxMs:1500,translationTemperature:0,translationConcurrency:4}),{chunkMinMs:700,chunkMaxMs:1500,translationTemperature:0,translationConcurrency:4});
+assert.deepEqual(validateAdminParameters({chunkMinMs:2000}),{chunkMinMs:2000});
+assert.deepEqual(validateAdminParameters({chunkMaxMs:400}),{chunkMaxMs:400});
 const {buildSync}=require('esbuild');const code=buildSync({entryPoints:['src/renderer/src/features/app/services/translation-queue.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text;const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);
 let entries=[{id:'http-0',revision:1,status:'final',startMs:0,endMs:1000,sourceText:'a sentence without punctuation',detectedLanguage:'en-US'}];
 const queue=new m.exports.TranslationQueue(()=>entries,f=>{entries=f(entries)},()=>{},()=>1200);

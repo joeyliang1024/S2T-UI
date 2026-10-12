@@ -955,3 +955,12 @@ button.session-processing-state:focus-visible { outline: 2px solid currentColor;
 .legacy-recovery-options { border: 1px solid #536885; border-radius: 8px; margin: 10px 0; padding: 12px; }
 .legacy-recovery-options p { margin: 0 0 10px; }
 .legacy-recovery-options .hint { margin: 10px 0 0; }
+
+.correction-highlight {
+  color: inherit;
+  background: linear-gradient(transparent 22%, rgba(255, 220, 65, .58) 22%, rgba(255, 220, 65, .58) 92%, transparent 92%);
+  border-radius: .12em;
+  padding: 0 .04em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
