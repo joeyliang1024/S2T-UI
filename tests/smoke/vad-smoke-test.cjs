@@ -84,6 +84,15 @@ for (const sampleRate of [16_000, 44_100, 48_000]) {
   assert.equal(last.speechStarted, true, 'endThreshold: speech starts')
   for (let count = 0; count < 4; count += 1) last = hysteresis.process(silence)
   assert.equal(last.speaking, true, 'endThreshold: a 0.4 dip above 0.35 keeps the sentence open')
+
+  const paused = new SileroBoundaryVad(16_000, config, Float32Array.from([.9, .9, 0, 0, .9, .9]))
+  paused.process(silence)
+  assert.equal(paused.process(silence).speaking, true)
+  paused.reset()
+  assert.equal(paused.process(silence).speechStarted, false, 'resume must consume the next silent window, not replay the voiced beginning')
+  paused.process(silence)
+  paused.process(silence)
+  assert.equal(paused.process(silence).speechStarted, true, 'resume keeps the probability timeline and detects the next utterance')
 }
 
 console.log('VAD smoke test passed.')

@@ -59,3 +59,15 @@ S2T_VOICEPRINT_AUDIO_VAD_MIN_RATIO=0.05
 逐塊比例門檻 `S2T_VOICEPRINT_VAD=1` 仍為選配，兩者並存。
 
 `Dockerfile.sherpa-models` 已將該模型放入 `/models/silero-vad/`；主 gateway image 需要將該目錄以 image layer 或唯讀 volume 提供給上述環境變數。
+
+## 研究回饋的修正（2026-10-12）
+
+`server/silero-vad.cjs` 現在使用起音 0.5／結束 0.35 的雙閾值遲滯，與研究評測的閘門一致。至少 120 ms 的連續候選語音才確認起音；短促尖峰之後的靜音不再湊進最短語音時間，尾端靜音也不列入語音區間。576 樣本餵法、recurrent state 與 <300 ms chunk 豁免保持有效，並以真實語音／靜音與合成機率回歸測試驗證。
+
+字幕 adapter 對佔回應大部分的四次以上片語迴圈作保守過濾（單字需八次），兩次重複仍可正常顯示。被否決、空白、迴圈或失敗的回應會清除 rolling context，避免錯誤文字持續影響後續請求。此啟發式不能辨識全部幻覺，也沒有取代模型信心度。
+
+BoundaryVad 在暫停時只重設說話狀態；Silero 的音訊 cursor 與機率窗口位置保留，恢復後不會改用 EnergyVad 或重播開頭機率。此能力仍是評測／注入 detector 的支援，並未把預先計算的 Silero 切點冒充產品即時切點。
+
+實驗評測改為按字幕 ID／revision 更新：句界更新不再重複計入文字，首次顯示時間不會被更新時間覆蓋。main 與 feature 一律使用同一份修正後的評測器；原本未去重的 CER/WER 與「句起點找不到 request」的 latency 結果須重新量測。詳見 [Taiwan-Tongues 實驗紀錄](../../experiment/silero-vad-chunking/taiwan-tongues-2026-10-12/README.md)。
+
+目前五格速度設定與 Energy VAD 預設請見[字幕速度指南](CAPTION_SPEED.zh-TW.md)；6000ms 已改列為慢檔。

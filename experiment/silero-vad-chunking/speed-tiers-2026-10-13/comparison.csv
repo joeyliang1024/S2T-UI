@@ -1,0 +1,9 @@
+position,maxMs,silenceMs,cer,wer,p50,p95,shown,total,errors,report
+main baseline,1500,250,39.66,45.7,1871,2864,78,79,0,../taiwan-tongues-2026-10-12/main-baseline/caption-latency-new.json
+1 快,1200,150,42.13,41.13,1707,2702,78,79,0,full/caption-latency-fastv2.json
+2 無文字,1500,250,38.73,44.09,1844,2767,78,79,0,full/caption-latency-normal1500.json
+3 正常,3000,250,20.37,29.3,2741,3390,79,79,0,full/caption-latency-normal3000.json
+4 無文字,4000,250,12.81,20.16,3295,4324,78,79,0,full/caption-latency-normal4000.json
+5 慢（前輪）,6000,250,10.34,16.67,3432,5546,79,79,0,../taiwan-tongues-2026-10-12/full-feature/caption-latency-accuracy6000.json
+不採用 2秒,2000,250,86.73,86.56,2032,3532,78,79,0,full/caption-latency-normal2000.json
+不採用 4.5秒,4500,250,111.27,48.66,3585,4808,78,79,0,full/caption-latency-normal4500.json

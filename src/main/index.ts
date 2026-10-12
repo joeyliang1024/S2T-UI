@@ -1,3 +1,4 @@
+import { normalizeResponseSpeed, type ResponseSpeed } from '../shared/response-speed'
 import { validateAdminParameters, type AdminParameters } from '../../server/admin-parameters.cjs'
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
 import { basename, dirname, isAbsolute, join, relative } from 'node:path'
@@ -152,7 +153,7 @@ type StoredModelConfig = {
   adminParameters?: AdminParameters
   theme: 'system' | 'light' | 'dark'; uiLanguage: 'zh-TW' | 'zh-CN' | 'en' | 'ja' | 'de'; storageLocation: 'local' | 'remote'; sourceLanguage: string; targetLanguage: string; modelProfiles: StoredModelProfile[]; selectedModelId: string
   translationEnabled: boolean; translationStrategy: 'realtime' | 'sentence'; translationLoadStrategy: 'automatic' | 'throttled' | 'manual'; translationEndpoint: string; translationModel: string; translationProfiles: Array<{ id: string; name: string; endpoint: string; model: string; requiresApiKey: boolean }>; selectedTranslationModelId: string; summaryEndpoint: string; summaryModel: string; summaryRequiresApiKey: boolean; summaryTemplate: string; summaryTemplates: Array<{ id: string; name: string; content: string }>; selectedSummaryTemplateId: string; summaryOutputLanguage: string; summaryIncludeTranslation: boolean; diarizationEndpoint: string; diarizationModel: string; diarizationRequiresApiKey: boolean; embeddingEndpoint: string; embeddingModel: string; embeddingRequiresApiKey: boolean; diarizationPreviewEnabled: boolean; denoiseEnabled: boolean; kaiserResampleEnabled: boolean; sileroVadEnabled: boolean; dynaudnormEnabled: boolean; glossary: string
-  responseSpeed: 'fast' | 'normal' | 'slow'
+  responseSpeed: ResponseSpeed
 }
 const shortText = (value: unknown, maximum = 500): string => typeof value === 'string' ? value.trim().slice(0, maximum) : ''
 const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
@@ -190,7 +191,7 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
     const id = shortText(template.id, 100); const name = shortText(template.name, 100); const content = shortText(template.content, 20_000)
     return id && name && content ? [{ id, name, content }] : []
   }).slice(0, 50) : []
-  const responseSpeed = input.responseSpeed === 'fast' || input.responseSpeed === 'slow' ? input.responseSpeed : 'normal'
+  const responseSpeed = normalizeResponseSpeed(input.responseSpeed)
   return {
     theme: input.theme === 'light' || input.theme === 'dark' ? input.theme : 'system', uiLanguage: input.uiLanguage === 'zh-CN' || input.uiLanguage === 'en' || input.uiLanguage === 'ja' || input.uiLanguage === 'de' ? input.uiLanguage : 'zh-TW', storageLocation: input.storageLocation === 'remote' ? 'remote' : 'local', sourceLanguage: shortText(input.sourceLanguage, 40), targetLanguage: shortText(input.targetLanguage, 40), modelProfiles,
     selectedModelId: shortText(input.selectedModelId, 100), translationEnabled: input.translationEnabled !== false, translationStrategy: input.translationStrategy === 'sentence' ? 'sentence' : 'realtime', translationLoadStrategy: input.translationLoadStrategy === 'manual' || input.translationLoadStrategy === 'throttled' ? input.translationLoadStrategy : 'automatic', translationEndpoint: shortText(input.translationEndpoint, 2_000),

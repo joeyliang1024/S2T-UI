@@ -2,16 +2,18 @@
 
 研究性文件：回答「能否讓 VAD + Diarization 自動決定怎麼切 chunk」。結合本專案既有量測、codebase 現況與外部論文／成熟 repo 做法，給出結論與分階段建議。本檔為歷史設計背景，不代表任何功能已完成或已驗收；需要追蹤的缺口以 [Enhancement.md](../Enhancement.md) 的 U02 為準。
 
+2026-10-13 評測稽核：下列歷史 CER/WER/latency 使用的舊評測器會重複拼接句界 revision、誤判部分未送出句子，偵測器排名需重新量測；不可直接沿用為新產品結論。真正 main baseline、修正方法與最新對照見 [Taiwan-Tongues 實驗紀錄](../../experiment/silero-vad-chunking/taiwan-tongues-2026-10-12/README.md)。微型 chunk 校準與 ONNX 576 樣本餵法回歸仍可作 bug 修正依據。
+
 ## 一句話結論
 
-- **VAD 自動決定切點**：可行且已是業界標準（WhisperX 的 VAD Cut & Merge），本專案只差把句界偵測器從 EnergyVad（RMS）換成 Silero（ML）。收益明確：修掉 BGM 素材上「句界恆為 0、全強制切段」的已量測失效模式。
+- **VAD 自動決定切點**：業界已有成熟做法，但本專案的後續實驗未證明「只換成 Silero」即可改善 CER。先保留 EnergyVad，將 Silero 用於非語音否決；切段長度、停頓門檻與模型上下文需分開量測。
 - **Diarization 參與決定切點**：可行，且本專案的 request/response 架構反而是它合理存在的前提（串流 STT 不需要切段，所以 pyannote 走並行＋時間戳對帳；必須切段送的系統才有理由讓講者資訊參與切點）。有 Turn-to-Diarize（Google, ICASSP 2022）與 Argmax pre-diarized transcription 兩個先例，但需先補離線模擬（Phase 0）證明收益，不宜直接進產品碼。
 
 ## 現況盤點：目前有四套切段機制
 
 | 機制 | 位置 | 規則 |
 | --- | --- | --- |
-| 即時字幕切段 | `src/renderer/src/features/capture/vad.ts`、`src/renderer/src/features/models/model-adapter.ts` | EnergyVad（RMS 音量）產生天然句界（`minSilenceMs`），`flushPending` 在「句界或 `chunkMaxMs`」擇先觸發時切段；三速預設 快 700/1200/150、正常 700/1500/250、慢 1000/2400/800 |
+| 即時字幕切段 | `src/renderer/src/features/capture/vad.ts`、`src/renderer/src/features/models/model-adapter.ts` | EnergyVad（RMS 音量）產生天然句界；現行五個位置的 chunk 目標為 1200／1500／3000／4000／6000ms，快檔停頓 150ms、其他 250ms、minimum 皆 700ms。健康負載下句界或目標擇先觸發，排隊時可放大強制片段至最多 6 秒。參數與證據以 [回應速度指南](../guide/CAPTION_SPEED.zh-TW.md) 為準。 |
 | 伺服器端 Silero 關卡 | `server/silero-vad.cjs`、`model-adapter.ts` | 每個待送 ASR 的短 WAV 先判有無語音，無語音不發請求（可選、預設關） |
 | 檔案匯入固定切 | `src/renderer/src/features/transcript/wav-batch.ts` | 固定 45 秒段＋1.5 秒重疊，`joinOverlappedText` 去重；gap 補跑用 30 秒無重疊 |
 | 講者分離切塊 | `server/sherpa-diarization.cjs`、即時預覽 45 秒 rolling buffer | 與字幕切段完全解耦：預覽 30 秒 tick，結果以時間戳重疊歸屬到既有字幕 |
@@ -128,7 +130,7 @@ Phase 1 已實作並通過 `typecheck`／`vad:smoke`／`model-adapter:smoke`：
 - **產品碼接縫（最小改動）**：`vad.ts` 新增 `BoundaryVad` 介面（`process(samples): VadFrame` 同步契約），`EnergyVad` 實作之；`OpenAiChunkedModelAdapter` profile 新增可選 `vadFactory`，未注入時行為與現況完全一致。
 - **`silero-vad.ts`（renderer 安全）**：`SileroBoundaryVad` 不含任何 ONNX import——機率以 Float32Array 注入（每 512 樣本@16 kHz 一個視窗，與上游 wrapper 同窗格）。遲滯契約與 EnergyVad 相同（`minSpeechMs` 起音、`minSilenceMs` 停頓），三速預設值可直接沿用，對比時唯一變數就是偵測器。設計要點：**視窗只在被推入樣本完整覆蓋時計分**（128@48 kHz 批次不對齊 16k 窗界，跨窗重複計分會讓起音提前）；最後不足一窗的尾巴不計分，由 `flush()` 顯式收尾。
 - **評測**：`caption-latency-eval.cjs` 新增 `newSilero`／`fastSilero` preset（config 與 EnergyVad 對照組 `new`／`fastv2` 完全相同）；機率由 `scripts/evaluation/silero-probabilities.cjs` 預先整段算妥，餵法契約（576＝64 context＋512、state 延續）與 `server/silero-vad.cjs` 逐行一致。
-- **已知限制**：評測的機率是預先計算的；產品化後機率會晚約 32 ms 到達（切點為 sample 索引、位置不受影響，但 Electron main IPC／wasm 的實際接線與共用 CPU 成本尚未做）。指標以 CER 呈現（中文素材，評測正規化後去空白，與 WER 同為字元級編辑距離）。
+- **已知限制**：評測的機率是預先計算的；產品化後機率會晚約 32 ms 到達（切點為 sample 索引、位置不受影響，但 Electron main IPC／wasm 的實際接線與共用 CPU 成本尚未做）。CER 使用正規化後字元編輯距離；後續加入的 WER 使用 `Intl.Segmenter('zh-TW')` 詞界，兩者不是同一指標。
 
 ### 評測結果（2026-10-12，各素材前 300 秒，Breeze-ASR-25）
 

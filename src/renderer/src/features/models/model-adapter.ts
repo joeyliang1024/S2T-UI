@@ -1,5 +1,5 @@
 import { attachCaptionTiming, recordCaptionEvent, type CaptionTiming } from '../../shared/services/caption-metrics'
-import { type BoundaryVad, EnergyVad, type VadConfig } from '../capture/vad'
+import { type BoundaryVad, defaultVadConfig, EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
 import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
 import { activeTranslate } from '../../shared/i18n'
@@ -56,6 +56,21 @@ export interface ModelAdapter {
  */
 export const sanitizeAsrText = (text: string): string =>
   text.replace(/<\|[^|]*\|>/g, ' ').replace(/\|\|/g, ' ').replace(/\s+/g, ' ').trim()
+
+/** Conservative decoder-loop guard. Two repetitions can be ordinary speech;
+ * reject only a fourfold phrase loop occupying most of the response. */
+export const isRepetitiveAsrText = (text: string): boolean => {
+  const characters = [...text.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase()]
+  for (let size = 1; size <= Math.floor(characters.length / 4); size += 1) {
+    for (let offset = 0; offset + size * 4 <= characters.length; offset += 1) {
+      let end = offset + size
+      while (end + size <= characters.length && characters.slice(offset, offset + size).every((character, index) => character === characters[end + index])) end += size
+      const repeated = (end - offset) / size
+      if (repeated >= (size === 1 ? 8 : 4) && end - offset >= characters.length * .8) return true
+    }
+  }
+  return false
+}
 
 /**
  * A deliberately quiet placeholder. Replace this with the adapter for the
@@ -270,7 +285,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
 
   constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean; vadFactory?: (sampleRate: number, config?: VadConfig) => BoundaryVad }) {
     this.prompt = profile.prompt
-    this.vadConfig = profile.vadConfig
+    this.vadConfig = profile.vadConfig ?? { ...defaultVadConfig }
   }
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
@@ -375,7 +390,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       if (this.pendingSamples && this.pendingBoundaries[this.pendingBoundaries.length - 1] !== end) this.pendingBoundaries.push(end)
     }
     // Pause has no incoming silence frames; reset onset detection for resume.
-    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    if (this.vad?.reset) this.vad.reset()
+    else this.vad = this.createVad()
     this.vadSpeaking = false
     this.flushPending()
     this.closePreviousCaption(Math.round(end / this.sampleRate * 1000))
@@ -466,6 +482,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         }
         if (!hasSpeech) {
           recordCaptionEvent('silero_veto')
+          this.rollingContext = ''
+          this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
           if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
           return
         }
@@ -474,8 +492,11 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const response = await this.transcribeWithRetry(wav)
       const responseAt = performance.now()
       const sourceText = sanitizeAsrText(response.text)
-      if (!sourceText) {
+      if (!sourceText || isRepetitiveAsrText(sourceText)) {
         recordCaptionEvent('asr_empty')
+        // A failed/looping response must not condition subsequent requests
+        // with stale text and keep the decoder in a self-repeating loop.
+        this.rollingContext = ''
         this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
         if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
         return
@@ -490,6 +511,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
       recordCaptionEvent('asr_failed')
+      this.rollingContext = ''
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
       this.emitError(error instanceof Error ? error.message : activeTranslate('svcModelTranscribeFailed'))
       this.emitGap(sequence, startMs, endMs, 'request-failed')

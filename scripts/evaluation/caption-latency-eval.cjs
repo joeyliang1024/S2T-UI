@@ -15,10 +15,13 @@
 //   node scripts/evaluation/caption-latency-eval.cjs [--preset old,new,newov,new16k]
 //                                        [--audio path] [--tsv path]
 //                                        [--max-seconds N] [--out experiment/evaluation-reports]
+//                                        [--source-ref main] (actual archived baseline code)
 //
 // 需要 .env 提供 S2T_ASR_ENDPOINT / S2T_ASR_MODEL / S2T_ASR_API_KEY。
 const { spawnSync } = require('node:child_process')
-const { mkdirSync, readFileSync, writeFileSync } = require('node:fs')
+const { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } = require('node:fs')
+const { tmpdir } = require('node:os')
+const { createHash } = require('node:crypto')
 const zlib = require('node:zlib')
 const path = require('node:path')
 const { buildSync } = require('esbuild')
@@ -38,6 +41,29 @@ const audioPath = arg('audio', path.join('music', '卓文萱 Genie Chuo&曹格 G
 const tsvPath = arg('tsv', path.join('music', '梁山伯與茱麗葉_句級Speaker時間軸.tsv'))
 const maxSeconds = Number(arg('max-seconds', '0')) || 0
 const outDir = arg('out', 'experiment/evaluation-reports')
+const language = arg('language', 'zh-TW')
+// Load the actual revision, including its transitive renderer dependencies.
+// The evaluator and metric definitions stay identical across both arms.
+const sourceRef = arg('source-ref', '')
+const sourceRoot = mkdtempSync(path.join(tmpdir(), 's2t-caption-source-'))
+process.on('exit', () => rmSync(sourceRoot, { recursive: true, force: true }))
+let sourceCommit
+if (sourceRef) {
+  const revision = spawnSync('git', ['rev-parse', '--verify', `${sourceRef}^{commit}`], { encoding: 'utf8' })
+  if (revision.status !== 0) throw new Error(`無效 source-ref: ${sourceRef}`)
+  sourceCommit = revision.stdout.trim()
+  const archive = spawnSync('git', ['archive', sourceCommit, 'src'], { maxBuffer: 128 * 1024 * 1024 })
+  if (archive.status !== 0) throw new Error('無法匯出 baseline 原始碼')
+  const extract = spawnSync('tar', ['-x', '-C', sourceRoot], { input: archive.stdout })
+  if (extract.status !== 0) throw new Error('無法解壓 baseline 原始碼')
+} else {
+  sourceCommit = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim()
+  // Freeze the entire renderer dependency tree for the duration of all arms.
+  // Concurrent workspace edits cannot change the tested code or its hashes.
+  cpSync(path.resolve('src'), path.join(sourceRoot, 'src'), { recursive: true })
+}
+symlinkSync(path.resolve('node_modules'), path.join(sourceRoot, 'node_modules'))
+const sourcePath = (...parts) => path.join(sourceRoot, ...parts)
 
 const endpoint = (process.env.S2T_ASR_ENDPOINT || '').trim()
 const model = (process.env.S2T_ASR_MODEL || '').trim()
@@ -55,19 +81,33 @@ const loadTs = (entry) => {
   loaded._compile(result.outputFiles[0].text, loaded.filename)
   return loaded.exports
 }
-const { OpenAiChunkedModelAdapter } = loadTs(path.join('src', 'renderer', 'src', 'features', 'models', 'model-adapter.ts'))
-const { defaultVadConfig } = loadTs(path.join('src', 'renderer', 'src', 'features', 'capture', 'vad.ts'))
+const { OpenAiChunkedModelAdapter } = loadTs(sourcePath('src', 'renderer', 'src', 'features', 'models', 'model-adapter.ts'))
+const { defaultVadConfig, speedToVadConfig } = loadTs(sourcePath('src', 'renderer', 'src', 'features', 'capture', 'vad.ts'))
 const { SileroBoundaryVad } = loadTs(path.join('src', 'renderer', 'src', 'features', 'capture', 'silero-vad.ts'))
-const { canMergeHttpCaption } = loadTs(path.join('src', 'renderer', 'src', 'features', 'app', 'services', 'translation-policy.ts'))
+const { canMergeHttpCaption } = loadTs(sourcePath('src', 'renderer', 'src', 'features', 'app', 'services', 'translation-policy.ts'))
 const { createSileroScorer } = require(path.join(__dirname, 'silero-probabilities.cjs'))
 // CER／WER 共用指標：WER 以 Intl.Segmenter（ICU 字典分詞）切 zh-TW 詞邊界，
 // 與 CER 同為正規化後計算；事後比較腳本共用同一模組，算法一致。
 const { normalize, editDistance, corpusRates, sentenceRates } = require(path.join(__dirname, 'text-metrics.cjs'))
+const { recordTranscriptEvent } = require('./caption-evaluation-events.cjs')
+
+// Freeze the screening arms so changing the product default does not change
+// the meaning of a historical preset on a later reproduction run.
+const referenceNormalVadConfig = {
+  minSpeechMs: 120, minSilenceMs: 250, preRollMs: 300,
+  noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_500
+}
 
 // 調整前的舊預設值，用來跟新預設做對照。
 // overlapMs/sampleRate 為尚未產品化的準度與延遲槓桿（見檔頭說明）。
 const PRESETS = {
-  // 目前產品三速：快 700-1200/150（fastv2）、正常 new 700-1500/250、慢 1000-2400/800。
+  // Product aliases follow the loaded source revision; historical arms below
+  // retain their recorded parameters rather than silently changing meaning.
+  speedFast: { vadConfig: speedToVadConfig('fast'), overlapMs: 0, sampleRate: 48_000 },
+  speedFastNormal: { vadConfig: speedToVadConfig('fast-normal'), overlapMs: 0, sampleRate: 48_000 },
+  speedNormal: { vadConfig: speedToVadConfig('normal'), overlapMs: 0, sampleRate: 48_000 },
+  speedNormalSlow: { vadConfig: speedToVadConfig('normal-slow'), overlapMs: 0, sampleRate: 48_000 },
+  speedSlow: { vadConfig: speedToVadConfig('slow'), overlapMs: 0, sampleRate: 48_000 },
   // 注意：舊測量標籤 old ＝ minSilence 500 版慢檔；slow 自 2026-10-01 起對齊產品 800。
   // 調校矩陣（2026-10-01，快=延遲優先／慢=CER 優先／正常=穩定）：
   //   fast1000／fast1100 = 快的 chunkMax 前哨（與 fastv2 同場對照量出延遲-漏句前緣）
@@ -88,6 +128,18 @@ const PRESETS = {
   new: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000 },
   newov: { vadConfig: { ...defaultVadConfig }, overlapMs: OVERLAP_MS, sampleRate: 48_000 },
   new16k: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 16_000 },
+  // Taiwan-Tongues screening: retain natural silence endpoints, but give
+  // continuous speech more context before a forced request boundary.
+  accuracy2400: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 2_400 }, overlapMs: 0, sampleRate: 48_000 },
+  normal2000: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 2_000 }, overlapMs: 0, sampleRate: 48_000 },
+  normal1500: { vadConfig: { ...referenceNormalVadConfig }, overlapMs: 0, sampleRate: 48_000 },
+  normal3000: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 3_000 }, overlapMs: 0, sampleRate: 48_000 },
+  normal4000: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 4_000 }, overlapMs: 0, sampleRate: 48_000 },
+  normal4500: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 4_500 }, overlapMs: 0, sampleRate: 48_000 },
+  accuracy6000: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 6_000 }, overlapMs: 0, sampleRate: 48_000 },
+  accuracy6000Conservative: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 6_000, minSilenceMs: 500 }, overlapMs: 0, sampleRate: 48_000 },
+  accuracy6000NoContext: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 6_000 }, overlapMs: 0, sampleRate: 48_000, rollingContext: false },
+  accuracy6000NoContext16k: { vadConfig: { ...referenceNormalVadConfig, chunkMaxMs: 6_000 }, overlapMs: 0, sampleRate: 16_000, rollingContext: false },
   // Silero 邊界對照組：vadConfig 與 EnergyVad 對照組（fastv2／new）完全相同，
   // 只把句界偵測器換成 Silero 框率狀態機——差異全部來自偵測器本身。
   // 框率在 preset 開跑前以 scripts/evaluation/silero-probabilities.cjs 預先算妥
@@ -111,7 +163,7 @@ const PRESETS = {
   // 可零誤殺且不漏放 BGM。gateMinChunkMs 即此豁免下限。
   newHyg2: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true, gateMinChunkMs: 300 },
   fastHyg2: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true, gateMinChunkMs: 300 },
-  newSileroInd: { vadConfig: { ...defaultVadConfig, minSilenceMs: 500 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true },
+  newSileroInd: { vadConfig: { ...referenceNormalVadConfig, minSilenceMs: 500 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true },
   fastSileroInd: { vadConfig: { minSpeechMs: 120, minSilenceMs: 500, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true }
 }
 
@@ -130,10 +182,12 @@ const decodeAudio = (sampleRate) => {
 
 const loadSentences = () => {
   const lines = readFileSync(tsvPath, 'utf8').replace(/^﻿/, '').trim().split('\n').slice(1)
-  return lines.map((line) => {
+  const selected = lines.map((line) => {
     const [start, end, speaker, ...text] = line.split('\t')
     return { startMs: Math.round(Number(start) * 1_000), endMs: Math.round(Number(end) * 1_000), speaker, text: text.join('\t') }
   }).filter((sentence) => Number.isFinite(sentence.startMs) && Number.isFinite(sentence.endMs) && sentence.text && (!maxSeconds || sentence.startMs < maxSeconds * 1_000))
+  if (maxSeconds && selected.some(sentence => sentence.endMs > Math.round(maxSeconds * 1_000))) throw new Error('max-seconds 切在標註句子中間；請選完整句子的 end 時間或評測完整音檔，避免標準答案含未播放文字')
+  return selected
 }
 
 const percentile = (values, value) => {
@@ -204,6 +258,7 @@ const isHallucination = (text) => {
 }
 
 const runPreset = async (name, preset, sentences) => {
+  const runStartedAt = new Date().toISOString()
   const { vadConfig, overlapMs, sampleRate: sr, vad: vadKind, gate: gateEnabled, hallucFilter: hallucFilterEnabled, endThreshold, gateMinChunkMs } = preset
   const samples = decodeAudio(sr)
   const records = [] // enqueue 順序，含被 queue-overflow 丟棄的 chunk
@@ -258,6 +313,7 @@ const runPreset = async (name, preset, sentences) => {
   }
 
   const adapter = new OpenAiChunkedModelAdapter({ id: 'eval-asr', endpoint, model, requiresApiKey: false, vadConfig, vadFactory })
+  if (preset.rollingContext === false) adapter.rollingPrompt = () => undefined
   const originalEnqueue = Object.getPrototypeOf(adapter).enqueue
   const originalRetry = Object.getPrototypeOf(adapter).transcribeWithRetry
   adapter.enqueue = function (audio, startSample, isSentenceBoundary) {
@@ -314,15 +370,15 @@ const runPreset = async (name, preset, sentences) => {
     // queue-overflow 的 gap 在 enqueue 內同步發出，一定是剛入隊的最後一筆。
     if (event.status === 'gap' && event.gapReason === 'queue-overflow' && records.length) records[records.length - 1].dropped = true
     let finalEvent = event
-    if (event.status === 'final' && overlapMs > 0) {
+    if (event.status === 'final' && !event.boundaryOnly && overlapMs > 0) {
       finalEvent = { ...event, sourceText: stripOverlapDuplicate(lastFinalText, event.sourceText) }
       if (finalEvent.sourceText) lastFinalText = finalEvent.sourceText
     }
-    events.push({ ...finalEvent, displayWall: performance.now() })
+    recordTranscriptEvent(events, finalEvent, performance.now())
   })
   adapter.onError((message) => errors.push(message))
 
-  await adapter.start({ sampleRate: sr, language: 'zh-TW', targetLanguage: 'en' })
+  await adapter.start({ sampleRate: sr, language, targetLanguage: language.startsWith('en') ? 'zh-TW' : 'en' })
   startedAtWall = performance.now()
   const batch = Math.round(sr * 0.02) // 20 ms 一批，模擬 AudioWorklet 的連續收音
   for (let offset = 0; offset < samples.length; offset += batch) {
@@ -348,9 +404,16 @@ const runPreset = async (name, preset, sentences) => {
 
   // 逐句 CER 用「原始 chunk 事件」對齊句子區間，避免 merged 長字幕跨多句污染
   const sentenceResults = sentences.map((sentence) => {
-    const record = records.find((item) => item.startMs <= sentence.startMs && item.endMs > sentence.startMs)
     const base = { startMs: sentence.startMs, endMs: sentence.endMs, speaker: sentence.speaker, text: sentence.text }
     const overlappingFinals = finals.filter((event) => event.startMs < sentence.endMs && event.endMs > sentence.startMs)
+    // Onsets often fall between requests after room tone was discarded.
+    // Measure the first actual final overlapping this sentence instead of
+    // marking an already displayed sentence as "not-sent".
+    const firstFinal = overlappingFinals.filter(event => event.displayWall >= startedAtWall + sentence.startMs)
+      .reduce((first, event) => !first || event.displayWall < first.displayWall ? event : first, null)
+    const record = firstFinal
+      ? records.find((item) => item.startMs === firstFinal.startMs && item.endMs === firstFinal.endMs)
+      : records.find((item) => item.startMs < sentence.endMs && item.endMs > sentence.startMs)
     const hyp = overlappingFinals.map((event) => event.sourceText).join('')
     const overlapping = merged.filter((caption) => caption.startMs < sentence.endMs && caption.endMs > sentence.startMs)
     const rates = sentenceRates(sentence.text, hyp)
@@ -363,7 +426,7 @@ const runPreset = async (name, preset, sentences) => {
     }
     if (!record) return { ...base, status: 'not-sent', ...common }
     if (record.dropped) return { ...base, status: 'dropped', ...common }
-    const event = findEvent(record)
+    const event = firstFinal || findEvent(record)
     if (!event || event.status !== 'final') return { ...base, status: event?.status === 'gap' ? 'request-failed' : 'empty-text', ...common }
     const displayOffsetMs = Math.round(event.displayWall - startedAtWall)
     return {
@@ -406,6 +469,19 @@ const runPreset = async (name, preset, sentences) => {
   const segmentsPerSentence = sentenceResults.map((result) => result.segments)
   const report = {
     preset: name,
+    language,
+    source: {
+      ref: sourceRef || 'working-tree',
+      commit: sourceCommit,
+      adapterSha256: createHash('sha256').update(readFileSync(sourcePath('src', 'renderer', 'src', 'features', 'models', 'model-adapter.ts'))).digest('hex'),
+      vadSha256: createHash('sha256').update(readFileSync(sourcePath('src', 'renderer', 'src', 'features', 'capture', 'vad.ts'))).digest('hex')
+    },
+    fixture: {
+      audioSha256: createHash('sha256').update(readFileSync(audioPath)).digest('hex'),
+      tsvSha256: createHash('sha256').update(readFileSync(tsvPath)).digest('hex'),
+      maxSeconds
+    },
+    rollingContext: preset.rollingContext !== false,
     vadKind: vadKind || 'energy',
     gate: Boolean(gateEnabled),
     gateMinChunkMs: gateMinChunkMs ?? null,
@@ -419,7 +495,8 @@ const runPreset = async (name, preset, sentences) => {
     tsv: tsvPath,
     endpointHost: new URL(endpoint).host,
     model,
-    startedAt: new Date().toISOString(),
+    startedAt: runStartedAt,
+    completedAt: new Date().toISOString(),
     chunks: {
       enqueued: records.length,
       sent: sent.length,
@@ -449,6 +526,7 @@ const runPreset = async (name, preset, sentences) => {
       within2500AllPct: sentenceResults.length ? Math.round(shown.filter((result) => result.latencyMs <= TARGET_MS).length / sentenceResults.length * 10_000) / 100 : null
     },
     accuracy: {
+      sentenceAttributionAmbiguousEvents: finals.filter(event => sentences.filter(sentence => event.startMs < sentence.endMs && event.endMs > sentence.startMs).length > 1).length,
       corpusCerPct: corpus.cer === null ? null : Math.round(corpus.cer * 10_000) / 100,
       corpusRefChars: corpus.refChars,
       corpusDistance: corpus.cerDistance,

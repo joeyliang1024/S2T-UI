@@ -1,0 +1,20 @@
+const assert = require('node:assert/strict')
+const { recordTranscriptEvent } = require('../../scripts/evaluation/caption-evaluation-events.cjs')
+const { corpusRates } = require('../../scripts/evaluation/text-metrics.cjs')
+const events = []
+const first = { id: 'caption-1', revision: 1, status: 'final', startMs: 0, endMs: 1500, sourceText: '中央研究院老師' }
+recordTranscriptEvent(events, first, 1800)
+recordTranscriptEvent(events, { ...first, revision: 2, boundaryOnly: true, isSentenceBoundary: true }, 2200)
+assert.equal(events.length, 1, 'a boundary revision must not insert a second transcript')
+assert.equal(events[0].displayWall, 1800, 'latency uses the initial display time')
+assert.equal(events[0].isSentenceBoundary, true)
+assert.equal(corpusRates(first.sourceText, events.map(event => event.sourceText).join('')).cer, 0, 'boundary revisions cannot inflate CER')
+recordTranscriptEvent(events, first, 2500)
+assert.equal(events[0].revision, 2, 'older revisions cannot erase a confirmed boundary')
+recordTranscriptEvent(events, { ...first, id: 'unknown', boundaryOnly: true }, 2600)
+assert.equal(events.length, 1, 'an orphan boundary does not invent a transcript')
+const overlapEvents = []
+recordTranscriptEvent(overlapEvents, { ...first, sourceText: '去重後文字' }, 1800)
+recordTranscriptEvent(overlapEvents, { ...first, revision: 2, boundaryOnly: true }, 2200)
+assert.equal(overlapEvents[0].sourceText, '去重後文字', 'boundary updates preserve overlap-stripped text')
+console.log('Caption evaluation event smoke test passed.')

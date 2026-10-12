@@ -8,6 +8,7 @@
 | 環境變數、模型與預設設定 | [環境設定](guide/ENVIRONMENT.zh-TW.md) |
 | 部署多副本應用 | [Kubernetes 指南](guide/K8S_SCALE_DEPLOYMENT.zh-TW.md) |
 | 看首字延遲、耗時百分比與服務監控 | [監控指南](guide/OBSERVABILITY.zh-TW.md) |
+| 選擇字幕回應速度五個位置 | [回應速度指南](guide/CAPTION_SPEED.zh-TW.md)、[完整五檔實驗](../experiment/silero-vad-chunking/speed-tiers-2026-10-13/README.md) |
 | 重跑至少 2 Pod 的壓力測試 | [容量測試](guide/CAPACITY_TEST.zh-TW.md) |
 | 自動檢查與真人驗收 | [驗收手冊](guide/VALIDATION.zh-TW.md) |
 | 安裝本機講者分離／VAD | [sherpa-onnx](guide/SHERPA_ONNX.zh-TW.md)、[Silero VAD](guide/SILERO_VAD.zh-TW.md) |

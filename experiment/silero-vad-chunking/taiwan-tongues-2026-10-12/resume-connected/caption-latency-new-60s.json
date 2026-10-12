@@ -1,0 +1,381 @@
+{
+  "preset": "new",
+  "vadKind": "energy",
+  "gate": false,
+  "gateMinChunkMs": null,
+  "hallucFilter": false,
+  "endThreshold": null,
+  "vadConfig": {
+    "minSpeechMs": 120,
+    "minSilenceMs": 250,
+    "preRollMs": 300,
+    "noiseFloorOffsetDb": 12,
+    "chunkMinMs": 700,
+    "chunkMaxMs": 1500
+  },
+  "overlapMs": 0,
+  "sampleRate": 48000,
+  "audio": "music/taiwan-tongues/fixture-300s.wav",
+  "audioSeconds": 60,
+  "tsv": "music/taiwan-tongues/fixture-300s.tsv",
+  "endpointHost": "submissions-enter-audit-workstation.trycloudflare.com",
+  "model": "Breeze-ASR-25",
+  "startedAt": "2026-10-12T15:42:28.404Z",
+  "chunks": {
+    "enqueued": 39,
+    "sent": 39,
+    "droppedQueue": 0,
+    "emptyText": 5,
+    "gateVetoed": 0,
+    "hallucVetoed": 0,
+    "requestFailed": 0,
+    "avgAudioMs": 1226,
+    "vadBoundaries": 15,
+    "forcedBoundaries": 24
+  },
+  "asrMs": {
+    "n": 39,
+    "p50": 464,
+    "p95": 1207,
+    "max": 1418
+  },
+  "queueWaitMs": {
+    "n": 39,
+    "p50": 3,
+    "p95": 251,
+    "max": 706
+  },
+  "errors": {
+    "count": 0,
+    "unique": []
+  },
+  "sentences": {
+    "total": 15,
+    "shown": 7,
+    "dropped": 0,
+    "emptyText": 1,
+    "requestFailed": 0,
+    "notSent": 7
+  },
+  "latencyMs": {
+    "n": 7,
+    "p50": 1594,
+    "p95": 2274,
+    "max": 2274,
+    "within2500ShownPct": 100,
+    "within2500AllPct": 46.67
+  },
+  "accuracy": {
+    "corpusCerPct": 39.67,
+    "corpusRefChars": 121,
+    "corpusDistance": 48,
+    "corpusWerPct": 45.45,
+    "corpusRefWords": 66,
+    "corpusWerDistance": 30,
+    "sentenceCerPct": 42.98,
+    "sentenceWerPct": 50
+  },
+  "fragmentation": {
+    "displayedCaptions": 12,
+    "rawFinalEvents": 38,
+    "mergeOperations": 26,
+    "meanCaptionChars": 10.5,
+    "segmentsPerSentenceMean": 1,
+    "segmentsPerSentenceMax": 1,
+    "sentencesSplit": 0
+  },
+  "drainMs": 451,
+  "captions": [
+    {
+      "startMs": 0,
+      "endMs": 2960,
+      "text": "中心會處理|"
+    },
+    {
+      "startMs": 4460,
+      "endMs": 13560,
+      "text": "中央研究院老師院老師小編不錯吧中華民國訓政時期國訓政時期"
+    },
+    {
+      "startMs": 15560,
+      "endMs": 20060,
+      "text": "獲選的勢力社會最敬請帶著體諒敬請帶著體諒"
+    },
+    {
+      "startMs": 21900,
+      "endMs": 25360,
+      "text": "為了更結合政府現有資源|"
+    },
+    {
+      "startMs": 26580,
+      "endMs": 30060,
+      "text": "高雄捷運東港銀針線|"
+    },
+    {
+      "startMs": 31280,
+      "endMs": 34280,
+      "text": "今天和平出面和平出面"
+    },
+    {
+      "startMs": 35920,
+      "endMs": 40340,
+      "text": "J定 以此復習新社區"
+    },
+    {
+      "startMs": 41560,
+      "endMs": 43880,
+      "text": "保證會給利息"
+    },
+    {
+      "startMs": 45100,
+      "endMs": 47720,
+      "text": "如人員願意投入"
+    },
+    {
+      "startMs": 48940,
+      "endMs": 51160,
+      "text": "非精神疾病"
+    },
+    {
+      "startMs": 52380,
+      "endMs": 54740,
+      "text": "很多人都是當了父母"
+    },
+    {
+      "startMs": 55960,
+      "endMs": 60000,
+      "text": "緊張的情緒好好"
+    }
+  ],
+  "detail": [
+    {
+      "startMs": 0,
+      "endMs": 2712,
+      "speaker": "-",
+      "text": "中心會處理",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 789,
+      "displayOffsetMs": 2274,
+      "latencyMs": 2274,
+      "segments": 1,
+      "hyp": "中心會處理|",
+      "sentenceCerPct": 0,
+      "sentenceWerPct": 0,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 3312,
+      "endMs": 7656,
+      "speaker": "-",
+      "text": "以及中央研究院老師",
+      "status": "empty-text",
+      "segments": 1,
+      "hyp": "中央研究院老師院老師小編不",
+      "sentenceCerPct": 88.89,
+      "sentenceWerPct": 166.67,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 8256,
+      "endMs": 10344,
+      "speaker": "-",
+      "text": "小編不錯吧",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 3,
+      "asrMs": 464,
+      "displayOffsetMs": 9548,
+      "latencyMs": 1292,
+      "segments": 1,
+      "hyp": "小編不錯吧",
+      "sentenceCerPct": 0,
+      "sentenceWerPct": 0,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 10944,
+      "endMs": 14760,
+      "speaker": "-",
+      "text": "中華民國訓政時期約法",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 5,
+      "asrMs": 465,
+      "displayOffsetMs": 12511,
+      "latencyMs": 1567,
+      "segments": 1,
+      "hyp": "中華民國訓政時期國訓政時期",
+      "sentenceCerPct": 50,
+      "sentenceWerPct": 50,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 15360,
+      "endMs": 20544,
+      "speaker": "-",
+      "text": "獲選的勢必是社會最殷切期待的提案",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "獲選的勢力社會最敬請帶著體諒敬請帶著體諒",
+      "sentenceCerPct": 87.5,
+      "sentenceWerPct": 80,
+      "sentenceRefWords": 10
+    },
+    {
+      "startMs": 21144,
+      "endMs": 25968,
+      "speaker": "-",
+      "text": "未來將結合政府現有資源",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "為了更結合政府現有資源|",
+      "sentenceCerPct": 27.27,
+      "sentenceWerPct": 33.33,
+      "sentenceRefWords": 6
+    },
+    {
+      "startMs": 26568,
+      "endMs": 30348,
+      "speaker": "-",
+      "text": "高雄捷運東港延伸線",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "高雄捷運東港銀針線|",
+      "sentenceCerPct": 22.22,
+      "sentenceWerPct": 20,
+      "sentenceRefWords": 5
+    },
+    {
+      "startMs": 30948,
+      "endMs": 35532,
+      "speaker": "-",
+      "text": "今日能否提出名單？",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "今天和平出面和平出面",
+      "sentenceCerPct": 112.5,
+      "sentenceWerPct": 125,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 36132,
+      "endMs": 41196,
+      "speaker": "-",
+      "text": "決定以此復興社區",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 322,
+      "displayOffsetMs": 37726,
+      "latencyMs": 1594,
+      "segments": 1,
+      "hyp": "J定 以此復習新社區",
+      "sentenceCerPct": 37.5,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 41796,
+      "endMs": 44076,
+      "speaker": "-",
+      "text": "保證會給利息",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 2,
+      "asrMs": 599,
+      "displayOffsetMs": 43641,
+      "latencyMs": 1845,
+      "segments": 1,
+      "hyp": "保證會給利息",
+      "sentenceCerPct": 0,
+      "sentenceWerPct": 0,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 44676,
+      "endMs": 48180,
+      "speaker": "-",
+      "text": "如人員願意投入",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "如人員願意投入",
+      "sentenceCerPct": 0,
+      "sentenceWerPct": 0,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 48780,
+      "endMs": 51516,
+      "speaker": "-",
+      "text": "非精神疾病",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "非精神疾病",
+      "sentenceCerPct": 0,
+      "sentenceWerPct": 0,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 52116,
+      "endMs": 55380,
+      "speaker": "-",
+      "text": "很多人都是當了父母",
+      "status": "not-sent",
+      "segments": 1,
+      "hyp": "很多人都是當了父母",
+      "sentenceCerPct": 0,
+      "sentenceWerPct": 0,
+      "sentenceRefWords": 5
+    },
+    {
+      "startMs": 55980,
+      "endMs": 58596,
+      "speaker": "-",
+      "text": "緊張的情緒",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 4,
+      "asrMs": 383,
+      "displayOffsetMs": 57828,
+      "latencyMs": 1848,
+      "segments": 1,
+      "hyp": "緊張的情緒好",
+      "sentenceCerPct": 20,
+      "sentenceWerPct": 33.33,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 59196,
+      "endMs": 62244,
+      "speaker": "-",
+      "text": "好孩子請不要模仿",
+      "status": "shown",
+      "chunkMs": 1500,
+      "payloadMs": null,
+      "boundary": "forced",
+      "queueWaitMs": 3,
+      "asrMs": 387,
+      "displayOffsetMs": 60231,
+      "latencyMs": 1035,
+      "segments": 1,
+      "hyp": "好好",
+      "sentenceCerPct": 87.5,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 5
+    }
+  ]
+}

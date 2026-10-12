@@ -44,6 +44,14 @@ export class SileroBoundaryVad implements BoundaryVad {
     this.minimumSilent = Math.max(this.windowSamples, Math.floor(16_000 * this.config.minSilenceMs / 1_000))
   }
 
+  reset(): void {
+    this.speaking = false
+    this.voicedSamples = 0
+    this.silentSamples = 0
+    // cursor/nextWindow belong to the audio timeline. Rewinding them on
+    // pause would replay probabilities from the beginning on resume.
+  }
+
   process(samples: Float32Array): VadFrame {
     let sum = 0
     for (const sample of samples) sum += sample * sample
