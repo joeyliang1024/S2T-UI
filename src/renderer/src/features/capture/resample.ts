@@ -81,7 +81,10 @@ export class StreamingResampler {
       output.push(samples[lower] + (samples[lower + 1] - samples[lower]) * fraction)
       this.cursor += ratio
     }
-    const retainedStart = Math.max(0, Math.floor(this.cursor) - 1)
+    // A downsample cursor can step past this frame. Retain the final
+    // available sample rather than subtract a position outside the buffer;
+    // otherwise a 96kHz/128-frame stream gains samples on every boundary.
+    const retainedStart = Math.min(samples.length - 1, Math.max(0, Math.floor(this.cursor) - 1))
     this.tail = samples.slice(retainedStart)
     this.cursor -= retainedStart
     this.emittedSamples += output.length

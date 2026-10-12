@@ -4,7 +4,7 @@
 
 ### OpenAI 相容 HTTP（目前即時字幕預設）
 
-在設定頁新增 ASR 模型時，應用會以 OpenAI 相容的 `POST /v1/audio/transcriptions` 送出 WAV 檔案。這類 API 是「短片段請求／回應」：app-side VAD 過濾純靜音並將連續音訊切成約 0.8–1.5 秒片段，收到回應後新增一筆 **final** 字幕。因此可做到接近即時的字幕，但不會產生串流中的 partial 字元。
+在設定頁新增 ASR 模型時，應用會以 OpenAI 相容的 `POST /v1/audio/transcriptions` 送出 WAV 檔案。這類 API 是「音訊片段請求／回應」：app-side EnergyVad 過濾純靜音，依回應速度選擇切段參數，遇自然停頓可提早送出。收到回應後新增一筆 **final** 字幕，不會產生串流中的 partial 字元。五個位置的現行參數、準度與延遲取捨見 [回應速度指南](../guide/CAPTION_SPEED.zh-TW.md)，不再以固定 0.8–1.5 秒描述所有模式。
 
 這是適合 vLLM 或自有 ASR gateway 的預設整合方式，前提是服務確實實作 audio transcriptions 格式。Chat Completions 的 `stream: true` 只代表文字回應可以串流，不能據此假設服務接受 `input_audio`，也不能取代音訊持續輸入協定。
 
@@ -36,7 +36,7 @@
 
 `MediaTek-Research/Breeze-ASR-26` 是台語 ASR，並以中文漢字輸出；它不提供翻譯，也不是文字轉語音模型。此 Electron／TypeScript 專案不內嵌 Python 執行環境或模型推論服務。若以 vLLM 或其他自有服務部署，優先確認其是否提供 OpenAI 相容 `/audio/transcriptions`；只有在服務另行提供並約定 WebSocket 串流格式時，才使用下列 WebSocket 協定。
 
-Electron 應用已透過 `src/renderer/src/model-adapter.ts` 將收音與字幕 UI 分離。整合自有模型時，實作 `ModelAdapter` 並替換 `NoopModelAdapter` 即可；收音、音量、錄音、逐字稿版本控制與匯出不需要重寫。
+Electron 應用已透過 `src/renderer/src/features/models/model-adapter.ts` 將收音與字幕 UI 分離。整合自有模型時，實作 `ModelAdapter` 並替換 `NoopModelAdapter` 即可；收音、音量、錄音、逐字稿版本控制與匯出不需要重寫。
 
 模型適配器在 `start()` 收到音訊採樣率、來源語言及目標語言。收音期間，`pushAudio()` 會收到單聲道 Float32 PCM 分塊與從會議開始累積的樣本位移。模型需要其他格式時，在適配器中重採樣、量化或封裝，不要修改錄音分支。
 

@@ -13,19 +13,21 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 
 | 範圍 | 可用功能 | 尚待真人／正式環境驗收 |
 | --- | --- | --- |
-| 即時收音 | 麥克風／系統音訊、回應速度滑桿（快／正常／慢）、即時與整句翻譯策略 | 斷句延遲、不同裝置與長時間收音品質 |
+| 即時收音 | 麥克風／系統音訊、五格回應速度滑桿（只標示快／正常／慢）、即時與整句翻譯策略 | 斷句延遲、不同裝置與長時間收音品質 |
 | 講者 | sherpa 分群、聲紋註冊／NT 比對、字幕講者手動編輯與 VTT 匯出 | 多人重疊、長會議與誤配率 |
 | 資料 | 登入隔離、歷史、搜尋、排序、複製、摘要模板、術語與 MinIO／PostgreSQL／Milvus | 正式外部 HTTPS 部署與故障情境 |
 | 介面 | 繁中、簡中、英文、日文、德文與深／淺／系統主題 | 全頁窄視窗、無障礙與視覺回歸 |
 
 ## 文件導覽
 
+現行回應速度為 **1.2／1.5／3／4／6 秒**切段目標；正常檔預設 3 秒，先前 CER 10.34% 的 6 秒方案改列慢檔。自然停頓可提早送出。參數、完整量測與限制見 [回應速度指南](docs/guide/CAPTION_SPEED.zh-TW.md) 與 [五檔實驗](experiment/silero-vad-chunking/speed-tiers-2026-10-13/README.md)；不把舊 P95≤2.5 秒報告當成所有檔位的現行保證。
+
 | 類別 | 文件 |
 | --- | --- |
 | 操作指南 `guide` | [部署、Storage 與遷移](docs/guide/DEPLOYMENT.zh-TW.md)、[環境設定](docs/guide/ENVIRONMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)、[sherpa-onnx 安裝](docs/guide/SHERPA_ONNX.zh-TW.md)、[Silero VAD worker](docs/guide/SILERO_VAD.zh-TW.md)、[Kubernetes 多副本](docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)、[K8s 容量測試](docs/guide/CAPACITY_TEST.zh-TW.md)、[監控指南](docs/guide/OBSERVABILITY.zh-TW.md) |
 | 契約與架構 `reference` | [程式目錄責任](docs/reference/ARCHITECTURE.zh-TW.md)、[模型接入契約](docs/reference/MODEL_ADAPTER.md)、[Web Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質與取樣率](docs/reference/AUDIO_QUALITY.zh-TW.md) |
-| 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[背景處理生命週期](docs/research/SESSION_LIFECYCLE.zh-TW.md) |
-| 量測報告 `reports` | [字幕延遲調校（P95 ≤ 2.5 秒）](docs/reports/CAPTION_LATENCY.zh-TW.md)、[字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[五分鐘字幕比較與顯示修正](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)；已套用的修正與環境盤點見 [docs/README.md](docs/README.md) 的「修正與盤點記錄」 |
+| 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[Chunking 自動切分可行性（1011）](docs/research/AUTO_CHUNKING.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[背景處理生命週期](docs/research/SESSION_LIFECYCLE.zh-TW.md) |
+| 量測報告 `reports` | [字幕延遲歷史調校](docs/reports/CAPTION_LATENCY.zh-TW.md)、[字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[五分鐘字幕比較與顯示修正](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)；已套用的修正與環境盤點見 [docs/README.md](docs/README.md) 的「修正與盤點記錄」 |
 
 研究類文件為歷史參考，不覆蓋 Enhancement.md 的決策。
 
@@ -101,11 +103,13 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 完整清單在 `package.json` 的 `scripts`。
 
-## 字幕延遲實測與回應速度設定
+## 歷史字幕延遲實測（2026-10-01）
 
-目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。
+> 本節保留舊三速調校結果與當時目標；表中「正常／慢」參數不適用現行版本。最新設定與有效成績見[五檔實驗](experiment/silero-vad-chunking/speed-tiers-2026-10-13/README.md)。
 
-### 回應速度三速（收音控制面板的單一滑桿）
+當時目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。
+
+### 當時三速設定（已由現行五格取代）
 
 | 速度 | minSilence | chunkMin | chunkMax | 延遲 p50 | 延遲 p95 | ≤2500ms | 逐句CER | 語料CER | 沒上屏 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

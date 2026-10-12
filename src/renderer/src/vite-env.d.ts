@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import type { ResponseSpeed } from '../../shared/response-speed'
 
 declare global {
   type EnvironmentModels = Partial<Record<'asr' | 'translation' | 'summary' | 'diarization', { endpoint: string; sourceEndpoint?: string; model: string; configured: boolean }>> & {
@@ -70,7 +71,7 @@ interface SettingsConfig {
   sileroVadEnabled: boolean
   dynaudnormEnabled: boolean
   glossary: string
-  responseSpeed: 'fast' | 'normal' | 'slow'
+  responseSpeed: ResponseSpeed
 }
 
 export {}

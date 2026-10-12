@@ -1,0 +1,273 @@
+{
+  "preset": "new",
+  "vadKind": "energy",
+  "gate": false,
+  "gateMinChunkMs": null,
+  "hallucFilter": false,
+  "endThreshold": null,
+  "vadConfig": {
+    "minSpeechMs": 120,
+    "minSilenceMs": 250,
+    "preRollMs": 300,
+    "noiseFloorOffsetDb": 12,
+    "chunkMinMs": 700,
+    "chunkMaxMs": 1500
+  },
+  "overlapMs": 0,
+  "sampleRate": 48000,
+  "audio": "music/taiwan-tongues/fixture-300s.wav",
+  "audioSeconds": 60,
+  "tsv": "music/taiwan-tongues/fixture-300s.tsv",
+  "endpointHost": "submissions-enter-audit-workstation.trycloudflare.com",
+  "model": "Breeze-ASR-25",
+  "startedAt": "2026-10-12T15:41:00.426Z",
+  "chunks": {
+    "enqueued": 24,
+    "sent": 24,
+    "droppedQueue": 0,
+    "emptyText": 0,
+    "gateVetoed": 0,
+    "hallucVetoed": 0,
+    "requestFailed": 24,
+    "avgAudioMs": 1992,
+    "vadBoundaries": 15,
+    "forcedBoundaries": 9
+  },
+  "asrMs": {
+    "n": 24,
+    "p50": 2764,
+    "p95": 2775,
+    "max": 2806
+  },
+  "queueWaitMs": {
+    "n": 24,
+    "p50": 5207,
+    "p95": 8283,
+    "max": 8311
+  },
+  "errors": {
+    "count": 24,
+    "unique": [
+      "fetch failed"
+    ]
+  },
+  "sentences": {
+    "total": 15,
+    "shown": 0,
+    "dropped": 0,
+    "emptyText": 0,
+    "requestFailed": 8,
+    "notSent": 7
+  },
+  "latencyMs": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null,
+    "within2500ShownPct": null,
+    "within2500AllPct": 0
+  },
+  "accuracy": {
+    "corpusCerPct": 100,
+    "corpusRefChars": 121,
+    "corpusDistance": 121,
+    "corpusWerPct": 100,
+    "corpusRefWords": 66,
+    "corpusWerDistance": 66,
+    "sentenceCerPct": 100,
+    "sentenceWerPct": 100
+  },
+  "fragmentation": {
+    "displayedCaptions": 0,
+    "rawFinalEvents": 0,
+    "mergeOperations": 0,
+    "meanCaptionChars": null,
+    "segmentsPerSentenceMean": 0,
+    "segmentsPerSentenceMax": 0,
+    "sentencesSplit": 0
+  },
+  "drainMs": 7973,
+  "captions": [],
+  "detail": [
+    {
+      "startMs": 0,
+      "endMs": 2712,
+      "speaker": "-",
+      "text": "中心會處理",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 3312,
+      "endMs": 7656,
+      "speaker": "-",
+      "text": "以及中央研究院老師",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 8256,
+      "endMs": 10344,
+      "speaker": "-",
+      "text": "小編不錯吧",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 10944,
+      "endMs": 14760,
+      "speaker": "-",
+      "text": "中華民國訓政時期約法",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 15360,
+      "endMs": 20544,
+      "speaker": "-",
+      "text": "獲選的勢必是社會最殷切期待的提案",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 10
+    },
+    {
+      "startMs": 21144,
+      "endMs": 25968,
+      "speaker": "-",
+      "text": "未來將結合政府現有資源",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 6
+    },
+    {
+      "startMs": 26568,
+      "endMs": 30348,
+      "speaker": "-",
+      "text": "高雄捷運東港延伸線",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 5
+    },
+    {
+      "startMs": 30948,
+      "endMs": 35532,
+      "speaker": "-",
+      "text": "今日能否提出名單？",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 36132,
+      "endMs": 41196,
+      "speaker": "-",
+      "text": "決定以此復興社區",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 41796,
+      "endMs": 44076,
+      "speaker": "-",
+      "text": "保證會給利息",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 44676,
+      "endMs": 48180,
+      "speaker": "-",
+      "text": "如人員願意投入",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 4
+    },
+    {
+      "startMs": 48780,
+      "endMs": 51516,
+      "speaker": "-",
+      "text": "非精神疾病",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 52116,
+      "endMs": 55380,
+      "speaker": "-",
+      "text": "很多人都是當了父母",
+      "status": "not-sent",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 5
+    },
+    {
+      "startMs": 55980,
+      "endMs": 58596,
+      "speaker": "-",
+      "text": "緊張的情緒",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 3
+    },
+    {
+      "startMs": 59196,
+      "endMs": 62244,
+      "speaker": "-",
+      "text": "好孩子請不要模仿",
+      "status": "request-failed",
+      "segments": 0,
+      "hyp": "",
+      "sentenceCerPct": 100,
+      "sentenceWerPct": 100,
+      "sentenceRefWords": 5
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+source,preset,corpus_CER_pct,corpus_WER_pct,latency_p50_ms,latency_p95_ms,within_2500ms_pct,shown,total,ASR_errors
+main,new,39.66,45.7,1871,2864,86.08,78,79,0
+working-tree,accuracy6000,10.34,16.67,3432,5546,7.59,79,79,0
+working-tree,accuracy6000Conservative,11.11,17.2,3790,5988,3.8,79,79,0

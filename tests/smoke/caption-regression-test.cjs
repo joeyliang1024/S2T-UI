@@ -38,40 +38,40 @@ async function regressions(){
  await assert.rejects(readJsonResponse({status:429,ok:false,headers:new Headers({'retry-after':'15'}),text:async()=>''},'test'),e=>e.status===429&&e.retryAfterSeconds===15)
  const parallel=setup([entry('skip1',{detectedLanguage:'en-US'}),entry('skip2',{detectedLanguage:'en-US'}),entry(1),entry(2)])
  let active=0,peak=0
- const slow=async()=>{active++;peak=Math.max(peak,active);await parallel.clock.wait(2000);active--;return '譯文'}
+ const slow=async()=>{active++;peak=Math.max(peak,active);await parallel.clock.wait(2000);active--;return {text:'譯文'}}
  parallel.queue.tick(options,slow);await flush();assert.equal(parallel.queue.inFlight,2);await parallel.clock.advance(2000);assert.equal(peak,2);assert.equal(parallel.entries.filter(e=>e.translatedText).length,2)
- const throttled=setup([entry(1),entry(2)]);throttled.queue.tick(options,async()=>{await throttled.clock.wait(1000);return '譯文'},true);await flush();assert.equal(throttled.queue.inFlight,1)
+ const throttled=setup([entry(1),entry(2)]);throttled.queue.tick(options,async()=>{await throttled.clock.wait(1000);return {text:'譯文'}},true);await flush();assert.equal(throttled.queue.inFlight,1)
  const retry=setup([entry(1)]);const attemptTimes=[];const fail=async()=>{attemptTimes.push(retry.clock.now);throw new Error('temporary')}
  retry.queue.tick(options,fail);await flush();await retry.clock.advance(999);retry.queue.tick(options,fail);await flush();assert.equal(attemptTimes.length,1)
  await retry.clock.advance(1000);retry.queue.tick(options,fail);await flush();await retry.clock.advance(2999);retry.queue.tick(options,fail);await flush();assert.equal(attemptTimes.length,2)
  await retry.clock.advance(3000);retry.queue.tick(options,fail);await flush();assert.deepEqual(attemptTimes,[0,1000,3000]);assert.equal(retry.entries[0].translationStatus,'failed');assert.equal(retry.queue.retryCount,0)
- const blank=setup([entry(1)]);blank.queue.tick(options,async()=> '  ');await flush();assert.equal(blank.entries[0].translationAttempts,1)
- const rate=setup([entry(1)]);let rateCalls=0;const limited=async()=>{if(++rateCalls===1)throw new HttpServiceError('limit',429,15);return '譯文'}
+ const blank=setup([entry(1)]);blank.queue.tick(options,async()=>({text:'  '}));await flush();assert.equal(blank.entries[0].translationAttempts,1)
+ const rate=setup([entry(1)]);let rateCalls=0;const limited=async()=>{if(++rateCalls===1)throw new HttpServiceError('limit',429,15);return {text:'譯文'}}
  rate.queue.tick(options,limited);await flush();assert.equal(rate.entries[0].translationAttempts,undefined);await rate.clock.advance(14999);rate.queue.tick(options,limited);await flush();assert.equal(rateCalls,1)
  await rate.clock.advance(15000);rate.queue.tick(options,limited);await flush();assert.equal(rate.entries[0].translatedText,'譯文')
- const speaker=setup([entry(1)]);speaker.queue.tick(options,async()=>{await speaker.clock.wait(1000);return '譯文'});await flush();speaker.update(es=>assignSpeakersByOverlap(es,[{startMs:0,endMs:1200,speaker:'SPEAKER_00'}]));await speaker.clock.advance(1000);assert.equal(speaker.entries[0].translatedText,'譯文');assert.equal(speaker.queue.diagnostics.requests,1)
- const merge=setup([entry(1)]);merge.queue.tick(options,async()=>{await merge.clock.wait(1000);return '譯文'});await flush();merge.update(es=>upsertLiveCaption(es,entry(2,{startMs:1200,endMs:2400}),-1,id=>merge.queue.isActive(id)));assert.equal(merge.entries.length,2);await merge.clock.advance(1000);assert.equal(merge.entries[0].translatedText,'譯文')
+ const speaker=setup([entry(1)]);speaker.queue.tick(options,async()=>{await speaker.clock.wait(1000);return {text:'譯文'}});await flush();speaker.update(es=>assignSpeakersByOverlap(es,[{startMs:0,endMs:1200,speaker:'SPEAKER_00'}]));await speaker.clock.advance(1000);assert.equal(speaker.entries[0].translatedText,'譯文');assert.equal(speaker.queue.diagnostics.requests,1)
+ const merge=setup([entry(1)]);merge.queue.tick(options,async()=>{await merge.clock.wait(1000);return {text:'譯文'}});await flush();merge.update(es=>upsertLiveCaption(es,entry(2,{startMs:1200,endMs:2400}),-1,id=>merge.queue.isActive(id)));assert.equal(merge.entries.length,2);await merge.clock.advance(1000);assert.equal(merge.entries[0].translatedText,'譯文')
  assert.equal(editCaptionContent(entry(1,{translatedText:'old'}),'new','old').translatedText,undefined);assert.equal(editCaptionContent(entry(1,{translatedText:'old'}),'new','manual').translatedText,'manual');
- const edit=setup([entry(1)]);edit.queue.tick(options,async()=>{await edit.clock.wait(1000);return '舊譯文'});await flush();edit.update(es=>es.map(e=>({...e,sourceText:'修改',translationContentRevision:1})));await edit.clock.advance(1000);assert.equal(edit.entries[0].translatedText,undefined);assert.equal(edit.queue.diagnostics.staleResults,1)
- const cancel=setup([entry(1),entry(2)]);cancel.queue.tick(options,async()=>{await cancel.clock.wait(2000);return 'late'});await flush();cancel.queue.reset(true);await flush();assert.equal(cancel.queue.inFlight,0);assert.ok(cancel.entries.every(e=>e.translationStatus==='failed'));await cancel.clock.advance(2000);assert.ok(cancel.entries.every(e=>!e.translatedText))
- cancel.queue.reset();cancel.update(()=>[entry(1,{sourceText:'新會話'})]);cancel.queue.tick(options,async()=> 'new');await flush();assert.equal(cancel.entries[0].translatedText,'new')
-  const untouched=setup([entry(1)]);untouched.queue.tick({...options,targetLanguage:'zh-TW'},async()=>'不該被呼叫');await flush();assert.equal(untouched.queue.inFlight,0,'same-language captions are never dispatched');untouched.queue.reset(true);await flush();assert.equal(untouched.entries[0].translationStatus,undefined,'cancel must not report an attempt nothing made')
+ const edit=setup([entry(1)]);edit.queue.tick(options,async()=>{await edit.clock.wait(1000);return {text:'舊譯文'}});await flush();edit.update(es=>es.map(e=>({...e,sourceText:'修改',translationContentRevision:1})));await edit.clock.advance(1000);assert.equal(edit.entries[0].translatedText,undefined);assert.equal(edit.queue.diagnostics.staleResults,1)
+ const cancel=setup([entry(1),entry(2)]);cancel.queue.tick(options,async()=>{await cancel.clock.wait(2000);return {text:'late'}});await flush();cancel.queue.reset(true);await flush();assert.equal(cancel.queue.inFlight,0);assert.ok(cancel.entries.every(e=>e.translationStatus==='failed'));await cancel.clock.advance(2000);assert.ok(cancel.entries.every(e=>!e.translatedText))
+ cancel.queue.reset();cancel.update(()=>[entry(1,{sourceText:'新會話'})]);cancel.queue.tick(options,async()=>({text:'new'}));await flush();assert.equal(cancel.entries[0].translatedText,'new')
+  const untouched=setup([entry(1)]);untouched.queue.tick({...options,targetLanguage:'zh-TW'},async()=>({text:'不該被呼叫'}));await flush();assert.equal(untouched.queue.inFlight,0,'same-language captions are never dispatched');untouched.queue.reset(true);await flush();assert.equal(untouched.entries[0].translationStatus,undefined,'cancel must not report an attempt nothing made')
  const sentence=setup([entry('a',{sourceText:'我們今天',endMs:1200}),entry('b',{sourceText:'討論計畫',startMs:1200,endMs:2400})]);let sentenceTexts=[]
  const sentenceOptions={...options,strategy:'sentence',elapsedMs:2500}
- sentence.queue.tick(sentenceOptions,async e=>{sentenceTexts.push(e.sourceText);return 'whole segment'});await flush();assert.equal(sentenceTexts.length,0,'open merged segment waits')
+ sentence.queue.tick(sentenceOptions,async e=>{sentenceTexts.push(e.sourceText);return {text:'whole segment'}});await flush();assert.equal(sentenceTexts.length,0,'open merged segment waits')
  sentence.update(es=>es.map(e=>e.id==='http-b'?{...e,isSentenceBoundary:true}:e))
- sentence.queue.tick(sentenceOptions,async e=>{sentenceTexts.push(e.sourceText);return 'whole segment'});await flush()
+ sentence.queue.tick(sentenceOptions,async e=>{sentenceTexts.push(e.sourceText);return {text:'whole segment'}});await flush()
  assert.deepEqual(sentenceTexts,['我們今天討論計畫'],'translate merged segment in one request')
  assert.equal(sentence.entries[0].translatedText,'whole segment');assert.equal(sentence.entries[1].translationStatus,'completed')
  sentence.queue.tick(options,async()=>{throw Error('duplicate translation')});await flush();assert.equal(sentence.queue.diagnostics.requests,1)
  const staleGroup=setup([entry('a'),entry('b',{startMs:1200,endMs:2400,isSentenceBoundary:true})])
- staleGroup.queue.tick(sentenceOptions,async()=>{await staleGroup.clock.wait(1000);return 'stale group'})
+ staleGroup.queue.tick(sentenceOptions,async()=>{await staleGroup.clock.wait(1000);return {text:'stale group'}})
  await flush();staleGroup.update(es=>es.map(e=>e.id==='http-b'?editCaptionContent(e,'edited'):e));await staleGroup.clock.advance(1000)
  assert.ok(staleGroup.entries.every(e=>!e.translatedText),'editing any member invalidates whole translation')
- const drain=setup([entry(1,{isSentenceBoundary:false})]);const draining=drain.queue.drain(options,async()=>{await drain.clock.wait(1000);return '尾句'});await drain.clock.advance(1200);assert.equal(await draining,true);assert.equal(drain.entries[0].translatedText,'尾句');assert.equal(drain.queue.inFlight,0)
- const manual=setup([entry(1),entry(2)]);const manualTransport=async()=>{await manual.clock.wait(1000);return '人工啟動的翻譯'};void manual.queue.request(manual.entries[0],manualTransport,'en');await flush();const manualDrain=manual.queue.drain(options,manualTransport,60000,false);await manual.clock.advance(1200);assert.equal(await manualDrain,true);assert.equal(manual.entries[0].translatedText,'人工啟動的翻譯');assert.equal(manual.entries[1].translatedText,undefined);assert.equal(manual.queue.diagnostics.requests,1)
- const settingsChange=setup([entry(1)]);settingsChange.queue.tick(options,async()=>{await settingsChange.clock.wait(2000);return 'old target'});await flush();settingsChange.queue.reset();await flush();settingsChange.queue.tick({...options,targetLanguage:'ja'},async()=> 'new target');await flush();await settingsChange.clock.advance(2000);assert.equal(settingsChange.entries[0].translatedText,'new target')
- const timing=setup([entry(1)]);timing.queue.tick(options,async()=>{await timing.clock.wait(1000);return '譯文'});await flush();timing.update(es=>es.map(e=>({...e,startMs:50,revision:e.revision+1})));await timing.clock.advance(1000);assert.equal(timing.entries[0].translatedText,'譯文')
+ const drain=setup([entry(1,{isSentenceBoundary:false})]);const draining=drain.queue.drain(options,async()=>{await drain.clock.wait(1000);return {text:'尾句'}});await drain.clock.advance(1200);assert.equal(await draining,true);assert.equal(drain.entries[0].translatedText,'尾句');assert.equal(drain.queue.inFlight,0)
+ const manual=setup([entry(1),entry(2)]);const manualTransport=async()=>{await manual.clock.wait(1000);return {text:'人工啟動的翻譯'}};void manual.queue.request(manual.entries[0],manualTransport,'en');await flush();const manualDrain=manual.queue.drain(options,manualTransport,60000,false);await manual.clock.advance(1200);assert.equal(await manualDrain,true);assert.equal(manual.entries[0].translatedText,'人工啟動的翻譯');assert.equal(manual.entries[1].translatedText,undefined);assert.equal(manual.queue.diagnostics.requests,1)
+ const settingsChange=setup([entry(1)]);settingsChange.queue.tick(options,async()=>{await settingsChange.clock.wait(2000);return {text:'old target'}});await flush();settingsChange.queue.reset();await flush();settingsChange.queue.tick({...options,targetLanguage:'ja'},async()=>({text:'new target'}));await flush();await settingsChange.clock.advance(2000);assert.equal(settingsChange.entries[0].translatedText,'new target')
+ const timing=setup([entry(1)]);timing.queue.tick(options,async()=>{await timing.clock.wait(1000);return {text:'譯文'}});await flush();timing.update(es=>es.map(e=>({...e,startMs:50,revision:e.revision+1})));await timing.clock.advance(1000);assert.equal(timing.entries[0].translatedText,'譯文')
  const deadline=setup([entry(1)]);const timeout=deadline.queue.drain(options,async()=>new Promise(()=>{}),1000);await deadline.clock.advance(1000);assert.equal(await timeout,false);await flush();assert.equal(deadline.queue.inFlight,0);assert.equal(deadline.entries[0].translationStatus,undefined)
  assert.equal(renderedLiveCaptionWindow(Array.from({length:10000},(_,i)=>entry(i))).length,500)
  assert.equal(renderedLiveCaptionWindow(Array.from({length:10000},(_,i)=>entry(i)),true).length,10000)
@@ -100,17 +100,17 @@ async function regressions(){
  const displayRow=[entry('row1',{startMs:0,endMs:1000}),entry('row2',{startMs:1000,endMs:2000}),entry('row3',{startMs:2000,endMs:3000}),entry('row4',{startMs:3000,endMs:4000})]
  assert.equal(groupLiveCaptions(displayRow).length,1,'four consecutive captions form one display row')
  const realtime=setup(displayRow.map(e=>({...e})))
- for(const segment of realtime.entries)await realtime.queue.request(segment,async()=> '即時譯文','en')
+ for(const segment of realtime.entries)await realtime.queue.request(segment,async()=>({text:'即時譯文'}),'en')
  assert.ok(realtime.entries.every(e=>e.translatedText),'realtime strategy translates every segment')
  assert.ok(realtime.entries.every(e=>e.captionGroupId===undefined),'realtime translation must not write display-row locks')
  assert.equal(groupLiveCaptions(realtime.entries).length,1,'realtime translation must not fragment the display')
  const sentenceStrategy=setup(displayRow.map(e=>({...e})))
- await sentenceStrategy.queue.request(groupLiveCaptions(sentenceStrategy.entries)[0],async()=> '整句譯文','en')
+ await sentenceStrategy.queue.request(groupLiveCaptions(sentenceStrategy.entries)[0],async()=>({text:'整句譯文'}),'en')
  assert.equal(sentenceStrategy.entries.filter(e=>e.translatedText).length,1,'sentence strategy stores one group translation')
  assert.ok(sentenceStrategy.entries.every(e=>e.captionGroupId===undefined),'sentence translation must not write display-row locks either')
  assert.equal(groupLiveCaptions(sentenceStrategy.entries).length,1,'sentence translation must not fragment the display')
  const frozen=setup(freezeCaptionGroups(displayRow.map(e=>({...e})),true))
- await frozen.queue.request(groupLiveCaptions(frozen.entries)[0],async()=> '整句譯文','en')
+ await frozen.queue.request(groupLiveCaptions(frozen.entries)[0],async()=>({text:'整句譯文'}),'en')
  assert.ok(frozen.entries.some(e=>e.captionGroupId),'freezeCaptionGroups keeps the display-row lock')
  assert.equal(groupLiveCaptions(frozen.entries).length,1,'translation must not split a row frozen by speaker labelling')
  console.log('Caption lifecycle, limiter and scheduler regressions passed.')
@@ -125,7 +125,7 @@ async function virtualCapture(speed,inject=false){
   if(inject&&h.clock.now>=30000&&!limitedOnce){limitedOnce=true;throw new HttpServiceError('limit',429,15)}
   if(inject&&h.clock.now>=90000&&!failedOnce){failedOnce=true;throw new HttpServiceError('temporary',503)}
   assert.equal(translatedIds.has(e.id),false,'no unnecessary duplicate model request');translatedIds.add(e.id);acceptedTranslations++
-  await h.clock.wait(100);latencies.push({at:e.endMs,lag:h.clock.now-e.endMs});return '譯文'
+  await h.clock.wait(100);latencies.push({at:e.endMs,lag:h.clock.now-e.endMs});return {text:'譯文'}
  }
  const adapter=new OpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default',vadConfig:speedToVadConfig(speed)})
  adapter.onTranscript(e=>{if(e.status==='final')asrTexts.push(e.sourceText);h.update(es=>upsertLiveCaption(es,e,-1,id=>h.queue.isActive(id)))})

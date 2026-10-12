@@ -325,6 +325,24 @@ const interactivePool = new SherpaWorkerPool({
 })
 // Heavy: diarization and per-speaker embeddings.
 const heavyPool = new SherpaWorkerPool({ label: 'heavy' })
+// Dedicated Silero pool. Per-chunk VAD gating is on the live-caption path, so
+// it must never queue behind a voiceprint enrolment, and its capacity is an
+// independent knob: each worker thread owns one ONNX session, so
+// S2T_SILERO_VAD_WORKERS=2 doubles concurrent VAD throughput and keeps
+// answering while another worker is wedged or crashing (respawn on exit,
+// quarantine on timeout, explicit rejection on queue overflow — never a
+// silent stall). Raise it only after scaling CPU: workers x infer threads
+// must stay within the pod limit.
+const sileroPool = new SherpaWorkerPool({
+  label: 'silero',
+  size: positiveInteger(process.env.S2T_SILERO_VAD_WORKERS, 1),
+  maxQueue: positiveInteger(process.env.S2T_SILERO_VAD_MAX_QUEUE, 32),
+  // A healthy chunk call returns in milliseconds; a 10 s floor plus a 30 s
+  // cap only exist to surface a wedged session instead of hanging the caption
+  // pipeline, which then gets quarantined and respawned.
+  baseTimeoutMs: positiveInteger(process.env.S2T_SILERO_VAD_JOB_TIMEOUT_BASE_MS, 10_000),
+  capTimeoutMs: positiveInteger(process.env.S2T_SILERO_VAD_JOB_TIMEOUT_MS, 30_000)
+})
 
 const interactive = (operation, payload) => interactivePool.execute(operation, payload, { priority: 'interactive' })
 
@@ -332,7 +350,7 @@ const interactive = (operation, payload) => interactivePool.execute(operation, p
 const sherpaWorkerPool = {
   execute: (operation, payload, options) => heavyPool.execute(operation, payload, options),
   stats () {
-    const pools = { interactive: interactivePool.stats(), heavy: heavyPool.stats() }
+    const pools = { interactive: interactivePool.stats(), heavy: heavyPool.stats(), silero: sileroPool.stats() }
     const ops = {}
     for (const [name, value] of Object.entries(pools)) {
       for (const [operation, metric] of Object.entries(value.ops)) {
@@ -363,18 +381,18 @@ const sherpaWorkerPool = {
       }
     }
     return {
-      configured: pools.interactive.configured + pools.heavy.configured,
-      workers: pools.interactive.workers + pools.heavy.workers,
-      busy: pools.interactive.busy + pools.heavy.busy,
-      queued: pools.interactive.queued + pools.heavy.queued,
-      inFlight: pools.interactive.inFlight + pools.heavy.inFlight,
-      maxQueue: pools.interactive.maxQueue + pools.heavy.maxQueue,
+      configured: pools.interactive.configured + pools.heavy.configured + pools.silero.configured,
+      workers: pools.interactive.workers + pools.heavy.workers + pools.silero.workers,
+      busy: pools.interactive.busy + pools.heavy.busy + pools.silero.busy,
+      queued: pools.interactive.queued + pools.heavy.queued + pools.silero.queued,
+      inFlight: pools.interactive.inFlight + pools.heavy.inFlight + pools.silero.inFlight,
+      maxQueue: pools.interactive.maxQueue + pools.heavy.maxQueue + pools.silero.maxQueue,
       pools,
       ops: merged
     }
   },
-  resetStats () { interactivePool.resetStats(); heavyPool.resetStats() },
-  close () { return Promise.all([interactivePool.close(), heavyPool.close()]) }
+  resetStats () { interactivePool.resetStats(); heavyPool.resetStats(); sileroPool.resetStats() },
+  close () { return Promise.all([interactivePool.close(), heavyPool.close(), sileroPool.close()]) }
 }
 
 module.exports = {
@@ -387,9 +405,12 @@ module.exports = {
   extractSpeakerLabelEmbeddings: (audio, segments) => heavyPool.execute('speakerLabelEmbeddings', { audio, segments }, { retainAudio: true }),
   diarizeWav: (audio, backend = localModelName()) => heavyPool.execute('diarizeWav', { audio, backend, segments: [] }, { retainAudio: true }),
   nemotronStatus: () => heavyPool.execute('nemotronStatus', {}, { timeoutMs: 10000 }),
-  analyzeSileroVad: (audio, options) => interactive('sileroVad', { audio, options }),
-  sileroVadStatus: () => interactivePool.execute('sileroStatus', {}, { priority: 'interactive', timeoutMs: 10_000 }),
-  warmSileroVad: () => interactivePool.execute('sileroWarmup', {}, { priority: 'interactive', timeoutMs: 10_000 }),
+  // Silero runs on its own pool (S2T_SILERO_VAD_WORKERS): live-caption chunk
+  // gating must keep answering while voiceprint/embedding jobs occupy the
+  // interactive pool. Warmup touches every worker so no session is cold.
+  analyzeSileroVad: (audio, options) => sileroPool.execute('sileroVad', { audio, options }, { priority: 'interactive' }),
+  sileroVadStatus: () => sileroPool.execute('sileroStatus', {}, { priority: 'interactive', timeoutMs: 10_000 }),
+  warmSileroVad: () => Promise.all(Array.from({ length: sileroPool.size }, () => sileroPool.execute('sileroWarmup', {}, { priority: 'interactive', timeoutMs: 10_000 }))),
   dynaudnormWav: (audio) => interactive('dynaudnorm', { audio }),
   audioPreprocessStatus: () => interactivePool.execute('audioPreprocessStatus', {}, { priority: 'interactive', timeoutMs: 10_000 })
 }

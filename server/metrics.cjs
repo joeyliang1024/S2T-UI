@@ -1,23 +1,23 @@
 const { monitorEventLoopDelay } = require('node:perf_hooks')
-const stages = new Set(['chunk_speech_to_paint','speech_to_first_paint', 'vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint', 'translation_roundtrip', 'translation_response_to_paint', 'translation_schedule_wait', 'speech_to_translation_paint'])
-const firstWordStages = new Set(['vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint'])
+// t1~t7 latency pipeline. Slices come from the browser clock plus the
+// gateway's Server-Timing header; e2e_* carries the end-to-end observation.
+// phase groups the slices so one PromQL can show where time is spent:
+//   t1 音訊擷取與上傳 · t2 VAD 偵測與分段 · t3 ASR 模型推論 · t4 文字後處理
+//   t5 回傳轉錄與呈現 · t6 翻譯模型 · t7 翻譯回傳與呈現
+const captionStageMetric = 's2t_caption_stage_duration_seconds'
+const captionStages = ['e2e_asr', 'e2e_translation', 't1_queue', 't1_encode', 't1_upload', 't2_vad', 't2_segment', 't2_gate', 't3_queue', 't3_preprocess', 't3_model', 't3_gateway', 't4_postprocess', 't5_network', 't5_paint', 't6_wait', 't6_queue', 't6_model', 't6_gateway', 't7_network', 't7_paint']
+const phaseOf = stage => stage.startsWith('t') ? stage.slice(0, 2) : 'e2e'
+const stages = new Set(captionStages)
 const buckets = [.025, .05, .1, .15, .25, .4, .6, .8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120, 300]
 const histograms = new Map()
 const events = new Map()
-const allowedEvents = new Set(['speech_detected', 'asr_empty', 'asr_failed', 'audio_gap', 'telemetry_dropped'])
+const allowedEvents = new Set(['speech_detected', 'asr_empty', 'asr_failed', 'audio_gap', 'telemetry_dropped', 'silero_veto', 'silero_failed'])
 // Expose zero baselines before the first browser sample, so a first scrape
 // does not silently lose the initial observation when Prometheus calculates rate.
+// Label order must match observe() below or a sample would create a second series.
 for (const stage of stages) {
-  const labels = `stage=${JSON.stringify(stage)}`, name = 's2t_caption_stage_duration_seconds'
-  histograms.set(`${name}:${labels}`, { name, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
-}
-for (const stage of firstWordStages) {
-  const labels = `stage=${JSON.stringify(stage)}`, name = 's2t_first_word_stage_duration_seconds'
-  histograms.set(`${name}:${labels}`, { name, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
-}
-for (const stage of firstWordStages) {
-  const labels = `stage=${JSON.stringify(stage)}`, name = 's2t_chunk_stage_duration_seconds'
-  histograms.set(`${name}:${labels}`, { name, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
+  const labels = `stage=${JSON.stringify(stage)},phase=${JSON.stringify(phaseOf(stage))}`
+  histograms.set(`${captionStageMetric}:${labels}`, { name: captionStageMetric, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
 }
 for (const event of allowedEvents) events.set(event, 0)
 const observe = (name, labels, seconds, failed = false) => {
@@ -73,13 +73,9 @@ const acceptCaptionSamples = body => {
   const eventEntries = Object.entries(body.events || {})
   if (!body.samples.length && !eventEntries.length) return false
   if (eventEntries.some(([name, count]) => !allowedEvents.has(name) || !Number.isSafeInteger(count) || count < 1 || count > 1000)) return false
-  if (!body.samples.every(sample => (stages.has(sample?.stage) || (typeof sample?.stage === 'string' && ((sample.stage.startsWith('first_word_') && firstWordStages.has(sample.stage.slice(11))) || (sample.stage.startsWith('chunk_') && firstWordStages.has(sample.stage.slice(6)))))) && Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300)) return false
+  if (!body.samples.every(sample => stages.has(sample?.stage) && Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300)) return false
   for (const [name, count] of eventEntries) events.set(name, (events.get(name) || 0) + count)
-  for (const sample of body.samples) {
-    const firstWord = sample.stage.startsWith('first_word_')
-    const chunk = sample.stage.startsWith('chunk_') && firstWordStages.has(sample.stage.slice(6))
-    observe(chunk ? 's2t_chunk_stage_duration_seconds' : firstWord ? 's2t_first_word_stage_duration_seconds' : 's2t_caption_stage_duration_seconds', { stage: chunk ? sample.stage.slice(6) : firstWord ? sample.stage.slice(11) : sample.stage }, sample.seconds)
-  }
+  for (const sample of body.samples) observe(captionStageMetric, { stage: sample.stage, phase: phaseOf(sample.stage) }, sample.seconds)
   return true
 }
 module.exports = { observe, measure, render, instrumentStorage, acceptCaptionSamples }

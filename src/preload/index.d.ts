@@ -1,3 +1,4 @@
+import type { ResponseSpeed } from '../shared/response-speed'
 export {}
 
 declare global {
@@ -65,5 +66,5 @@ interface SettingsConfig {
   sileroVadEnabled: boolean
   dynaudnormEnabled: boolean
   glossary: string
-  responseSpeed: 'fast' | 'normal' | 'slow'
+  responseSpeed: ResponseSpeed
 }

@@ -56,7 +56,39 @@ const getSession = async () => {
 // every voiceprint block if `S2T_VOICEPRINT_VAD=1` were turned on.
 const WINDOW_SAMPLES = 512
 const CONTEXT_SAMPLES = 64
-const analyzeSamples = async (samples, { threshold = .5, minSpeechMs = 120, minSilenceMs = 300, includeProbabilities = false } = {}) => {
+// Share the gate's onset/hysteresis contract with the renderer experiments.
+// A brief high-probability spike followed by silence cannot satisfy the
+// minimum speech duration merely by including its trailing silence.
+const speechIntervalsFromProbabilities = (probabilities, sampleCount, { threshold = .5, minSpeechMs = 120, minSilenceMs = 300, endThreshold = threshold - .15 } = {}) => {
+  const minimumSpeech = Math.max(32, Number(minSpeechMs) || 120)
+  const minimumSilence = Math.max(32, Number(minSilenceMs) || 300)
+  const end = Math.max(.01, Math.min(threshold, Number.isFinite(Number(endThreshold)) ? Number(endThreshold) : threshold - .15))
+  const speech = []
+  let candidateStart = null
+  let start = null
+  let silenceStart = null
+  for (let index = 0; index < probabilities.length; index += 1) {
+    const startMs = index * WINDOW_SAMPLES / 16
+    const endMs = Math.min((index + 1) * WINDOW_SAMPLES, sampleCount) / 16
+    if (start === null) {
+      if (probabilities[index] >= (candidateStart === null ? threshold : end)) {
+        if (candidateStart === null) candidateStart = startMs
+        if (endMs - candidateStart >= minimumSpeech) start = candidateStart
+      } else candidateStart = null
+      continue
+    }
+    if (probabilities[index] >= end) { silenceStart = null; continue }
+    if (silenceStart === null) silenceStart = startMs
+    if (endMs - silenceStart >= minimumSilence) {
+      speech.push({ startMs: Math.round(start), endMs: Math.round(silenceStart) })
+      start = null; candidateStart = null; silenceStart = null
+    }
+  }
+  if (start !== null) speech.push({ startMs: Math.round(start), endMs: Math.round(silenceStart ?? sampleCount / 16) })
+  return speech
+}
+
+const analyzeSamples = async (samples, { threshold = .5, minSpeechMs = 120, minSilenceMs = 300, endThreshold, includeProbabilities = false } = {}) => {
   const status = modelStatus()
   if (!status.available) throw new Error(status.reason)
   const sanitizedThreshold = Math.max(.05, Math.min(.95, Number(threshold) || .5))
@@ -79,25 +111,8 @@ const analyzeSamples = async (samples, { threshold = .5, minSpeechMs = 120, minS
     state = output.stateN
     context = frame.slice(-CONTEXT_SAMPLES)
   }
-  const minimumSpeech = Math.max(32, Number(minSpeechMs) || 120)
-  const minimumSilence = Math.max(32, Number(minSilenceMs) || 300)
   const frameMs = (index) => ({ startMs: Math.round(index * WINDOW_SAMPLES / 16), endMs: Math.round(Math.min((index + 1) * WINDOW_SAMPLES, samples.length) / 16) })
-  const speech = []; let start = null; let silenceStart = null
-  for (let index = 0; index < probabilities.length; index += 1) {
-    const { startMs, endMs } = frameMs(index)
-    if (probabilities[index] >= sanitizedThreshold) {
-      if (start === null) start = startMs
-      silenceStart = null
-      continue
-    }
-    if (start === null) continue
-    if (silenceStart === null) silenceStart = startMs
-    if (endMs - silenceStart >= minimumSilence) {
-      if (silenceStart - start >= minimumSpeech) speech.push({ startMs: start, endMs: silenceStart })
-      start = null; silenceStart = null
-    }
-  }
-  if (start !== null && samples.length / 16 - start >= minimumSpeech) speech.push({ startMs: start, endMs: Math.round(samples.length / 16) })
+  const speech = speechIntervalsFromProbabilities(probabilities, samples.length, { threshold: sanitizedThreshold, minSpeechMs, minSilenceMs, endThreshold })
   const durationMs = Math.round(samples.length / 16)
   const result = { sampleRate: 16_000, durationMs, speech }
   // Frame probabilities are useful for debugging but expensive to ship across
@@ -113,4 +128,4 @@ const analyzeWav = async (audio, options = {}) => {
   return analyzeSamples(resampleMono(wave.samples, wave.sampleRate, 16_000), options)
 }
 
-module.exports = { modelPath, modelStatus, analyzeWav, analyzeSamples, defaultChecksum }
+module.exports = { modelPath, modelStatus, analyzeWav, analyzeSamples, speechIntervalsFromProbabilities, defaultChecksum }

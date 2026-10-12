@@ -1,9 +1,25 @@
+import type { ResponseSpeed } from '../../../../shared/response-speed'
+export { normalizeResponseSpeed, responseSpeeds } from '../../../../shared/response-speed'
+export type { ResponseSpeed } from '../../../../shared/response-speed'
+
 export type VadFrame = {
   onsetSamples: number
   speechStarted: boolean
   speechEnded: boolean
   speaking: boolean
   levelDbfs: number
+}
+
+/**
+ * The synchronous contract OpenAiChunkedModelAdapter needs from any boundary
+ * detector. EnergyVad (RMS) and SileroBoundaryVad (ML) both satisfy it, and
+ * the adapter accepts a factory so evaluations or future on-device runtimes
+ * can swap the detector without touching the chunking logic.
+ */
+export interface BoundaryVad {
+  process(samples: Float32Array): VadFrame
+  /** Clear utterance state while retaining the detector's audio position. */
+  reset?(): void
 }
 
 export type VadConfig = {
@@ -18,44 +34,30 @@ export type VadConfig = {
 
 export const defaultVadConfig: VadConfig = {
   minSpeechMs: 120,
-  // 250 ms keeps sentence-endpoint latency inside the 2.5 s budget;
-  // canMergeHttpCaption re-joins the shorter segments for display.
+  // Natural silence endpoints dispatch before the selected request bound.
   minSilenceMs: 250,
   preRollMs: 300,
   noiseFloorOffsetDb: 12,
-  // 700/1500 ms bounds the wait before the first caption: continuous speech
-  // reaches the ASR at ~1.2 s instead of ~2.1 s from the speaker's first word.
+  // Normal is the middle setting; the validated 6000/250 CER-first
+  // configuration belongs to Slow. See docs/guide/CAPTION_SPEED.zh-TW.md.
   chunkMinMs: 700,
-  chunkMaxMs: 1_500
+  chunkMaxMs: 3_000
 }
 
 /**
- * The only user-facing caption control. Each tier is a curated VadConfig
- * measured by scripts/evaluation/caption-latency-eval.cjs on conversational speech:
- * 'fast' shows captions earliest (shorter, occasionally choppier clips),
- * 'normal' is the validated P95 ≤ 2.5 s configuration, 'slow' waits for
- * longer clips (steadier output, later on screen).
+ * Five positions, with visible labels only at Fast, Normal and Slow.
+ * Existing saved values retain their semantic position; the two intermediate
+ * values are persisted explicitly so settings reload does not collapse them.
  */
-export type ResponseSpeed = 'fast' | 'normal' | 'slow'
-
-export const responseSpeeds: ReadonlyArray<ResponseSpeed> = ['fast', 'normal', 'slow']
-
 export const responseSpeedVadConfig: Record<ResponseSpeed, VadConfig> = {
-  // Measured on conversational speech: 700/1200 keeps CER level with 'normal'
-  // (35.2% corpus) while cutting median display latency ~270 ms; an earlier
-  // 500/1000 attempt lost 4 of 32 sentences to empty ASR output on short clips.
-  // On clean narration, chunkMin 500 gained nothing over 700 (p50 1219 vs
-  // 1164 ms, corpus CER 14.2% vs 14.0%), so 700 stays.
   fast: { ...defaultVadConfig, minSilenceMs: 150, chunkMaxMs: 1_200 },
+  'fast-normal': { ...defaultVadConfig, chunkMaxMs: 1_500 },
   normal: { ...defaultVadConfig },
-  // minSilence 800 (not 500): on clean narration it holds clips across short
-  // pauses instead of cutting at them — corpus CER 8.35% vs 10.27%, with 0
-  // premature natural cuts vs 2. On BGM material no boundary ever fires, so
-  // the tier behaves exactly like 500 there (corpus CER 28.88% unchanged).
-  slow: { ...defaultVadConfig, minSilenceMs: 800, chunkMinMs: 1_000, chunkMaxMs: 2_400 }
+  'normal-slow': { ...defaultVadConfig, chunkMaxMs: 4_000 },
+  // The full-fixture 6000/250 result (CER 10.34%, display P95 5.546s)
+  // is assigned exactly to Slow, including its 700ms minimum setting.
+  slow: { ...defaultVadConfig, chunkMaxMs: 6_000 }
 }
-
-export const normalizeResponseSpeed = (value: unknown): ResponseSpeed => value === 'fast' || value === 'slow' ? value : 'normal'
 
 export const speedToVadConfig = (speed: ResponseSpeed): VadConfig => ({ ...responseSpeedVadConfig[speed] })
 
@@ -63,13 +65,19 @@ export const speedToVadConfig = (speed: ResponseSpeed): VadConfig => ({ ...respo
  * An app-side VAD for a request/response ASR service. It chooses better HTTP
  * chunk boundaries and suppresses room tone; it does not claim word timing.
  */
-export class EnergyVad {
+export class EnergyVad implements BoundaryVad {
   private speaking = false
   private onsetSamples = 0
   private silenceSamples = 0
   private noiseFloorDbfs = -60
 
   constructor(private readonly sampleRate: number, private readonly config: VadConfig = defaultVadConfig) {}
+
+  reset(): void {
+    this.speaking = false
+    this.onsetSamples = 0
+    this.silenceSamples = 0
+  }
 
   process(samples: Float32Array): VadFrame {
     let sum = 0

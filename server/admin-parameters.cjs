@@ -13,8 +13,8 @@ function validateAdminParameters(value) {
     if (!range || typeof number !== 'number' || !Number.isFinite(number) || number < range[0] || number > range[1] || (key !== 'translationTemperature' && !Number.isInteger(number))) throw new Error(`進階參數 ${key} 無效`)
     result[key] = number
   }
-  if ((result.chunkMinMs !== undefined || result.chunkMaxMs !== undefined) && (result.chunkMinMs ?? 700) > (result.chunkMaxMs ?? 1500)) throw new Error('chunkMinMs 不可大於 chunkMaxMs')
-  if ((result.minSpeechMs ?? 120) > (result.chunkMaxMs ?? 1500)) throw new Error('語音確認時間不可長於 chunk 上限')
+  if (result.chunkMinMs !== undefined && result.chunkMaxMs !== undefined && result.chunkMinMs > result.chunkMaxMs) throw new Error('chunkMinMs 不可大於 chunkMaxMs')
+  if ((result.minSpeechMs ?? 120) > (result.chunkMaxMs ?? 3000)) throw new Error('語音確認時間不可長於 chunk 上限')
   return result
 }
 module.exports = { bounds, validateAdminParameters }

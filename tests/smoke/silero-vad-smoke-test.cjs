@@ -8,8 +8,9 @@
 // asserts that real speech is detected and that the peak probability is in the
 // range a working VAD produces.
 const { readFileSync } = require('node:fs')
+const assert = require('node:assert/strict')
 const { resolve } = require('node:path')
-const { analyzeWav } = require('../../server/silero-vad.cjs')
+const { analyzeWav, speechIntervalsFromProbabilities } = require('../../server/silero-vad.cjs')
 
 const silenceWav = (seconds) => {
   const frames = Math.round(16_000 * seconds)
@@ -28,6 +29,12 @@ const ratioOf = (result) => {
 }
 
 const main = async () => {
+  const segments = (values, options) => speechIntervalsFromProbabilities(Float32Array.from(values), values.length * 512, options)
+  assert.deepEqual(segments([.9, 0, 0, 0, 0]), [], 'trailing silence must not inflate a 32ms spike to 120ms of speech')
+  assert.deepEqual(segments([.9, .9, .9, .9, .4, .4, .4, .4, 0, 0]), [{ startMs: 0, endMs: 256 }], 'probabilities between 0.35 and 0.5 retain the active utterance; trailing silence is trimmed')
+  assert.deepEqual(segments([.9, .9, 0, .9, .9]), [], 'separated sub-120ms spikes do not accumulate as a voiced onset')
+  assert.deepEqual(speechIntervalsFromProbabilities(Float32Array.from([.9, .9, .9, .9]), 1600), [], 'zero-padding the last window must not invent enough speech to meet 120ms')
+  assert.deepEqual(segments([.9, .9, .9, .9, 0, 0], { threshold: .05 }), [{ startMs: 0, endMs: 128 }], 'low onset thresholds must still treat probability zero as silence')
   const speech = await analyzeWav(readFileSync(resolve(__dirname, '../fixtures', 'speech-sample.wav')), { includeProbabilities: true })
   const ratio = ratioOf(speech)
   const peak = Math.max(0, ...(speech.probabilities || []).map((frame) => frame.probability))

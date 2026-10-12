@@ -71,6 +71,10 @@ export const pcmWavChunkCount = (layout: PcmWavFileLayout, segmentMs = 45_000, o
 export const readPcmWavFileChunk = async (file: File, layout: PcmWavFileLayout, startByte: number, segmentMs = 45_000): Promise<WavChunk> => {
   const segmentBytes = segmentBytesFor(layout, segmentMs)
   const endByte = Math.min(layout.dataBytes, startByte + segmentBytes)
+  return readPcmWavFileBytes(file, layout, startByte, endByte)
+}
+
+const readPcmWavFileBytes = async (file: File, layout: PcmWavFileLayout, startByte: number, endByte: number): Promise<WavChunk> => {
   const data = new Uint8Array(await file.slice(layout.dataOffset + startByte, layout.dataOffset + endByte).arrayBuffer())
   const header = layout.header.slice()
   const view = new DataView(header.buffer)
@@ -114,4 +118,13 @@ export const joinOverlappedText = (previous: string, next: string): string => {
   }
   const needsSpace = /[A-Za-z0-9]$/.test(left) && /^[A-Za-z0-9]/.test(right)
   return `${left}${needsSpace ? ' ' : ''}${right}`
+}
+
+/** Extract an existing sentence span without fixed-duration batching or overlap. */
+export const readPcmWavSentence = async (file: File, layout: PcmWavFileLayout, startMs: number, endMs: number): Promise<WavChunk> => {
+  const frames = layout.dataBytes / layout.bytesPerFrame
+  const start = Math.max(0, Math.min(frames, Math.floor(startMs * layout.sampleRate / 1000)))
+  const end = Math.max(start, Math.min(frames, Math.ceil(endMs * layout.sampleRate / 1000)))
+  if (end <= start) throw new Error('Sentence has no recorded audio')
+  return readPcmWavFileBytes(file, layout, start * layout.bytesPerFrame, end * layout.bytesPerFrame)
 }

@@ -15,6 +15,20 @@
   "templating": {
     "list": [
       {
+        "name": "datasource",
+        "label": "資料來源",
+        "type": "datasource",
+        "query": "prometheus",
+        "regex": "",
+        "current": {
+          "text": "Prometheus",
+          "value": "s2t-prometheus"
+        },
+        "options": [],
+        "multi": false,
+        "includeAll": false
+      },
+      {
         "name": "caption_gateway",
         "label": "字幕量測來源",
         "type": "custom",
@@ -49,7 +63,7 @@
         "type": "query",
         "datasource": {
           "type": "prometheus",
-          "uid": "s2t-prometheus"
+          "uid": "${datasource}"
         },
         "query": "label_values(s2t_user_requests_total{job=\"$caption_gateway\",department!=\"\"}, department)",
         "refresh": 2,
@@ -67,7 +81,7 @@
         "type": "query",
         "datasource": {
           "type": "prometheus",
-          "uid": "s2t-prometheus"
+          "uid": "${datasource}"
         },
         "query": "label_values(s2t_user_requests_total{job=\"$caption_gateway\",department=~\"$usage_department\",department!=\"\"}, nt)",
         "refresh": 2,
@@ -108,18 +122,18 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m])) by (le))",
           "legendFormat": "",
           "instant": true,
           "range": false
         }
       ],
-      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
+      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到原文呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -160,18 +174,18 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m])) by (le))",
           "legendFormat": "",
           "instant": true,
           "range": false
         }
       ],
-      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
+      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到原文呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -212,18 +226,18 @@
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m])) by (le))",
           "legendFormat": "",
           "instant": true,
           "range": false
         }
       ],
-      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
+      "description": "完整落在即時字幕頁可見期間的 chunk 語音起點到原文呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -259,31 +273,31 @@
       "gridPos": {
         "x": 0,
         "y": 5,
-        "w": 16,
+        "w": 12,
         "h": 5
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
           "refId": "0",
-          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m])) by (le))",
           "legendFormat": "P50",
           "range": true,
           "instant": false
         },
         {
           "refId": "1",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m])) by (le))",
           "legendFormat": "P95",
           "range": true,
           "instant": false
         },
         {
           "refId": "2",
-          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m])) by (le))",
           "legendFormat": "P99",
           "range": true,
           "instant": false
@@ -322,19 +336,19 @@
       "title": "有效字幕樣本（最近 5 分鐘）",
       "type": "stat",
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 5,
-        "w": 8,
+        "w": 6,
         "h": 5
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"chunk_speech_to_paint\"}[5m]))",
+          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"e2e_asr\"}[5m]))",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -371,29 +385,316 @@
     },
     {
       "id": 7,
+      "title": "瓶頸階段（5 分鐘平均最慢）",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 5,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(1, sum by (phase) (rate(s2t_caption_stage_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[5m])) / sum by (phase) (rate(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[5m])))",
+          "legendFormat": "{{phase}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "t1~t5 中平均耗時最長的階段名稱（rate(_sum)/rate(_count) 取最大）；比值＝平均耗時。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t1 音訊擷取與上傳"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t2 VAD 偵測與分段"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t3 ASR 模型推論"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t4 文字後處理"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t5"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t5 回傳轉錄與呈現"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "textMode": "name"
+      }
+    },
+    {
+      "id": 8,
+      "title": "各階段平均耗時｜最長者即瓶頸（所選範圍）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 16,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sort_desc(sum by (phase) (increase(s2t_caption_stage_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__range])) / sum by (phase) (increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__range])))",
+          "legendFormat": "{{phase}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "t1~t5 平均耗時由長到短排列：t3 大＝ASR 模型推論吃緊，t1 大＝上傳／編碼，t5 大＝回傳網路與重試。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t1 音訊擷取與上傳"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t2 VAD 偵測與分段"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t3 ASR 模型推論"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t4 文字後處理"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "t5"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "t5 回傳轉錄與呈現"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "calcs": [
+          "last"
+        ],
+        "fields": "",
+        "values": false
+      }
+    },
+    {
+      "id": 9,
+      "title": "翻譯 P95（最近 5 分鐘）",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[5m])) by (le))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "語音起點到譯文在 UI 呈現（含前段 ASR 等待）；翻譯未啟用時無資料，不填零。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
       "title": "02 · 使用者｜NT 與部門（來源：$caption_gateway）",
       "type": "row",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 15,
         "w": 24,
         "h": 1
       }
     },
     {
-      "id": 8,
+      "id": 11,
       "title": "有請求的 NT（最近 5 分鐘）",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 11,
+        "y": 16,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -434,18 +735,18 @@
       }
     },
     {
-      "id": 9,
+      "id": 12,
       "title": "有活動的部門（最近 5 分鐘）",
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 11,
+        "y": 16,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -486,18 +787,18 @@
       }
     },
     {
-      "id": 10,
+      "id": 13,
       "title": "ASR 音訊量（所選範圍）",
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 11,
+        "y": 16,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -538,18 +839,18 @@
       }
     },
     {
-      "id": 11,
+      "id": 14,
       "title": "模型權杖數（所選範圍）",
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 11,
+        "y": 16,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -590,18 +891,18 @@
       }
     },
     {
-      "id": 12,
+      "id": 15,
       "title": "使用者請求量｜前 10 位 NT（所選範圍）",
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 20,
         "w": 12,
         "h": 5
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -645,18 +946,18 @@
       }
     },
     {
-      "id": 13,
+      "id": 16,
       "title": "部門總體請求量（所選範圍）",
       "type": "bargauge",
       "gridPos": {
         "x": 12,
-        "y": 15,
+        "y": 20,
         "w": 12,
         "h": 5
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -700,30 +1001,30 @@
       }
     },
     {
-      "id": 14,
+      "id": 17,
       "title": "03 · 請求｜入口健康與負載（來源：$caption_gateway）",
       "type": "row",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 25,
         "w": 24,
         "h": 1
       }
     },
     {
-      "id": 15,
+      "id": 18,
       "title": "監控入口狀態",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 26,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -779,18 +1080,18 @@
       }
     },
     {
-      "id": 16,
+      "id": 19,
       "title": "API 請求速率（最近 5 分鐘）",
       "type": "stat",
       "gridPos": {
         "x": 6,
-        "y": 21,
+        "y": 26,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -831,18 +1132,18 @@
       }
     },
     {
-      "id": 17,
+      "id": 20,
       "title": "API 錯誤率（最近 5 分鐘）",
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 21,
+        "y": 26,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -895,18 +1196,18 @@
       }
     },
     {
-      "id": 18,
+      "id": 21,
       "title": "處理中的 HTTP 請求",
       "type": "stat",
       "gridPos": {
         "x": 18,
-        "y": 21,
+        "y": 26,
         "w": 6,
         "h": 4
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -947,18 +1248,18 @@
       }
     },
     {
-      "id": 19,
+      "id": 22,
       "title": "API 請求趨勢（每秒）",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 25,
+        "y": 30,
         "w": 12,
         "h": 5
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -1371,18 +1672,18 @@
       }
     },
     {
-      "id": 20,
+      "id": 23,
       "title": "已登入請求錯誤分類（每秒）",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 25,
+        "y": 30,
         "w": 12,
         "h": 5
       },
       "datasource": {
         "type": "prometheus",
-        "uid": "s2t-prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -1805,5 +2106,5 @@
       "targetBlank": true
     }
   ],
-  "description": "值班快速判讀：延遲 → NT／部門使用情況 → 請求健康。來源選擇器區分 8787 真實入口與驗收模擬資料；不將缺失資料當作零。"
+  "description": "值班快速判讀：延遲 → 瓶頸階段 → NT／部門使用情況 → 請求健康。來源選擇器區分 8787 真實入口與驗收模擬資料；不將缺失資料當作零。"
 }

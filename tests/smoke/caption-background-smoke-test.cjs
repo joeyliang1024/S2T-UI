@@ -32,7 +32,7 @@ async function capture({ continuation=false, diarization=false, translateFails=f
     setCaptureState:value=>{state=value},cleanUpCapture:()=>{},continuationTargetRef:ref(continuation ? {entry:sessions[0],audio:new Blob(['old']),baseDurationMs:2000} : null),
     sessionsRef:{get current(){return sessions}},startAtRef:ref(Date.now()-1000),selectedDeviceId:'default',devices:[],includeSystemAudio:false,transcriptsRef:transcripts,setSessions,
     automaticSessionTitle:()=> 'title',setHistorySearch:()=>{},setHistoryPage:()=>{},setView:value=>{view=value},setStatus:()=>{},
-    translationTransportRef:ref(async entry=>{await translation.promise; if(translateFails) { throw new HttpServiceError('translation failed',400) } return `translated ${entry.id}`}),
+    translationTransportRef:ref(async entry=>{await translation.promise; if(translateFails) { throw new HttpServiceError('translation failed',400) } return {text:`translated ${entry.id}`}}),
     resamplerRef:ref(null),sampleOffsetRef:ref(0),modelRef:ref({stop:()=>asr.promise}),translationReady:true,
     settings:{targetLanguage:'en',translationStrategy:'realtime',translationLoadStrategy:'auto',diarizationModel:diarization?'mock':'',diarizationPreviewEnabled:false,diarizationEndpoint:''},
     translationElapsedMsRef:ref(10000),OpenAiChunkedModelAdapter:class {},shouldSkipTranslation,resolveTranslationTarget,

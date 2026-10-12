@@ -1,11 +1,11 @@
-import { registerTranslationTiming } from '../../../shared/services/caption-metrics'
+import { registerTranslationTiming, type CaptionServerTiming } from '../../../shared/services/caption-metrics'
 import { groupLiveCaptions } from './live-caption'
 import type { TranscriptEvent } from '../../models/model-adapter'
 import { HttpServiceError } from '../../../shared/services/http'
 import { activeTranslate } from '../../../shared/i18n'
 import { maximumAutomaticTranslationQueue, maximumSentenceWaitMs, resolveTranslationTarget, shouldAutoTranslate, shouldSkipTranslation } from './translation-policy'
 
-export type TranslateCaption = (entry: TranscriptEvent, signal: AbortSignal) => Promise<string>
+export type TranslateCaption = (entry: TranscriptEvent, signal: AbortSignal) => Promise<{ text: string; server?: CaptionServerTiming }>
 type ActiveRequest = { promise: Promise<void>; controller: AbortController; generation: number }
 type QueueOptions = { targetLanguage: string; strategy: 'realtime' | 'sentence'; elapsedMs: number }
 
@@ -95,7 +95,8 @@ export class TranslationQueue {
       this.diagnostics.requests += 1
       const transportStartedAt = performance.now()
       try {
-        const text = (await this.abortable(translate(entry, controller.signal), controller.signal)).trim()
+        const result = await this.abortable(translate(entry, controller.signal), controller.signal)
+        const text = result.text.trim()
         if (!text) throw new Error(activeTranslate('svcTranslationEmptyResult'))
         if (generation !== this.generation || controller.signal.aborted) return
         const responseAt = performance.now()
@@ -103,7 +104,7 @@ export class TranslationQueue {
         this.updateEntries((entries) => {
           if (!matchesMembers(entries)) return entries
           applied = true
-          registerTranslationTiming(entry.id, transportStartedAt, responseAt)
+          registerTranslationTiming(entry.id, transportStartedAt, responseAt, result.server)
           // `captionGroupId` is the display-row lock written by freezeCaptionGroups
           // (speaker labelling, stop flush). Translation must not touch it: writing
           // per-request ids made every translated segment its own row, so turning

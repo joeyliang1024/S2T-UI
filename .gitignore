@@ -13,3 +13,6 @@ models/
 # Local diarization benchmark fixtures (VoxConverse, ~2 GB) — never commit.
 tmp/
 experiment/evaluation-reports/
+# Downloaded Taiwan-Tongues audio shards and generated WAV fixtures.
+# Reproduction metadata and evaluation reports live under experiment/.
+music/taiwan-tongues/

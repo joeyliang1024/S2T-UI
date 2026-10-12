@@ -50,6 +50,13 @@ export const pcm16 = (samples: Float32Array): ArrayBuffer => {
   return buffer
 }
 
+/** PCM16 mono limits expressed in capture time, independent of device sample rate. */
+export const pcmRecordingBufferLimits = (sampleRate: number, remote = false): { batchBytes: number; maximumPendingBytes: number } => {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) throw new Error('Invalid recording sample rate')
+  const bytesPerSecond = Math.ceil(sampleRate) * 2
+  return { batchBytes: bytesPerSecond * (remote ? 2 : .5), maximumPendingBytes: bytesPerSecond * 8 }
+}
+
 export class BufferedPcmWriter {
   private pending: ArrayBuffer[] = []
   private pendingBytes = 0
@@ -103,14 +110,14 @@ export class BufferedPcmWriter {
 
   private pump(): void {
     if (this.writing || this.failure || !this.pendingBytes || (!this.closed && this.pendingBytes < this.batchBytes)) return
-    const pieces: ArrayBuffer[] = []
-    let bytes = 0
-    while (this.pending.length && (bytes < this.batchBytes || !pieces.length)) {
-      const piece = this.pending.shift()!
-      pieces.push(piece)
-      bytes += piece.byteLength
-    }
-    this.pendingBytes -= bytes
+    // Drain the accepted backlog in one bounded write. Replaying many small
+    // writes after a stall otherwise spends extra time on per-write overhead.
+    const pieces = this.pending
+    const bytes = this.pendingBytes
+    this.pending = []
+    this.pendingBytes = 0
+    if (this.timer !== null) window.clearTimeout(this.timer)
+    this.timer = null
     const merged = new Uint8Array(bytes)
     let offset = 0
     for (const piece of pieces) { merged.set(new Uint8Array(piece), offset); offset += piece.byteLength }

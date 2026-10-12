@@ -132,46 +132,107 @@ for obj in items:
         obj['data']['prometheus.yml'] += '  - job_name: gateway-acceptance\n    static_configs: [{targets: ["monitoring-acceptance:8787"], labels: {service: acceptance, pod: synthetic-acceptance}}]\n'
 cm('grafana-provisioning',{'datasources.yaml':'apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: ${PROMETHEUS_URL}\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n','dashboards.yaml':'apiVersion: 1\nproviders:\n  - name: S2T\n    type: file\n    updateIntervalSeconds: 10\n    options: {path: /var/lib/grafana/dashboards}\n'})
 # The single dashboard deliberately separates measured UI latency from server-only load.
+# Datasource uid and the gateway job travel as template variables, so nothing here is
+# bound to one deployment's datasource uid or job name.
+DS = {'type': 'prometheus', 'uid': '${datasource}'}
+PHASE_LABELS = {'t1': 't1 音訊擷取與上傳', 't2': 't2 VAD 偵測與分段', 't3': 't3 ASR 模型推論', 't4': 't4 文字後處理', 't5': 't5 回傳轉錄與呈現', 't6': 't6 翻譯模型', 't7': 't7 翻譯回傳與呈現'}
+STAGE_LABELS = {'t1_queue': '瀏覽器請求佇列', 't1_encode': 'WAV 編碼與前置', 't1_upload': '上傳（伺服器收音訊）', 't2_vad': 'VAD 語音偵測', 't2_segment': '句段累積', 't2_gate': 'Silero 二次確認', 't3_queue': '伺服器容量排隊', 't3_preprocess': '音訊前處理', 't3_model': 'ASR 模型推論', 't3_gateway': '伺服器驗證／快取／寫出', 't4_postprocess': '文字清理（標點／不雅字）', 't5_network': '回傳網路與重試', 't5_paint': 'UI 呈現', 't6_wait': '翻譯排隊等待', 't6_queue': '翻譯容量排隊', 't6_model': '翻譯模型推論', 't6_gateway': '翻譯伺服器固定處理', 't7_network': '譯文回傳網路', 't7_paint': '譯文 UI 呈現'}
 panels=[]; y=0; ident=1
 def panel(title,expr,unit='short',legend='',width=12,height=7,description='',typ='timeseries',x=0):
     global ident
-    panels.append({'id':ident,'title':title,'type':typ,'gridPos':{'x':x,'y':y,'w':width,'h':height},'datasource':{'type':'prometheus','uid':'s2t-prometheus'},'targets':[{'refId':'A','expr':expr,'legendFormat':legend}], 'description':description,'fieldConfig':{'defaults':{'unit':unit,'min':0},'overrides':[]},'options':{'legend':{'displayMode':'table','placement':'bottom','calcs':['lastNotNull'],'height':170},'tooltip':{'mode':'multi'},'reduceOptions':{'calcs':['lastNotNull'],'fields':'','values':False}}});ident+=1
+    panels.append({'id':ident,'title':title,'type':typ,'gridPos':{'x':x,'y':y,'w':width,'h':height},'datasource':DS,'targets':[{'refId':'A','expr':expr,'legendFormat':legend}], 'description':description,'fieldConfig':{'defaults':{'unit':unit,'min':0},'overrides':[]},'options':{'legend':{'displayMode':'table','placement':'bottom','calcs':['lastNotNull'],'height':170},'tooltip':{'mode':'multi'},'reduceOptions':{'calcs':['lastNotNull'],'fields':'','values':False}}});ident+=1
+def instant():
+    panels[-1]['targets'][0].update({'instant':True,'range':False})
+    panels[-1]['options']['reduceOptions']['calcs']=['last']
+def labels(mapping):
+    for name,label in mapping.items():panels[-1]['fieldConfig']['overrides'].append({'matcher':{'id':'byName','options':name},'properties':[{'id':'displayName','value':label}]})
+def bargauge():
+    panels[-1]['options']={'orientation':'horizontal','displayMode':'gradient','showUnfilled':True,'reduceOptions':{'calcs':['last'],'fields':'','values':False}}
 def row(title):
     global ident,y
     panels.append({'id':ident,'title':title,'type':'row','collapsed':False,'gridPos':{'x':0,'y':y,'w':24,'h':1}});ident+=1;y+=1
 def pair(a,b):
     global y
     panel(*a,x=0);panel(*b,x=12);y+=7
-row('01 · 每個 chunk 延遲 — 此 chunk 語音起點到 Web 字幕首次呈現')
+row('00 · 總覽 KPI（最近 5 分鐘）· 來源：$caption_gateway')
+kpi_description = '端到端 = 語音起點到文字首次在 Web UI 呈現；固定最近 5 分鐘，沒有新樣本時顯示無資料而不是保留舊值。'
 for x,q in enumerate([.5,.95,.99]):
-    panel(f'Chunk P{int(q*100)}（固定最近 5m）',f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="chunk_speech_to_paint"}}[5m])) by (le))','s',width=8,height=4,x=x*8,typ='stat',description='此 chunk 的語音起點到其文字首次在 Web UI 呈現。包含音訊累積與排隊，固定最近 5 分鐘；沒有新樣本時不保留舊數值。')
-    panels[-1]['targets'][0].update({'instant':True,'range':False})
-    panels[-1]['options']['reduceOptions']['calcs']=['last']
-
+    panel(f'ASR 語音→原文 P{int(q*100)}', f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="e2e_asr"}}[5m])) by (le))', 's', width=6, height=4, x=x*6, typ='stat', description=kpi_description)
+    instant()
+    if q == .95:
+        panels[-1]['fieldConfig']['defaults'].update({'color':{'mode':'thresholds'},'thresholds':{'mode':'absolute','steps':[{'color':'green','value':None},{'color':'orange','value':2},{'color':'red','value':5}]}})
+panel('目前瓶頸階段（5 分鐘平均最慢）', 'topk(1, sum by (phase) (rate(s2t_caption_stage_duration_seconds_sum{phase=~"t[1-5]"}[5m])) / sum by (phase) (rate(s2t_caption_stage_duration_seconds_count{phase=~"t[1-5]"}[5m])))', 's', '{{phase}}', width=6, height=4, x=18, typ='stat', description='最近 5 分鐘 t1~t5 中平均耗時最長的階段名稱（rate(_sum)/rate(_count) 取最大）。先看這裡，再對照下一列的階段長條圖確認量級。')
+instant(); labels(PHASE_LABELS)
+# Show the slowest phase's name (t3 ASR 模型推論 …), not its numeric value.
+panels[-1]['options']['textMode'] = 'name'
+panels[-1]['fieldConfig']['defaults'].update({'color':{'mode':'fixed','fixedColor':'orange'}})
 y+=4
-panel('已呈現 chunk 樣本（所選範圍）','sum(increase(s2t_caption_stage_duration_seconds_count{stage="chunk_speech_to_paint"}[$__range]))',width=24,height=3,x=0,typ='stat')
-panels[-1]['targets'][0].update({'instant':True,'range':False})
-panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'text'}
-y+=3
-panel('每個 chunk 階段耗時占比（所選範圍）','sum(increase(s2t_chunk_stage_duration_seconds_sum[$__range])) by (stage) / scalar(sum(increase(s2t_chunk_stage_duration_seconds_sum[$__range])))','percentunit','{{stage}}',width=24,height=8,typ='piechart',description='每個已顯示 chunk 的同一批樣本，各階段耗時占比；不是 P50/P95/P99 的拆分。')
-panels[-1]['targets'][0].update({'instant':True,'range':False})
-panels[-1]['options']={'pieType':'donut','displayLabels':['percent'],'reduceOptions':{'calcs':['last'],'fields':'','values':False},'legend':{'displayMode':'table','placement':'right','values':['value'],'showLegend':True}}
-for name,label in [('vad_onset','VAD 語音確認'),('chunk_wait','音訊累積／切段'),('browser_queue','瀏覽器排隊'),('browser_preprocess','音訊前處理'),('asr_roundtrip_with_retries','ASR 往返（含 server 排隊與重試）'),('response_to_paint','UI 呈現')]:
-    panels[-1]['fieldConfig']['overrides'].append({'matcher':{'id':'byName','options':name},'properties':[{'id':'displayName','value':label}]})
+panel('翻譯 語音→譯文 P95', f'histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="e2e_translation"}}[5m])) by (le))', 's', width=6, height=4, x=0, typ='stat', description='語音起點到譯文在 UI 呈現（含前段 ASR 等待）；翻譯未啟用時無資料。')
+instant()
+panel('已呈現 ASR 樣本（5 分鐘）', 'sum(increase(s2t_caption_stage_duration_seconds_count{stage="e2e_asr"}[5m]))', width=6, height=4, x=6, typ='stat', description='無有效樣本時，上方延遲分位數不能用來判斷服務正常。')
+instant(); panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'text'}
+panel('API 錯誤率（5 分鐘）', 'sum(rate(s2t_gateway_request_errors_total[5m])) / sum(rate(s2t_gateway_request_duration_seconds_count[5m]))', 'percentunit', width=6, height=4, x=12, typ='stat', description='4xx 與 5xx 合計佔比；無請求時不填零。')
+instant()
+panel('監控入口狀態', 'min(up{job="$caption_gateway"})', width=6, height=4, x=18, typ='stat', description='Prometheus 是否能抓取所選來源；可抓取不等同模型或下游服务正常。')
+instant(); panels[-1]['fieldConfig']['defaults']['mappings']=[{'type':'value','options':{'0':{'text':'抓取失敗','color':'red'},'1':{'text':'可抓取','color':'green'}}}]
+y+=4
 
-y += 8
-pair(('Chunk 延遲分布 P50 / P95 / P99','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage="chunk_speech_to_paint"}[5m])) by (le))','s'),('Web 階段 p95（字幕 / 翻譯）','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{stage!~"chunk_speech_to_paint|speech_to_first_paint|speech_to_translation_paint"}[5m])) by (stage,le))','s','{{stage}}'))
-# Add parallel quantiles to the first timeseries.
-panels[-2]['targets']=[{'refId':str(i),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="chunk_speech_to_paint"}}[5m])) by (le))','legendFormat':f'p{int(q*100)}'} for i,q in enumerate([.5,.95,.99])]
-pair(('Gateway 階段 p95（與 Web roundtrip 重疊，勿加總）','histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket[5m])) by (stage,le))','s','{{stage}}'),('可見字幕段樣本 / 秒','sum(rate(s2t_caption_stage_duration_seconds_count{stage="response_to_paint"}[5m]))'))
-pair(('語音偵測 / 無文字 / 失敗 / 音訊缺口','sum(increase(s2t_caption_events_total[5m])) by (event)','short','{{event}}'),('已偵測語音（目前 Pods 累計）','sum(s2t_caption_events_total{event="speech_detected"})','short'))
-row('02 · Gateway / Audio worker / 模擬模型')
+row('01 · ASR 瓶頸分析 — 語音起點 → 原文呈現（t1~t5）· 來源：$caption_gateway')
+panel('ASR 階段平均耗時（所選範圍）· 最長者即瓶頸',
+      'sort_desc(sum by (phase) (increase(s2t_caption_stage_duration_seconds_sum{phase=~"t[1-5]"}[$__range])) / sum by (phase) (increase(s2t_caption_stage_duration_seconds_count{phase=~"t[1-5]"}[$__range])))',
+      's', '{{phase}}', width=8, height=8, x=0, typ='bargauge',
+      description='t1 音訊擷取上傳／t2 VAD 與分段／t3 ASR 模型推論／t4 文字後處理／t5 回傳與呈現 的平均耗時，由長到短排列：最長的一根就是瓶頸。t3 最大＝模型推論吃緊；t1 大＝上傳或編碼；t5 大＝回傳網路與重試；t2 大＝分段累積或 VAD 確認慢。')
+bargauge(); labels(PHASE_LABELS)
+panel('ASR 階段耗時占比（所選範圍）',
+      'sum by (phase) (increase(s2t_caption_stage_duration_seconds_sum{phase=~"t[1-5]"}[$__range])) / scalar(sum(increase(s2t_caption_stage_duration_seconds_sum{phase=~"t[1-5]"}[$__range])))',
+      'percentunit', '{{phase}}', width=8, height=8, x=8, typ='piechart', description='同一批樣本的耗時占比（不是分位數的拆分）；配合左側長條圖判讀瓶頸佔了多少比例。')
+instant()
+panels[-1]['options']={'pieType':'donut','displayLabels':['percent'],'reduceOptions':{'calcs':['last'],'fields':'','values':False},'legend':{'displayMode':'table','placement':'right','values':['value'],'showLegend':True}}
+labels(PHASE_LABELS)
+panel('ASR 明細平均耗時（每個細項，所選範圍）',
+      'sort_desc(sum by (stage) (increase(s2t_caption_stage_duration_seconds_sum{stage=~"t[1-5]_.*"}[$__range])) / sum by (stage) (increase(s2t_caption_stage_duration_seconds_count{stage=~"t[1-5]_.*"}[$__range])))',
+      's', '{{stage}}', width=8, height=8, x=16, typ='bargauge', description='確認最長階段後，用這根定位到原子量測：佇列、編碼、上傳、VAD、排隊、模型推論、後處理、網路、呈現。0 秒的可選步驟（如未啟用的前處理）不會輸出樣本。')
+bargauge(); labels(STAGE_LABELS)
+y+=8
+panel('ASR 端到端延遲趨勢 P50／P95／P99', '', 's', width=16, height=6, x=0, typ='timeseries', description='完整鏈路分位數趨勢（固定 5 分鐘窗口）；先看是否惡化，再回到上排確認當下瓶頸。')
+panels[-1]['targets']=[{'refId':str(i),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="e2e_asr"}}[5m])) by (le))','legendFormat':f'P{int(q*100)}','range':True,'instant':False} for i,q in enumerate([.5,.95,.99])]
+panels[-1]['fieldConfig']['defaults']['color']={'mode':'palette-classic'}
+panel('ASR 各階段平均耗時趨勢（堆疊）',
+      'sum by (phase) (rate(s2t_caption_stage_duration_seconds_sum{phase=~"t[1-5]"}[1m])) / sum by (phase) (rate(s2t_caption_stage_duration_seconds_count{phase=~"t[1-5]"}[1m]))',
+      's', '{{phase}}', width=8, height=6, x=16, typ='timeseries', description='每分鐘各階段的平均耗時，堆疊總高近似每段請求的平均時間；哪一層突然變厚，就是新出現的瓶頸。')
+panels[-1]['fieldConfig']['defaults'].update({'color':{'mode':'palette-classic'},'custom':{'stacking':{'mode':'normal','group':'A'}}})
+labels(PHASE_LABELS)
+y+=6
+panel('有效 ASR 端到端樣本（所選範圍）', 'sum(increase(s2t_caption_stage_duration_seconds_count{stage="e2e_asr"}[$__range]))', width=8, height=5, x=0, typ='stat', description='沒有樣本時，上面的分位數與瓶頸判讀都不可信。')
+instant(); panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'text'}
+panel('ASR 事件（語音偵測／無文字／失敗／缺口）', 'sum(increase(s2t_caption_events_total[5m])) by (event)', 'short', '{{event}}', width=16, height=5, x=8, typ='timeseries', description='asr_failed／asr_empty／audio_gap／silero_veto 等事件；失敗請求不進延遲樣本，必須從這裡觀察，否則分位數會過於樂觀。')
+panels[-1]['fieldConfig']['defaults']['color']={'mode':'palette-classic'}
+y+=5
+
+row('02 · 翻譯管線 — 原文 → 譯文呈現（t6~t7）· 來源：$caption_gateway')
+for x,q in enumerate([.5,.95,.99]):
+    panel(f'翻譯 語音→譯文 P{int(q*100)}', f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="e2e_translation"}}[5m])) by (le))', 's', width=6, height=4, x=x*6, typ='stat', description='語音起點到譯文在 UI 呈現（含前段 ASR 等待）；固定最近 5 分鐘。')
+    instant()
+panel('有效翻譯樣本（5 分鐘）', 'sum(increase(s2t_caption_stage_duration_seconds_count{stage="e2e_translation"}[5m]))', width=6, height=4, x=18, typ='stat', description='無樣本時分位數不可信；翻譯未啟用時本列會無資料。')
+instant(); panels[-1]['fieldConfig']['defaults']['color']={'mode':'fixed','fixedColor':'text'}
+y+=4
+panel('翻譯階段平均耗時（所選範圍）',
+      'sort_desc(sum by (phase) (increase(s2t_caption_stage_duration_seconds_sum{phase=~"t[67]"}[$__range])) / sum by (phase) (increase(s2t_caption_stage_duration_seconds_count{phase=~"t[67]"}[$__range])))',
+      's', '{{phase}}', width=12, height=6, x=0, typ='bargauge', description='t6 排隊等待＋容量排隊＋翻譯模型推論＋伺服器固定處理；t7 回傳網路與譯文呈現。t6_wait 長代表前端排隊，t6_model 長代表模型吃緊。')
+bargauge(); labels(PHASE_LABELS)
+panel('翻譯端到端延遲趨勢 P50／P95／P99', '', 's', width=12, height=6, x=12, typ='timeseries', description='語音起點到譯文呈現的分位數趨勢（固定 5 分鐘窗口）。')
+panels[-1]['targets']=[{'refId':str(i),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="e2e_translation"}}[5m])) by (le))','legendFormat':f'P{int(q*100)}','range':True,'instant':False} for i,q in enumerate([.5,.95,.99])]
+panels[-1]['fieldConfig']['defaults']['color']={'mode':'palette-classic'}
+y+=6
+
+row('03 · Gateway / Audio worker / 模擬模型 · 交叉驗證（伺服器端與 t1_upload、t3、t6 對應）')
+pair(('Gateway 伺服器階段 p95（與瀏覽器切片同源，勿加總）','histogram_quantile(0.95, sum(rate(s2t_server_stage_duration_seconds_bucket[5m])) by (stage,le))','s','{{stage}}'),('字幕繪出樣本 / 秒','sum(rate(s2t_caption_stage_duration_seconds_count{stage="e2e_asr"}[5m]))'))
 pair(('HTTP 路由 p95','histogram_quantile(0.95, sum(rate(s2t_gateway_request_duration_seconds_bucket[5m])) by (route,le))','s','{{route}}'),('HTTP 吞吐 / 秒','sum(rate(s2t_gateway_request_duration_seconds_count[2m])) by (route)','reqps','{{route}}'))
 pair(('HTTP 失敗 / 秒','sum(rate(s2t_gateway_request_errors_total[2m])) by (route)','reqps','{{route}}'),('服務進行中請求','s2t_gateway_inflight_requests','short','{{service}} {{pod}}'))
 pair(('程序 RSS','s2t_process_resident_memory_bytes','bytes','{{service}} {{pod}}'),('Event loop p99','s2t_event_loop_p99_seconds','s','{{service}} {{pod}}'))
 pair(('Diarization 待處理工作 / 最老秒數','max(s2t_diarization_pending_jobs)','short'),('Diarization 最老等待','max(s2t_diarization_oldest_seconds)','s'))
 pair(('Mock 模型進行中 / 明確是模擬 API','s2t_mock_active_requests','short','{{operation}}'),('Mock 注入延遲 / 長尾','s2t_mock_configured_delay_seconds','s','{{operation}}'))
-row('03 · 所有服務可用性與儲存操作')
+row('04 · 所有服務可用性與儲存操作')
 pair(('所有 scrape targets（1=成功）','up','short','{{job}} {{instance}}'),('應用儲存操作 p95','histogram_quantile(0.95, sum(rate(s2t_storage_operation_duration_seconds_bucket[5m])) by (service,operation,le))','s','{{service}} {{operation}}'))
 pair(('儲存操作失敗 / 秒','sum(rate(s2t_storage_operation_duration_seconds_errors_total[5m])) by (service,operation)','reqps','{{service}} {{operation}}'),('PostgreSQL 連線','sum(pg_stat_database_numbackends) by (datname)','short','{{datname}}'))
 pair(('PostgreSQL commits / rollback 每秒','sum(rate(pg_stat_database_xact_commit[5m])) by (datname)','ops','{{datname}} commits'),('PostgreSQL rollback / deadlock 每秒','sum(rate(pg_stat_database_xact_rollback[5m])) by (datname)','ops','{{datname}} rollback'))
@@ -181,7 +242,7 @@ pair(('Sentinel TILT（應為 0）','redis_sentinel_tilt','short','{{instance}}'
 pair(('MinIO 儲存用量','minio_cluster_usage_total_bytes','bytes'),('MinIO 磁碟可用量','minio_cluster_capacity_usable_free_bytes','bytes'))
 pair(('Milvus process RSS','process_resident_memory_bytes{job="milvus"}','bytes'),('Milvus 載入向量數量','milvus_querynode_entity_num','short','{{collection_id}}'))
 pair(('etcd leader（1=有 leader）','etcd_server_has_leader','short'),('etcd WAL fsync p95','histogram_quantile(0.95, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m])) by (le))','s'))
-row('04 · Kubernetes Pods / 容量 / 資源')
+row('05 · Kubernetes Pods / 容量 / 資源')
 pair(('VM node CPU cores','sum(rate(container_cpu_usage_seconds_total{id="/"}[2m]))','short'),('VM node memory','container_memory_working_set_bytes{id="/"}','bytes'))
 pair(('Pod CPU 使用量（cores）','sum(rate(container_cpu_usage_seconds_total{namespace="'+N+'",pod!=""}[2m])) by (pod)','short','{{pod}}'),('Pod memory working set','sum(container_memory_working_set_bytes{namespace="'+N+'",pod!=""}) by (pod)','bytes','{{pod}}'))
 pair(('Pod ready（1=就緒）','kube_pod_status_ready{condition="true"}','short','{{pod}}'),('Pod 重啟','sum(kube_pod_container_status_restarts_total) by (pod)','short','{{pod}}'))
@@ -250,17 +311,17 @@ for entry in panels:
             {'matcher':{'id':'byName','options':'操作'},'properties':[{'id':'mappings','value':[{'type':'value','options':{key:{'text':text} for key,text in [('transcriptions','語音辨識'),('translations','翻譯'),('summaries','摘要'),('diarizations','講者分離'),('telemetry/captions','字幕遙測'),('config','服務設定'),('data/sessions','會議紀錄'),('auth/session','登入狀態'),('other','其他操作'),('storage','儲存服務'),('audio/object','錄音檔案'),('data/settings','使用者設定'),('data/glossary','詞彙表'),('data/voiceprints','聲紋資料'),('data/diarization-jobs','講者分離工作'),('data/storage-status','儲存狀態'),('data/storage-audit','儲存稽核'),('data/storage-retry','儲存重試'),('data/model-registry','模型設定'),('data/model-health','模型健康狀態'),('data/model-credentials/id','模型憑證設定'),('data/summary-templates','摘要模板'),('auth/logout','登出'),('admin/users','帳號管理'),('audio-processing/silero-vad','語音活動偵測'),('audio-processing/status','音訊處理狀態'),('audio-processing/import-wav','匯入音訊')]}}]}]},
             {'matcher':{'id':'byName','options':'結果'},'properties':[{'id':'mappings','value':[{'type':'value','options':{key:{'text':text} for key,text in [('success','成功'),('client_error','請求錯誤（4xx）'),('server_error','服務錯誤（5xx）'),('aborted','連線中斷')]}}]}]}
         ]
-dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / Chunk 延遲與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','Web','K8s'],'panels':panels,'editable':False}
+dashboard={'uid':'s2t-overview','title':'S2T · 一張總覽 / ASR·翻譯瓶頸與服務健康','schemaVersion':41,'version':1,'timezone':'browser','refresh':'5s','time':{'from':'now-15m','to':'now'},'tags':['S2T','Web','K8s'],'panels':panels,'editable':False}
 # Caption panels must never combine real users with the isolated load generator.
 import re
 for entry in panels:
     for target in entry.get('targets', []):
-        target['expr'] = re.sub(r'(s2t_(?:caption_stage_duration_seconds|chunk_stage_duration_seconds|caption_events_total|server_stage_duration_seconds|gateway_request_duration_seconds|gateway_request_errors_total|gateway_inflight_requests|diarization_pending_jobs|diarization_oldest_seconds|storage_operation_duration_seconds)(?:_bucket|_sum|_count|_errors_total)?)(\{)?', lambda match: match.group(1) + '{job="$caption_gateway"' + (',' if match.group(2) else '}'), target['expr'])
-    if entry['type'] == 'row' and entry['title'].startswith(('01 ', '02 ')):
-        entry['title'] += ' · 來源：$caption_gateway'
-dashboard['templating'] = {'list': [{'name': 'caption_gateway', 'label': '字幕量測來源', 'type': 'custom', 'query': '8787 網頁入口 : gateway-web,K8s 測試站 : s2t,驗收模擬資料（非正式） : gateway-acceptance', 'current': {'text': '8787 網頁入口' if external_gateway else 'K8s 測試站', 'value': 'gateway-web' if external_gateway else 's2t'}, 'options': [{'text': '8787 網頁入口', 'value': 'gateway-web', 'selected': bool(external_gateway)}, {'text': 'K8s 測試站', 'value': 's2t', 'selected': not bool(external_gateway)}, {'text':'驗收模擬資料（非正式）','value':'gateway-acceptance','selected':False}], 'multi': False, 'includeAll': False}]}
-dashboard['templating']['list'].append({'name':'usage_department','label':'部門','type':'query','datasource':{'type':'prometheus','uid':'s2t-prometheus'},'query':'label_values(s2t_user_requests_total{job="$caption_gateway",department!=""}, department)','refresh':2,'multi':True,'includeAll':True,'allValue':'.*','current':{'text':'All','value':'$__all'}})
-dashboard['templating']['list'].append({'name':'usage_user','label':'使用量 NT','type':'query','datasource':{'type':'prometheus','uid':'s2t-prometheus'},'query':'label_values(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!=""}, nt)','refresh':2,'multi':True,'includeAll':True,'allValue':'.*','current':{'text':'All','value':'$__all'}})
+        target['expr'] = re.sub(r'(s2t_(?:caption_stage_duration_seconds|caption_events_total|server_stage_duration_seconds|gateway_request_duration_seconds|gateway_request_errors_total|gateway_inflight_requests|diarization_pending_jobs|diarization_oldest_seconds|storage_operation_duration_seconds)(?:_bucket|_sum|_count|_errors_total)?)(\{)?', lambda match: match.group(1) + '{job="$caption_gateway"' + (',' if match.group(2) else '}'), target['expr'])
+    if entry['type'] == 'row' and entry['title'].startswith(('00 ', '01 ', '02 ', '03 ')):
+        if '來源：$caption_gateway' not in entry['title']: entry['title'] += ' · 來源：$caption_gateway'
+dashboard['templating'] = {'list': [{'name': 'datasource', 'label': '資料來源', 'type': 'datasource', 'query': 'prometheus', 'regex': '', 'current': {'text': 'Prometheus', 'value': 's2t-prometheus'}, 'options': [], 'multi': False, 'includeAll': False}, {'name': 'caption_gateway', 'label': '字幕量測來源', 'type': 'custom', 'query': '8787 網頁入口 : gateway-web,K8s 測試站 : s2t,驗收模擬資料（非正式） : gateway-acceptance', 'current': {'text': '8787 網頁入口' if external_gateway else 'K8s 測試站', 'value': 'gateway-web' if external_gateway else 's2t'}, 'options': [{'text': '8787 網頁入口', 'value': 'gateway-web', 'selected': bool(external_gateway)}, {'text': 'K8s 測試站', 'value': 's2t', 'selected': not bool(external_gateway)}, {'text':'驗收模擬資料（非正式）','value':'gateway-acceptance','selected':False}], 'multi': False, 'includeAll': False}]}
+dashboard['templating']['list'].append({'name':'usage_department','label':'部門','type':'query','datasource':DS,'query':'label_values(s2t_user_requests_total{job="$caption_gateway",department!=""}, department)','refresh':2,'multi':True,'includeAll':True,'allValue':'.*','current':{'text':'All','value':'$__all'}})
+dashboard['templating']['list'].append({'name':'usage_user','label':'使用量 NT','type':'query','datasource':DS,'query':'label_values(s2t_user_requests_total{job="$caption_gateway",department=~"$usage_department",department!=""}, nt)','refresh':2,'multi':True,'includeAll':True,'allValue':'.*','current':{'text':'All','value':'$__all'}})
 Path(__file__).with_name('dashboard.json').write_text(json.dumps(dashboard,ensure_ascii=False,indent=2)+'\n')
 from oncall import build_oncall
 oncall = build_oncall(dashboard)

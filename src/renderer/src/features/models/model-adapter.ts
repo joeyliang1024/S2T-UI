@@ -1,5 +1,5 @@
-import { attachCaptionTiming, recordCaptionEvent, type CaptionTiming } from '../../shared/services/caption-metrics'
-import { EnergyVad, type VadConfig } from '../capture/vad'
+import { attachCaptionTiming, parseServerTiming, recordCaptionEvent, type CaptionServerTiming, type CaptionTiming } from '../../shared/services/caption-metrics'
+import { type BoundaryVad, defaultVadConfig, EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
 import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
 import { activeTranslate } from '../../shared/i18n'
@@ -13,6 +13,7 @@ export type TranscriptEvent = {
   status: 'partial' | 'final' | 'gap'
   startMs: number
   endMs: number
+  correctionOriginalText?: string
   sourceText: string
   translatedText?: string
   speaker?: string
@@ -45,7 +46,7 @@ export interface ModelAdapter {
   onTranscript(listener: (event: TranscriptEvent) => void): () => void
   onError(listener: (message: string) => void): () => void
   /** Applies settings to audio received after this call; it never restarts capture. */
-  updateLiveSettings?(input: { language?: string; prompt?: string; vadConfig?: VadConfig }): void
+  updateLiveSettings?(input: { language?: string; prompt?: string; vadConfig?: VadConfig; strictChunkLimits?: boolean }): void
 }
 
 /**
@@ -56,6 +57,21 @@ export interface ModelAdapter {
  */
 export const sanitizeAsrText = (text: string): string =>
   text.replace(/<\|[^|]*\|>/g, ' ').replace(/\|\|/g, ' ').replace(/\s+/g, ' ').trim()
+
+/** Conservative decoder-loop guard. Two repetitions can be ordinary speech;
+ * reject only a fourfold phrase loop occupying most of the response. */
+export const isRepetitiveAsrText = (text: string): boolean => {
+  const characters = [...text.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase()]
+  for (let size = 1; size <= Math.floor(characters.length / 4); size += 1) {
+    for (let offset = 0; offset + size * 4 <= characters.length; offset += 1) {
+      let end = offset + size
+      while (end + size <= characters.length && characters.slice(offset, offset + size).every((character, index) => character === characters[end + index])) end += size
+      const repeated = (end - offset) / size
+      if (repeated >= (size === 1 ? 8 : 4) && end - offset >= characters.length * .8) return true
+    }
+  }
+  return false
+}
 
 /**
  * A deliberately quiet placeholder. Replace this with the adapter for the
@@ -251,7 +267,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private stopped = false
   private queuedChunks = 0
   private readonly maximumQueuedChunks = 4
-  private vad: EnergyVad | null = null
+  private vad: BoundaryVad | null = null
   private pendingContainsSpeech = false
   private pendingBoundaries: number[] = []
   private explicitBoundaries = new Set<number>()
@@ -268,9 +284,9 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private readonly gatewayTimeoutMs = 30_000
   readonly diagnostics = { requests: 0, completed: 0, rateLimited: 0, gaps: 0, inFlight: 0, maximumQueued: 0, totalRequestMs: 0, totalQueueWaitMs: 0, maximumPendingMs: 0 }
 
-  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean }) {
+  constructor(private readonly profile: { id: string; endpoint: string; model: string; requiresApiKey?: boolean; gatewayProfileId?: string; prompt?: string; vadConfig?: VadConfig; strictChunkLimits?: boolean; sileroVadEnabled?: boolean; dynaudnormEnabled?: boolean; vadFactory?: (sampleRate: number, config?: VadConfig) => BoundaryVad }) {
     this.prompt = profile.prompt
-    this.vadConfig = profile.vadConfig
+    this.vadConfig = profile.vadConfig ?? { ...defaultVadConfig }
   }
 
   async start(input: { sampleRate: number; language: string; targetLanguage: string }): Promise<void> {
@@ -289,7 +305,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.sequence = 0
     this.stopped = false
     this.queuedChunks = 0
-    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    this.vad = this.createVad()
     this.pendingContainsSpeech = false
     this.pendingBoundaries = []
     this.explicitBoundaries.clear()
@@ -300,6 +316,12 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.overflowGap = undefined
     this.activeGatewayRequests.clear()
     Object.keys(this.diagnostics).forEach((key) => { this.diagnostics[key as keyof typeof this.diagnostics] = 0 })
+  }
+
+  /** The boundary detector is swappable so evaluations can compare detectors
+   * (e.g. Silero probabilities) against the default RMS EnergyVad. */
+  private createVad(): BoundaryVad {
+    return this.profile.vadFactory ? this.profile.vadFactory(this.sampleRate, this.vadConfig) : new EnergyVad(this.sampleRate, this.vadConfig)
   }
 
   pushAudio(chunk: Float32Array, startSample: number): void {
@@ -346,9 +368,11 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     while (this.pendingBoundaries.length && this.pendingBoundaries[0] <= this.pendingStart) this.pendingBoundaries.shift()
     this.pendingContainsSpeech = this.vadSpeaking || this.pendingStart < this.lastSpeechSample || this.pendingBoundaries.length > 0
     while (this.pendingSamples && this.pendingContainsSpeech && this.queuedChunks < this.maximumQueuedChunks) {
-      const maximum = Math.floor(this.sampleRate * Math.min(6000, configuredMaximum * (this.queuedChunks >= 2 ? 2 : 1)) / 1000)
+      const maximum = Math.floor(this.sampleRate * Math.min(6000, configuredMaximum * (!this.profile.strictChunkLimits && this.queuedChunks >= 2 ? 2 : 1)) / 1000)
       const boundary = this.pendingBoundaries[0]
-      const toBoundary = boundary === undefined ? Infinity : boundary - this.pendingStart
+      const minimum = this.profile.strictChunkLimits ? Math.floor(this.sampleRate * (this.vadConfig?.chunkMinMs ?? 700) / 1000) : 0
+      const explicit = boundary !== undefined && this.explicitBoundaries.has(boundary)
+      const toBoundary = boundary === undefined ? Infinity : Math.max(explicit ? 0 : minimum, boundary - this.pendingStart)
       if (this.pendingSamples < maximum && toBoundary > this.pendingSamples) break
       const size = Math.min(maximum, toBoundary, this.pendingSamples)
       const natural = size === toBoundary
@@ -369,7 +393,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       if (this.pendingSamples && this.pendingBoundaries[this.pendingBoundaries.length - 1] !== end) this.pendingBoundaries.push(end)
     }
     // Pause has no incoming silence frames; reset onset detection for resume.
-    this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+    if (this.vad?.reset) this.vad.reset()
+    else this.vad = this.createVad()
     this.vadSpeaking = false
     this.flushPending()
     this.closePreviousCaption(Math.round(end / this.sampleRate * 1000))
@@ -389,7 +414,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const start = this.pendingStart
       while (this.pendingBoundaries.length && this.pendingBoundaries[0] <= start) this.pendingBoundaries.shift()
       const boundary = this.pendingBoundaries[0]
-      const size = Math.min(this.pendingSamples, this.sampleRate * 6, boundary === undefined ? Infinity : boundary - start)
+      const stopMaximum = this.profile.strictChunkLimits ? (this.vadConfig?.chunkMaxMs ?? 6000) / 1000 : 6
+      const size = Math.min(this.pendingSamples, this.sampleRate * stopMaximum, boundary === undefined ? Infinity : boundary - start)
       const final = size === this.pendingSamples
       const natural = boundary === start + size
       if (natural) this.pendingBoundaries.shift()
@@ -411,12 +437,13 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.errorListeners.add(listener)
     return () => this.errorListeners.delete(listener)
   }
-  updateLiveSettings(input: { language?: string; prompt?: string; vadConfig?: VadConfig }): void {
+  updateLiveSettings(input: { language?: string; prompt?: string; vadConfig?: VadConfig; strictChunkLimits?: boolean }): void {
+    if (input.strictChunkLimits !== undefined) this.profile.strictChunkLimits = input.strictChunkLimits
     if (input.language !== undefined) this.language = input.language === 'auto' ? '' : input.language.split('-')[0]
     if (input.prompt !== undefined) this.prompt = input.prompt || undefined
     if (input.vadConfig) {
       this.vadConfig = input.vadConfig
-      this.vad = new EnergyVad(this.sampleRate, this.vadConfig)
+      this.vad = this.createVad()
     }
   }
 
@@ -444,16 +471,44 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const dequeuedAt = performance.now()
       const wav = wavFromFloat32(audio, this.sampleRate)
-      if (this.profile.sileroVadEnabled && !await this.hasSileroSpeech(wav)) {
-        if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
-        return
+      // <300ms 微型 chunk 豁免（2026-10 校準）：快切碎音結構性湊不出 Silero
+      // 的 120ms 連續語音，硬送會誤殺真語音（實測誤殺全為 20-220ms、被攔的
+      // BGM 全 ≥1200ms）。豁免同時省下一次閘門 HTTP。
+      let sileroStartAt: number | undefined
+      let sileroEndAt: number | undefined
+      if (this.profile.sileroVadEnabled && audio.length / this.sampleRate * 1_000 >= 300) {
+        let hasSpeech = true
+        sileroStartAt = performance.now()
+        try {
+          hasSpeech = await this.hasSileroSpeech(wav)
+        } catch (error) {
+          // An auxiliary gate failure degrades to the ungated path so a
+          // Silero outage cannot silence captions; the distinct event keeps
+          // the failure rate visible instead of counting it as ASR failure.
+          recordCaptionEvent('silero_failed')
+          this.emitError(error instanceof Error ? error.message : activeTranslate('svcSileroGatewayFailed').replace('{status}', '?'))
+        }
+        sileroEndAt = performance.now()
+        if (!hasSpeech) {
+          recordCaptionEvent('silero_veto')
+          this.rollingContext = ''
+          this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
+          if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
+          return
+        }
       }
       const requestAt = performance.now()
       const response = await this.transcribeWithRetry(wav)
       const responseAt = performance.now()
       const sourceText = sanitizeAsrText(response.text)
-      if (!sourceText) {
+      // t4：標點符號／不雅字等文字後處理的量測窗口（目前僅有清理步驟）。
+      const repetitive = isRepetitiveAsrText(sourceText)
+      const postEndAt = performance.now()
+      if (!sourceText || repetitive) {
         recordCaptionEvent('asr_empty')
+        // A failed/looping response must not condition subsequent requests
+        // with stale text and keep the decoder in a self-repeating loop.
+        this.rollingContext = ''
         this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
         if (isSentenceBoundary || this.explicitBoundaries.has(endSample)) this.closePreviousCaption(startMs)
         return
@@ -462,12 +517,18 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary: isSentenceBoundary || this.explicitBoundaries.has(endSample) }
       const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
-      const timing: CaptionTiming = { queuedAt, dequeuedAt, requestAt, responseAt, chunkSpeechAt, chunkDetectedAt, ...(onsets[0] ? { speechAt: onsets[0].at, detectedAt: onsets[0].detected } : {}) }
+      const timing: CaptionTiming = {
+        chunkSpeechAt, chunkDetectedAt, queuedAt, dequeuedAt, requestAt, responseAt, postEndAt,
+        ...(sileroStartAt !== undefined && sileroEndAt !== undefined ? { sileroStartAt, sileroEndAt } : {}),
+        ...(response.server ? { server: response.server } : {}),
+        ...(onsets[0] ? { speechAt: onsets[0].at } : {})
+      }
       attachCaptionTiming(event, timing)
       this.lastTranscript = event
       this.listeners.forEach((listener) => listener(event))
     }).catch((error: unknown) => {
       recordCaptionEvent('asr_failed')
+      this.rollingContext = ''
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
       this.emitError(error instanceof Error ? error.message : activeTranslate('svcModelTranscribeFailed'))
       this.emitGap(sequence, startMs, endMs, 'request-failed')
@@ -520,7 +581,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.listeners.forEach((listener) => listener(event))
   }
 
-  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
+  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage']; server?: CaptionServerTiming }> {
     const request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }
     const delays = [0, 250, 750, 1750]
     let lastError: unknown
@@ -615,7 +676,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingStart += discarded
   }
 
-  private async transcribeThroughWebGateway(audio: ArrayBuffer, request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
+  private async transcribeThroughWebGateway(audio: ArrayBuffer, request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage']; server?: CaptionServerTiming }> {
     const prompt = request.prompt
     const controller = new AbortController()
     this.activeGatewayRequests.add(controller)
@@ -634,9 +695,11 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         body: audio,
         signal: controller.signal
       })
+      // Server-Timing 早於 body 讀取即可取得；這是 t1_upload/t3/t5 精確拆分的來源。
+      const server = parseServerTiming(response.headers.get('server-timing'))
       const payload = await readJsonResponse<{ text?: string; detectedLanguage?: string }>(response, 'Web ASR gateway')
       const detectedLanguage = payload.detectedLanguage === 'zh-TW' || payload.detectedLanguage === 'en-US' || payload.detectedLanguage === 'ja-JP' || payload.detectedLanguage === 'de-DE' ? payload.detectedLanguage : undefined
-      return { text: payload.text || '', detectedLanguage }
+      return { text: payload.text || '', detectedLanguage, ...(server ? { server } : {}) }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         const timeoutError = new Error(activeTranslate('svcAsrRequestTimeout'))

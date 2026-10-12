@@ -9,18 +9,29 @@ def build_oncall(detail):
         panels.append({'id':len(panels)+1,'title':title,'type':'row','collapsed':False,'gridPos':{'x':0,'y':y,'w':24,'h':1}})
         y+=1
     def add(title,expr,unit='short',typ='stat',x=0,width=6,height=4,legend='',description=''):
-        item={'id':len(panels)+1,'title':title,'type':typ,'gridPos':{'x':x,'y':y,'w':width,'h':height},'datasource':{'type':'prometheus','uid':'s2t-prometheus'},'targets':[{'refId':'A','expr':expr,'legendFormat':legend,'instant':typ!='timeseries','range':typ=='timeseries'}],'description':description,'fieldConfig':{'defaults':{'unit':unit,'min':0,'color':{'mode':'fixed','fixedColor':'blue'}},'overrides':[]},'options':{'reduceOptions':{'calcs':['last'],'fields':'','values':False},'legend':{'displayMode':'list','placement':'bottom'},'tooltip':{'mode':'multi'}}}
+        item={'id':len(panels)+1,'title':title,'type':typ,'gridPos':{'x':x,'y':y,'w':width,'h':height},'datasource':{'type':'prometheus','uid':'${datasource}'},'targets':[{'refId':'A','expr':expr,'legendFormat':legend,'instant':typ!='timeseries','range':typ=='timeseries'}],'description':description,'fieldConfig':{'defaults':{'unit':unit,'min':0,'color':{'mode':'fixed','fixedColor':'blue'}},'overrides':[]},'options':{'reduceOptions':{'calcs':['last'],'fields':'','values':False},'legend':{'displayMode':'list','placement':'bottom'},'tooltip':{'mode':'multi'}}}
         if typ=='bargauge':item['options'].update({'orientation':'horizontal','displayMode':'gradient','showUnfilled':True})
         panels.append(item)
         return item
+    def labels(mapping):
+        for name,label in mapping.items():panels[-1]['fieldConfig']['overrides'].append({'matcher':{'id':'byName','options':name},'properties':[{'id':'displayName','value':label}]})
     row('01 · 延遲｜語音到字幕（來源：$caption_gateway）')
     for index,q in enumerate([.5,.95,.99]):
-        add(f'字幕 P{int(q*100)}（最近 5 分鐘）',f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{job="$caption_gateway",stage="chunk_speech_to_paint"}}[5m])) by (le))','s',x=index*8,width=8,description='完整落在即時字幕頁可見期間的 chunk 語音起點到字幕呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。')
+        add(f'字幕 P{int(q*100)}（最近 5 分鐘）',f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{job="$caption_gateway",stage="e2e_asr"}}[5m])) by (le))','s',x=index*8,width=8,description='完整落在即時字幕頁可見期間的 chunk 語音起點到原文呈現；包含音訊累積與排隊，缺少樣本時顯示無資料。分位數是 histogram 估算。')
     y+=4
-    chart=add('字幕延遲趨勢｜P50／P95／P99','', 's',typ='timeseries',width=16,height=5)
-    chart['targets']=[{'refId':str(index),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{job="$caption_gateway",stage="chunk_speech_to_paint"}}[5m])) by (le))','legendFormat':f'P{int(q*100)}','range':True,'instant':False} for index,q in enumerate([.5,.95,.99])]
+    chart=add('字幕延遲趨勢｜P50／P95／P99','', 's',typ='timeseries',width=12,height=5)
+    chart['targets']=[{'refId':str(index),'expr':f'histogram_quantile({q}, sum(rate(s2t_caption_stage_duration_seconds_bucket{{job="$caption_gateway",stage="e2e_asr"}}[5m])) by (le))','legendFormat':f'P{int(q*100)}','range':True,'instant':False} for index,q in enumerate([.5,.95,.99])]
     chart['fieldConfig']['defaults']['color']={'mode':'palette-classic'}
-    add('有效字幕樣本（最近 5 分鐘）','sum(increase(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",stage="chunk_speech_to_paint"}[5m]))',x=16,width=8,height=5,description='無有效樣本時，延遲分位數不能用來判斷服務正常。')
+    add('有效字幕樣本（最近 5 分鐘）','sum(increase(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",stage="e2e_asr"}[5m]))',x=12,width=6,height=5,description='無有效樣本時，延遲分位數不能用來判斷服務正常。')
+    bottleneck=add('瓶頸階段（5 分鐘平均最慢）','topk(1, sum by (phase) (rate(s2t_caption_stage_duration_seconds_sum{job="$caption_gateway",phase=~"t[1-5]"}[5m])) / sum by (phase) (rate(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",phase=~"t[1-5]"}[5m])))','s',x=18,width=6,height=5,legend='{{phase}}',description='t1~t5 中平均耗時最長的階段名稱（rate(_sum)/rate(_count) 取最大）；比值＝平均耗時。')
+    bottleneck['fieldConfig']['defaults'].update({'color':{'mode':'fixed','fixedColor':'orange'}})
+    bottleneck['options']['textMode'] = 'name'
+    labels({'t1':'t1 音訊擷取與上傳','t2':'t2 VAD 偵測與分段','t3':'t3 ASR 模型推論','t4':'t4 文字後處理','t5':'t5 回傳轉錄與呈現'})
+    y+=5
+    phases=add('各階段平均耗時｜最長者即瓶頸（所選範圍）','sort_desc(sum by (phase) (increase(s2t_caption_stage_duration_seconds_sum{job="$caption_gateway",phase=~"t[1-5]"}[$__range])) / sum by (phase) (increase(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",phase=~"t[1-5]"}[$__range])))','s',typ='bargauge',x=0,width=16,height=5,legend='{{phase}}',description='t1~t5 平均耗時由長到短排列：t3 大＝ASR 模型推論吃緊，t1 大＝上傳／編碼，t5 大＝回傳網路與重試。')
+    phases['options'].update({'calcs':['last'],'fields':'','values':False})
+    labels({'t1':'t1 音訊擷取與上傳','t2':'t2 VAD 偵測與分段','t3':'t3 ASR 模型推論','t4':'t4 文字後處理','t5':'t5 回傳轉錄與呈現'})
+    add('翻譯 P95（最近 5 分鐘）','histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job="$caption_gateway",stage="e2e_translation"}[5m])) by (le))','s',x=16,width=8,height=5,description='語音起點到譯文在 UI 呈現（含前段 ASR 等待）；翻譯未啟用時無資料，不填零。')
     y+=5
     row('02 · 使用者｜NT 與部門（來源：$caption_gateway）')
     valid='job="$caption_gateway",nt!="",department!="",user_id!="__overflow__"'
@@ -50,5 +61,5 @@ def build_oncall(detail):
         names={'transcriptions':'語音辨識','translations':'翻譯','summaries':'摘要','diarizations':'講者分離','telemetry_captions':'字幕遙測','auth_session':'登入狀態','auth_register':'註冊','auth_login':'登入','auth_logout':'登出','storage':'儲存服務','audio_object':'錄音檔案','data_glossary':'詞彙表','data_voiceprints':'聲紋資料','data_diarization_jobs':'講者分離工作','data_storage_status':'儲存狀態','data_storage_audit':'儲存稽核','data_storage_retry':'儲存重試','data_model_registry':'模型設定','data_model_health':'模型健康狀態','data_model_credentials_id':'模型憑證設定','data_summary_templates':'摘要模板','audio_processing_silero_vad':'語音活動偵測','audio_processing_status':'音訊處理狀態','audio_processing_import_wav':'匯入音訊','config':'服務設定','data_sessions':'會議紀錄','data_settings':'使用者設定','other':'其他操作','client_error':'請求錯誤（4xx）','server_error':'服務錯誤（5xx）','aborted':'連線中斷'}
         for name,label in names.items():item['fieldConfig']['overrides'].append({'matcher':{'id':'byName','options':name},'properties':[{'id':'displayName','value':label}]})
     result={key:deepcopy(value) for key,value in detail.items() if key not in ('panels','uid','title')}
-    result.update({'uid':'s2t-oncall','title':'S2T · 值班總覽｜延遲・使用者・請求','panels':panels,'tags':['S2T','值班'],'links':[{'title':'詳細監控與用量','type':'link','url':'/d/s2t-overview','includeVars':True,'keepTime':True,'targetBlank':True}],'description':'值班快速判讀：延遲 → NT／部門使用情況 → 請求健康。來源選擇器區分 8787 真實入口與驗收模擬資料；不將缺失資料當作零。'})
+    result.update({'uid':'s2t-oncall','title':'S2T · 值班總覽｜延遲・使用者・請求','panels':panels,'tags':['S2T','值班'],'links':[{'title':'詳細監控與用量','type':'link','url':'/d/s2t-overview','includeVars':True,'keepTime':True,'targetBlank':True}],'description':'值班快速判讀：延遲 → 瓶頸階段 → NT／部門使用情況 → 請求健康。來源選擇器區分 8787 真實入口與驗收模擬資料；不將缺失資料當作零。'})
     return result

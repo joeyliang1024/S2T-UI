@@ -5,13 +5,14 @@ const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}}
 const flush=async()=>{for(let i=0;i<50;i++)await Promise.resolve()}
 async function scenario(fail=false){
- let progress={other:{stage:'completed',completed:1,total:1}},sessions=[{id:'test',createdAt:new Date().toISOString(),segments:[],audioKey:'audio'}],requests=0
+ let progress={other:{stage:'completed',completed:1,total:1}},sessions=[{id:'test',createdAt:new Date().toISOString(),segments:[{id:'a',revision:1,status:'final',sourceText:'old a',startMs:0,endMs:1000,isSentenceBoundary:true},{id:'b',revision:1,status:'final',sourceText:'old b',startMs:1000,endMs:2000,isSentenceBoundary:true}],audioKey:'audio'}],requests=0
  const audio=deferred(),asrs=[deferred(),deferred()],speaker=deferred(),active={current:new Set()}
  const ctx={qualityCorrectionActiveRef:active,setStatus:()=>{},activeTranslate:key=>key,selectedModel:{kind:'openai-http',capabilities:{}},setQualityCorrectionProgress:update=>{progress=update(progress)},loadSessionAudio:()=>audio.promise,
  readPcmWavFileLayout:async()=>({sampleRate:48000}),pcmWavChunkCount:()=>2,readPcmWavFileChunk:async(_file,_layout,offset)=>({audio:new ArrayBuffer(4),startMs:offset*1000,endMs:(offset+1)*1000}),nextPcmWavChunkStart:(_layout,offset)=>offset+1,chooseModelSampleRate:()=>48000,
- window:{},settings:{sourceLanguage:'zh-TW',glossary:''},asrLanguage:()=> 'zh',webGatewayAsrProfileId:'mock',headerValue:x=>x,
+ window:{},settings:{sourceLanguage:'zh-TW',glossary:'',diarizationModel:'mock'},asrLanguage:()=> 'zh',webGatewayAsrProfileId:'mock',headerValue:x=>x,
  requestBrowserAsr:async()=>{const i=requests++;await asrs[i].promise;return new Response(JSON.stringify({text:`sentence ${i}`}),{status:200})},readJsonResponse:response=>response.json(),
  joinOverlappedText:(first,next)=>`${first} ${next}`,authFetch:()=>speaker.promise,assignSpeakersByOverlap:entries=>entries,parseSpeakerTurns:()=>[],makeTranscriptText:entries=>entries.map(e=>e.sourceText).join('\n'),setSessions:update=>{sessions=update(sessions)},automaticSessionTitle:()=> 'corrected',audioVersionsFor:()=>[],activeAudioVersionFor:()=>({id:'original',audioKey:'audio'}),generateSessionTitle:async()=>{}}
+ ctx.correctionGroups=entry=>entry.map(item=>({...item,members:[item]}));ctx.correctedCaption=(group,text)=>({...group,sourceText:text});ctx.readPcmWavSentence=async(_file,_layout,startMs,endMs)=>({audio:new ArrayBuffer(4),startMs,endMs});ctx.transcribeCorrection=async()=>{const i=requests++;await asrs[i].promise;return{text:`sentence ${i}`}}
  const finalize=new Function(...Object.keys(ctx),code+';return finalizeSession')(...Object.values(ctx))
  const task=finalize(sessions[0]);assert.equal(progress.test.stage,'loading');assert.ok(active.current.has('test'))
  await finalize(sessions[0]);assert.equal(requests,0,'repeat click cannot enqueue another correction')

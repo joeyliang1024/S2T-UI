@@ -6,11 +6,25 @@ Grafana：[單張總覽](http://127.0.0.1:13000/d/s2t-overview?orgId=1&from=now-
 
 ## 讀圖
 
-現在量測每個成功呈現的 chunk：起點是該 chunk 內開始說話的音訊樣本時間，終點是該 chunk 的文字首次在 Web UI 可見呈現（兩次 requestAnimationFrame 估計）。第一個 chunk 使用 VAD 回推的語音起點；連續說話的後續 chunk 使用自身起始樣本回推，沒有新的 VAD onset 也會記錄。時間包含音訊累積／切段、瀏覽器排隊、前處理、ASR 往返、畫面呈現。不是從送出 API 才開始計時，也不從整段會議開頭計時。靜音前卷中的新 onset 以實際 VAD 起點為準。硬體麥克風、JS 前的延遲、螢幕 scanout、Electron／浮動字幕視窗尚未量測。
+延遲量測拆成 ASR 與翻譯兩條管線，共七個階段（`phase` 標籤），每個階段再細分原子量測（`stage` 標籤）：
 
-頂部 P50／P95／P99 為固定最近 5 分鐘的即時查詢，不跟隨右上時間範圍。沒有有效樣本時顯示 No data，不沿用最後一次舊數值。下方原生圓環依所選時間範圍計算同一批 chunk 的六階段耗時占比，不是百分位數拆分；不同階段 P95 不能相加。連續語音後續 chunk 的 VAD 等待為零。所有面板都使用 Grafana 原生功能，無自訂 plugin 或允許未簽名插件的設定。
+| 階段 | 含義 | 細項（stage） |
+| --- | --- | --- |
+| t1 | UI 截取音訊並傳送到伺服器 | `t1_queue` 瀏覽器佇列、`t1_encode` WAV 編碼與前置、`t1_upload` 伺服器收音訊 |
+| t2 | VAD 偵測 + 分段處理 | `t2_vad` 語音偵測、`t2_segment` 句段累積、`t2_gate` Silero 二次確認（僅啟用時） |
+| t3 | ASR 模型推論（伺服器端） | `t3_queue` 容量排隊、`t3_preprocess` 音訊前處理（僅啟用 dynaudnorm 時）、`t3_model` 模型推論、`t3_gateway` 伺服器驗證／快取／寫出 |
+| t4 | 標點符號等文字後處理 | `t4_postprocess` 文字清理（目前僅有清理步驟；不雅字過濾加入後同樣計在這裡） |
+| t5 | 回傳轉錄文字到 UI 呈現 | `t5_network` 回傳網路與重試、`t5_paint` UI 呈現（兩次 requestAnimationFrame） |
+| t6 | 翻譯模型（含不雅字過濾位置） | `t6_wait` 前端排隊等待、`t6_queue` 容量排隊、`t6_model` 模型推論、`t6_gateway` 伺服器固定處理 |
+| t7 | 譯文回傳並渲染到 UI | `t7_network` 回傳網路、`t7_paint` 譯文 UI 呈現 |
 
-新量測使用 `chunk_speech_to_paint` 與 `s2t_chunk_stage_duration_seconds`，不混用舊首字樣本。舊樣本留在 Prometheus 歷史，更新並重新載入字幕頁後才有新 chunk 資料。
+另有兩個端到端樣本：`e2e_asr`（該 chunk 語音起點到原文首次呈現）與 `e2e_translation`（語音起點到譯文呈現，包含前段 ASR 等待）。起點仍是該 chunk 內開始說話的音訊樣本時間，不是從送出 API 才開始計時，也不從整段會議開頭計時；連續說話的後續 chunk 使用自身起始樣本回推。硬體麥克風、JS 前的延遲、螢幕 scanout、Electron／浮動字幕視窗尚未量測。
+
+**t1_upload／t3_\*／t6\_\* 的伺服器端拆分來自標準 `Server-Timing` 回應標頭**：Gateway 在 `/api/transcriptions` 與 `/api/translations` 回報 upload／queue／pre／model／total，瀏覽器用「往返時間 − 伺服器耗時」精確得到回傳網路時間（`t5_network`／`t7_network`），因此 t1~t5 互不重疊、相加 ≈ e2e。沒有 `Server-Timing` 時（舊版 gateway）整段往返歸入 t5／t7_network，仍不重疊。未啟用的可選步驟（如 Silero 閘門、dynaudnorm）不輸出 0 秒樣本，避免把「沒跑」誤當「很快」。
+
+儀表板依「總覽 KPI → ASR 瓶頸分析 → 翻譯管線 → 伺服器端交叉驗證 → 服務健康」排列。判讀 ASR 瓶頸最快路徑：先看頂部「目前瓶頸階段」（最近 5 分鐘 t1~t5 平均最慢的階段），再看「ASR 階段平均耗時」長條圖（最長者即瓶頸），需要定位到原子量測時看「ASR 明細平均耗時」；t3 最大＝模型推論吃緊，t1 大＝上傳／編碼，t5 大＝回傳網路與重試。儀表板頂部 P50／P95／P99 為固定最近 5 分鐘的即時查詢，不跟隨右上時間範圍；沒有有效樣本時顯示 No data，不沿用最後一次舊數值。圓環依所選時間範圍計算同一批樣本的階段耗時占比，不是百分位數拆分；不同階段 P95 不能相加。所有面板都使用 Grafana 原生功能，無自訂 plugin 或允許未簽名插件的設定；datasource 與量測來源都由模板變數（`datasource`、`caption_gateway`）指定，未寫死。
+
+新量測使用 `e2e_asr`、`e2e_translation` 與 `t1~t7` 系列 stage，舊的 `chunk_speech_to_paint`、`first_word_*`、`chunk_*` 階段已停用。舊樣本只留在 Prometheus 歷史；更新 renderer 與 gateway、重新載入字幕頁後才有新樣本。
 
 分位數為 histogram 的估計，與原始樣本排序分位數可能不同。不同步驟的 p95 不能直接相加。樣本累計以目前 Pod 生命週期為準，重啟會歸零；歷史時序由 Prometheus 保存。
 
@@ -54,7 +68,7 @@ Grafana 的 datasource provisioning 使用 `${PROMETHEUS_URL}`，Deployment 從 
 
 同一張 Dashboard 的「字幕量測來源」預設選 **8787 網頁入口**，可切換到 **K8s 測試站**。Web 字幕、Gateway 階段、HTTP 及應用儲存操作均依來源過濾，避免混合真實測試與模擬負載。其餘 Redis、PostgreSQL、MinIO、Milvus 與 K8s 資源圖仍代表隔離測試 cluster 的服務。
 
-API roundtrip 在瀏覽器完成讀取回應時結算。瀏覽器的 request、chunk 及翻譯延遲樣本，必須完整落在同一段即時字幕頁可見期間；跨越切換功能頁、隱藏分頁的請求，即使切回後才完成也排除，避免 fetch 回呼與 RAF 被背景節流拉長。Gateway 的 request／用量仍正常記錄。只有當即時字幕頁可見、字幕實際可見時，才納入 chunk 說話到 UI 首次呈現及 response-to-paint 的樣本。離開字幕頁、隱藏分頁或字幕位於可視區外，會丟棄待呈現樣本；切回頁面不補報歷史字幕。沒有有效呈現樣本時顯示 No data，不能以 0 或舊值冒充。頂部 P50/P95/P99 仍使用固定最近 5m。
+API roundtrip 在瀏覽器完成讀取回應時結算。瀏覽器的 request、chunk 及翻譯延遲樣本，必須完整落在同一段即時字幕頁可見期間；跨越切換功能頁、隱藏分頁的請求，即使切回後才完成也排除，避免 fetch 回呼與 RAF 被背景節流拉長。Gateway 的 request／用量仍正常記錄。只有當即時字幕頁可見、字幕實際可見時，才納入 `t5_paint`、`e2e_asr` 與翻譯繪出樣本；t1~t4、t6 的前段樣本在文字抵達時即記錄。離開字幕頁、隱藏分頁或字幕位於可視區外，會丟棄待呈現樣本；切回頁面不補報歷史字幕。沒有有效呈現樣本時顯示 No data，不能以 0 或舊值冒充。頂部 P50/P95/P99 仍使用固定最近 5m。
 
 
 ## 每位帳號與總體使用量
