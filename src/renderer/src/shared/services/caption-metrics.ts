@@ -1,10 +1,32 @@
 import { CaptionMetricTransport, type CaptionMetricSample, type CaptionMetricEvent } from './caption-metric-transport'
 import { authFetch } from '../../features/auth/services/auth-client'
-export type CaptionTiming = { speechAt?: number; detectedAt?: number; chunkSpeechAt?: number; chunkDetectedAt?: number; queuedAt: number; dequeuedAt: number; requestAt: number; responseAt: number }
+
+/** Gateway Server-Timing values (milliseconds) for one model request. */
+export type CaptionServerTiming = { upload?: number; queue?: number; pre?: number; model?: number; total: number }
+
+export type CaptionTiming = {
+  /** First onset of the utterance; only feeds the translation end-to-end sample. */
+  speechAt?: number
+  /** This chunk's first speech sample (sample clock) — the t2 / e2e 起點. */
+  chunkSpeechAt: number
+  /** When the local VAD confirmed speech inside this chunk. */
+  chunkDetectedAt: number
+  queuedAt: number
+  dequeuedAt: number
+  /** Silero second-gate HTTP roundtrip; absent when the gate is disabled. */
+  sileroStartAt?: number
+  sileroEndAt?: number
+  requestAt: number
+  responseAt: number
+  /** Set when text cleanup finished; t4_postprocess measures responseAt → here. */
+  postEndAt?: number
+  /** Server-Timing echoed by the gateway; absent on Electron or older gateways. */
+  server?: CaptionServerTiming
+}
 const timings = new WeakMap<object, CaptionTiming>()
 const pending = new Map<string, CaptionTiming>()
 const translationOrigins = new Map<string, CaptionTiming>()
-const translations = new Map<string, { started: number; response: number }>()
+const translations = new Map<string, { started: number; response: number; server?: CaptionServerTiming }>()
 // Only paints of newly received captions in the live view form a latency sample.
 // Navigation/hidden tabs must never replay an old response as a fresh paint.
 let liveViewActive = false
@@ -31,9 +53,45 @@ export const discardCaptionPaint = (ids: string[], translation = false): void =>
     else pending.delete(id)
   }
 }
-export const registerTranslationTiming = (id: string, started: number, response: number): void => {
+
+/**
+ * Parses a Server-Timing response header (`upload;dur=1.20, model;dur=820.00`).
+ * Malformed entries are dropped; without a usable `total` there is no split.
+ */
+export const parseServerTiming = (header: string | null): CaptionServerTiming | undefined => {
+  if (!header) return undefined
+  const values: Record<string, number> = {}
+  for (const entry of header.split(',')) {
+    const match = /^\s*([A-Za-z][A-Za-z0-9_-]*)\s*;\s*dur\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*$/.exec(entry)
+    if (match) values[match[1]] = Number(match[2])
+  }
+  if (values.total === undefined || !Number.isFinite(values.total)) return undefined
+  const timing: CaptionServerTiming = { total: values.total }
+  for (const key of ['upload', 'queue', 'pre', 'model'] as const) {
+    if (values[key] !== undefined && Number.isFinite(values[key])) timing[key] = values[key]
+  }
+  return timing
+}
+
+type Sample = CaptionMetricSample
+/** Samples are bounded [0, 300]s; an impossible split is dropped, never negative. */
+const pushValue = (samples: Sample[], stage: string, seconds?: number): void => {
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0 || seconds > 300) return
+  samples.push({ stage, seconds })
+}
+const pushSpan = (samples: Sample[], stage: string, start?: number, end?: number): void => {
+  if (start === undefined || end === undefined) return
+  pushValue(samples, stage, (end - start) / 1000)
+}
+/** Server-Timing carries milliseconds; samples are seconds. */
+const pushMs = (samples: Sample[], stage: string, milliseconds?: number): void => {
+  if (milliseconds === undefined) return
+  pushValue(samples, stage, milliseconds / 1000)
+}
+
+export const registerTranslationTiming = (id: string, started: number, response: number, server?: CaptionServerTiming): void => {
   if (!withinMeasurementWindow(started)) return
-  translations.set(id, { started, response })
+  translations.set(id, { started, response, server })
   if (translations.size > 1000) translations.delete(translations.keys().next().value!)
 }
 export const reportTranslationPaint = (ids: string[], paintedAt: number): void => {
@@ -43,15 +101,24 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
     const timing = translations.get(id), origin = translationOrigins.get(id)
     if (!timing) continue
     translations.delete(id); translationOrigins.delete(id)
-    samples.push({ stage: 'translation_roundtrip', seconds: (timing.response - timing.started) / 1000 }, { stage: 'translation_response_to_paint', seconds: (paintedAt - timing.response) / 1000 })
-    if (origin) {
-      samples.push({ stage: 'translation_schedule_wait', seconds: (timing.started - origin.responseAt) / 1000 })
-      if (origin.speechAt !== undefined && withinMeasurementWindow(origin.speechAt)) samples.push({ stage: 'speech_to_translation_paint', seconds: (paintedAt - origin.speechAt) / 1000 })
+    // t6：翻譯排隊與模型（模型時間目前已包含未來的不雅字過濾位置）。
+    if (origin) pushSpan(samples, 't6_wait', origin.responseAt, timing.started)
+    if (timing.server) {
+      pushMs(samples, 't6_queue', timing.server.queue ?? 0)
+      pushMs(samples, 't6_model', timing.server.model ?? 0)
+      pushValue(samples, 't6_gateway', (timing.server.total - (timing.server.queue ?? 0) - (timing.server.model ?? 0)) / 1000)
+      // 往返（ms）先扣掉伺服器耗時（ms）再轉秒，避免浮點與單位錯置。
+      pushValue(samples, 't7_network', ((timing.response - timing.started) - timing.server.total) / 1000)
+    } else {
+      // 無 Server-Timing：整段往返無法拆分，全部歸入 t7_network。
+      pushSpan(samples, 't7_network', timing.started, timing.response)
     }
+    // t7：回傳譯文並渲染到 UI。
+    pushSpan(samples, 't7_paint', timing.response, paintedAt)
+    if (origin && origin.speechAt !== undefined && withinMeasurementWindow(origin.speechAt)) pushSpan(samples, 'e2e_translation', origin.speechAt, paintedAt)
   }
-  if (samples.length) enqueue(samples.filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
+  if (samples.length) enqueue(samples)
 }
-type Sample = CaptionMetricSample
 const transport = new CaptionMetricTransport(async payload => {
   const response = await authFetch('/api/telemetry/captions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(3000) })
   return response.ok
@@ -61,58 +128,61 @@ const enqueue = (samples: Sample[] = [], event?: CaptionMetricEvent): void => {
 }
 export const recordCaptionEvent = (event: CaptionMetricEvent): void => enqueue([], event)
 export const attachCaptionTiming = (event: object, timing: CaptionTiming): void => { timings.set(event, timing) }
+
+/**
+ * Arrival batch: every slice known once the transcription response is here —
+ * t2 (VAD/分段), t1 (佇列/編碼/上傳), t3 (伺服器端 ASR), t4 (後處理) 與
+ * t5_network (回傳網路與重試). Paint-dependent samples come at paint time.
+ */
 export const registerCaptionTiming = (id: string, event: object): void => {
   const timing = timings.get(event)
   if (!timing) return
   timings.delete(event)
-  if (!withinMeasurementWindow(timing.chunkSpeechAt ?? timing.queuedAt)) return
-  // Hidden/frozen tabs can delay fetch callbacks as well as animation frames.
-  // Only requests entirely within this live window form browser latency samples.
-  enqueue([
-    { stage: 'browser_queue', seconds: (timing.dequeuedAt - timing.queuedAt) / 1000 },
-    { stage: 'browser_preprocess', seconds: (timing.requestAt - timing.dequeuedAt) / 1000 },
-    { stage: 'asr_roundtrip_with_retries', seconds: (timing.responseAt - timing.requestAt) / 1000 }
-  ].filter(sample => Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300))
+  if (!withinMeasurementWindow(timing.chunkSpeechAt)) return
+  const samples: Sample[] = []
+  // t2：VAD 偵測與分段 — 細分為偵測、句段累積與 Silero 二次確認。
+  pushSpan(samples, 't2_vad', timing.chunkSpeechAt, timing.chunkDetectedAt)
+  pushSpan(samples, 't2_segment', timing.chunkDetectedAt, timing.queuedAt)
+  pushSpan(samples, 't2_gate', timing.sileroStartAt, timing.sileroEndAt)
+  // t1：瀏覽器佇列、WAV 編碼與伺服器收音訊（Server-Timing upload）。
+  pushSpan(samples, 't1_queue', timing.queuedAt, timing.dequeuedAt)
+  const gateMs = timing.sileroStartAt !== undefined && timing.sileroEndAt !== undefined ? timing.sileroEndAt - timing.sileroStartAt : 0
+  pushSpan(samples, 't1_encode', timing.dequeuedAt + Math.max(0, gateMs), timing.requestAt)
+  const server = timing.server
+  if (server) {
+    pushMs(samples, 't1_upload', server.upload)
+    pushMs(samples, 't3_queue', server.queue)
+    // 未啟用的前置處理不輸出 0 樣本，避免把「沒跑」誤當「很快」。
+    if ((server.pre ?? 0) > 0) pushMs(samples, 't3_preprocess', server.pre)
+    pushMs(samples, 't3_model', server.model)
+    // 伺服器驗證／快取檢查／回應寫出等固定處理 = total − 已知分段。
+    pushValue(samples, 't3_gateway', (server.total - (server.upload ?? 0) - (server.queue ?? 0) - (server.pre ?? 0) - (server.model ?? 0)) / 1000)
+    // 往返（ms）先扣掉伺服器耗時（ms）再轉秒，避免浮點與單位錯置。
+    pushValue(samples, 't5_network', ((timing.responseAt - timing.requestAt) - server.total) / 1000)
+  } else {
+    // 沒有 Server-Timing（舊版 gateway）：整段往返歸入 t5_network，仍不重疊。
+    pushSpan(samples, 't5_network', timing.requestAt, timing.responseAt)
+  }
+  // t4：回應文字後處理（目前僅清理；標點／不雅字過濾加入後在此計時）。
+  if (timing.postEndAt !== undefined) pushSpan(samples, 't4_postprocess', timing.responseAt, timing.postEndAt)
+  if (samples.length) enqueue(samples)
   pending.set(id, timing)
   translationOrigins.set(id, timing)
   if (translationOrigins.size > 1000) translationOrigins.delete(translationOrigins.keys().next().value!)
   if (pending.size > 1000) pending.delete(pending.keys().next().value!)
 }
-// All six slices must come from the same first-word observation. Other
-// chunks and overlapping server timings must not change the denominator.
-export const buildFirstWordBreakdown = (timing: CaptionTiming, paintedAt: number): Sample[] => {
-  const points = [timing.speechAt, timing.detectedAt, timing.queuedAt, timing.dequeuedAt, timing.requestAt, timing.responseAt, paintedAt]
-  if (points.some(point => point === undefined || !Number.isFinite(point))) return []
-  const times = points as number[]
-  if (times.some((time, index) => index > 0 && time < times[index - 1]) || times[6] - times[0] > 300_000) return []
-  const stages = ['vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint']
-  return stages.map((stage, index) => ({ stage: `first_word_${stage}`, seconds: (times[index + 1] - times[index]) / 1000 }))
-}
 // Measurements are ephemeral: no transcript, user ID, model name or trace ID
 // is sent or used as a Prometheus label. Missing/hidden paints are not zeroes.
+// t5_paint 與 e2e_asr 只在字幕真正繪出時計；導航或隱藏分頁不補報舊回應。
 export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
   if (!canMeasurePaint()) return
-  const samples: Array<{ stage: string; seconds: number }> = []
+  const samples: Sample[] = []
   for (const id of ids) {
     const timing = pending.get(id)
     if (!timing) continue
     pending.delete(id)
-    const add = (stage: string, start: number, end: number): void => {
-      const seconds = (end - start) / 1000
-      if (Number.isFinite(seconds) && seconds >= 0 && seconds <= 300) samples.push({ stage, seconds })
-    }
-    if (timing.speechAt !== undefined && timing.detectedAt !== undefined && withinMeasurementWindow(timing.speechAt)) {
-      add('speech_to_first_paint', timing.speechAt, paintedAt)
-      add('vad_onset', timing.speechAt, timing.detectedAt)
-      add('chunk_wait', timing.detectedAt, timing.queuedAt)
-    }
-    if (timing.speechAt !== undefined && withinMeasurementWindow(timing.speechAt)) samples.push(...buildFirstWordBreakdown(timing, paintedAt))
-    const chunkSlices = buildFirstWordBreakdown({ ...timing, speechAt: timing.chunkSpeechAt, detectedAt: timing.chunkDetectedAt }, paintedAt)
-    if (chunkSlices.length) {
-      add('chunk_speech_to_paint', timing.chunkSpeechAt!, paintedAt)
-      samples.push(...chunkSlices.map(sample => ({ ...sample, stage: sample.stage.replace('first_word_', 'chunk_') })))
-    }
-    add('response_to_paint', timing.responseAt, paintedAt)
+    pushSpan(samples, 't5_paint', timing.postEndAt ?? timing.responseAt, paintedAt)
+    pushSpan(samples, 'e2e_asr', timing.chunkSpeechAt, paintedAt)
   }
   if (!samples.length || window.s2t) return // This deployment instruments the Web capture path.
   enqueue(samples)

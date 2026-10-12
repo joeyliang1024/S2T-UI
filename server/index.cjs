@@ -138,6 +138,13 @@ const acceptLimitedRequest = sharedLimits.accept
 const requestLatency = new Map()
 const modelHealthLastState = new Map()
 const latencyBuckets = [.025, .05, .1, .25, .5, .8, 1, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120]
+// Server-Timing (standard response header) hands the browser this request's
+// server-side durations so one HTTP roundtrip can be split into upload,
+// gateway handling and download without a second clock or extra probe.
+const serverTimingHeader = (timing) => Object.entries(timing)
+  .filter(([, value]) => Number.isFinite(value))
+  .map(([name, value]) => `${name};dur=${Math.max(0, value).toFixed(2)}`)
+  .join(', ')
 const observeRequest = (path, status, startedAt) => {
   if (!path.startsWith('/api/')) return
   // IDs and object keys must never become metric labels.
@@ -1243,6 +1250,12 @@ const handleHttpRequest = async (request, response) => {
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '聲紋比對失敗' }) }
   }
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
+    const handlerStart = performance.now()
+    // Mirrored to the browser through Server-Timing so the t1/t3/t5 split of
+    // this request's roundtrip stays exact (upload / queue / model / gateway).
+    // queue/pre/model are added only when the stage actually ran: an
+    // idempotent cache hit must not publish a fabricated 0-second model slice.
+    const serverTiming = { upload: 0, total: 0 }
     const user = await auth.requireUser(request)
     const limit = await acceptsRequest(request, 'transcriptions', user?.id)
     if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many transcription requests. Try again later.')
@@ -1259,24 +1272,47 @@ const handleHttpRequest = async (request, response) => {
       if (!contentType) return send(response, 415, { error: 'Unsupported audio content type. Use WAV, MP3, M4A/AAC, OGG, WebM, FLAC, MP4, or MOV.' })
       const requestedLanguage = String(request.headers['x-s2t-language'] || '')
       if (requestedLanguage && !['zh', 'en', 'ja', 'de'].includes(requestedLanguage)) return send(response, 400, { error: 'Unsupported ASR language. Use zh, en, ja, de, or omit it for automatic detection.' })
+      const uploadStart = performance.now()
       let audio = await metrics.measure('asr_upload_read', () => readBody(request, maxAsrAudioBytes))
+      serverTiming.upload = performance.now() - uploadStart
       if (!audio.length) return send(response, 400, { error: 'Audio is required.' })
       asrAudioBytes = audio.length
       const fingerprint = requestHash(Buffer.concat([audio, Buffer.from(JSON.stringify({ contentType, requestedLanguage, prompt: request.headers['x-s2t-prompt'] || '', filename: request.headers['x-s2t-filename'] || '', dynaudnorm: request.headers['x-s2t-dynaudnorm'] || '', model: selectedAsr.model, endpoint: selectedAsr.endpoint, credential: requestHash(selectedAsr.apiKey || '') }))]))
-      const output = await executeIdempotent(storage.config, user.id, '/api/transcriptions', request.headers['x-s2t-idempotency-key'], fingerprint, () => sharedLimits.withCapacity('asr', async () => {
-      if (request.headers['x-s2t-dynaudnorm'] === 'true') audio = await metrics.measure('audio_preprocess', () => dynaudnormWav(audio))
-      // Never the prompt itself, the audio or the transcript — only sizes.
-      logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
-      const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
-      const result = await metrics.measure('asr_model', async () => client.audio.transcriptions.create({
-        file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
-        ...(requestedLanguage ? { language: requestedLanguage } : {}),
-        ...(request.headers['x-s2t-prompt'] ? { prompt: decodedHeaderValue(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
-      }))
-      usageMetrics.observeExecution(user.id, 'transcriptions', { audio, output: result.text || '' })
-      logger.debug('asr.completed', { profileId, model: selectedAsr.model, durationMs: Date.now() - asrStartedAt, audioBytes: asrAudioBytes, chars: (result.text || '').length })
-      return { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) }
-      }))
+      let capacitySpan = 0
+      let innerMs = 0
+      const output = await executeIdempotent(storage.config, user.id, '/api/transcriptions', request.headers['x-s2t-idempotency-key'], fingerprint, async () => {
+        const capacityStart = performance.now()
+        try {
+          return await sharedLimits.withCapacity('asr', async () => {
+            const innerStart = performance.now()
+            try {
+              if (request.headers['x-s2t-dynaudnorm'] === 'true') {
+                const preStart = performance.now()
+                audio = await metrics.measure('audio_preprocess', () => dynaudnormWav(audio))
+                serverTiming.pre = performance.now() - preStart
+              }
+              // Never the prompt itself, the audio or the transcript — only sizes.
+              logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
+              const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
+              const modelStart = performance.now()
+              const result = await metrics.measure('asr_model', async () => client.audio.transcriptions.create({
+                file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
+                ...(requestedLanguage ? { language: requestedLanguage } : {}),
+                ...(request.headers['x-s2t-prompt'] ? { prompt: decodedHeaderValue(request.headers['x-s2t-prompt']).slice(0, 10_000) } : {})
+              }))
+              serverTiming.model = performance.now() - modelStart
+              usageMetrics.observeExecution(user.id, 'transcriptions', { audio, output: result.text || '' })
+              logger.debug('asr.completed', { profileId, model: selectedAsr.model, durationMs: Date.now() - asrStartedAt, audioBytes: asrAudioBytes, chars: (result.text || '').length })
+              return { text: result.text || '', detectedLanguage: normalizeDetectedLanguage(result.language) }
+            } finally { innerMs = performance.now() - innerStart }
+          })
+        } finally { capacitySpan = performance.now() - capacityStart }
+      })
+      // Capacity span minus the inner call is the admission wait; on the
+      // standalone default (no limit) withCapacity runs the operation inline.
+      serverTiming.queue = Math.max(0, capacitySpan - innerMs)
+      serverTiming.total = performance.now() - handlerStart
+      response.setHeader('server-timing', serverTimingHeader(serverTiming))
       return send(response, 200, output)
     } catch (error) {
       logger.error('asr.failed', {
@@ -1293,6 +1329,10 @@ const handleHttpRequest = async (request, response) => {
     }
   }
   if (request.method === 'POST' && request.url === '/api/translations') {
+    const handlerStart = performance.now()
+    // t6/t7 split source: queue + model travel to the browser via Server-Timing.
+    // Only stages that ran are reported (an idempotent cache hit runs neither).
+    const serverTiming = { total: 0 }
     const user = await auth.requireUser(request)
     const limit = await acceptsRequest(request, 'translations', user?.id)
     if (!limit.accepted) return rateLimitResponse(response, limit, 'Too many translation requests. Try again later.')
@@ -1320,8 +1360,20 @@ const handleHttpRequest = async (request, response) => {
       const translationStartedAt = Date.now()
       const accountSettings = user.role === 'admin' ? await storage.config.get(user.id, 'app-settings') : undefined
       const translationTemperature = requestedTemperature ?? validateAdminParameters(accountSettings?.settings?.adminParameters)?.translationTemperature ?? 0.2
-      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, temperature: translationTemperature, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), () => sharedLimits.withCapacity('translation', () => metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0, translationTemperature, { userId: user.id, operation: 'translations' }))))
+      const textResult = await executeIdempotent(storage.config, user.id, '/api/translations', request.headers['x-s2t-idempotency-key'], requestHash(JSON.stringify({ text, sourceLanguage, targetLanguage, glossary, temperature: translationTemperature, model: selectedTranslation.model, endpoint: selectedTranslation.endpoint, credential: requestHash(selectedTranslation.apiKey || '') })), async () => {
+        const capacityStart = performance.now()
+        let innerMs = 0
+        try {
+          return await sharedLimits.withCapacity('translation', async () => {
+            const innerStart = performance.now()
+            try { return await metrics.measure('translation_model', () => completeText(selectedTranslation, [{ role: 'user', content: hyTranslationPrompt(text, sourceLanguage, targetLanguage, glossary) }], 0, translationTemperature, { userId: user.id, operation: 'translations' })) }
+            finally { innerMs = performance.now() - innerStart; serverTiming.model = innerMs }
+          })
+        } finally { serverTiming.queue = Math.max(0, performance.now() - capacityStart - innerMs) }
+      })
+      serverTiming.total = performance.now() - handlerStart
       logger.debug('translation.completed', { profileId, sourceLanguage, targetLanguage, durationMs: Date.now() - translationStartedAt, chars: (textResult || '').length })
+      response.setHeader('server-timing', serverTimingHeader(serverTiming))
       return send(response, 200, { text: textResult })
     } catch (error) {
       const rateLimit = upstreamRateLimit(error)

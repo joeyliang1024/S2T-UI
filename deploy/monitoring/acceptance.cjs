@@ -52,9 +52,20 @@ const exporter = createServer(async (request, response) => {
       await call('/api/translations', token, { text: 'Synthetic acceptance input ' + 'sample '.repeat((i + 1) * 3), sourceLanguage: 'en-US', targetLanguage: 'zh-TW' })
       if (i === 2) await call('/api/summaries', token, { messages: [{ role: 'user', content: 'Summarize this synthetic acceptance input only.' }] })
       if (tick % 5 === 0) await call('/api/translations', token, { text: '' })
-      const seconds = [.12, .65 + i * .3, .05 + tick % 3 * .04, .03, .25 + i * .12, .025]
-      const names = ['vad_onset', 'chunk_wait', 'browser_queue', 'browser_preprocess', 'asr_roundtrip_with_retries', 'response_to_paint']
-      await call('/api/telemetry/captions', token, { samples: [{ stage: 'chunk_speech_to_paint', seconds: seconds.reduce((a, b) => a + b, 0) }, ...names.map((stage, index) => ({ stage: 'chunk_' + stage, seconds: seconds[index] })), { stage: 'response_to_paint', seconds: seconds[5] }, { stage: 'asr_roundtrip_with_retries', seconds: seconds[4] }], events: { speech_detected: 1 } })
+      // Synthetic t1~t7 slices mirroring the browser split: ASR and translation
+      // stay separate, each e2e equals the sum of its own slices (no overlap).
+      const asr = { t2_vad: .12, t2_segment: .4 + i * .2, t1_queue: .05, t1_encode: .03, t1_upload: .08, t3_queue: .02 + tick % 3 * .01, t3_model: .9 + i * .3, t3_gateway: .04, t4_postprocess: .01, t5_network: .1, t5_paint: .025, ...(tick % 2 ? { t2_gate: .06 } : {}) }
+      const translation = { t6_wait: .2, t6_queue: .02, t6_model: .6 + i * .15, t6_gateway: .03, t7_network: .08, t7_paint: .05 }
+      const total = slices => Object.values(slices).reduce((a, b) => a + b, 0)
+      await call('/api/telemetry/captions', token, {
+        samples: [
+          ...Object.entries(asr).map(([stage, seconds]) => ({ stage, seconds })),
+          { stage: 'e2e_asr', seconds: total(asr) },
+          ...Object.entries(translation).map(([stage, seconds]) => ({ stage, seconds })),
+          { stage: 'e2e_translation', seconds: total(translation) }
+        ],
+        events: { speech_detected: 1 }
+      })
     }
     await sleep(3000)
   }

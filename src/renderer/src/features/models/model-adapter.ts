@@ -1,4 +1,4 @@
-import { attachCaptionTiming, recordCaptionEvent, type CaptionTiming } from '../../shared/services/caption-metrics'
+import { attachCaptionTiming, parseServerTiming, recordCaptionEvent, type CaptionServerTiming, type CaptionTiming } from '../../shared/services/caption-metrics'
 import { type BoundaryVad, defaultVadConfig, EnergyVad, type VadConfig } from '../capture/vad'
 import { authFetch } from '../auth/services/auth-client'
 import { HttpServiceError, readJsonResponse } from '../../shared/services/http'
@@ -474,8 +474,11 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       // <300ms 微型 chunk 豁免（2026-10 校準）：快切碎音結構性湊不出 Silero
       // 的 120ms 連續語音，硬送會誤殺真語音（實測誤殺全為 20-220ms、被攔的
       // BGM 全 ≥1200ms）。豁免同時省下一次閘門 HTTP。
+      let sileroStartAt: number | undefined
+      let sileroEndAt: number | undefined
       if (this.profile.sileroVadEnabled && audio.length / this.sampleRate * 1_000 >= 300) {
         let hasSpeech = true
+        sileroStartAt = performance.now()
         try {
           hasSpeech = await this.hasSileroSpeech(wav)
         } catch (error) {
@@ -485,6 +488,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
           recordCaptionEvent('silero_failed')
           this.emitError(error instanceof Error ? error.message : activeTranslate('svcSileroGatewayFailed').replace('{status}', '?'))
         }
+        sileroEndAt = performance.now()
         if (!hasSpeech) {
           recordCaptionEvent('silero_veto')
           this.rollingContext = ''
@@ -497,7 +501,10 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const response = await this.transcribeWithRetry(wav)
       const responseAt = performance.now()
       const sourceText = sanitizeAsrText(response.text)
-      if (!sourceText || isRepetitiveAsrText(sourceText)) {
+      // t4：標點符號／不雅字等文字後處理的量測窗口（目前僅有清理步驟）。
+      const repetitive = isRepetitiveAsrText(sourceText)
+      const postEndAt = performance.now()
+      if (!sourceText || repetitive) {
         recordCaptionEvent('asr_empty')
         // A failed/looping response must not condition subsequent requests
         // with stale text and keep the decoder in a self-repeating loop.
@@ -510,7 +517,12 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const event: TranscriptEvent = { id: `http-${sequence}`, revision: 1, status: 'final', startMs, endMs, sourceText, detectedLanguage: response.detectedLanguage, isSentenceBoundary: isSentenceBoundary || this.explicitBoundaries.has(endSample) }
       const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
-      const timing: CaptionTiming = { queuedAt, dequeuedAt, requestAt, responseAt, chunkSpeechAt, chunkDetectedAt, ...(onsets[0] ? { speechAt: onsets[0].at, detectedAt: onsets[0].detected } : {}) }
+      const timing: CaptionTiming = {
+        chunkSpeechAt, chunkDetectedAt, queuedAt, dequeuedAt, requestAt, responseAt, postEndAt,
+        ...(sileroStartAt !== undefined && sileroEndAt !== undefined ? { sileroStartAt, sileroEndAt } : {}),
+        ...(response.server ? { server: response.server } : {}),
+        ...(onsets[0] ? { speechAt: onsets[0].at } : {})
+      }
       attachCaptionTiming(event, timing)
       this.lastTranscript = event
       this.listeners.forEach((listener) => listener(event))
@@ -569,7 +581,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.listeners.forEach((listener) => listener(event))
   }
 
-  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
+  private async transcribeWithRetry(audio: ArrayBuffer): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage']; server?: CaptionServerTiming }> {
     const request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }
     const delays = [0, 250, 750, 1750]
     let lastError: unknown
@@ -664,7 +676,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.pendingStart += discarded
   }
 
-  private async transcribeThroughWebGateway(audio: ArrayBuffer, request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage'] }> {
+  private async transcribeThroughWebGateway(audio: ArrayBuffer, request = { key: crypto.randomUUID(), language: this.language, prompt: this.rollingPrompt() }): Promise<{ text: string; detectedLanguage?: TranscriptEvent['detectedLanguage']; server?: CaptionServerTiming }> {
     const prompt = request.prompt
     const controller = new AbortController()
     this.activeGatewayRequests.add(controller)
@@ -683,9 +695,11 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
         body: audio,
         signal: controller.signal
       })
+      // Server-Timing 早於 body 讀取即可取得；這是 t1_upload/t3/t5 精確拆分的來源。
+      const server = parseServerTiming(response.headers.get('server-timing'))
       const payload = await readJsonResponse<{ text?: string; detectedLanguage?: string }>(response, 'Web ASR gateway')
       const detectedLanguage = payload.detectedLanguage === 'zh-TW' || payload.detectedLanguage === 'en-US' || payload.detectedLanguage === 'ja-JP' || payload.detectedLanguage === 'de-DE' ? payload.detectedLanguage : undefined
-      return { text: payload.text || '', detectedLanguage }
+      return { text: payload.text || '', detectedLanguage, ...(server ? { server } : {}) }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         const timeoutError = new Error(activeTranslate('svcAsrRequestTimeout'))
