@@ -25,6 +25,7 @@ def build_oncall(detail):
     add('有效字幕樣本（最近 5 分鐘）','sum(increase(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",stage="e2e_asr"}[5m]))',x=12,width=6,height=5,description='無有效樣本時，延遲分位數不能用來判斷服務正常。')
     bottleneck=add('瓶頸階段（5 分鐘平均最慢）','topk(1, sum by (phase) (rate(s2t_caption_stage_duration_seconds_sum{job="$caption_gateway",phase=~"t[1-5]"}[5m])) / sum by (phase) (rate(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",phase=~"t[1-5]"}[5m])))','s',x=18,width=6,height=5,legend='{{phase}}',description='t1~t5 中平均耗時最長的階段名稱（rate(_sum)/rate(_count) 取最大）；比值＝平均耗時。')
     bottleneck['fieldConfig']['defaults'].update({'color':{'mode':'fixed','fixedColor':'orange'}})
+    bottleneck['options']['textMode'] = 'name'
     labels({'t1':'t1 音訊擷取與上傳','t2':'t2 VAD 偵測與分段','t3':'t3 ASR 模型推論','t4':'t4 文字後處理','t5':'t5 回傳轉錄與呈現'})
     y+=5
     phases=add('各階段平均耗時｜最長者即瓶頸（所選範圍）','sort_desc(sum by (phase) (increase(s2t_caption_stage_duration_seconds_sum{job="$caption_gateway",phase=~"t[1-5]"}[$__range])) / sum by (phase) (increase(s2t_caption_stage_duration_seconds_count{job="$caption_gateway",phase=~"t[1-5]"}[$__range])))','s',typ='bargauge',x=0,width=16,height=5,legend='{{phase}}',description='t1~t5 平均耗時由長到短排列：t3 大＝ASR 模型推論吃緊，t1 大＝上傳／編碼，t5 大＝回傳網路與重試。')

@@ -163,6 +163,8 @@ for x,q in enumerate([.5,.95,.99]):
         panels[-1]['fieldConfig']['defaults'].update({'color':{'mode':'thresholds'},'thresholds':{'mode':'absolute','steps':[{'color':'green','value':None},{'color':'orange','value':2},{'color':'red','value':5}]}})
 panel('目前瓶頸階段（5 分鐘平均最慢）', 'topk(1, sum by (phase) (rate(s2t_caption_stage_duration_seconds_sum{phase=~"t[1-5]"}[5m])) / sum by (phase) (rate(s2t_caption_stage_duration_seconds_count{phase=~"t[1-5]"}[5m])))', 's', '{{phase}}', width=6, height=4, x=18, typ='stat', description='最近 5 分鐘 t1~t5 中平均耗時最長的階段名稱（rate(_sum)/rate(_count) 取最大）。先看這裡，再對照下一列的階段長條圖確認量級。')
 instant(); labels(PHASE_LABELS)
+# Show the slowest phase's name (t3 ASR 模型推論 …), not its numeric value.
+panels[-1]['options']['textMode'] = 'name'
 panels[-1]['fieldConfig']['defaults'].update({'color':{'mode':'fixed','fixedColor':'orange'}})
 y+=4
 panel('翻譯 語音→譯文 P95', f'histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{{stage="e2e_translation"}}[5m])) by (le))', 's', width=6, height=4, x=0, typ='stat', description='語音起點到譯文在 UI 呈現（含前段 ASR 等待）；翻譯未啟用時無資料。')

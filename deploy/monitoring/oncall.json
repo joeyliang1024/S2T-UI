@@ -493,7 +493,8 @@
         },
         "tooltip": {
           "mode": "multi"
-        }
+        },
+        "textMode": "name"
       }
     },
     {

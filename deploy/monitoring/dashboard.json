@@ -341,7 +341,8 @@
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "textMode": "name"
       }
     },
     {
