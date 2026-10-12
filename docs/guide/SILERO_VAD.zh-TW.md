@@ -20,7 +20,7 @@ S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d
 
 模型固定為 upstream `snakers4/silero-vad` `v6.2.1` 的 ONNX opset 16 artifact。應在映像建置或受控的 init job 完成下載與 checksum 驗證；服務請求不會下載模型。預設路徑是 `models/silero-vad/silero_vad.onnx`，環境變數可覆寫為 Pod 掛載的唯讀路徑。
 
-在 Web「ASR／VAD」設定開啟「使用 Silero VAD」後，下一次收音先查 `/api/audio-processing/status`。模型檔、checksum 或 ONNX Runtime 任一項不健康時，收音不會假裝啟用它。每個待送 ASR 的短 WAV 會先由 worker 判斷；無語音就不發出 ASR 請求。這是可選的額外 CPU 工作，ASR／翻譯仍應以獨立模型 Deployment 擴容。
+在 Web「ASR／VAD」設定開啟「使用 Silero VAD」後，下一次收音先查 `/api/audio-processing/status`。模型檔、checksum 或 ONNX Runtime 任一項不健康時，收音不會假裝啟用它。每個待送 ASR 的短 WAV 會先由 worker 判斷；無語音就不發出 ASR 請求。**＜300 ms 的微型 chunk 豁免**（2026-10 校準：快切碎音結構性湊不出 120 ms 連續語音，硬判會誤殺真語音；實測誤殺全為 20-220 ms、被擋的 BGM 全 ≥1200 ms——見 `experiment/silero-vad-chunking/comparison-2026-10-12/實驗報告.md`）。這是可選的額外 CPU 工作，ASR／翻譯仍應以獨立模型 Deployment 擴容。
 
 ## 指標監控（Prometheus，`GET /metrics`）
 

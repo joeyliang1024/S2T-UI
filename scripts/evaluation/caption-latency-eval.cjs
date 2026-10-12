@@ -105,6 +105,12 @@ const PRESETS = {
   //     neg_threshold）＋minSilence 500ms（串流折衷，離線預設為 2000ms）
   newHyg: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true },
   fastHyg: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true },
+  // 放寬版閘門（2026-10-12 校準，scripts/evaluation/gate-calibration.cjs）：
+  // 誤殺全部落在 20-220ms 微型 chunk（結構性湊不出 120ms 連續語音），
+  // 被攔的 BGM 全是 chunkMax 強制長 chunk（1200-1500ms）——<300ms 豁免
+  // 可零誤殺且不漏放 BGM。gateMinChunkMs 即此豁免下限。
+  newHyg2: { vadConfig: { ...defaultVadConfig }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true, gateMinChunkMs: 300 },
+  fastHyg2: { vadConfig: { minSpeechMs: 120, minSilenceMs: 150, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, gate: true, hallucFilter: true, gateMinChunkMs: 300 },
   newSileroInd: { vadConfig: { ...defaultVadConfig, minSilenceMs: 500 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true },
   fastSileroInd: { vadConfig: { minSpeechMs: 120, minSilenceMs: 500, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1_200 }, overlapMs: 0, sampleRate: 48_000, vad: 'silero', endThreshold: 0.35, gate: true, hallucFilter: true }
 }
@@ -198,7 +204,7 @@ const isHallucination = (text) => {
 }
 
 const runPreset = async (name, preset, sentences) => {
-  const { vadConfig, overlapMs, sampleRate: sr, vad: vadKind, gate: gateEnabled, hallucFilter: hallucFilterEnabled, endThreshold } = preset
+  const { vadConfig, overlapMs, sampleRate: sr, vad: vadKind, gate: gateEnabled, hallucFilter: hallucFilterEnabled, endThreshold, gateMinChunkMs } = preset
   const samples = decodeAudio(sr)
   const records = [] // enqueue 順序，含被 queue-overflow 丟棄的 chunk
   const events = [] // 所有 transcript/gap 事件＋實際上屏 wall time
@@ -275,7 +281,10 @@ const runPreset = async (name, preset, sentences) => {
       const chunkSamples = Math.floor((audio.byteLength - 44) / 2)
       const fromWindow = Math.ceil(record.startSample * 16_000 / sr / 512)
       const toWindow = Math.floor((record.startSample + chunkSamples) * 16_000 / sr / 512)
-      if (!gateHasSpeech(sileroProbabilities.subarray(fromWindow, Math.max(fromWindow, toWindow)))) {
+      // 長度豁免：微型 chunk（快速停頓碎片）結構性湊不出 120ms 連續語音，
+      // 硬套會誤殺真語音（校準實測誤殺全為 20-220ms，攔下的 BGM 全 ≥1200ms）
+      const exempt = record.audioMs < (gateMinChunkMs ?? 0)
+      if (!exempt && !gateHasSpeech(sileroProbabilities.subarray(fromWindow, Math.max(fromWindow, toWindow)))) {
         gateVetoCount += 1
         record.gateVetoed = true
         return { text: '' }
@@ -399,6 +408,7 @@ const runPreset = async (name, preset, sentences) => {
     preset: name,
     vadKind: vadKind || 'energy',
     gate: Boolean(gateEnabled),
+    gateMinChunkMs: gateMinChunkMs ?? null,
     hallucFilter: Boolean(hallucFilterEnabled),
     endThreshold: endThreshold ?? null,
     vadConfig,
@@ -466,7 +476,7 @@ const runPreset = async (name, preset, sentences) => {
 
 const printSummary = (report) => {
   const { chunks, asrMs, queueWaitMs, sentences, latencyMs, accuracy, fragmentation, errors } = report
-  const extras = [report.gate ? 'gate' : null, report.hallucFilter ? '幻覺濾' : null].filter(Boolean)
+  const extras = [report.gate ? (report.gateMinChunkMs ? `gate(豁免<${report.gateMinChunkMs}ms)` : 'gate') : null, report.hallucFilter ? '幻覺濾' : null].filter(Boolean)
   const knobs = `minSilence ${report.vadConfig.minSilenceMs} / chunk ${report.vadConfig.chunkMinMs}-${report.vadConfig.chunkMaxMs} / 滾動prompt(產品) / 重疊 ${report.overlapMs}ms / ${report.sampleRate / 1000}kHz${extras.length ? ` / ${extras.join('+')}` : ''}`
   console.log(`\n=== preset ${report.preset} (${knobs}, ${report.audioSeconds}s 音檔) ===`)
   const vetoNote = (chunks.gateVetoed || chunks.hallucVetoed) ? ` | 否決: 閘門 ${chunks.gateVetoed || 0} / 幻覺 ${chunks.hallucVetoed || 0}` : ''

@@ -206,8 +206,8 @@ whisper_streaming（IJCNLP 2023 demo）的核心是 **LocalAgreement-n**：文�
 
 - **修正 1+2 生效**：chunk 級否決閘門＋幻覺濾把 newSilero 的 BGM 災難從語料 CER 53.1% 拉回 **36.26%**（newSileroInd），回到基線 35.01% 附近——失效一確認主因（純音樂 chunk → ASR 幻覺）被閘門解決；幻覺濾 0 命中（閘門已先擋掉純音樂 chunk，殘餘迴圈重複次數未達 n-gram 門檻）。
 - **修正 3 不足以翻案**：endThreshold 0.35＋minSilence 500 後，Silero 臂在兩素材仍不贏 EnergyVad 臂（對話 BGM：36.26% vs 34.19%；旁白：12.19% vs 11.76%，延遲亦較差）——Phase 1 負面結果維持。
-- **閘門有代價**：fast preset 的短 chunk 較易被誤殺含語音 chunk（旁白 fastHyg 誤殺 5 個 → 語料 CER 11.76% → 16.89%）。閘門門檻需隨 chunk 尺寸調校，或放寬至否決率 < 2%。
-- **產品方向定案**：EnergyVad 切段 ＋ Silero 否決閘門（閾值放寬版）；Silero 決定句界不產品化。否決率自本次起可由 `s2t_caption_events_total{event="silero_veto"}` 於生產觀測（見 `docs/guide/SILERO_VAD.zh-TW.md` 指標監控節）。
+- **閘門有代價（已解）**：fast preset 會切出 20–220ms 微型 chunk，120ms 連續語音門檻對其結構性必殺（旁白 fastHyg 誤殺 5 個，同切段淨成本 +0.24pp；第一輪的 +5.1pp 為把 fast 切段本身代價誤算到閘門頭上）。離線校準（`scripts/evaluation/gate-calibration.cjs`）證實誤殺全 <300ms、被攔 BGM 全 ≥1200ms，**長度豁免（<300ms 放行）**後同輪驗證：旁白零誤殺、BGM 收益（−0.8〜−0.9pp）分毫不損。
+- **產品方向定案**：EnergyVad 切段 ＋ Silero 否決閘門（長度豁免版）；Silero 決定句界不產品化。否決率自本次起可由 `s2t_caption_events_total{event="silero_veto"}` 於生產觀測（見 `docs/guide/SILERO_VAD.zh-TW.md` 指標監控節）。詳細數據見 `experiment/silero-vad-chunking/comparison-2026-10-12/實驗報告.md`。
 
 ## 參考來源
 

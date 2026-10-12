@@ -450,7 +450,10 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const dequeuedAt = performance.now()
       const wav = wavFromFloat32(audio, this.sampleRate)
-      if (this.profile.sileroVadEnabled) {
+      // <300ms 微型 chunk 豁免（2026-10 校準）：快切碎音結構性湊不出 Silero
+      // 的 120ms 連續語音，硬送會誤殺真語音（實測誤殺全為 20-220ms、被攔的
+      // BGM 全 ≥1200ms）。豁免同時省下一次閘門 HTTP。
+      if (this.profile.sileroVadEnabled && audio.length / this.sampleRate * 1_000 >= 300) {
         let hasSpeech = true
         try {
           hasSpeech = await this.hasSileroSpeech(wav)
