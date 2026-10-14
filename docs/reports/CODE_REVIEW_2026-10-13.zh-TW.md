@@ -119,3 +119,18 @@ experiment/                 # 可重現實驗與索引
 - 後兩個 HTTP tests 初次受 sandbox loopback listen 限制；獲准 sandbox 外重跑後通過。
 - F1 用目前正式 merge 函式直接重現；F2／F3／F4／F5 是路徑與條件靜態追蹤，尚未全面做 HTTP 故障注入或真實遠端驗證。
 - 未執行真實 MinIO／Postgres／Milvus、Kubernetes、模型推論、會停止容器或清資料的測試，也未執行完整 build／所有 browser tests。本次不是完整安全稽核或效能證明。
+
+## 修改紀錄（2026-10-14，併入 `codex/technical-debt-refactor` 後複核）
+
+F1–F6 已於本次 refactor 實作修正；以下為逐項複核結果，全部在合併後的 `feat/bug-fix` 重新驗證通過。
+
+| Finding | 狀態 | 實作位置 | 驗證 |
+| --- | --- | --- | --- |
+| F1 三方合併 | 已修 | `features/sessions/domain/session-merge.ts` 的 `rebaseSessions`：committed baseline 三方合併、缺失 baseline 記錄即明確刪除、雙方皆改即拋 `SessionMergeConflictError`；`features/sessions/services/sync-coordinator.ts` 在 CAS 409 改走 rebase 並保留衝突供 UI 處理 | `session-rebase-smoke-test`（刪除、相異編輯、ACK 遺失重送、衝突、JSON 鍵序）PASS |
+| F2 consent header | 已修 | `server/bootstrap.cjs` 聲紋路由改用正確的 `request.headers['x-s2t-voiceprint-consent']`，`validateSharingEnrollment` 置於 500 MB body 讀取之前 | `sharing-authorization-http-smoke-test`（consent 成功 201）PASS |
+| F3 自宣稱部門 | 已修 | `server/auth/sharing-authorization.cjs` 將授權群組與展示用 Department 分離：`approved` 授權只能由 admin 以 `/api/admin/users/:id/sharing-authorization` 設定，公開 register 不會取得 | `sharing-authorization-http-smoke-test`（自我核准 403、自宣稱部門不匹配、核准後跨部門可見、organization 跨可信部門）＋`auth-policy-smoke-test` PASS |
+| F4 logout 吞錯 | 已修 | `server/auth/index.cjs` `revoke()` 只忽略無效／過期 token；有效 token 的持久化錯誤一律上拋（程式內註解明示），logout 不再假成功 | `auth-policy-smoke-test`（注入 revocation 故障必須拒絕、無效 token 不拒絕、併發 logout）PASS |
+| F5 預設 admin | 已修 | `ensureBootstrapAdmin`：production／Kubernetes 未提供明確憑證即啟動失敗；預設 admin/admin 只允許 `S2T_ALLOW_DEFAULT_ADMIN=true` 的非正式環境；既有 admin 不因缺少 bootstrap 變數中斷；正式環境密碼至少 12 字元 | `auth-policy-smoke-test`（三個斷言）PASS |
+| F6 片段擷取 harness | 已修 | 抽出 `features/sessions/services/recovery-handlers.ts`；測試改以 esbuild bundle 載入真實模組並注入 ports，不再用字串定位＋片段 mock | `session-recovery-handlers-smoke-test`（unit suite 內）PASS |
+
+結構債複核：第 1–3 項（controller／server／平台分支集中）已由 features 拆分、`shared/contracts` 與 ports 收斂處理；第 5 項已建立 `scripts/testing/run-tests.cjs` + `tests/suites.json` 分類、`.github/workflows/ci.yml`、`test:external` 需 `S2T_ALLOW_EXTERNAL_TESTS=true` 的 opt-in，並移除測試中的個人路徑（`/Users/...` 0 處）。第 4 項（server 型別檢查）僅完成契約層，其餘進度見 `REFACTOR_PROGRESS_2026-10-14.zh-TW.md`。
