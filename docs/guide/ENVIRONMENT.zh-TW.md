@@ -62,3 +62,13 @@ node tests/smoke/model-paths-smoke-test.cjs
 node tests/smoke/gateway-env-smoke-test.cjs
 node tests/smoke/nemotron-diarization-smoke-test.cjs
 ```
+
+## 主機與容器範例
+
+`.env.example` 與 `.env.local-storage.example` 的摘要模板路徑為 `./data/template`，適用於專案根目錄執行 gateway。Gateway Compose 明確覆寫為 `/data/template`，對應唯讀掛載的 repo 模板目錄。
+
+`.env.local-storage.example` 預設只啟用 MinIO／PostgreSQL；需要 Milvus 時，依部署指南同時啟動 profile 與填齊四項變數。`.env.example` 的完整 Storage 範例則預設選用三個遠端 adapter；使用 fallback 時必須清空對應整組設定。
+
+Docker image 使用 production 模式。啟動前必須填入 `S2T_AUTH_SECRET`；全新資料庫還需設定 bootstrap admin 帳號及至少 12 字元的密碼。`S2T_ALLOW_DEFAULT_ADMIN=true` 僅在開發模式有效，不會讓正式部署接受預設密碼。跨站 Cookie 值必須是小寫 `S2T_COOKIE_SAME_SITE=none`，並搭配 `S2T_COOKIE_SECURE=true`。
+
+`S2T_POSTGRES_MAX_CONNECTIONS` 同時限制資料操作池與獨立帳號圍欄池（各預設 10），每個 gateway／worker 最多使用兩倍設定值；請將所有副本的總連線數納入 PostgreSQL 容量。

@@ -109,7 +109,7 @@ UI 視覺優化的最後順位參考：使用者提供的 [Threads prompt](https
 
 ### O10 技術文件與部署說明一致性 — 部分完成
 
-現況：docs/ 已依用途分四類並建立索引（`guide` 操作、`reference` 契約與架構、`research` 歷史研究與規劃、`reports` 量測報告），`docs/README.md` 為分類索引，根目錄 `0930_plan.md` 已移為 `docs/research/K8S_SCALE_PLAN.zh-TW.md`；全 repo 連結、程式碼內文件路徑註解與 README 已同步翻新。Gateway 文件已同步 Bearer auth、格式上限、模型 registry／加密 key 寫入端點、選定帳號模型代理與限流／錯誤行為；部署文件已說明 bootstrap 帳密只建立新帳號；README、部署與 sherpa 操作文件已同步 Web 啟動順序、`5173`／`8787` 的責任與常見 404／Origin 問題，Linux x64 離線模型 image `joeyliang1024/s2t-sherpa-models:1.13.8` 已建置並驗證。
+現況：docs/ 已依用途分四類並建立索引（`guide` 操作、`reference` 契約與架構、`research` 歷史研究與規劃、`reports` 量測報告），`docs/README.md` 為分類索引，根目錄 `0930_plan.md` 已移為 `docs/research/K8S_SCALE_PLAN.zh-TW.md`；全 repo 連結、程式碼內文件路徑註解與 README 已同步翻新。Gateway 文件已同步 Bearer auth、格式上限、模型 registry／加密 key 寫入端點、選定帳號模型代理與限流／錯誤行為；部署文件已說明 bootstrap 帳密只建立新帳號；README 與部署文件已同步 Web 由 `npm run build:web` 建置 `out/web`、再由 8787 gateway 同源提供 UI 與 API 的流程；Electron renderer 維持 `out/renderer`。Linux x64 離線模型 image `joeyliang1024/s2t-sherpa-models:1.13.8` 已建置並驗證。
 
 - [ ] 技術文件的操作範例持續核對現有 code：模型註冊位置、儲存與認證、能力欄位、語者分離即時／離線路徑、檔案大小、取消行為。
 - [ ] 將歷史研究中的「不依賴 sherpa」與現有可選 sherpa gateway 區分；API key 留空不代表不需要登入 token；前端／後端聲紋樣本長度檢查需一致。

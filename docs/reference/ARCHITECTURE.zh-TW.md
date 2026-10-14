@@ -5,7 +5,7 @@
 ```mermaid
 flowchart TB
     subgraph client["用戶端"]
-        browser["瀏覽器 UI<br/>(React renderer，Vite :5173)"]
+        browser["瀏覽器 UI<br/>(React renderer，Web Gateway :8787)"]
         electron["Electron 桌面版<br/>(main + preload + renderer)"]
     end
 

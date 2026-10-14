@@ -86,6 +86,6 @@ Server 統一由 `server/logger.cjs` 輸出到 stdout，取代散落的 `console
 ## 部署注意事項
 
 1. 使用 HTTPS；麥克風 API 在正式部署需要 secure context。
-2. 以反向代理將靜態 `out/renderer` 與 BFF 掛在同一 origin，避免寬鬆 CORS。
+2. gateway 直接從 `out/web` 提供 Web UI 與 BFF API；Web build 與 gateway 應掛在同一 origin。`out/renderer` 是 Electron renderer 的建置輸出。
 3. gateway 已要求 Bearer token、登入限流、token 撤銷與各服務限流；正式服務仍應加反向代理 rate limit、request log 與監控。
 4. BFF 只轉錄短 WAV chunks；大檔批次上傳需另建可取消的 job API。

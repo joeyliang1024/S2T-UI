@@ -15,7 +15,7 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 ```mermaid
 flowchart TB
     subgraph client["用戶端"]
-        browser["瀏覽器 UI<br/>(React renderer，Vite :5173)"]
+        browser["瀏覽器 UI<br/>(React renderer，Web Gateway :8787)"]
         electron["Electron 桌面版<br/>(main + preload + renderer)"]
     end
 
@@ -90,32 +90,33 @@ npm install
 cp .env.example .env
 ```
 
-編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`（OpenAI 相容 Breeze ASR 的預設值已附在範例）。`.env` 會被忽略，不應提交到 Git。
+編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`。`.env` 會被忽略，不應提交到 Git。
 
 開發環境明確設定 `S2T_ALLOW_DEFAULT_ADMIN=true` 後可用 `admin`／`admin`；正式環境禁止預設帳號，首次啟動前必須設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
 
 ### 2. Electron 桌面版
 
+先依下節啟動 gateway。桌面開發在 `.env` 設定 `S2T_GATEWAY_URL=http://127.0.0.1:8787`，並在 `S2T_WEB_ORIGINS` 加入 `null`，讓本機檔案 renderer 連線；打包版仍須設定外部 HTTPS gateway。
+
 ```bash
 npm run dev
 ```
 
-首次啟動請允許麥克風權限。生產建置用 `npm run build`（不等於可安裝包，打包待辦見 Enhancement.md F04）。停止收音只會建立尚未保存的記錄，請在「記錄」頁按「保存工作階段」才選擇正式資料夾。自有模型整合入口在 `src/renderer/src/features/models/model-adapter.ts`，契約見 [MODEL_ADAPTER.md](docs/reference/MODEL_ADAPTER.md)。
+首次啟動請允許麥克風權限。`npm run dev` 會先建置再以 Electron preview 啟動，沒有 renderer HMR；生產建置用 `npm run build`（不等於可安裝包，打包待辦見 Enhancement.md F04）。停止收音只會建立尚未保存的記錄，請在「記錄」頁按「保存工作階段」才選擇正式資料夾。自有模型整合入口在 `src/renderer/src/features/models/model-adapter.ts`，契約見 [MODEL_ADAPTER.md](docs/reference/MODEL_ADAPTER.md)。
 
 ### 3. Web 版
 
-Web 版需要同時執行兩個本機程序：
+Web gateway 在同一個 origin 提供 UI 與 API：
 
 ```bash
-# 終端 A：gateway（登入、模型 key、Storage，預設 8787）
-npm run build
-npm run web:serve
+# 建置 Web renderer 到 out/web
+npm run build:web
 
-# 終端 B：瀏覽器介面（固定 5173，將 /api 轉送給 gateway）
-npm run web:preview
+# gateway（登入、模型 key、Storage、Web UI，預設 8787）
+npm run web:serve
 ```
 
-開啟 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)；`8787` 只提供 API，不是網頁頁面。Storage 可用本機 fallback（三組 MinIO／PostgreSQL／Milvus 變數全部留空）或 Docker 外部服務；Docker Compose 啟動、驗證 smoke、備份還原與 Web 常見問題（404／Origin／port）見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md)。
+開啟 [http://127.0.0.1:8787/](http://127.0.0.1:8787/)；同一個 origin 也提供 `/api`。Storage 可用本機 fallback（三組 MinIO／PostgreSQL／Milvus 變數全部留空）或 Docker 外部服務；Docker Compose 啟動、驗證 smoke、備份還原與 Web 常見問題見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md)。
 
 ### 4. 公司 Nexus 的離線 Docker Web build
 
@@ -145,7 +146,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 | 類別 | 指令 |
 | --- | --- |
-| 開發與建置 | `npm run dev`（Electron）、`npm run build`、`npm run typecheck`、`npm run web:serve`、`npm run web:preview` |
+| 開發與建置 | `npm run dev`（Electron preview，無 HMR）、`npm run build`、`npm run build:web`、`npm run typecheck`、`npm run web:serve` |
 | 核心 smoke | `gateway:auth-smoke`、`import-checkpoint:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`i18n:smoke`、`vad:smoke`、`storage:smoke` |
 | Storage smoke | `storage:remote:smoke`、`storage:gateway:smoke`、`storage:compensation:smoke`、`storage:grace:smoke`、`storage:outage:smoke`、`storage:voiceprint-backup:smoke`、`storage:migrate:remote` |
 | 講者與聲紋 | `diarization:smoke`、`sherpa:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
@@ -285,7 +286,7 @@ Electron 的本機設定使用 `s2t-local://diarization`，直接載入工作目
 
 驗證：`node tests/smoke/import-audio-smoke-test.cjs`。已在 Mac 與 Linux ARM64 Docker 實測上述 18 個副檔名；Chrome 驗證 95 秒 MP3 分三段，以及約 110 MiB 的 300 秒浮點 WAV 轉換後分七段，並驗證取消。ASR 在整合測試使用隔離回應，這些測試驗證轉換與切段，不代表各格式的辨識準確率。
 
-瀏覽器分頁小圖示來源為 `icon/favicon.svg`，由 Vite 打包為網站資產；獨立字幕視窗沿用相同圖示。
+瀏覽器分頁小圖示來源為 `icon/favicon.svg`，由 Web build 打包為網站資產；獨立字幕視窗沿用相同圖示。
 
 側邊欄導覽採共用 SVG 圖示網格、圓角線條與深淺色配色；選取、滑鼠提示及鍵盤焦點跟隨主題，並尊重減少動態效果設定。紀錄卡片右側功能按鈕上下置中。
 

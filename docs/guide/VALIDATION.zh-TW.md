@@ -7,7 +7,7 @@
 | 項目 | 結果 | 證據／指令 |
 | --- | --- | --- |
 | TypeScript 型別 | 通過 | `npm run typecheck` |
-| Production bundle | 通過 | `npm run build` |
+| Production bundle | 通過 | `npm run build`（Electron）及 `npm run build:web`（Web） |
 | Diff 格式 | 通過 | `git diff --check` |
 | 本機儲存與帳號隔離 | 通過 | `npm run storage:smoke`（含原子 `update` 並發寫入與 stale-lock 回收） |
 | Gateway PostgreSQL 啟動 | 通過 | `npm run storage:gateway:smoke`（暫存資料庫實啟 gateway，驗證 schema migration 與 auth bootstrap 無競態、第一個 API 要求不 crash） |
@@ -22,23 +22,24 @@
 | Gateway 授權與聲紋同意 | 通過 | `npm run gateway:auth-smoke`（本機 loopback，拒絕未授權與未同意的共享聲紋請求） |
 | Breeze HTTP ASR | 通過 | 本機中文 WAV → `/v1/audio/transcriptions` → 非空白文字 |
 | Web 模型載入 | 通過 | `GET /api/config` 回傳 `Breeze-ASR-25`；Web 下拉選單已選取該模型 |
-| Web BFF 轉錄 | 通過 | Web → Vite `/api` proxy → BFF → ASR → 非空白文字 |
+| Web BFF 轉錄 | 通過 | Web UI → 同源 BFF → ASR → 非空白文字 |
 
 API key 僅存在忽略的 `.env`，不應寫入本文件、截圖、前端 bundle 或 Git。
 
 ## 啟動測試環境
 
 ```bash
-# 終端機 A：Web BFF，持有 .env 的模型 key
+# 建置並啟動 Web gateway；同時提供 UI 與 API
+npm run build:web
 npm run web:serve
 
-# 終端機 B：Electron 與 Vite 開發伺服器
+# 需要 Electron 時另開終端；會先建置再 preview，沒有 renderer HMR
 npm run dev
 ```
 
-- Web：開啟 `http://127.0.0.1:5173/`，確認 ASR 模型是 `Breeze-ASR-25`。
+- Web：開啟 `http://127.0.0.1:8787/`，確認 ASR 模型是 `Breeze-ASR-25`。
 - Electron：由 `npm run dev` 開啟的 S2T UI 視窗測試原生保存、safeStorage、浮動字幕與系統音訊。
-- Production Web：先執行 `npm run build`，再以 `npm run web:serve` 開啟 `http://127.0.0.1:8787/`。
+- Production Web：以 `npm run build:web` 建置 `out/web`，再以 `npm run web:serve` 開啟 `http://127.0.0.1:8787/`。
 
 ## 近即時字幕驗收
 
@@ -87,7 +88,7 @@ npm run dev
 | 項目 | 驗收條件 |
 | --- | --- |
 | 模型載入 | `Breeze-ASR-25` 自動出現在並選取於快速設定 ASR 下拉選單。 |
-| 模型 key | 瀏覽器 DevTools、localStorage、Vite bundle 與 `/api/config` 均不能看到 key。 |
+| 模型 key | 瀏覽器 DevTools、localStorage、Web bundle 與 `/api/config` 均不能看到 key。 |
 | BFF 限制 | `/api/transcriptions` 僅接受受允許 origin、單次上傳最大 100 MB、每 IP 每分鐘最多 60 次。 |
 | 保存 | Web 經登入保護的 gateway 保存工作階段與音檔，IndexedDB 作本機後備，另可下載；沒有 Electron 原生資料夾保存功能。 |
 | 系統音訊 | 依瀏覽器的 tab/screen share 支援情況；不等同 Electron loopback。 |
