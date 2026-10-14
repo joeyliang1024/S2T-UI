@@ -8,7 +8,7 @@
 
 PromQL 使用同一族 _sum 的 increase[$__range]（跟隨時間選擇器），分母是全部步驟之和；query 為 instant，沒有樣本時 No data，不回填虛構比例。圖例使用中文名稱與百分比，5 秒刷新。沿用 VAD／雙 RAF 的語音起點和呈現估計限制。
 
-驗證：純函式測試時間守恆、拒絕無起點／倒序／過期、server family 與未知 stage；TypeScript；八個 Chrome 假麥克風實際收音，每個首字六個區間與端到端值一致。結果及截圖保存在 results/。圖表採 [Grafana Pie chart](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/visualizations/pie-chart/) 原生 donut。
+驗證：純函式測試時間守恆、拒絕無起點／倒序／過期、server family 與未知 stage；TypeScript；八個 Chrome 假麥克風實際收音，每個首字六個區間與端到端值一致。圖表採 [Grafana Pie chart](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/visualizations/pie-chart/) 原生 donut。
 
 修復 No data：分子按 stage 分組，分母為不帶 stage 的單一向量，PromQL 預設 label matching 得到空結果。分母已改 scalar(sum(...))，六個步驟比值才會返回。圖表改跟隨上方時間選擇器，方便無新收音時仍查看剛才的實驗結果；空的選擇區間仍維持 No data。首次瀏覽器測試期間 UI port-forward 的 SPDY 連線中斷，已恢復 forward 並延長假麥克風 WAV，重跑 8 個 Chrome 成功取得 24 筆完整樣本，逐筆六段之和與首字時間相等。Prometheus 包含首次測試的 8 筆，共 32 筆／每 stage，同族百分比精確加總 100%；targets 全數正常。
 

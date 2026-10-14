@@ -37,6 +37,14 @@ Browser microphone
 - Response：`{ "text": "..." }`。
 - 限制：每個來源 IP 每分鐘 60 次；不支援的 MIME 回傳 415，未支援的語言回傳 400。
 
+### `POST /api/translations`
+
+- Request body：`text`（上限 20,000 字元）、`sourceLanguage`（`auto`、`zh-TW`、`zh-CN`、`en-US`、`ja-JP`、`de-DE`）、`targetLanguage`（`zh-TW`、`en`、`ja`、`de`）、可選 `glossary`（上限 10,000 字元）、`format`（`text` 預設；`markdown` 要求模型保留標題／清單／表格／程式碼區塊結構）。
+- Headers：`content-type`、`authorization: Bearer <token>`、`x-s2t-idempotency-key`，可選 `x-s2t-model-id`。
+- Response：`{ "text": "..." }`。
+- 未支援的語言會退回 `zh-TW`／`en`；`temperature` 只有 admin 可傳入。字幕翻譯不帶 `format`；摘要翻譯（內容為 Markdown）帶 `format: "markdown"`，避免標題與清單被改寫成純文字。
+- 幂等：同一 `x-s2t-idempotency-key` 與相同 body（含 `format`）會命中同一份快取。
+
 ### 帳號模型 registry
 
 登入後可讀寫 `GET`／`POST /api/data/model-registry`，以版本號 CAS 保存 ASR、翻譯、摘要、講者分離與 Embedding 的名稱、endpoint、model ID、用途、能力與是否需要 key。模型 key 只可用 `POST /api/data/model-credentials/:modelId` 單向寫入，或以 `DELETE` 移除；讀取 registry 不會回傳 key。

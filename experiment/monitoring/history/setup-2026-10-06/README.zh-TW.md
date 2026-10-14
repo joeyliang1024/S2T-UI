@@ -20,7 +20,7 @@ Prometheus／kube-state-metrics 的網路政策只增加本 K3s API 位址／埠
 
 ## 目前實驗
 
-100 人、90 秒、ASR 400±150ms，每20次1200ms長尾；翻譯180±80ms，每25次800ms長尾：6000 組、12000 次模型請求、0 失敗、0 排程丟棄，peak pending 106。八個 Chrome 頁面在相同模型負載下以假麥克風週期聲音實際錄音：32 個語音開頭成功 paint，p50 1.6132s、p95 2.4094s、p99 3.1545s。這是模擬模型／聲音的延遲測試，未量測真實模型正確率。原始結果為 results/load-100.json、browser.json、browser-summary.json。
+100 人、90 秒、ASR 400±150ms，每20次1200ms長尾；翻譯180±80ms，每25次800ms長尾：6000 組、12000 次模型請求、0 失敗、0 排程丟棄，peak pending 106。八個 Chrome 頁面在相同模型負載下以假麥克風週期聲音實際錄音：32 個語音開頭成功 paint，p50 1.6132s、p95 2.4094s、p99 3.1545s。這是模擬模型／聲音的延遲測試，未量測真實模型正確率。
 
 Grafana 的分位數是 Prometheus histogram / rate 的 5 分鐘估計；與原始樣本 order-statistic 分位數不完全相同。首批指標有零基線，避免第一次 scrape 漏掉 first observation。累計樣本依目前 Pods 生命週期重置；不以兩個跨 Pod counter 的滾動比率宣稱成功率。
 
@@ -28,10 +28,10 @@ Redis 主要變數直接改為 REDIS_SENTINEL_NODES、REDIS_SERVICE_NAME、REDIS
 
 ## 重現
 
-python3 deploy/monitoring/generate.py 生成 stack / dashboard。建置 Dockerfile.web 的最新 s2t-stress:20261006-stage-share-v2 映像後（含後續階段占比增補），python3 deploy/monitoring/install-test.py 安裝監控，python3 deploy/monitoring/rename-app-redis.py 將既有隔離應用設定及映像原子切換到新名稱。監控 Secret 不納入版本控制。kubectl port-forward svc/grafana 13000:3000、svc/gateway 8790:8787 都要指定本測試 context / namespace。瀏覽器檔案使用本機 Chrome 與 Codex bundled Playwright；probe.cjs 在 load-client 執行逐一核對所有 PromQL 與 targets。
+python3 deploy/monitoring/generate.py 生成 stack / dashboard。建置 Dockerfile.web 的最新 s2t-stress:20261006-stage-share-v2 映像後（含後續階段占比增補），python3 deploy/monitoring/install-test.py 安裝監控，python3 deploy/monitoring/rename-app-redis.py 將既有隔離應用設定及映像原子切換到新名稱。監控 Secret 不納入版本控制。kubectl port-forward svc/grafana 13000:3000、svc/gateway 8790:8787 都要指定本測試 context / namespace。
 
 參考：[Prometheus Kubernetes SD](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)、[Grafana provisioning](https://grafana.com/docs/grafana/latest/administration/provisioning/)、[Redis exporter Sentinel](https://github.com/oliver006/redis_exporter)。
 
-改名初次 rollout 發現設定透過 envFrom Secret 注入，僅改 container env 不足，新 Pod 未 Ready，舊 Pod 繼續服務。已修正 rename-app-redis.py 同時遷移 envFrom Secret / ConfigMap，再將映像與 env 原子更新；舊鍵從 Secret 移除。load-before-secret-migration.json 只證明舊副本持續服務，不當成新名稱驗證。
+改名初次 rollout 發現設定透過 envFrom Secret 注入，僅改 container env 不足，新 Pod 未 Ready，舊 Pod 繼續服務。已修正 rename-app-redis.py 同時遷移 envFrom Secret / ConfigMap，再將映像與 env 原子更新；舊鍵從 Secret 移除。改名前的驗證只證明舊副本持續服務，不當成新名稱驗證。
 
-最終驗證：新 Secret／新映像四個 Gateway 全數 Ready，滾動期間 100 人再執行 6000 組／12000 請求，0 失敗、0 丟棄，peak pending 60（results/load-redis-secret-fixed.json）。Pod 內原生 Sentinel 探針確認舊 S2T_REDIS_* 變數完全不存在、default 使用者、省略 port→26379、6 次容量執行成功（redis-live.json）。最終八個 Chrome 再量 32 個首字樣本：p50 1.5275s、p95 2.3172s、p99 2.3798s；此輪後半段沒有背景 100 人負載，不與初輪視為完全相同負載條件。22 個 targets 全部 up，所有 dashboard 面板 PromQL 有資料、無查詢錯誤；原始 100 帳號音訊 SHA256／紀錄／聲紋完整性全通過。Chrome dashboard 無頁面錯誤，截圖 results/dashboard.png。
+最終驗證：新 Secret／新映像四個 Gateway 全數 Ready，滾動期間 100 人再執行 6000 組／12000 請求，0 失敗、0 丟棄，peak pending 60。Pod 內原生 Sentinel 探針確認舊 S2T_REDIS_* 變數完全不存在、default 使用者、省略 port→26379、6 次容量執行成功。最終八個 Chrome 再量 32 個首字樣本：p50 1.5275s、p95 2.3172s、p99 2.3798s；此輪後半段沒有背景 100 人負載，不與初輪視為完全相同負載條件。22 個 targets 全部 up，所有 dashboard 面板 PromQL 有資料、無查詢錯誤；原始 100 帳號音訊 SHA256／紀錄／聲紋完整性全通過。Chrome dashboard 無頁面錯誤。

@@ -35,14 +35,6 @@
 | 舊陣列的背景講者分離 | 正常排入 202，使用 mock 模型完成並保存安全版本 |
 | 原 100 帳號資料 | 音訊 SHA256、翻譯、完成工作與聲紋全部通過 |
 
-本地兩個 LocalConfigStore instance 的並行修復測試亦通過；真實 API 驗證使用隔離 PostgreSQL／MinIO。TypeScript、HTTP lifecycle smoke 通過。背景講者分離使用 namespace 內的模擬服務，未呼叫真實模型 API。
-
-## 原始證據
-
-- [修改前 API 結果](results/baseline.json)、最新修復與正常修改 (intermediate artifact removed)。
-- [音訊誤刪重現](results/audio-before.json)、[音訊保留及背景工作](results/audio-fixed.json)。
-- [100 帳號完整性](results/integrity-final.json)、results/local-smoke.txt、results/http-smoke.txt。
-
-probe.cjs／audio-probe.cjs 須在具有隔離 Storage 環境變數的 Gateway 容器內執行，每次建立專用帳號並在 finally 清理。baseline 會故意重現該專用帳號的資料覆寫／音訊刪除；請勿在正式環境執行。測試輸出沒有認證 token。
+本地兩個 LocalConfigStore instance 的並行修復測試亦通過；真實 API 驗證使用隔離 PostgreSQL／MinIO。TypeScript、HTTP lifecycle smoke 通過。背景講者分離使用 namespace 內的模擬服務，未呼叫真實模型 API。測試輸出沒有認證 token。
 
 目前隔離 K8s 使用 s2t-stress:20261006-legacy-history4。此輪驗證格式辨識與資料保護，不取代對特定使用者已損壞檔案／資料庫紀錄的根因調查。

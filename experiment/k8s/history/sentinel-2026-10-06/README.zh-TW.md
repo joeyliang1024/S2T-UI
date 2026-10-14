@@ -36,19 +36,11 @@
 
 另外暫停全部三個 Redis：受限 ASR 請求約 10 秒後回 **503**，模擬模型呼叫增加 **0**，沒有繞過共享協調。解凍後等待 readiness 恢復，再檢查 100 個帳號的音訊 SHA256、完成工作、翻譯及聲紋。
 
-第一次在解凍後立刻做檢查，7 次讀取仍因 Service 尚在恢復而 fetch failed；該結果保存在 integrity-during-recovery.json，不是資料毀損。最終檢查需等待 readiness；final-integrity.json 為穩定後結果。全部 Redis 同時不可用仍有服務中斷，不能宣稱此情境零中斷。
+第一次在解凍後立刻做檢查，7 次讀取仍因 Service 尚在恢復而 fetch failed，不是資料毀損。最終檢查需等待 readiness，以穩定後的完整性結果為準。全部 Redis 同時不可用仍有服務中斷，不能宣稱此情境零中斷。
 
-## 證據與重現
+## 證據與限制
 
-- [最終結果摘要](results/summary.json)、[全部 Redis 停止](results/total-redis-outage.json)、[恢復時間](results/total-outage-recovery.json)、[完整性](results/final-integrity.json)。
-- [重複命令去重](results/redis-replay-check.json)、results/sentinel-smoke.txt、scale-smoke.txt、typecheck.txt。
-- [最終部署快照](manifests/stack-final.json)；Secret、帳號與負載工具沿用前次隔離實驗，不含於這份快照。
-- baseline、fixed、final、fifo 各階段原始數據都保留，未隱藏中間失敗。
+- baseline、fixed、final、fifo 各階段的中間失敗都列入結果，未隱藏。
+- 部署的 Secret、帳號與負載工具沿用前次隔離實驗，不含於部署快照。
 
-既有測試叢集、load-client 暫存腳本及帳號仍保留時，先確認副本數與設定，再用新的名稱重跑：
-
-```sh
-sh experiment/k8s/history/sentinel-2026-10-06/run-failover.sh rerun-failover
-```
-
-failover.sh 只暫停隔離 context／namespace 的 Redis primary；以穩定 DNS 找 Pod，EXIT trap 保證解凍。日誌含選主時間、資料探針及 Sentinel quorum。此結果不包含真實 GPU 容量、多節點故障或 Pod crash 與 Redis 切換同時發生；Redis 非同步複寫仍不提供配額 exactly-once 保證，可靠資料與任務擁有權仍以 PostgreSQL 為準。
+此結果不包含真實 GPU 容量、多節點故障或 Pod crash 與 Redis 切換同時發生；Redis 非同步複寫仍不提供配額 exactly-once 保證，可靠資料與任務擁有權仍以 PostgreSQL 為準。

@@ -1,1 +1,0 @@
-PASS production save queue: intermediate saves remain pending, running progress stable, completed final commit acknowledged, unrelated records preserved, failures remain pending; no API calls

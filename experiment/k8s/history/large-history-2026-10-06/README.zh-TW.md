@@ -28,22 +28,13 @@
 
 混合流量：每人每 1.5 秒一組，ASR 600 ± 200 ms、翻譯 300 ± 100 ms，每 100 次插入 12 秒／3 秒慢回應。模型整組 P95 1,211 ms、P99 12,223 ms。負載程式沒有重試；此階段未另外擷取 mock 前後計數差值，因此不以此數據宣稱已量測實際 upstream 次數。
 
-每個大型 snapshot 透過 API 讀回做深度內容比對，再還原原本的帳號紀錄。混合測試後，原有 100 份音訊 SHA256、翻譯、完成工作與聲紋完整性全部通過。腳本帳號與 backup 只存 load-client /tmp，未推送認證 token。
+每個大型 snapshot 透過 API 讀回做深度內容比對，再還原原本的帳號紀錄。混合測試後，原有 100 份音訊 SHA256、翻譯、完成工作與聲紋完整性全部通過。測試帳號與 backup 只存於隔離的 load-client，未推送認證 token。
 
 實際 Docker Node runtime 亦驗證：plain 超限及 gzip 解壓超限皆 413，損壞 gzip／null 皆 400、未知編碼 415，而且帳號資料前後完全不變。另通過真 PostgreSQL／MinIO／Redis 的多 adapter 整合測試，涵蓋 CAS 首寫競態、工作 generation fencing、row-lock 等待逾期、共享配額、chunk ACK、組裝、讀取與清理。TypeScript、HTTP lifecycle smoke、client compression smoke 及 payload smoke 通過。
 
-## 證據、重現與限制
+## 證據與限制
 
-- [摘要](results/summary.json)、[原始失敗](results/baseline.json)、[100 人突發](results/burst.json)、[混合流量](results/mixed-models.json)。
-- [真實瀏覽器編輯](results/browser.json)、[錯誤回覆／資料不變](results/errors.json)、整合測試 (intermediate artifact removed)。
-- probe.cjs 使用額外模擬帳號；concurrent.cjs／burst.cjs 使用既有 100 帳號並還原原紀錄。測試資料是模擬逐字稿，模型服務也完全模擬，未呼叫真實模型 API。
-
-```sh
-kubectl --context colima-s2t-stress -n s2t-stress-20261005 exec load-client -- node /tmp/large-history-burst.cjs
-node experiment/k8s/history/large-history-2026-10-06/browser.cjs
-```
-
-重跑需要既有隔離測試叢集、load-client 中的帳號及腳本；browser.cjs 需要 Chrome、bundled Playwright、8790 port-forward，以及 probe 帳號。瀏覽器會修改該模擬帳號的一筆標題；原 100 個測試帳號已還原。請勿把 script 當作正式帳號資料搬移工具。
+- 額外探測使用模擬帳號，併發與突發測試使用既有 100 帳號並還原原紀錄。測試資料是模擬逐字稿，模型服務也完全模擬，未呼叫真實模型 API。
 
 目前 4 個 Gateway、1 個 audio-worker 使用 s2t-stress:20261006-large-history4，模型延遲恢復 ASR 400 ms／翻譯 180 ms。原服務 localhost:8787 及其儲存資料未修改。
 

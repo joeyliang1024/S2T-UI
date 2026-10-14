@@ -30,18 +30,15 @@
 
 100 個錄音流程是 **虛擬時鐘的前端模擬**，不代表 100 個實體麥克風或真實模型的辨識率。所有模型回應均模擬；另通過 fast／normal 的十分鐘字幕／翻譯回歸、VAD onset／silence、model-adapter smoke、TypeScript 與 Docker 正式 Web 建置。
 
-## 原始證據與重現
+## 證據與重跑
 
-- [原流程缺口](results/baseline.json)、[修正後完整 sample](results/fixed.json)。
-- [100 流程與極端負載檢查](results/backlog-smoke.txt)、[瀏覽器回應遺失](results/browser-retry.json)、[upstream 一次的計數證據](results/retry-upstream-proof.json)。
-- results/caption-regression.txt、model-adapter-smoke.txt、vad-smoke.txt、typecheck.txt、integrity.json。
+- 證據為修改前後的 sample 數量與 gap 計錄、100 流程與極端負載檢查，以及瀏覽器回應遺失時 upstream 只收到一次 ASR 的計數。
 
 ```sh
 node tests/smoke/caption-backlog-smoke-test.cjs
 node tests/smoke/caption-regression-test.cjs
-node experiment/captions/vad-2026-10-06/probe.cjs rerun
 ```
 
-browser-retry.cjs 需要隔離測試 K8s、8790 port-forward、本機 Chrome 和既有大型紀錄測試帳號。它在 Gateway 成功回覆後故意 abort 第一個瀏覽器請求；沒有呼叫真實 ASR API。計數前後快照需由 load-client /stats 另行取得，避免把 cached replay 當成兩次辨識。
+瀏覽器回應遺失測試需要隔離測試 K8s、8790 port-forward、本機 Chrome 和既有大型紀錄測試帳號。它在 Gateway 成功回覆後故意 abort 第一個瀏覽器請求；沒有呼叫真實 ASR API。計數前後快照需由 load-client /stats 另行取得，避免把 cached replay 當成兩次辨識。
 
 目前映像為 s2t-stress:20261006-vad-backlog2。此次證明送入模型的 PCM 順序與佇列處理；**不能保證真實 ASR 不漏字，亦未改成所有音量／噪聲都能偵測**。EnergyVad 的最短 onset、能量閾值和對噪聲的取捨仍存在，低音量或短於 onset 的語音需要後續 corpus／實際錄音驗證。完整錄音與即時字幕是不同保存流程，gap 會保留在字幕資料供檢查。

@@ -10,8 +10,8 @@
 
 模板在「設定 → 摘要模板」新增、編輯、刪除與保存。摘要頁只選擇及預覽已保存模板；「管理模板」直接進對應設定分類。修改保留原模板 id，空名稱不使畫面崩潰。Web 使用既有序列化 CAS 模板 API 保存，Electron 使用既有帳號設定。
 
-`browser-results.json` 為最後建置的真實 Chrome + 攔截假 API 測試：模板新增／編輯／重載、摘要失敗重試、舊中斷摘要恢復、刷新圖示提示，以及翻譯補救只呼叫翻譯，沒有 ASR 或 diarization 呼叫；page errors 為 0。
+最後建置的真實 Chrome + 攔截假 API 測試涵蓋：模板新增／編輯／重載、摘要失敗重試、舊中斷摘要恢復、刷新圖示提示，以及翻譯補救只呼叫翻譯，沒有 ASR 或 diarization 呼叫；page errors 為 0。
 
-`session-recovery-smoke-test.cjs` 與 `session-recovery-handlers-smoke-test.cjs` 直接驗證 production executor／handler，涵蓋 ASR 範圍、部分進度、翻譯、手動講者、備份 WAV、保存中間失敗。沒有真實模型或使用者資料呼叫。TypeScript、build、i18n、模板規則及字幕背景流程通過。
+`tests/smoke/session-recovery-smoke-test.cjs` 與 `tests/smoke/session-recovery-handlers-smoke-test.cjs` 直接驗證 production executor／handler，涵蓋 ASR 範圍、部分進度、翻譯、手動講者、備份 WAV、保存中間失敗。沒有真實模型或使用者資料呼叫。TypeScript、build、i18n、模板規則及字幕背景流程通過。
 
-8787 為使用者正式網頁入口，Docker 映像與容器同步更新，部署結果比對最終 bundle；原 storage 與模型掛載保留。K8s 隔離測試站維持至少雙 Gateway／雙 audio-worker／雙 ingress，使用假 API 做 100 人回歸；負載與 Pod 原始結果放在本目錄。未向 8787 注入假字幕或呼叫真實模型。
+8787 為使用者正式網頁入口，Docker 映像與容器同步更新，部署結果比對最終 bundle；原 storage 與模型掛載保留。K8s 隔離測試站維持至少雙 Gateway／雙 audio-worker／雙 ingress，使用假 API 做 100 人回歸。未向 8787 注入假字幕或呼叫真實模型。
