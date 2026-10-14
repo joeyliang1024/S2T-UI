@@ -40,8 +40,8 @@ export function SummaryWorkspace(props: Props): ReactElement {
   const systemSource = ({ 'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US', ja: 'ja-JP', de: 'de-DE' } as const)[resolveUiLanguage('system')]
   const activeTarget = translationTarget ?? resolveTranslationTarget(systemSource, settings.targetLanguage)
   const hasCurrentTranslation = Boolean(session?.summaryTranslation && session.summaryTranslationTargetLanguage === activeTarget)
-  const runTranslation = (target = activeTarget, replace = false): void => {
-    if (!session?.summary || session.summary === '正在產生摘要…' || props.generatingIds.includes(session.id) || (translating && !replace)) return
+  const runTranslation = (target = activeTarget): void => {
+    if (!session?.summary || session.summary === '正在產生摘要…' || props.generatingIds.includes(session.id) || translating) return
     const request = ++requestRef.current
     setTranslating(true)
     setTranslationError(null)
@@ -51,13 +51,17 @@ export function SummaryWorkspace(props: Props): ReactElement {
       })
       .finally(() => { if (requestRef.current === request) setTranslating(false) })
   }
+  // Translation only starts from an explicit button click, never on tab open
+  // or target-language change; switching the target supersedes any in-flight
+  // request so the trigger button appears immediately.
   const openTranslationTab = (): void => {
     setSummaryTab('translation')
-    if (!hasCurrentTranslation && !translationError) runTranslation()
   }
   const changeTranslationTarget = (value: string): void => {
+    requestRef.current += 1
+    setTranslating(false)
+    setTranslationError(null)
     setTranslationTarget(value)
-    runTranslation(value, true)
   }
   const activeText = summaryTab === 'translation' ? (hasCurrentTranslation && !translating && !translationError ? session?.summaryTranslation ?? '' : '') : session?.summary ?? ''
   return <section className="page-panel summary-workspace">
@@ -73,7 +77,7 @@ export function SummaryWorkspace(props: Props): ReactElement {
         {session?.summaryError && <p className="summary-translation-error" role="alert">{session.summaryError}</p>}
         <button className="primary" disabled={!session || !(session.transcript.trim() || makeTranscriptText(session.segments).trim()) || session.processingState === 'running' || props.generatingIds.includes(session.id)} onClick={() => session && void summarizeSession(session)}>{session && props.generatingIds.includes(session.id) ? ui('generating') : session?.summary ? ui('regenerateSummary') : ui('generateSummary')}</button>
       </section>
-      <section className="summary-result"><div className="summary-result-heading"><div><p className="eyebrow">{ui('formattedOutput').toUpperCase()}</p><h3>{session ? session.title : ui('notSelected')}</h3></div>{session?.summary && !props.generatingIds.includes(session.id) && session.summary !== '正在產生摘要…' && activeText && <div className="summary-actions"><button className="text-button" onClick={() => void copySummary(activeText)}>▣ {ui('copy')}</button><button className="text-button" onClick={() => openSummaryDownload(activeText, session.title)}>↓ {ui('download')}</button></div>}</div>{session?.summary === '正在產生摘要…' ? <div className="empty compact"><h2>{ui('summaryGeneratingTitle')}</h2><p>{ui('summaryGeneratingHint')}</p></div> : session?.summary ? <><div className="summary-tabs" role="tablist"><button type="button" role="tab" aria-selected={summaryTab === 'original'} onClick={() => setSummaryTab('original')}>{ui('sourceText')}</button><button type="button" role="tab" disabled={Boolean(session && props.generatingIds.includes(session.id))} aria-selected={summaryTab === 'translation'} onClick={openTranslationTab}>{ui('translation')}</button>{summaryTab === 'translation' && <label className="summary-target-language">{ui('translationLanguage')}<select value={activeTarget} onChange={(event) => changeTranslationTarget(event.target.value)}>{supportedTargetLanguages.map((language) => <option key={language} value={language}>{languageName(language)}</option>)}</select></label>}</div>{summaryTab === 'original' ? <MarkdownSummary text={session.summary} /> : translating ? <p className="summary-translation-status" role="status">{ui('summaryTranslating')}</p> : translationError ? <p className="summary-translation-error" role="alert">{translationError} <button className="text-button" onClick={() => { setTranslationError(null); runTranslation() }}>{ui('retryTranslation')}</button></p> : hasCurrentTranslation ? <MarkdownSummary text={session.summaryTranslation ?? ''} /> : <button className="text-button" onClick={() => runTranslation()}>{ui('retryTranslation')}</button>}</> : <div className="empty compact"><h2>{ui('preparingSummary')}</h2><p>{ui('summaryReadyHint')}</p></div>}</section>
+      <section className="summary-result"><div className="summary-result-heading"><div><p className="eyebrow">{ui('formattedOutput').toUpperCase()}</p><h3>{session ? session.title : ui('notSelected')}</h3></div>{session?.summary && !props.generatingIds.includes(session.id) && session.summary !== '正在產生摘要…' && activeText && <div className="summary-actions"><button className="text-button" onClick={() => void copySummary(activeText)}>▣ {ui('copy')}</button><button className="text-button" onClick={() => openSummaryDownload(activeText, session.title)}>↓ {ui('download')}</button></div>}</div>{session?.summary === '正在產生摘要…' ? <div className="empty compact"><h2>{ui('summaryGeneratingTitle')}</h2><p>{ui('summaryGeneratingHint')}</p></div> : session?.summary ? <><div className="summary-tabs" role="tablist"><button type="button" role="tab" aria-selected={summaryTab === 'original'} onClick={() => setSummaryTab('original')}>{ui('sourceText')}</button><button type="button" role="tab" disabled={Boolean(session && props.generatingIds.includes(session.id))} aria-selected={summaryTab === 'translation'} onClick={openTranslationTab}>{ui('translation')}</button>{summaryTab === 'translation' && <label className="summary-target-language">{ui('translationLanguage')}<select value={activeTarget} onChange={(event) => changeTranslationTarget(event.target.value)}>{supportedTargetLanguages.map((language) => <option key={language} value={language}>{languageName(language)}</option>)}</select></label>}</div>{summaryTab === 'original' ? <MarkdownSummary text={session.summary} /> : translating ? <p className="summary-translation-status" role="status">{ui('summaryTranslating')}</p> : translationError ? <p className="summary-translation-error" role="alert">{translationError} <button className="text-button" onClick={() => { setTranslationError(null); runTranslation() }}>{ui('retryTranslation')}</button></p> : hasCurrentTranslation ? <MarkdownSummary text={session.summaryTranslation ?? ''} /> : <button className="text-button" onClick={() => runTranslation()}>{ui('translateSummary')}</button>}</> : <div className="empty compact"><h2>{ui('preparingSummary')}</h2><p>{ui('summaryReadyHint')}</p></div>}</section>
     </div>
   </section>
 }

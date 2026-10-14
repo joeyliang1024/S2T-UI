@@ -41,6 +41,11 @@ const flush = async () => { await Promise.resolve(); await Promise.resolve(); aw
   render()
   assert.equal(button('regenerateSummary').props.disabled, false, 'a translation failure cannot disable summary generation')
   button('translation').props.onClick(); render()
+  // Switching tabs or languages must not fire the request; an explicit
+  // button triggers the translation instead.
+  assert.equal(calls.length, 0, 'opening the tab does not auto-translate')
+  assert.ok(button('translateSummary'), 'an explicit translate button is shown without a translation')
+  button('translateSummary').props.onClick(); render()
   assert.equal(calls.length, 1)
   assert.ok(nodes(tree).some(node => node.props?.role === 'status' && node.props.children === 'summaryTranslating'))
   calls[0].reject(Error('timeout')); await flush()
@@ -48,6 +53,8 @@ const flush = async () => { await Promise.resolve(); await Promise.resolve(); aw
   button('retryTranslation').props.onClick(); render()
   assert.equal(calls.length, 2)
   targetSelect().props.onChange({ target: { value: 'de' } }); render()
+  assert.equal(calls.length, 2, 'changing the target language does not auto-translate')
+  button('translateSummary').props.onClick(); render()
   assert.equal(calls.length, 3)
   calls[1].reject(Error('stale timeout')); await flush()
   assert.ok(nodes(tree).some(node => node.props?.role === 'status' && node.props.children === 'summaryTranslating'), 'old failure must not clear new loading state')
@@ -57,7 +64,10 @@ const flush = async () => { await Promise.resolve(); await Promise.resolve(); aw
   assert.ok(!nodes(tree).some(node => node.props?.role === 'alert'), 'old session cannot set the new session error')
   props.sessions[1] = { ...props.sessions[1], summaryTranslation: 'Old German', summaryTranslationTargetLanguage: 'de' }
   render(); button('translation').props.onClick(); render()
-  assert.equal(calls.length, 4, 'cached translation for a different language must be translated again')
+  // The cached translation is for another language: show the button, wait.
+  assert.equal(calls.length, 3, 'a cached translation for a different language waits for the explicit button')
+  button('translateSummary').props.onClick(); render()
+  assert.equal(calls.length, 4)
   calls[3].resolve(); await flush()
-  console.log('PASS summary workspace shows failures/retry, guards target and session races, validates cached language and permits summaries after translation failure')
+  console.log('PASS summary workspace translates only on explicit click, keeps failure/retry, guards target and session races, validates cached language and permits summaries after translation failure')
 })().catch(error => { console.error(error); process.exitCode = 1 })
