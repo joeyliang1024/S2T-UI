@@ -1,8 +1,8 @@
 // Real React UI with isolated in-memory API fixtures; never calls model services.
 const assert = require('node:assert/strict'), http = require('node:http'), fs = require('node:fs'), path = require('node:path')
-const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')
+const { chromium, browserOptions } = require('../helpers/browser.cjs')
 ;(async () => {
-  const root = path.resolve('out/renderer')
+  const root = path.resolve('out/web')
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://test'); let file = path.join(root, url.pathname)
     if (!file.startsWith(root + path.sep)) { res.writeHead(403); return res.end() }
@@ -11,7 +11,7 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`
-  const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
+  const browser = await chromium.launch(browserOptions())
   const sessions = [
     { id: 'failed', title: '', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: '', audioKey: 'fixture', processingState: 'failed', processingError: 'Translation fixture failure', diarizationJobId: 'old-failed-job', processingFailures: ['translation'], segments: [{ id: 'segment', status: 'final', revision: 1, startMs: 0, endMs: 1000, sourceText: 'Meeting decision: ship tomorrow.', translationStatus: 'failed' }] },
     { id: 'legacy', title: 'Legacy failure', createdAt: '2026-10-08T00:00:00Z', durationMs: 1000, source: 'fixture', transcript: 'Legacy transcript', audioKey: 'legacy', processingState: 'failed', processingError: 'Legacy error', segments: [] },
@@ -80,7 +80,7 @@ const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-pr
     await selects.nth(0).selectOption('failed')
     assert.equal(await page.locator('.summary-setup button.primary').isEnabled(), true)
     await page.locator('.summary-setup button.primary').click()
-    await page.getByRole('alert').filter({ hasText: 'Mock summary unavailable' }).waitFor()
+    await page.getByRole('alert').filter({ hasText: 'Mock summary unavailable' }).waitFor().catch(async error => { console.error(JSON.stringify({ calls, errors, body: await page.locator('body').innerText() })); throw error })
     assert.equal(await page.locator('.summary-setup button.primary').isEnabled(), true)
     failSummary = false; await page.locator('.summary-setup button.primary').click()
     await page.getByRole('heading', { name: 'Recovered summary', exact: true }).waitFor()

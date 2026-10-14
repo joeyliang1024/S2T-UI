@@ -1,7 +1,7 @@
-import { validateAdminParameters } from '../../../../../server/admin-parameters.cjs'
+import { validateAdminParameters } from '../../../../shared/validation/admin-parameters.cjs'
 import { type Settings, type ModelCapabilities, type ModelProfile, type TextModelProfile, type SummaryTemplate } from '../types'
 import { activeTranslate, supportedUiLanguages } from '../i18n'
-import { normalizeResponseSpeed } from '../../features/capture/vad'
+import { normalizeResponseSpeed } from '../../../../shared/contracts/response-speed'
 
 export const modelEndpoint = (endpoint: string, kind: ModelProfile['kind']): string => {
   try {

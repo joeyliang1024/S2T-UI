@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict'), { buildSync } = require('esbuild')
-const result = buildSync({entryPoints:['src/renderer/src/features/app/services/session-recovery.ts'],bundle:true,format:'cjs',platform:'node',write:false})
+const result = buildSync({entryPoints:['src/renderer/src/features/sessions/domain/recovery.ts'],bundle:true,format:'cjs',platform:'node',write:false})
 const m={exports:{}};new Function('module','exports',result.outputFiles[0].text)(m,m.exports)
 const {recoverSession,sessionRecoveryStages}=m.exports
 const base={title:'test',id:'test',processingState:'failed',processingError:'original',transcript:'keep',segments:[{id:'good',status:'final',sourceText:'keep',translatedText:'kept',translationStatus:'completed'},{id:'bad',status:'final',sourceText:'retry',translationStatus:'failed'}]}
@@ -16,7 +16,15 @@ const base={title:'test',id:'test',processingState:'failed',processingError:'ori
  await assert.rejects(()=>recoverSession({...base,segments:[],processingFailures:[]},handlers,()=>{}),/unknown-stage/)
  const worker=require('../../server/diarization-session.cjs')
  const source={...base,audioKey:'a',processingError:undefined,processingFailures:['asr']};assert.equal(worker.finalizeDiarizationSession(source,{sessionId:'test',audioKey:'a'},[]).processingState,'failed')
- const mergeCode=buildSync({entryPoints:['src/renderer/src/features/app/services/session-merge.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text;const mm={exports:{}};new Function('module','exports','require',mergeCode)(mm,mm.exports,require)
+ const mergeCode=buildSync({entryPoints:['src/renderer/src/features/sessions/domain/session-merge.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text;const mm={exports:{}};new Function('module','exports','require',mergeCode)(mm,mm.exports,require)
  const active={...base,processingState:'running',processingStage:'diarization',processingToken:'retry',diarizationJobId:undefined};assert.equal(mm.exports.mergeSessions([active],[{...active,processingState:'failed',processingStage:undefined}])[0].processingState,'running');assert.equal(mm.exports.recoverStaleProcessing([active],{activeRecoveries:new Set(['test'])})[0].processingState,'running')
+ const interrupted=mm.exports.recoverStaleProcessing([{...active,processingStage:'translation',diarizationJobId:'old-completed-job',processingFailures:undefined}],{durableJobs:true})[0]
+ assert.equal(interrupted.processingState,'failed','an old diarization ID must not lock a translation in running after reload')
+ assert.deepEqual(sessionRecoveryStages(interrupted),['translation'])
+ const both=mm.exports.recoverStaleProcessing([{...active,processingStage:'translation',processingFailures:['asr']}])[0]
+ assert.deepEqual(sessionRecoveryStages({...both,segments:[]}),['asr','translation'],'reload preserves both earlier failures and the interrupted stage')
+ const recovered=await recoverSession(interrupted,handlers,()=>{})
+ assert.equal(recovered.processingState,'completed');assert.equal(recovered.transcript,'keep');assert.equal(recovered.processingError,undefined)
+ assert.equal(mm.exports.recoverStaleProcessing([{...active,diarizationJobId:'active-job'}],{durableJobs:true})[0].processingState,'running','a real background diarization remains active')
  console.log('PASS only failed stages retry, successful work preserved, partial retry progress survives failure, unknown legacy failures do not rerun all work, completed diarization cannot hide ASR failures')
 })().catch(e=>{console.error(e);process.exitCode=1})

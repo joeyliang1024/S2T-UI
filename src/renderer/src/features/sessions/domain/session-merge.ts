@@ -1,0 +1,89 @@
+import type { SavedSession } from '../../../shared/types'
+import { activeTranslate } from '../../../shared/i18n/index'
+
+const conflictBaseId = (id: string): string => id.replace(/(?:-remote-[a-f0-9]+)+$/i, '')
+
+/**
+ * Keep one canonical record for a recording. `primary` is the authoritative
+ * source (remote storage on web, local storage in Electron); fallback entries
+ * fill only records it does not contain. Old conflict-copy IDs collapse back
+ * onto their original recording instead of creating a second history item.
+ */
+export const mergeSessions = (primary: SavedSession[], fallback: SavedSession[]): SavedSession[] => {
+  const entries = new Map<string, SavedSession>()
+  for (const session of [...primary, ...fallback]) {
+    const id = conflictBaseId(session.id)
+    const previous = entries.get(id)
+    if (previous) {
+      // A server-owned final speaker pass must not be overwritten by a stale
+      // running snapshot on a CAS rebase. A new capture token remains authoritative.
+      if (previous.diarizationJobId && previous.processingState === 'running' && previous.processingStage === 'diarization'
+        && previous.processingToken && previous.processingToken === session.processingToken
+        && (session.processingState === 'completed' || session.processingState === 'failed' && !session.processingStage)) entries.set(id, { ...session, id })
+      continue
+    }
+    // Do not retain historical UI-only conflict labels after migrating.
+    entries.set(id, { ...session, id, title: (session.title || '').replace(/（遠端衝突版本）+$/u, '') })
+  }
+  return [...entries.values()].sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+}
+
+/**
+ * A record left in `running` with nobody able to finish it is worse than a
+ * visible failure: continue, summarize, quality-correct and load are all gated
+ * on that state, so the record turns unactionable for the rest of the session
+ * — and nothing resumes it after a restart either. Only `delete` stayed open,
+ * which is a poor consolation prize for a record the user did not break.
+ *
+ * Call this once per load/merge, never on a save path:
+ * - `finishing` names the record this page is actively processing right now, so
+ *   a provisional `running` written by stopCapture is never demoted.
+ * - on web, `durableJobs` keeps any record that still carries a job id waiting
+ *   for the poller's answer instead of guessing at it.
+ */
+export const recoverStaleProcessing = (
+  sessions: SavedSession[],
+  options: { finishing?: { id: string; token: string } | null; durableJobs?: boolean; activeRecoveries?: ReadonlySet<string> } = {}
+): SavedSession[] => {
+  const { finishing = null, durableJobs = false } = options
+  let recovered = false
+  const next = sessions.map((session) => {
+    if (session.processingState !== 'running' || options.activeRecoveries?.has(session.id)) return session
+    if (finishing && finishing.id === session.id && finishing.token === session.processingToken) return session
+    if (durableJobs && session.diarizationJobId && session.processingStage === 'diarization') return session
+    recovered = true
+    return { ...session, processingState: 'failed' as const, processingFailures: [...new Set([...(session.processingFailures ?? []), ...(session.processingStage ? [session.processingStage] : [])])], processingStage: undefined, processingError: activeTranslate('svcInterruptedProcessing') }
+  })
+  // Same reference when nothing changed: setSessions must not schedule a save
+  // (or a re-render) just because the app was opened.
+  return recovered ? next : sessions
+}
+
+/** A conflicting edit stays local and must never silently overwrite remote data. */
+export class SessionMergeConflictError extends Error {
+  constructor(readonly sessionIds: string[]) {
+    super(activeTranslate('svcSessionSyncConflict').replace('{ids}', sessionIds.join(', ')))
+    this.name = 'SessionMergeConflictError'
+  }
+}
+
+const stableValue = (value: unknown): string => JSON.stringify(value, (_key, item: unknown) =>
+  item && typeof item === 'object' && !Array.isArray(item)
+    ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item) ?? 'undefined'
+
+/** Three-way record merge. Missing baseline records encode explicit deletes. */
+export const rebaseSessions = (baseline: SavedSession[], local: SavedSession[], remote: SavedSession[]): SavedSession[] => {
+  const index = (items: SavedSession[]) => new Map(items.map(item => [item.id, item]))
+  const base = index(baseline), ours = index(local), theirs = index(remote)
+  const result: SavedSession[] = [], conflicts: string[] = []
+  for (const id of new Set([...base.keys(), ...ours.keys(), ...theirs.keys()])) {
+    const before = base.get(id), left = ours.get(id), right = theirs.get(id)
+    const b = stableValue(before), l = stableValue(left), t = stableValue(right)
+    const chosen = l === t ? left : l === b ? right : t === b ? left : undefined
+    if (l !== t && l !== b && t !== b) conflicts.push(id)
+    else if (chosen) result.push(chosen)
+  }
+  if (conflicts.length) throw new SessionMergeConflictError(conflicts)
+  result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return result.length === local.length && result.every((entry, i) => entry === local[i]) ? local : result
+}

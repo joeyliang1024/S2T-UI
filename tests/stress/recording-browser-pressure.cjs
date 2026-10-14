@@ -3,7 +3,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:
 const {createServer}=require('node:http')
 const {build}=require('esbuild')
 const ts=require('typescript')
-const {chromium}=require('/Users/liangzhiquan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')
+const { chromium, browserOptions } = require('../helpers/browser.cjs')
 const option=(name,defaultValue)=>{const at=process.argv.indexOf(name);return at<0?defaultValue:process.argv[at+1]}
 const duration=Number(option('--seconds','600'))*1000
 const reportPath=path.resolve(option('--report','experiment/evaluation-reports/recording-browser-pressure.json'))
@@ -40,7 +40,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
   })
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)})
   const origin=`http://127.0.0.1:${server.address().port}`
-  browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows','--enable-precise-memory-info']})
+  browser=await chromium.launch(browserOptions({args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows','--enable-precise-memory-info']}))
   const short=Math.min(duration,180000)
   const configs=[
    {name:'normal-48k',sampleRate:48000,durationMs:duration,delay:'none',expectPauses:false},

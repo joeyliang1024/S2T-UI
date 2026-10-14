@@ -4,7 +4,7 @@
 
 Grafana 使用 `gateway-acceptance` 的独立驗收資料：三個 NT（驗收使用者甲、乙、丙）、兩個部門（驗收研發部、驗收營運部），持續产生不同 ASR／翻譯／摘要用量、4xx 與未回報 token 的情境。實際 request 走隔離 gateway 的 HTTP 路徑，所有模型為同容器 mock；字幕延遲示範資料為合成樣本，不代表真實模型速度。未在真實 8787 帳號或資料中灌入示範流量。
 
-`verify-dashboard.cjs` 透過 Grafana datasource 實際查詢 Prometheus，確認來源可用、三個 NT、兩個部門、token／音訊量非零及各部門 request 加總等於各 NT request 加總；再以 Chrome 確認中文表格與圖表。結果存於 `result.json`，截圖為 `dashboard-top.png`、`dashboard-usage.png`、`dashboard-departments.png`。
+驗證透過 Grafana datasource 實際查詢 Prometheus，確認來源可用、三個 NT、兩個部門、token／音訊量非零及各部門 request 加總等於各 NT request 加總；再以 Chrome 確認中文表格與圖表。
 
 測試通過：跨切頁／隱藏分頁回歸、真實 Chrome + 隔離 gateway 呈現、chunk 起點、六階段時間守恆、遙測背壓、NT／部門標籤與用量、雙帳號 gateway request／token／音訊與快取重播、登入／登出／cookie 相容性、TypeScript 檢查及 Web production build。原版 caption 計時程式對新增回歸情境會失敗。
 

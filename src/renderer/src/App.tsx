@@ -1,16 +1,14 @@
-import type { ReactElement } from 'react'
-import { useAppController } from './features/app/hooks/useAppController'
-import { AppView } from './features/app/views/AppView'
+import { lazy, Suspense, type ReactElement } from 'react'
 import { useAuth } from './features/auth/hooks/useAuth'
 import { AuthGate } from './features/auth/views/AuthGate'
-import type { AuthUser } from './features/auth/services/auth-client'
+import { authTranslate, resolveUiLanguage } from './shared/i18n'
 
-const AuthenticatedApp = ({ user, onLogout }: { user: AuthUser; onLogout: () => Promise<void> }): ReactElement => {
-  const controller = useAppController(user.id, user.role)
-  return <AppView controller={controller} user={user} onLogout={onLogout} />
-}
+const AuthenticatedApp = lazy(() => import('./features/app/AuthenticatedApp'))
 
 export default function App(): ReactElement {
   const auth = useAuth()
-  return auth.status === 'signed-in' && auth.user ? <AuthenticatedApp user={auth.user} onLogout={auth.logout} /> : <AuthGate auth={auth} />
+  if (auth.status !== 'signed-in' || !auth.user) return <AuthGate auth={auth} />
+  return <Suspense fallback={<main className="auth-screen"><p role="status">{authTranslate(resolveUiLanguage('system'), 'checking')}</p></main>}>
+    <AuthenticatedApp key={auth.user.id} user={auth.user} onLogout={auth.logout} />
+  </Suspense>
 }

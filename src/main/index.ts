@@ -1,5 +1,8 @@
+import { finalizeRecording, releaseRecordings } from './recording/finalize-recording'
+import { discardRecoverableRecording, recoverRecordings, type RecoverableRecording } from './recording/recover-recordings'
+import type { DesktopBridge } from '../shared/contracts/desktop'
 import { normalizeResponseSpeed, type ResponseSpeed } from '../shared/response-speed'
-import { validateAdminParameters, type AdminParameters } from '../../server/admin-parameters.cjs'
+import { validateAdminParameters, type AdminParameters } from '../shared/validation/admin-parameters.cjs'
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
 import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -7,7 +10,7 @@ import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { createRequire } from 'node:module'
 import { createWriteStream, type WriteStream } from 'node:fs'
-import { copyFile, mkdir, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { is } from '@electron-toolkit/utils'
 import OpenAI, { toFile } from 'openai'
 import { config as loadDotenv } from 'dotenv'
@@ -39,8 +42,7 @@ const requireDesktopUser = (event: { sender: { id: number } }): string => {
   if (!userId) throw new Error('請先完成登入驗證')
   return userId
 }
-type PcmRecording = { userId: string; path: string; stream: WriteStream; sampleRate: number; bytesWritten: number; writes: Promise<void> }
-type RecoverableRecording = { id: string; path: string; sampleRate: number; createdAt: string; state: 'active' | 'finished' }
+type PcmRecording = { senderId: number; userId: string; path: string; stream: WriteStream; sampleRate: number; bytesWritten: number; writes: Promise<void> }
 const pcmRecordings = new Map<string, PcmRecording>()
 const completedRecordings = new Set<string>()
 const availableAudioPaths = new Map<string, string>()
@@ -57,7 +59,10 @@ const readRecoveryManifest = async (userId: string): Promise<RecoverableRecordin
       return typeof entry.id === 'string' && typeof entry.path === 'string' && Number.isFinite(entry.sampleRate) &&
         typeof entry.createdAt === 'string' && (entry.state === 'active' || entry.state === 'finished') ? [entry as RecoverableRecording] : []
     }) : []
-  } catch { return [] }
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') return []
+    throw error
+  }
 }
 const writeRecoveryManifest = async (userId: string, entries: RecoverableRecording[]): Promise<void> => {
   const file = recoveryManifestPath(userId)
@@ -95,11 +100,7 @@ const wavHeader = (sampleRate: number, dataBytes: number): Buffer => {
   return header
 }
 
-const waitForStreamEnd = (stream: WriteStream): Promise<void> => new Promise((resolve, reject) => {
-  stream.once('finish', resolve)
-  stream.once('error', reject)
-  stream.end()
-})
+
 
 const secretStorePath = (userId: string): string => join(accountDirectory(userId), 'model-secrets.json')
 const modelConfigPath = (userId: string): string => join(accountDirectory(userId), 'models.json')
@@ -237,6 +238,14 @@ const showCaptionWindow = (): void => {
   loadRenderer(captionWindow, '#floating')
 }
 
+const releaseSenderRecordings = (senderId: number): Promise<void> => releaseRecordings(pcmRecordings, recording => recording.senderId === senderId, async (id, recording) => {
+  await finalizeRecording(recording, { header: wavHeader, committed: async () => {
+    completedRecordings.add(recording.path)
+    availableAudioPaths.set(recording.path, recording.userId)
+    await updateRecoveryManifest(recording.userId, entries => entries.map(entry => entry.id === id ? { ...entry, state: 'finished' } : entry))
+  } })
+}).catch(error => { console.warn('Recording release retained recovery sources', error instanceof Error ? error.message : 'unknown failure') })
+
 const createWindow = (): void => {
   const window = new BrowserWindow({
     width: 1280,
@@ -258,6 +267,9 @@ const createWindow = (): void => {
 }
 
 app.whenReady().then(() => {
+  ipcMain.on('app:system-languages', (event) => {
+    event.returnValue = app.getPreferredSystemLanguages()
+  })
   const textRequestControllers = new Map<string, AbortController>()
   // `media` alone does not grant getDisplayMedia in Electron. Display capture
   // must be permitted separately or the Renderer never receives the audio
@@ -293,14 +305,18 @@ app.whenReady().then(() => {
     const response = await fetch(new URL('/api/auth/session', `${gatewayUrl()}/`), { headers: { authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15_000) })
     const payload = await response.json().catch(() => null) as { user?: { id?: unknown; role?: unknown }; error?: string } | null
     if (!response.ok || !validUserId(payload?.user?.id)) throw new Error(payload?.error || '無法驗證登入身分')
+    if (desktopUsers.get(event.sender.id) !== payload.user.id) {
+      desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id)
+      await releaseSenderRecordings(event.sender.id)
+    }
     desktopUsers.set(event.sender.id, payload.user.id)
     desktopRoles.set(event.sender.id, payload.user.role === 'admin' ? 'admin' : 'user')
-    event.sender.once('destroyed', () => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id) })
+    event.sender.once('destroyed', () => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id); void releaseSenderRecordings(event.sender.id) })
     return { userId: payload.user.id }
   })
-  ipcMain.handle('gateway:clear-session', (event) => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id) })
+  ipcMain.handle('gateway:clear-session', async event => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id); await releaseSenderRecordings(event.sender.id) })
 
-  ipcMain.handle('model:save-api-key', async (event, input: { profileId: string; apiKey: string }) => {
+  ipcMain.handle('model:save-api-key', async (event, input: { profileId: Parameters<DesktopBridge['saveModelApiKey']>[0]; apiKey: Parameters<DesktopBridge['saveModelApiKey']>[1] }) => {
     if (!validSecretId(input.profileId) || typeof input.apiKey !== 'string' || input.apiKey.trim().length < 8) throw new Error('無效的 API key 設定')
     await saveSecret(requireDesktopUser(event), input.profileId, input.apiKey.trim())
   })
@@ -342,7 +358,7 @@ app.whenReady().then(() => {
     await writeFile(modelConfigPath(userId), JSON.stringify(sanitized, null, 2), { mode: 0o600 })
     return { saved: true }
   })
-  ipcMain.handle('model:transcribe', async (event, input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => {
+  ipcMain.handle('model:transcribe', async (event, input: Parameters<DesktopBridge['transcribeAudioChunk']>[0]) => {
     if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 100 * 1024 * 1024) throw new Error('無效的音訊分段')
     const apiKey = environmentKey(input.profileId) || (await readSecrets(requireDesktopUser(event)))[input.profileId]
     if (!apiKey && input.requiresApiKey !== false) throw new Error('請先在設定中儲存此模型的 API key')
@@ -378,14 +394,14 @@ app.whenReady().then(() => {
       throw new Error(error instanceof Error ? `模型轉錄失敗：${error.message}` : '模型轉錄失敗')
     }
   })
-  ipcMain.handle('model:complete', async (event, input: { requestId?: string; profileId: string; endpoint: string; model: string; temperature?: number; messages: Array<{ role: 'system' | 'user'; content: string }> }) => {
+  ipcMain.handle('model:complete', async (event, input: Parameters<DesktopBridge['completeText']>[0]) => {
     if (input.temperature !== undefined && (desktopRoles.get(event.sender.id) !== 'admin' || !Number.isFinite(input.temperature) || input.temperature < 0 || input.temperature > 2)) throw new Error('只有 admin 可調整有效的翻譯參數')
     if (!validSecretId(input.profileId) || !Array.isArray(input.messages) || !input.model.trim()) throw new Error('無效的文字模型請求')
     const apiKey = environmentKey(input.profileId) || (await readSecrets(requireDesktopUser(event)))[input.profileId]
-    if (!apiKey) throw new Error('請先在設定中儲存此服務的 API key')
+    if (!apiKey && input.requiresApiKey !== false) throw new Error('請先在設定中儲存此服務的 API key')
     let baseURL: string
     try { baseURL = openAiChatBaseUrl(input.endpoint) } catch { throw new Error('無效的文字 API 位址') }
-    const client = new OpenAI({ apiKey, baseURL, timeout: 30_000, maxRetries: 1 })
+    const client = new OpenAI({ apiKey: apiKey || 'local-no-key', baseURL, timeout: 30_000, maxRetries: 1 })
     const requestKey = typeof input.requestId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(input.requestId) ? `${event.sender.id}:${input.requestId}` : ''
     const controller = requestKey ? new AbortController() : undefined
     if (requestKey && controller) textRequestControllers.set(requestKey, controller)
@@ -406,7 +422,7 @@ app.whenReady().then(() => {
   // the sliding-window stabilizer can hold a speaker's name across windows.
   // Full-track passes never set it: they would pay the same cost over the whole
   // recording for a signal only the preview reads.
-  ipcMain.handle('model:diarize', async (event, input: { endpoint: string; model: string; audio: ArrayBuffer; embeddings?: boolean }) => {
+  ipcMain.handle('model:diarize', async (event, input: Parameters<DesktopBridge['diarizeAudio']>[0]) => {
     if (!(input.audio instanceof ArrayBuffer) || !input.audio.byteLength || input.audio.byteLength > 500 * 1024 * 1024) throw new Error('無效的講者分離音檔')
     if (input.endpoint === 's2t-local://diarization') {
       requireDesktopUser(event)
@@ -451,7 +467,7 @@ app.whenReady().then(() => {
     const id = randomUUID()
     const path = join(directory, `${id}.wav.part`)
     const stream = createWriteStream(path)
-    const recording: PcmRecording = { userId, path, stream, sampleRate, bytesWritten: 0, writes: Promise.resolve() }
+    const recording: PcmRecording = { senderId: event.sender.id, userId, path, stream, sampleRate, bytesWritten: 0, writes: Promise.resolve() }
     recording.writes = new Promise<void>((resolve, reject) => {
       stream.once('error', reject)
       stream.write(wavHeader(sampleRate, 0), (error) => error ? reject(error) : resolve())
@@ -480,21 +496,12 @@ app.whenReady().then(() => {
     const recording = pcmRecordings.get(id)
     if (!recording || recording.userId !== requireDesktopUser(event)) throw new Error('找不到進行中的錄音')
     try {
-      await recording.writes
-      await waitForStreamEnd(recording.stream)
-      const file = await open(recording.path, 'r+')
-      try {
-        await file.write(wavHeader(recording.sampleRate, recording.bytesWritten), 0)
-      } finally {
-        await file.close()
-      }
-      completedRecordings.add(recording.path)
-      availableAudioPaths.set(recording.path, recording.userId)
-      await updateRecoveryManifest(recording.userId, (entries) => entries.map((entry) => entry.id === id ? { ...entry, state: 'finished' } : entry))
-      return { audioPath: recording.path }
-    } finally {
-      pcmRecordings.delete(id)
-    }
+      return await finalizeRecording(recording, { header: wavHeader, committed: async () => {
+        completedRecordings.add(recording.path)
+        availableAudioPaths.set(recording.path, recording.userId)
+        await updateRecoveryManifest(recording.userId, entries => entries.map(entry => entry.id === id ? { ...entry, state: 'finished' } : entry))
+      } })
+    } finally { pcmRecordings.delete(id) }
   })
 
   ipcMain.handle('recording:abort', async (event, id: string) => {
@@ -536,9 +543,7 @@ const transcodeToM4a = async (audio: Buffer): Promise<ArrayBuffer> => {
   }
 }
 
-  ipcMain.handle('session:save', async (event, input: {
-    name: string; audio?: ArrayBuffer; recordingPath?: string; overwriteAudioPath?: string; transcript: string; createdAt: string; durationMs: number; source: string; summary?: string; segments: unknown[]
-  }) => {
+  ipcMain.handle('session:save', async (event, input: Parameters<DesktopBridge['saveSession']>[0]) => {
     const userId = requireDesktopUser(event)
     // Continuation rewrites the session's own audio file in place so a record
     // keeps exactly one audio file instead of accumulating version copies. Only
@@ -590,7 +595,7 @@ const transcodeToM4a = async (audio: Buffer): Promise<ArrayBuffer> => {
     return { canceled: false, audioPath, directory }
   })
 
-  ipcMain.handle('audio:transcode', async (event, input: { audio: ArrayBuffer; target: string }) => {
+  ipcMain.handle('audio:transcode', async (event, input: Parameters<DesktopBridge['transcodeAudio']>[0]) => {
     requireDesktopUser(event)
     if (!input || input.target !== 'm4a' || !(input.audio instanceof ArrayBuffer)) throw new Error('不支援的音訊轉檔格式')
     return transcodeToM4a(Buffer.from(input.audio))
@@ -670,27 +675,24 @@ const transcodeToM4a = async (audio: Buffer): Promise<ArrayBuffer> => {
   })
   ipcMain.handle('recording:recoverable', async (event) => {
     const userId = requireDesktopUser(event)
-    const entries = await readRecoveryManifest(userId)
-    const recovered: Array<RecoverableRecording & { audioPath: string }> = []
-    for (const entry of entries) {
-      try {
-        const info = await stat(entry.path)
-        if (info.size <= 44) continue
-        const file = await open(entry.path, 'r+')
-        try { await file.write(wavHeader(entry.sampleRate, info.size - 44), 0) } finally { await file.close() }
-        availableAudioPaths.set(entry.path, userId)
-        recovered.push({ ...entry, audioPath: entry.path })
-      } catch { /* stale manifests are omitted below */ }
-    }
-    await updateRecoveryManifest(userId, () => recovered.map(({ audioPath: _audioPath, ...entry }) => ({ ...entry, state: 'finished' })))
-    return recovered
+    return recoverRecordings({
+      read: () => readRecoveryManifest(userId),
+      update: update => updateRecoveryManifest(userId, update),
+      isActive: entry => [...pcmRecordings.entries()].some(([id, recording]) => id === entry.id || recording.path === entry.path),
+      isAllowedPath: path => pathInside(recoveryDirectory(userId), path),
+      header: wavHeader,
+      recovered: entry => availableAudioPaths.set(entry.path, userId)
+    })
   })
   ipcMain.handle('recording:discard-recoverable', async (event, id: string) => {
     const userId = requireDesktopUser(event)
-    const entries = await readRecoveryManifest(userId)
-    const target = entries.find((entry) => entry.id === id)
-    if (target) await rm(target.path, { force: true })
-    await updateRecoveryManifest(userId, (current) => current.filter((entry) => entry.id !== id))
+    if (typeof id !== 'string') throw new Error('無效的錄音識別碼')
+    await discardRecoverableRecording(id, {
+      read: () => readRecoveryManifest(userId),
+      update: update => updateRecoveryManifest(userId, update),
+      isActive: entry => [...pcmRecordings.entries()].some(([recordingId, recording]) => recordingId === entry.id || recording.path === entry.path),
+      isAllowedPath: path => pathInside(recoveryDirectory(userId), path)
+    })
   })
 
   ipcMain.on('captions:toggle-floating', (_event, visible: boolean) => {

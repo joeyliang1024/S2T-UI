@@ -244,12 +244,14 @@ class LocalConfigStore {
     const pending = jobs.filter(j => ['queued', 'running'].includes(j.state))
     return { pending: pending.length, audioSeconds: pending.reduce((sum, job) => sum + (Number.isFinite(job.payload?.audioSeconds) ? job.payload.audioSeconds : 60), 0), oldest: pending.length ? Math.max(0, (Date.now() - Math.min(...pending.map(j => Date.parse(j.createdAt)))) / 1000) : 0 }
   }
-  async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
+  async findVisibleVoiceprintIds({ userId, embeddingModel, embeddingVersion }) {
     const records = await this.records()
+    const authorization = records[`${userId}:sharing-authorization`]?.value
     return Object.entries(records).flatMap(([key, entry]) => {
       if (!key.endsWith(':voiceprints') || !Array.isArray(entry?.value)) return []
       const ownerId = key.slice(0, -':voiceprints'.length)
-      return entry.value.filter((item) => item && typeof item.id === 'string' && item.embeddingModel === embeddingModel && item.embeddingVersion === embeddingVersion && (ownerId === userId || item.sharingScope === 'organization' || (item.sharingScope === 'department' && item.Department === department))).map((item) => item.id)
+      const ownerAuthorization = records[`${ownerId}:sharing-authorization`]?.value
+      return entry.value.filter((item) => item && typeof item.id === 'string' && item.embeddingModel === embeddingModel && item.embeddingVersion === embeddingVersion && (ownerId === userId || authorization?.approved === true && ownerAuthorization?.approved === true && (item.sharingScope === 'organization' || item.sharingScope === 'department' && authorization.department && authorization.department === ownerAuthorization.department))).map((item) => item.id)
     })
   }
 }

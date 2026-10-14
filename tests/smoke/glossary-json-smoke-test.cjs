@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/features/app/services/glossary-json.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['src/renderer/src/features/settings/domain/glossary-json.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('glossary-json-smoke-module')
 loaded.filename = 'glossary-json-smoke-module.cjs'

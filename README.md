@@ -9,6 +9,56 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 
 即時字幕／翻譯限流與排程修正、零 API 用量的 10 分鐘本機驗證及重跑方式，見 [穩定性報告](docs/reports/CAPTION_STABILITY.zh-TW.md)。Web 的 ASR／翻譯每帳號每分鐘額度可分別透過 `S2T_ASR_REQUESTS_PER_MINUTE`、`S2T_TRANSLATION_REQUESTS_PER_MINUTE` 設定，預設各 180。
 
+
+## 系統架構
+
+```mermaid
+flowchart TB
+    subgraph client["用戶端"]
+        browser["瀏覽器 UI<br/>(React renderer，Vite :5173)"]
+        electron["Electron 桌面版<br/>(main + preload + renderer)"]
+    end
+
+    subgraph gateway["Web Gateway · server/bootstrap.cjs + server/http/routes (:8787)"]
+        auth["登入／JWT、每帳號限流"]
+        proxy["ASR／翻譯／摘要／分離代理"]
+        cred["模型 key 加密持有"]
+    end
+
+    subgraph workers["背景 Worker"]
+        sherpa["sherpa 講者分離池"]
+        silero["Silero VAD"]
+        nemotron["Nemotron CPU 分離"]
+    end
+
+    subgraph storage["Storage（本機 fallback 或遠端）"]
+        blob["blob · MinIO"]
+        config["config · PostgreSQL"]
+        vector["vector · Milvus"]
+    end
+
+    subgraph models["外部模型 API（OpenAI 相容）"]
+        asr["ASR"]
+        trans["翻譯"]
+        summ["摘要"]
+        dia["遠端講者分離"]
+    end
+
+    infra["Redis + Sentinel（多副本共享限流）"]
+    monitor["Prometheus + Grafana"]
+
+    browser -- "/api" --> gateway
+    electron -- "本機或 /api" --> gateway
+    gateway --> workers
+    gateway --> models
+    workers --> models
+    gateway --> storage
+    gateway -.-> infra
+    gateway -.-> monitor
+```
+
+目錄責任細節見 [程式目錄與架構](docs/reference/ARCHITECTURE.zh-TW.md)。
+
 ## 功能狀態
 
 | 範圍 | 可用功能 | 尚待真人／正式環境驗收 |
@@ -27,7 +77,7 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 | 操作指南 `guide` | [部署、Storage 與遷移](docs/guide/DEPLOYMENT.zh-TW.md)、[環境設定](docs/guide/ENVIRONMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)、[sherpa-onnx 安裝](docs/guide/SHERPA_ONNX.zh-TW.md)、[Silero VAD worker](docs/guide/SILERO_VAD.zh-TW.md)、[Kubernetes 多副本](docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)、[K8s 容量測試](docs/guide/CAPACITY_TEST.zh-TW.md)、[監控指南](docs/guide/OBSERVABILITY.zh-TW.md) |
 | 契約與架構 `reference` | [程式目錄責任](docs/reference/ARCHITECTURE.zh-TW.md)、[模型接入契約](docs/reference/MODEL_ADAPTER.md)、[Web Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質與取樣率](docs/reference/AUDIO_QUALITY.zh-TW.md) |
 | 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[Chunking 自動切分可行性（1011）](docs/research/AUTO_CHUNKING.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[背景處理生命週期](docs/research/SESSION_LIFECYCLE.zh-TW.md) |
-| 量測報告 `reports` | [字幕延遲歷史調校](docs/reports/CAPTION_LATENCY.zh-TW.md)、[字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[五分鐘字幕比較與顯示修正](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)；已套用的修正與環境盤點見 [docs/README.md](docs/README.md) 的「修正與盤點記錄」 |
+| 量測報告 `reports` | [字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)、[字幕延遲與 VAD 調校實驗](experiment/silero-vad-chunking/README.md)、[五分鐘字幕比較與顯示修正](experiment/captions/comparison-2026-10-04/README.md)；量測證據集中在 [experiment](experiment/README.md) |
 
 研究類文件為歷史參考，不覆蓋 Enhancement.md 的決策。
 
@@ -42,7 +92,7 @@ cp .env.example .env
 
 編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`（OpenAI 相容 Breeze ASR 的預設值已附在範例）。`.env` 會被忽略，不應提交到 Git。
 
-首次使用本機資料可先以 `admin`／`admin` 登入；正式環境務必在第一次啟動前設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
+開發環境明確設定 `S2T_ALLOW_DEFAULT_ADMIN=true` 後可用 `admin`／`admin`；正式環境禁止預設帳號，首次啟動前必須設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
 
 ### 2. Electron 桌面版
 
@@ -107,7 +157,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 > 本節保留舊三速調校結果與當時目標；表中「正常／慢」參數不適用現行版本。最新設定與有效成績見[五檔實驗](experiment/silero-vad-chunking/speed-tiers-2026-10-13/README.md)。
 
-當時目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。
+當時目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見 [silero-vad-chunking 實驗索引](experiment/silero-vad-chunking/README.md)。
 
 ### 當時三速設定（已由現行五格取代）
 
@@ -155,7 +205,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 本輪未更動 ASR、VAD 切段、模型設定或翻譯排程。移除未翻譯片段的資料合併後，部分策略的翻譯請求數可能改變。Electron 獨立浮窗仍沿用既有純文字流程。
 
-五分鐘旁白的獨立實驗中，正常檔顯示列由 200 降為 34，短列比例由 40% 降為 0%；這是顯示投影的結果，不是辨識準確率提升或正式畫面延遲保證。參考 TSV 尚未人工校對，報告的差異率不是正式 CER。300 ms 重疊、長上下文與 LocalAgreement 均未套用到正式辨識流程。完整方法、反例及限制見[比較報告](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)。
+五分鐘旁白的獨立實驗中，正常檔顯示列由 200 降為 34，短列比例由 40% 降為 0%；這是顯示投影的結果，不是辨識準確率提升或正式畫面延遲保證。參考 TSV 尚未人工校對，報告的差異率不是正式 CER。300 ms 重疊、長上下文與 LocalAgreement 均未套用到正式辨識流程。完整方法、反例及限制見 [五分鐘字幕比較報告](experiment/captions/comparison-2026-10-04/字幕實驗報告.md)。
 
 並排回放、五分鐘音訊、核對案例與 CSV／JSON 保存在 [experiment/captions/comparison-2026-10-04](experiment/captions/comparison-2026-10-04/README.md)。從專案根目錄啟動：
 

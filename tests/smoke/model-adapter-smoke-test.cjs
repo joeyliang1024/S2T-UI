@@ -7,7 +7,7 @@ const loaded = new LoadedModule('model-adapter-smoke-module')
 loaded.filename = 'model-adapter-smoke-module.cjs'
 loaded.paths = module.paths
 loaded._compile(result.outputFiles[0].text, loaded.filename)
-const { OpenAiChunkedModelAdapter, isRepetitiveAsrText } = loaded.exports
+const { createOpenAiChunkedModelAdapter, isRepetitiveAsrText } = loaded.exports
 
 const main = async () => {
   assert.equal(isRepetitiveAsrText('請稍候請稍候請稍候請稍候'), true)
@@ -16,16 +16,16 @@ const main = async () => {
   assert.equal(isRepetitiveAsrText('哈哈哈哈哈哈哈哈'), true)
   let keyChecks = 0
   global.window = { s2t: { hasModelApiKey: async () => { keyChecks += 1; return false } } }
-  const noKey = new OpenAiChunkedModelAdapter({ id: 'local-asr', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false })
+  const noKey = createOpenAiChunkedModelAdapter({ id: 'local-asr', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false })
   await noKey.start({ sampleRate: 16_000, language: 'auto', targetLanguage: 'en' })
   assert.equal(keyChecks, 0, 'keyless models must not require a stored key')
-  const requiresKey = new OpenAiChunkedModelAdapter({ id: 'protected-asr', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'protected', requiresApiKey: true })
+  const requiresKey = createOpenAiChunkedModelAdapter({ id: 'protected-asr', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'protected', requiresApiKey: true })
   await assert.rejects(requiresKey.start({ sampleRate: 16_000, language: 'auto', targetLanguage: 'en' }), /API key/)
   assert.equal(keyChecks, 1)
   const requests = []
   const transcripts = []
   global.window = { s2t: { transcribeAudioChunk: async (request) => { requests.push(request); return { text: '測試即時字幕' } } } }
-  const live = new OpenAiChunkedModelAdapter({ id: 'live-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false })
+  const live = createOpenAiChunkedModelAdapter({ id: 'live-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false })
   live.onTranscript((entry) => transcripts.push(entry))
   await live.start({ sampleRate: 48_000, language: 'zh-TW', targetLanguage: 'en' })
   for (let offset = 0; offset < 48_000 * 7; offset += 128) {
@@ -39,7 +39,7 @@ const main = async () => {
   assert.ok(requests.length >= 2, 'the final flush must send the remaining pending audio')
   assert.ok(String(requests[1].prompt || '').includes('測試即時字幕'), 'later chunks must carry the previous caption as rolling prompt')
   const shortEvents = []
-  const short = new OpenAiChunkedModelAdapter({ id: 'short-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false, vadConfig: { minSpeechMs:120, minSilenceMs:250, preRollMs:300, noiseFloorOffsetDb:12, chunkMinMs:700, chunkMaxMs:1500 } })
+  const short = createOpenAiChunkedModelAdapter({ id: 'short-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false, vadConfig: { minSpeechMs:120, minSilenceMs:250, preRollMs:300, noiseFloorOffsetDb:12, chunkMinMs:700, chunkMaxMs:1500 } })
   short.onTranscript(e=>shortEvents.push(e))
   await short.start({ sampleRate:16000, language:'zh-TW', targetLanguage:'en' })
   for(let offset=0;offset<8000;offset+=160) short.pushAudio(new Float32Array(160).fill(offset<3200?.1:0),offset)
@@ -49,7 +49,7 @@ const main = async () => {
   await short.stop()
   const adminRequests = []
   global.window = { s2t: { transcribeAudioChunk: async request => { adminRequests.push(request); return { text: 'admin caption' } } } }
-  const admin = new OpenAiChunkedModelAdapter({ id: 'admin', endpoint: '/test', model: 'local', requiresApiKey: false, strictChunkLimits: true, vadConfig: { minSpeechMs: 120, minSilenceMs: 250, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1500 } })
+  const admin = createOpenAiChunkedModelAdapter({ id: 'admin', endpoint: '/test', model: 'local', requiresApiKey: false, strictChunkLimits: true, vadConfig: { minSpeechMs: 120, minSilenceMs: 250, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1500 } })
   await admin.start({ sampleRate: 16000, language: 'zh-TW', targetLanguage: 'en' })
   for (let offset = 0; offset < 8000; offset += 160) admin.pushAudio(new Float32Array(160).fill(offset < 3200 ? .1 : 0), offset)
   await admin.queued
@@ -64,7 +64,7 @@ const main = async () => {
   const naturalRequests = []
   const naturalEvents = []
   global.window = { setTimeout, s2t: { transcribeAudioChunk: async request => { naturalRequests.push(request); return { text: '完整的一句' } } } }
-  const natural = new OpenAiChunkedModelAdapter({ id: 'natural-default', endpoint: '/test', model: 'local', requiresApiKey: false })
+  const natural = createOpenAiChunkedModelAdapter({ id: 'natural-default', endpoint: '/test', model: 'local', requiresApiKey: false })
   natural.onTranscript(event => naturalEvents.push(event))
   await natural.start({ sampleRate: 16_000, language: 'zh-TW', targetLanguage: 'en' })
   for (let offset = 0; offset < 48_000; offset += 320) natural.pushAudio(new Float32Array(320).fill(offset < 32_000 ? .1 : 0), offset)
@@ -82,7 +82,7 @@ const main = async () => {
     process: () => { detectorFrames += 1; return { onsetSamples: 0, speechStarted: false, speechEnded: false, speaking: false, levelDbfs: -80 } },
     reset: () => { detectorResets += 1 }
   }
-  const custom = new OpenAiChunkedModelAdapter({ id: 'custom-vad', endpoint: '/test', model: 'local', requiresApiKey: false, vadFactory: () => detector })
+  const custom = createOpenAiChunkedModelAdapter({ id: 'custom-vad', endpoint: '/test', model: 'local', requiresApiKey: false, vadFactory: () => detector })
   await custom.start({ sampleRate: 16_000, language: 'zh-TW', targetLanguage: 'en' })
   custom.pushAudio(new Float32Array(160), 0)
   custom.flush()
@@ -94,7 +94,7 @@ const main = async () => {
   const loopEvents = []
   const replies = ['正常的第一段', '請稍候請稍候請稍候請稍候', '恢復正常辨識']
   global.window = { setTimeout, s2t: { transcribeAudioChunk: async request => { loopRequests.push(request); return { text: replies.shift() } } } }
-  const loop = new OpenAiChunkedModelAdapter({ id: 'loop-test', endpoint: '/test', model: 'local', requiresApiKey: false })
+  const loop = createOpenAiChunkedModelAdapter({ id: 'loop-test', endpoint: '/test', model: 'local', requiresApiKey: false })
   loop.onTranscript(event => loopEvents.push(event))
   await loop.start({ sampleRate: 16_000, language: 'zh-TW', targetLanguage: 'en' })
   for (let index = 0; index < 3; index += 1) {
@@ -114,7 +114,7 @@ const main = async () => {
       status: 200, headers: { 'content-type': 'application/json' }
     })
   }
-  const web = new OpenAiChunkedModelAdapter({ id: 'web-asr', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default' })
+  const web = createOpenAiChunkedModelAdapter({ id: 'web-asr', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default' })
   web.onTranscript((entry) => webTranscripts.push(entry))
   web.onError((message) => webErrors.push(message))
   await web.start({ sampleRate: 48_000, language: 'zh-TW', targetLanguage: 'en' })
@@ -123,14 +123,14 @@ const main = async () => {
   }
   await new Promise((resolve) => setImmediate(resolve))
   assert.ok(webRequests.length > 0, 'web capture must send ASR requests during recording')
-  assert.equal(webRequests[0].headers.authorization, undefined, 'Web authentication is carried by the HttpOnly cookie, not localStorage')
-  assert.equal(webRequests[0].headers['x-s2t-model-id'], 'default')
-  assert.equal(webRequests[0].headers['x-s2t-language'], 'zh')
+  assert.equal(new Headers(webRequests[0].headers).get('authorization'), null, 'Web authentication is carried by the HttpOnly cookie, not localStorage')
+  assert.equal(new Headers(webRequests[0].headers).get('x-s2t-model-id'), 'default')
+  assert.equal(new Headers(webRequests[0].headers).get('x-s2t-language'), 'zh')
   assert.ok(webTranscripts.some((entry) => entry.sourceText === '網頁即時字幕'), 'authenticated web ASR must emit live captions')
   await web.stop()
   assert.ok(webRequests.length >= 2, 'the web flush must send the remaining pending audio')
-  assert.equal(webRequests[0].headers['x-s2t-prompt'], undefined, 'the first web chunk has no rolling context yet')
-  assert.ok(decodeURIComponent(String(webRequests[1].headers['x-s2t-prompt'] || '')).includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
+  assert.equal(new Headers(webRequests[0].headers).get('x-s2t-prompt'), null, 'the first web chunk has no rolling context yet')
+  assert.ok(decodeURIComponent(String(new Headers(webRequests[1].headers).get('x-s2t-prompt') || '')).includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
   assert.deepEqual(webErrors, [])
   // Silero gate observability: vetoes report silero_veto and drop the chunk;
   // a failing gate fails open (chunk still transcribed) with silero_failed.
@@ -156,7 +156,7 @@ const main = async () => {
   }
   const vetoTranscripts = []
   for (let chunk = 0; chunk < 8; chunk += 1) gate.silero.push({ status: 200, body: { speech: [] } })
-  const veto = new OpenAiChunkedModelAdapter({ id: 'gate-veto', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
+  const veto = createOpenAiChunkedModelAdapter({ id: 'gate-veto', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
   veto.onTranscript((entry) => vetoTranscripts.push(entry))
   await pushSpeech(veto)
   assert.equal(gate.asr, 0, 'vetoed chunks must not reach ASR')
@@ -168,7 +168,7 @@ const main = async () => {
   for (let chunk = 0; chunk < 8; chunk += 1) gate.silero.push({ status: 500, body: { error: 'silero-down' } })
   const failOpenErrors = []
   const failOpenTranscripts = []
-  const failOpen = new OpenAiChunkedModelAdapter({ id: 'gate-fail-open', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
+  const failOpen = createOpenAiChunkedModelAdapter({ id: 'gate-fail-open', endpoint: '/api/transcriptions', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
   failOpen.onTranscript((entry) => failOpenTranscripts.push(entry))
   failOpen.onError((message) => failOpenErrors.push(message))
   await pushSpeech(failOpen)
@@ -186,17 +186,17 @@ const main = async () => {
       return new Response(JSON.stringify({ speech: gateDecisions.shift() ? [{ startMs: 0, endMs: 1000 }] : [] }), { status: 200 })
     }
     if (String(url).includes('/api/telemetry/')) return new Response('{}', { status: 200 })
-    promptsAfterGate.push(init.headers['x-s2t-prompt'])
+    promptsAfterGate.push(new Headers(init.headers).get('x-s2t-prompt'))
     return new Response(JSON.stringify({ text: '正常語音' }), { status: 200 })
   }
-  const contextGate = new OpenAiChunkedModelAdapter({ id: 'context-gate', endpoint: '/test', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
+  const contextGate = createOpenAiChunkedModelAdapter({ id: 'context-gate', endpoint: '/test', model: 'local', gatewayProfileId: 'default', sileroVadEnabled: true })
   await contextGate.start({ sampleRate: 16_000, language: 'zh-TW', targetLanguage: 'en' })
   for (let index = 0; index < 3; index += 1) {
     contextGate.enqueue(new Float32Array(16_000).fill(.1), index * 16_000, true)
     await contextGate.queued
   }
   assert.equal(promptsAfterGate.length, 2, 'the vetoed chunk is never sent to ASR')
-  assert.equal(promptsAfterGate[1], undefined, 'a veto clears stale rolling context before the next request')
+  assert.equal(promptsAfterGate[1], null, 'a veto clears stale rolling context before the next request')
   const gateCallsBeforeMicro = gateCalls
   contextGate.enqueue(new Float32Array(3200).fill(.1), 48_000, true)
   await contextGate.queued

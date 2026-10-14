@@ -35,7 +35,7 @@ const main = async () => {
         ...process.env,
         S2T_WEB_PORT: String(port),
         S2T_WEB_ORIGINS: 'http://127.0.0.1:5173',
-        S2T_LOCAL_DATA_DIR: dataDirectory,
+        S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: dataDirectory,
         // Short grace keeps the test fast; the window logic is identical.
         S2T_STORAGE_COMPENSATION_GRACE_MS: '3000',
         S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '',

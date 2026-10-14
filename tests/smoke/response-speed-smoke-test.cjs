@@ -10,7 +10,7 @@ const load = entry => {
   return loaded.exports
 }
 const { normalizeSettings } = load('src/renderer/src/shared/services/settings.ts')
-const { ResponseSpeedControl } = load('src/renderer/src/features/app/views/ResponseSpeedControl.tsx')
+const { ResponseSpeedControl } = load('src/renderer/src/features/capture/views/ResponseSpeedControl.tsx')
 const values = ['fast', 'fast-normal', 'normal', 'normal-slow', 'slow']
 for (const [index, speed] of values.entries()) {
   const restored = normalizeSettings(JSON.parse(JSON.stringify({ responseSpeed: speed })))

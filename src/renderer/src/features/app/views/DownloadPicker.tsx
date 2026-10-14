@@ -1,8 +1,8 @@
 import { type ReactElement } from 'react'
 import { interfaceTranslate } from '../../../shared/i18n'
-import { audioDownloadFormats, type AudioDownloadFormat } from '../services/audio-export'
-import { summaryDownloadFormats, type SummaryDownloadFormat } from '../services/summary-document'
-import { transcriptDownloadFormats, type TranscriptDownloadFormat } from '../services/transcript-documents'
+import { audioDownloadFormats, type AudioDownloadFormat } from '../../capture/services/audio-export'
+import { summaryDownloadFormats, type SummaryDownloadFormat } from '../../summary/services/document'
+import { transcriptDownloadFormats, type TranscriptDownloadFormat } from '../../transcript/services/documents'
 
 type Ui = (key: Parameters<typeof interfaceTranslate>[1]) => string
 

@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict')
+const { buildSync } = require('esbuild')
+const code = buildSync({ entryPoints: ['src/renderer/src/features/sessions/domain/session-merge.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const m = { exports: {} }; new Function('module', 'exports', 'require', code)(m, m.exports, require)
+const { rebaseSessions, SessionMergeConflictError } = m.exports
+const row = (id, title = id) => ({ id, title, createdAt: '2026-10-14', segments: [], transcript: '', durationMs: 0, source: 'fixture' })
+const a = row('a'), b = row('b'), edited = row('a', 'remote edit')
+assert.deepEqual(rebaseSessions([a], [], [a, b]), [b], 'local deletion survives unrelated remote insertion')
+assert.deepEqual(rebaseSessions([a], [a, b], [edited]), [edited, b], 'untouched local record preserves remote edits')
+assert.deepEqual(rebaseSessions([a], [a], []), [], 'remote deletion is not resurrected')
+assert.deepEqual(rebaseSessions([a], [], []), [], 'lost ACK after deletion is idempotent')
+assert.deepEqual(rebaseSessions([], [a], [a]), [a], 'lost insertion ACK is idempotent')
+assert.throws(() => rebaseSessions([a], [], [edited]), SessionMergeConflictError, 'delete/edit collision is explicit')
+assert.throws(() => rebaseSessions([a], [row('a', 'local')], [edited]), SessionMergeConflictError, 'same-record divergent edit is explicit')
+const reordered = Object.fromEntries(Object.entries(a).reverse())
+assert.deepEqual(rebaseSessions([a], [reordered], [edited]), [edited], 'database JSON key ordering is immaterial')
+console.log('PASS three-way session merge: deletes, disjoint edits, lost ACKs, conflicts, JSON key order')

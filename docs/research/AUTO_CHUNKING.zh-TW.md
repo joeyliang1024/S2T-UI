@@ -1,8 +1,6 @@
 # 1011：Chunking 自動切分可行性（VAD + Diarization）
 
-研究性文件：回答「能否讓 VAD + Diarization 自動決定怎麼切 chunk」。結合本專案既有量測、codebase 現況與外部論文／成熟 repo 做法，給出結論與分階段建議。本檔為歷史設計背景，不代表任何功能已完成或已驗收；需要追蹤的缺口以 [Enhancement.md](../Enhancement.md) 的 U02 為準。
-
-2026-10-13 評測稽核：下列歷史 CER/WER/latency 使用的舊評測器會重複拼接句界 revision、誤判部分未送出句子，偵測器排名需重新量測；不可直接沿用為新產品結論。真正 main baseline、修正方法與最新對照見 [Taiwan-Tongues 實驗紀錄](../../experiment/silero-vad-chunking/taiwan-tongues-2026-10-12/README.md)。微型 chunk 校準與 ONNX 576 樣本餵法回歸仍可作 bug 修正依據。
+研究性文件：回答「能否讓 VAD + Diarization 自動決定怎麼切 chunk」。結合本專案既有量測、codebase 現況與外部論文／成熟 repo 做法，給出結論與分階段建議；待追蹤的缺口以 [Enhancement.md](../Enhancement.md) 的 U02 為準。
 
 ## 一句話結論
 
@@ -22,9 +20,9 @@
 
 ## 內部量測證據
 
-### VAD 面（`docs/reports/CAPTION_LATENCY.zh-TW.md`）
+### VAD 面（[回應速度指南](../guide/CAPTION_SPEED.zh-TW.md)）
 
-- BGM 素材（對話影片）上 EnergyVad 句界恆為 0，實測 200/200 段全數強制切段；三速的 `minSilenceMs`／`chunkMinMs` 在此類素材不參與運算。
+- BGM 素材（對話影片）上 EnergyVad 句界恆為 0，實測 200/200 段全數強制切段；五檔的 `minSilenceMs`／`chunkMinMs` 在此類素材不參與運算。
 - 無 BGM 素材上，`minSilenceMs` 是天然句界的總開關（150 ms 觸發 8–13 個、250/350/800 為 0）；切段變短的準度補償只有滑動 prompt（上一段尾 60 字）有效且零延遲成本。
 - 「無 BGM＋較長停頓（250–800 ms）」素材（如會議錄音）尚未量測，屬已知驗證缺口。
 
@@ -73,14 +71,14 @@ LiveKit turn-detector、pipecat smart-turn、AssemblyAI endpointing 等，在 VA
 
 | 方案 | 切點來源 | 延遲影響 | 準度影響 | 風險 |
 | --- | --- | --- | --- | --- |
-| 現況（EnergyVad＋三速） | RMS 靜音＋chunkMax | 基線 | BGM 素材 100% 強制切段 | 已量測的失效模式 |
+| 現況（EnergyVad＋五檔切段） | RMS 靜音＋chunkMax | 基線 | BGM 素材 100% 強制切段 | 已量測的失效模式 |
 | A：Silero 句界 | ML VAD 靜音＋chunkMax | 中性（句界偵測快於 RMS，但 minSilence 確認仍在） | 預期 BGM 素材首次出現天然句界 | 低；EnergyVad 保留為 fallback |
 | B：＋換人點切段 | A ∪ 換人確認（含遲滯） | 中性偏改善（換人常早於 chunkMax；吃 diarization lag ~0.3–0.5 s） | 單講者 chunk 純度↑（未驗證）；換人處 prompt 需重置 | 中；overlap 切詞尾、標籤錯配 |
 | C：pre-diarize 再切 | 先分離講者、再以講者段餵 ASR | 不適用即時（離線管線） | 重疊語音品質↑（Argmax 主張） | 僅適用檔案匯入／停止後重轉錄 |
 
 ## 建議路線
 
-> **實作狀態（2026-10-11）**：依決策「Diarization 先不做」，Phase 2／3 暫緩；Phase 1 已在分支 `feature/silero-vad-chunking` 開工，以 WER（中文以 CER 呈現）＋延遲雙指標對比驗收。實作紀錄見文末。
+> Phase 2／3 依「Diarization 先不做」的決策暫緩；Phase 1 已完成實作與對比評測（WER，中文以 CER 呈現，＋延遲雙指標），結果見文末「實作紀錄」。
 
 ### Phase 0：離線模擬（零產品碼，先行）
 
@@ -94,15 +92,15 @@ LiveKit turn-detector、pipecat smart-turn、AssemblyAI endpointing 等，在 VA
 ### Phase 1：Silero 進切點路徑
 
 - Electron：renderer 流式 IPC 到 main（已有 `onnxruntime-node`），每 32 ms 一個 window，邊界回傳；Web：gateway 每 200–500 ms 批次 PCM 查既有 `/api/audio-processing/silero-vad`，或 renderer wasm worker。
-- EnergyVad 保留為 fallback；`chunkMin/Max` 三速維持為硬邊界，只換句界偵測器。
-- 驗收：`npm run caption:eval` 在 BGM＋無 BGM 素材回歸——p95 與 CER 不得劣於基線，且 BGM 素材首次出現天然句界（現為 0）。另需補「無 BGM＋較長停頓（會議型）」素材，填補 CAPTION_LATENCY 已知缺口。
+- EnergyVad 保留為 fallback；`chunkMin/Max` 五檔切段目標維持為硬邊界，只換句界偵測器。
+- 驗收：`npm run caption:eval` 在 BGM＋無 BGM 素材回歸——p95 與 CER 不得劣於基線，且 BGM 素材首次出現天然句界（現為 0）。另需補「無 BGM＋較長停頓（會議型）」素材，填補 [回應速度指南](../guide/CAPTION_SPEED.zh-TW.md) 的已知素材缺口。
 
 ### Phase 2：換人點切段（feature-flag）
 
 - 切點決策 = VAD 靜音（主）∪ 換人確認（次，含遲滯與重疊閘）∪ chunkMax（硬上限）；以「晚到邊界」形式插入 `pendingBoundaries`（架構已支援）。
 - 換人處重置滾動 prompt（避免上一位講者的文字污染下一段解碼）——此單點改動獨立於其他部分、本身即有價值。
 - Diarization 後端：先用 Nemotron 0.32 s 檔重跑 paced 實驗確認 macOS CPU 的 lag；sherpa live preview 路徑不得作為切點來源（DER 76.78%、3→53 群）。
-- 驗收：`caption:eval` 擴充「chunk 講者純度」指標；p95 ≤ 2.5 s 不得回歸。
+- 驗收：`caption:eval` 擴充「chunk 講者純度」指標；p95 不得劣於基線。
 
 ### Phase 3：檔案匯入改 VAD／講者引導切點
 
@@ -128,40 +126,23 @@ LiveKit turn-detector、pipecat smart-turn、AssemblyAI endpointing 等，在 VA
 Phase 1 已實作並通過 `typecheck`／`vad:smoke`／`model-adapter:smoke`：
 
 - **產品碼接縫（最小改動）**：`vad.ts` 新增 `BoundaryVad` 介面（`process(samples): VadFrame` 同步契約），`EnergyVad` 實作之；`OpenAiChunkedModelAdapter` profile 新增可選 `vadFactory`，未注入時行為與現況完全一致。
-- **`silero-vad.ts`（renderer 安全）**：`SileroBoundaryVad` 不含任何 ONNX import——機率以 Float32Array 注入（每 512 樣本@16 kHz 一個視窗，與上游 wrapper 同窗格）。遲滯契約與 EnergyVad 相同（`minSpeechMs` 起音、`minSilenceMs` 停頓），三速預設值可直接沿用，對比時唯一變數就是偵測器。設計要點：**視窗只在被推入樣本完整覆蓋時計分**（128@48 kHz 批次不對齊 16k 窗界，跨窗重複計分會讓起音提前）；最後不足一窗的尾巴不計分，由 `flush()` 顯式收尾。
+- **`silero-vad.ts`（renderer 安全）**：`SileroBoundaryVad` 不含任何 ONNX import——機率以 Float32Array 注入（每 512 樣本@16 kHz 一個視窗，與上游 wrapper 同窗格）。遲滯契約與 EnergyVad 相同（`minSpeechMs` 起音、`minSilenceMs` 停頓），現行五檔預設值可直接沿用，對比時唯一變數就是偵測器。設計要點：**視窗只在被推入樣本完整覆蓋時計分**（128@48 kHz 批次不對齊 16k 窗界，跨窗重複計分會讓起音提前）；最後不足一窗的尾巴不計分，由 `flush()` 顯式收尾。
 - **評測**：`caption-latency-eval.cjs` 新增 `newSilero`／`fastSilero` preset（config 與 EnergyVad 對照組 `new`／`fastv2` 完全相同）；機率由 `scripts/evaluation/silero-probabilities.cjs` 預先整段算妥，餵法契約（576＝64 context＋512、state 延續）與 `server/silero-vad.cjs` 逐行一致。
 - **已知限制**：評測的機率是預先計算的；產品化後機率會晚約 32 ms 到達（切點為 sample 索引、位置不受影響，但 Electron main IPC／wasm 的實際接線與共用 CPU 成本尚未做）。CER 使用正規化後字元編輯距離；後續加入的 WER 使用 `Intl.Segmenter('zh-TW')` 詞界，兩者不是同一指標。
 
-### 評測結果（2026-10-12，各素材前 300 秒，Breeze-ASR-25）
+### 對照評測的觀察（2026-10-12，各素材前 300 秒，Breeze-ASR-25）
 
-對照設計：`new` vs `newSilero`、`fastv2` vs `fastSilero`（config 完全相同，唯一變數是切點偵測器）。延遲＝句子起話 → 上屏。
+對照設計：`new` vs `newSilero`、`fastv2` vs `fastSilero`（config 完全相同，唯一變數是切點偵測器）。延遲＝句子起話 → 上屏。此輪回答的是「Silero 句界方向是否可行」，作為後續失效分析的動機，不作驗收基準。
 
-**對話素材（含 BGM，32 句）——Silero 明確劣化：**
-
-| preset | 延遲 p50 | p95 | ≤2500ms | 逐句CER | 語料CER | VAD句界/強制 | 空chunk | 字幕行 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| new（EnergyVad） | 1112 ms | 1789 ms | 100% | 38.63% | 35.01% | 0 / 200 | 4 | 30 |
-| newSilero | 1225 ms | 1868 ms | 96.9% | 61.00% ❌ | 53.10% ❌ | 16 / 150 | 22 | 31 |
-| fastv2（EnergyVad） | 782 ms | 1592 ms | 96.9% | 37.44% | 35.16% | 0 / 250 | 17 | 32 |
-| fastSilero | 981 ms | 1477 ms | 96.9% | 42.98% ❌ | 41.43% ❌ | 85 / 181 | 22 | 45 |
-
-Silero 找到了 EnergyVad 在 BGM 下找不到的句界（0 → 66～85 個），但這些句界**傷害了 CER**：BGM 中人聲暫停的機率低點不等於句子邊界，切出的短 chunk 更常只含音樂，ASR 在純音樂段產生重複幻覺（例：標準「在睡覺」→ 字幕「你該睡覺你該睡覺」；一例整段「滴滴滴…」迴圈，CER 250%），空 chunk 也從 4 個升到 22 個。
-
-**旁白素材（無 BGM，18 句）——CER 微幅改善但延遲劣化：**
-
-| preset | 延遲 p50 | p95 | ≤2500ms | 逐句CER | 語料CER | VAD句界/強制 |
-| --- | --- | --- | --- | --- | --- | --- |
-| new（EnergyVad） | 1264 ms | 1904 ms | 100% | 17.14% | 11.76% | 3 / 198 |
-| newSilero | 1600 ms ❌ | 2598 ms ❌ | 88.9% ❌ | 14.54% ✓ | 11.08% ✓ | 11 / 193 |
-
-逐句配對（n=18）：CER 中位變化 −0.8 pp（10 句改善／8 句劣化）；延遲中位 **+200 ms**（13 句變慢）。CER 的小幅優勢來自更完整的句尾覆蓋，但**沒有達到可接受的延遲**。
+- **對話素材（含 BGM，32 句）——Silero 明確劣化**：Silero 找到了 EnergyVad 在 BGM 下找不到的句界（0 → 66～85 個），但這些句界**傷害了轉錄準度**：BGM 中人聲暫停的機率低點不等於句子邊界，切出的短 chunk 更常只含音樂，ASR 在純音樂段產生重複幻覺（例：標準「在睡覺」→ 字幕「你該睡覺你該睡覺」；一例整段「滴滴滴…」迴圈），空 chunk 也從 4 個升到 22 個。
+- **旁白素材（無 BGM，18 句）——準度微幅改善但延遲劣化**：Silero 的句尾覆蓋較完整，換來小幅度 CER 改善，但延遲中位 **+200 ms**（18 句中 13 句變慢），未達可接受的延遲水準。
 
 ### 結論
 
-- **BGM 素材：CER 與延遲雙輸** → 不可用。
-- **乾淨素材：CER 小贏（語料 −0.68 pp）但延遲輸（p50 +200 ms、≤2500ms 100%→89%）** → 依「WER 與延遲都要考量」的驗收標準，不通過。
+- **BGM 素材：準度與延遲雙輸** → 不可用。
+- **乾淨素材：準度小贏但延遲輸** → 依「準度與延遲都要考量」的驗收標準，不通過。
 - **Phase 1（Silero 決定切點）判定為負面結果，不產品化**。維持 EnergyVad 切段；Silero 只保留既有的「無語音否決閘門」用途。
-- 後續可再試的調參方向（未驗證，另開實驗）：把 `minSilenceMs` 拉長（400–600 ms）過濾 BGM 短暫低點；或句界需同時滿足機率低＋能量低（雙訊號）；或用 server 端 Silero 否決閘門先行剔除純音樂 chunk 再評 CER。
+- 後續可再試的調參方向（未驗證，另開實驗）：把 `minSilenceMs` 拉長（400–600 ms）過濾 BGM 短暫低點；或句界需同時滿足機率低＋能量低（雙訊號）；或用 server 端 Silero 否決閘門先行剔除純音樂 chunk 再評準度。
 
 ## 失效模式與業界解法（2026-10-12 查證）
 
@@ -173,7 +154,7 @@ Silero 找到了 EnergyVad 在 BGM 下找不到的句界（0 → 66～85 個）�
 
 業界的通用解法依序是：
 
-1. **送 ASR 前先用 VAD 剔除非語音**（WhisperX README：「VAD preprocessing, reduces hallucination & batching with no WER degradation」；faster-whisper `vad_filter` 同理）。**這正是我們已存在的 server 端 Silero 否決閘門**（`model-adapter.ts` `sileroVadEnabled` → `/api/audio-processing/silero-vad`，threshold 0.5／minSilence 300ms）——評測時沒開，產品預設也不是 BGM 場景。上表的幻覺本來就可以被它擋掉。
+1. **送 ASR 前先用 VAD 剔除非語音**（WhisperX README：「VAD preprocessing, reduces hallucination & batching with no WER degradation」；faster-whisper `vad_filter` 同理）。**這正是我們已存在的 server 端 Silero 否決閘門**（`model-adapter.ts` `sileroVadEnabled` → `/api/audio-processing/silero-vad`，threshold 0.5／minSilence 300ms）——評測時沒開，產品預設也不是 BGM 場景。此類幻覺本來就可以被它擋掉。
 2. **ASR 端信心度過濾**（whisper 的 no_speech／logprob 三閾值）→ 我們端點無此欄位，改為**客戶端文字層幻覺偵測**：zlib 壓縮比 >2.4（whisper 同款啟發式，等價偵測「滴滴滴…」迴圈）或 n-gram 重複 ≥3 次即丟棄，純 JS 幾行可做。
 3. **切斷幻覺的自我延續**：WhisperX 把 `condition_on_previous_text` 預設為 `False`（README：reduces hallucination）；whisper 官方文件也警告前段文字餵回 prompt 會「get stuck in a failure loop, such as repetition looping」。我們的 rolling prompt 正是此機制——**被否決或疑似幻覺的 chunk 不應進入 rolling context**。
 
@@ -202,18 +183,18 @@ whisper_streaming（IJCNLP 2023 demo）的核心是 **LocalAgreement-n**：文�
 4. rolling context 衛生化（被否決 chunk 不進 context）——斬斷幻覺延續。
 5. （另案）LocalAgreement 增量提交——對應失效三的結構性解法。
 
-### 修正組實測（2026-10-12 第二輪：四修正全開 × 兩素材）
+### 修正組對照（四修正全開 × 兩素材）
 
 完整數據與判讀見 `experiment/silero-vad-chunking/comparison-2026-10-12/實驗報告.md`。摘要：
 
-- **修正 1+2 生效**：chunk 級否決閘門＋幻覺濾把 newSilero 的 BGM 災難從語料 CER 53.1% 拉回 **36.26%**（newSileroInd），回到基線 35.01% 附近——失效一確認主因（純音樂 chunk → ASR 幻覺）被閘門解決；幻覺濾 0 命中（閘門已先擋掉純音樂 chunk，殘餘迴圈重複次數未達 n-gram 門檻）。
-- **修正 3 不足以翻案**：endThreshold 0.35＋minSilence 500 後，Silero 臂在兩素材仍不贏 EnergyVad 臂（對話 BGM：36.26% vs 34.19%；旁白：12.19% vs 11.76%，延遲亦較差）——Phase 1 負面結果維持。
-- **閘門有代價（已解）**：fast preset 會切出 20–220ms 微型 chunk，120ms 連續語音門檻對其結構性必殺（旁白 fastHyg 誤殺 5 個，同切段淨成本 +0.24pp；第一輪的 +5.1pp 為把 fast 切段本身代價誤算到閘門頭上）。離線校準（`scripts/evaluation/gate-calibration.cjs`）證實誤殺全 <300ms、被攔 BGM 全 ≥1200ms，**長度豁免（<300ms 放行）**後同輪驗證：旁白零誤殺、BGM 收益（−0.8〜−0.9pp）分毫不損。
-- **產品方向定案**：EnergyVad 切段 ＋ Silero 否決閘門（長度豁免版）；Silero 決定句界不產品化。否決率自本次起可由 `s2t_caption_events_total{event="silero_veto"}` 於生產觀測（見 `docs/guide/SILERO_VAD.zh-TW.md` 指標監控節）。詳細數據見 `experiment/silero-vad-chunking/comparison-2026-10-12/實驗報告.md`。
+- **修正 1+2 生效**：chunk 級否決閘門＋幻覺濾把 newSilero 的 BGM 災難拉回基線附近——失效一確認主因（純音樂 chunk → ASR 幻覺）被閘門解決；幻覺濾 0 命中（閘門已先擋掉純音樂 chunk，殘餘迴圈重複次數未達 n-gram 門檻）。
+- **修正 3 不足以翻案**：endThreshold 0.35＋minSilence 500 後，Silero 臂在兩素材的準度與延遲仍不贏 EnergyVad 臂——Phase 1 負面結果維持。
+- **閘門有代價（已解）**：fast preset 會切出 20–220ms 微型 chunk，120ms 連續語音門檻對其結構性必殺（旁白 fastHyg 誤殺 5 個，對淨準度影響很小）。離線校準（`scripts/evaluation/gate-calibration.cjs`）證實誤殺全 <300ms、被攔 BGM 全 ≥1200ms，**長度豁免（<300ms 放行）**後同輪驗證：旁白零誤殺、BGM 收益分毫不損。
+- **產品方向定案**：EnergyVad 切段 ＋ Silero 否決閘門（長度豁免版）；Silero 決定句界不產品化。否決率可由 `s2t_caption_events_total{event="silero_veto"}` 於生產觀測（見 `docs/guide/SILERO_VAD.zh-TW.md` 指標監控節）。詳細數據見 `experiment/silero-vad-chunking/comparison-2026-10-12/實驗報告.md`。
 
 ## 參考來源
 
-- 本專案：`docs/reports/CAPTION_LATENCY.zh-TW.md`、`experiment/diarization/comparison-2026-10-04/研究與實驗報告.md`、`docs/guide/SILERO_VAD.zh-TW.md`、`docs/reference/DIARIZATION_API.zh-TW.md`
+- 本專案：`docs/guide/CAPTION_SPEED.zh-TW.md`、`docs/guide/SILERO_VAD.zh-TW.md`、`experiment/silero-vad-chunking/taiwan-tongues-2026-10-12/README.md`、`experiment/diarization/comparison-2026-10-04/研究與實驗報告.md`、`docs/reference/DIARIZATION_API.zh-TW.md`
 - 論文：WhisperX（arXiv 2303.00747）、Whisper-Streaming（arXiv 2307.14743／IJCNLP 2023 demo）、Turn-to-Diarize（arXiv 2109.11641）、DIART（arXiv 2109.06483）、線上 diarization 延遲評估（arXiv 2407.04293）、Streaming Sortformer（arXiv 2507.18446）
 - Repo：ufal/whisper_streaming（含 LocalAgreement／VAC，後繼 SimulStreaming）、QuentinFuxa/WhisperLiveKit、bhargavchippada/faster-whisper-dictation、pipecat-ai/smart-turn、SYSTRAN/faster-whisper（`vad.py` 閾值實作）、openai/whisper（`transcribe.py` 幻覺過濾三閾值）、m-bain/whisperX（VAD 前處理減幻覺、`condition_on_previous_text=False`）
 - 官方文件：NVIDIA Nemotron 3 Diarization（Hugging Face blog 2026-09，含延遲參數表）、pyannote streaming 架構文（2026-10）、LiveKit turn detection 文件

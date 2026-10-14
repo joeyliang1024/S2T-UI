@@ -11,5 +11,3 @@ Baseline remote main ed725a1, feature 5b51249. The real TypeScript TranslationQu
 Realtime issued 24 requests, sentence issued 6. Both completed all 24 source captions with exactly the same request text and timing. The source-coverage check only detects omissions/duplication; it does not judge translated meaning. Translation prompt, temperature and mode policy have not changed. Caption grouping locks and distributed Gateway coordination differ and require separate integration comparison.
 
 Read-only inspection found the current 8790 environment default is `mock-translation`. Admin's persisted selection points to that environment default and realtime mode. This does not establish the model used by another account or another site. Real quality comparison requires identifying the affected real model/account. No real API was called in this experiment.
-
-Re-run: export origin/main's src/renderer/src into `/tmp/s2t-translation-main-20261007` without changing the current checkout, then `node experiment/translation/main-comparison-2026-10-07/queue-compare.cjs`. Use `S2T_MAIN_SNAPSHOT` to override snapshot path. Results retain actual request inputs for review.
