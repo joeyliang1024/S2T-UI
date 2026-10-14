@@ -1,3 +1,4 @@
+const { createAccountDeletionService, bootstrapRetirementKey } = require('./delete-account.cjs')
 const { readSharingAuthorization, setSharingAuthorization } = require('./sharing-authorization.cjs')
 const usageMetrics = require('../usage-metrics.cjs')
 const { randomBytes } = require('node:crypto')
@@ -54,6 +55,8 @@ const createAuth = async (storage, environment = process.env, limits = require('
     const password = configuredPassword || (developmentDefaults ? 'admin' : '')
     const existing = await users.findByUsername(username)
     if (existing?.role === 'admin') return
+    // An explicitly deleted bootstrap identity must not be recreated on restart.
+    if (!existing && await storage.config.get('auth', bootstrapRetirementKey(username))) return
     if (existing) throw new Error('Bootstrap admin 名稱已被一般帳號使用，請更換 S2T_BOOTSTRAP_ADMIN_USERNAME')
     if ((!configuredUsername || !configuredPassword) && !developmentDefaults) throw new Error('首次啟動必須設定 S2T_BOOTSTRAP_ADMIN_USERNAME 與 S2T_BOOTSTRAP_ADMIN_PASSWORD；開發環境可明確啟用 S2T_ALLOW_DEFAULT_ADMIN=true')
     if ((environment.NODE_ENV === 'production' || environment.S2T_KUBERNETES_MODE === 'true') && (password.length < 12 || password === 'admin')) throw new Error('正式環境 bootstrap 密碼至少需要 12 個字元')
@@ -64,6 +67,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
     } catch (error) { const winner = await users.findByUsername(username); if (!winner || winner.role !== 'admin') throw error }
   }
   await ensureBootstrapAdmin()
+  const deleteAccount = createAccountDeletionService({ storage, users, bootstrapUsername: environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin' })
   const activeRevocations = async (userId) => {
     const now = Math.floor(Date.now() / 1000)
     const active = (value) => (Array.isArray(value) ? value.filter((entry) => entry && typeof entry.jti === 'string' && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now) : [])
@@ -91,7 +95,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async login(input) {
       const account = await users.findByUsername(normalizeUsername(input?.username))
-      if (!account || !await bcrypt.compare(typeof input?.password === 'string' ? input.password : '', account.passwordHash)) throw new Error('帳號或密碼錯誤')
+      if (!account || account.deletionState === 'deleting' || !await bcrypt.compare(typeof input?.password === 'string' ? input.password : '', account.passwordHash)) throw new Error('帳號或密碼錯誤')
       const user = publicUser(account); return { user, token: issue(user) }
     },
     async session(token) {
@@ -99,7 +103,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
       try { payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) } catch { return null }
       if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string') return null
       const user = await users.findById(payload.sub)
-      if (!user || (await activeRevocations(user.id)).some(entry => entry.jti === payload.jti)) return null
+      if (!user || user.deletionState === 'deleting' || (await activeRevocations(user.id)).some(entry => entry.jti === payload.jti)) return null
       return publicUser(user)
     },
     async revoke(token) {
@@ -122,6 +126,15 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
+      const deleteMatch = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})$/.exec(url)
+      if (deleteMatch && request.method === 'DELETE') {
+        const admin = await this.requireUser(request)
+        if (!admin) { send(response, 401, { error: '需要登入' }); return true }
+        if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可刪除帳號' }); return true }
+        try { send(response, 200, await deleteAccount(deleteMatch[1], admin.id)) }
+        catch (error) { send(response, error.status || 503, { error: error.message || '帳號資料清理失敗，請重試' }) }
+        return true
+      }
       const sharingMatch = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})\/sharing-authorization$/.exec(url)
       if (sharingMatch) {
         const admin = await this.requireUser(request)
@@ -146,7 +159,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
             const input = await readJson(request)
             if (typeof input.password !== 'string' || input.password.length < 8 || Buffer.byteLength(input.password) > 72) throw new Error('密碼須為 8 至 72 bytes')
             const user = await users.create({ username: input.username, NT: input.NT, Department: input.Department, role: input.role, passwordHash: await bcrypt.hash(input.password, 12) })
-            await setSharingAuthorization(storage.config, user.id, { approved: true, department: user.Department }, admin.id)
+            await storage.withAccountWrite(user.id, () => setSharingAuthorization(storage.config, user.id, { approved: true, department: user.Department }, admin.id))
             send(response, 201, { user })
           } else send(response, 405, { error: 'Method not allowed' })
         } catch (error) { send(response, ['帳號已存在', 'NT 已存在'].includes(error.message) ? 409 : 400, { error: error.message }) }

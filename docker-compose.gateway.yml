@@ -13,6 +13,7 @@ services:
       # Container paths override the host-relative values in .env.
       S2T_MODELS_DIR: /models
       S2T_LOCAL_DATA_DIR: /data
+      S2T_SUMMARY_TEMPLATES_DIR: /data/template
       S2T_WEB_PORT: "8787"
     ports:
       - "127.0.0.1:8787:8787"

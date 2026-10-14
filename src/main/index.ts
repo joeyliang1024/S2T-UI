@@ -203,11 +203,7 @@ const sanitizeModelConfig = (value: unknown): StoredModelConfig => {
 }
 
 const loadRenderer = (window: BrowserWindow, fragment = ''): void => {
-  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}${fragment}`)
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'), { hash: fragment.replace(/^#/, '') })
-  }
+  void window.loadFile(join(__dirname, '../renderer/index.html'), { hash: fragment.replace(/^#/, '') })
 }
 
 const showCaptionWindow = (): void => {

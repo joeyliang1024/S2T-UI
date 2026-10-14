@@ -12,6 +12,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
   try {
     const a = new LocalConfigStore(root), b = new LocalConfigStore(root)
     const input = { id: 'job-1', userId: 'user-1', sessionId: 'session-1', audioKey: 'audio-1', payload: { processingToken: 'intent-1' } }
+    // Diarization admission requires an existing active account; seed the fixture identity.
+    await a.put('auth', 'account-user-1', { id: 'user-1', username: 'user-1', NT: 'NT-1', Department: 'fixture', role: 'user', createdAt: new Date().toISOString() })
     await a.put('user-1', 'sessions', { version: 1, sessions: [{ id: 'session-1' }] })
     await a.enqueueDiarizationJob(input)
     const lease = await a.claimDiarizationJob('owner-1')

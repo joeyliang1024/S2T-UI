@@ -132,8 +132,8 @@ const audioWarmupReady = (async () => {
   }
 })()
 audioWarmupReady.catch(error => logger.warn('audio.warmup.failed', { error }))
-const staticRoot = join(process.cwd(), existsSync(join(process.cwd(), 'out/web/index.html')) ? 'out/web' : 'out/renderer')
-const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:5173,http://localhost:5173').split(',').map((value) => value.trim()).filter(Boolean))
+const staticRoot = join(process.cwd(), 'out/web')
+const allowedOrigins = new Set((process.env.S2T_WEB_ORIGINS || 'http://127.0.0.1:8787,http://localhost:8787').split(',').map((value) => value.trim()).filter(Boolean))
 const modelHealthChecks = new Map()
 const acceptLimitedRequest = sharedLimits.accept
 const requestLatency = new Map()
@@ -627,7 +627,7 @@ const staticFile = async (request, response) => {
     const type = filePath.endsWith('.js') ? 'text/javascript' : filePath.endsWith('.css') ? 'text/css' : filePath.endsWith('.html') ? 'text/html' : filePath.endsWith('.svg') ? 'image/svg+xml' : filePath.endsWith('.png') ? 'image/png' : filePath.endsWith('.ico') ? 'image/x-icon' : 'application/octet-stream'
     send(response, 200, content, type)
   } catch {
-    try { send(response, 200, await readFile(join(staticRoot, 'index.html')), 'text/html') } catch { send(response, 404, { error: 'Web build not found. Run npm run build first.' }) }
+    try { send(response, 200, await readFile(join(staticRoot, 'index.html')), 'text/html') } catch { send(response, 404, { error: 'Web build not found. Run npm run build:web first.' }) }
   }
 }
 const acceptsRequest = (request, bucket, userId) => acceptLimitedRequest(
@@ -721,7 +721,25 @@ const handleHttpRequest = async (request, response) => {
   }
   response.once('finish', () => recordRequest())
   response.once('close', () => recordRequest(!response.writableFinished))
-  if (requestPath.startsWith('/api/')) await auth.requireUser(request)
+  const user = requestPath.startsWith('/api/') ? await auth.requireUser(request) : null
+  const handle = () => handleAuthenticatedRequest(request, response, auth)
+  if (!user) return handle()
+  // Admin mutations target another account; deletion acquires its own exclusive
+  // fence, while sharing changes must hold the target's admission, not the actor's.
+  const sharingTarget = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})\/sharing-authorization$/.exec(requestPath)
+  if (requestPath.startsWith('/api/admin/') && !sharingTarget) return handle()
+  const ownerId = sharingTarget?.[1] || user.id
+  // Hold admission until all work in the route settles, including uploads.
+  try { return await storage.withAccountWrite(ownerId, handle) }
+  catch (error) {
+    if (!['ACCOUNT_DELETING', 'ACCOUNT_UNAVAILABLE'].includes(error.code)) throw error
+    if (!response.headersSent) return send(response, error.status || 409, { error: error.message, code: error.code })
+    response.destroy()
+  }
+}
+
+const handleAuthenticatedRequest = async (request, response, auth) => {
+  const requestPath = new URL(request.url, 'http://localhost').pathname
   if (await auth.handle(request, response, send)) return
   if (request.method === 'POST' && request.url === '/api/telemetry/captions') {
     const user = await auth.requireUser(request)

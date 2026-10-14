@@ -17,7 +17,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
   })
   try {
     await new Promise((resolve, reject) => { mock.once('error', reject); mock.listen(0, '127.0.0.1', resolve) })
-    const renderer = path.join(directory, 'out/renderer'); await fs.mkdir(renderer, { recursive: true })
+    const renderer = path.join(directory, 'out/web'); await fs.mkdir(renderer, { recursive: true })
     await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', contents: `
       import React, {useState, useLayoutEffect} from 'react'; import {createRoot} from 'react-dom/client';
       import {attachCaptionTiming, parseServerTiming, registerCaptionTiming, setCaptionMeasurementActive} from './src/renderer/src/shared/services/caption-metrics';

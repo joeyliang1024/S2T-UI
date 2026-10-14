@@ -44,14 +44,14 @@ class PostgresConfigStore {
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000
     })
-    this.schemaVersion = '001-core-storage'
+    this.schemaVersion = '002-account-deletion'
     this.ready = config.S2T_STORAGE_MIGRATIONS === 'verify' ? this.verifySchema() : this.migrate()
   }
   async verifySchema() {
     let result
     try {
       result = await this.pool.query("SELECT 1 FROM s2t_schema_migrations WHERE version = $1", [this.schemaVersion])
-      await this.pool.query('SELECT id FROM s2t_users LIMIT 0')
+      await this.pool.query('SELECT id, deletion_state FROM s2t_users LIMIT 0')
       await this.pool.query('SELECT scope, record_key FROM s2t_config_records LIMIT 0')
       await this.pool.query('SELECT lease_generation FROM s2t_diarization_jobs LIMIT 0')
     } catch (error) {
@@ -81,6 +81,7 @@ class PostgresConfigStore {
         nt TEXT NOT NULL,
         department TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'user',
+        deletion_state TEXT NOT NULL DEFAULT 'active',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
@@ -130,9 +131,12 @@ class PostgresConfigStore {
       CREATE INDEX IF NOT EXISTS s2t_diarization_jobs_claim_index ON s2t_diarization_jobs(state, lease_until, created_at);
       CREATE UNIQUE INDEX IF NOT EXISTS s2t_users_nt_unique_index ON s2t_users (lower(nt));
       ALTER TABLE s2t_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+      ALTER TABLE s2t_users ADD COLUMN IF NOT EXISTS deletion_state TEXT NOT NULL DEFAULT 'active';
+      CREATE INDEX IF NOT EXISTS s2t_users_deletion_state_index ON s2t_users(deletion_state);
       ALTER TABLE s2t_voiceprint_records ADD COLUMN IF NOT EXISTS sharing_scope TEXT NOT NULL DEFAULT 'private';
       ALTER TABLE s2t_diarization_jobs ADD COLUMN IF NOT EXISTS lease_generation INTEGER NOT NULL DEFAULT 0;
       INSERT INTO s2t_schema_migrations(version) VALUES ('001-core-storage') ON CONFLICT(version) DO NOTHING;
+      INSERT INTO s2t_schema_migrations(version) VALUES ('002-account-deletion') ON CONFLICT(version) DO NOTHING;
     `)
     } catch (error) {
       logger.error('storage.migration.failed', { schemaVersion: this.schemaVersion, durationMs: Date.now() - startedAt, error })
@@ -146,6 +150,23 @@ class PostgresConfigStore {
     logger.info('storage.migration.applied', { schemaVersion: this.schemaVersion, durationMs: Date.now() - startedAt })
   }
   async get(scope, key) { await this.ready; const result = await this.pool.query('SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = $2', [safePart(scope, 'scope'), safePart(key, 'record key')]); return result.rows[0]?.value ?? null }
+  async getUserState(userId, client = this.pool) {
+    await this.ready
+    const result = await client.query('SELECT deletion_state FROM s2t_users WHERE id = $1', [safePart(userId, 'user id')])
+    return !result.rowCount ? null : result.rows[0].deletion_state === 'deleting' ? 'deleting' : 'active'
+  }
+  async purgeAccount(userId) {
+    await this.ready
+    const ownerId = safePart(userId, 'user id'); const client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+      await client.query('DELETE FROM s2t_config_records WHERE scope = $1', [ownerId])
+      await client.query('DELETE FROM s2t_diarization_jobs WHERE user_id = $1', [ownerId])
+      await client.query('DELETE FROM s2t_voiceprint_records WHERE user_id = $1', [ownerId])
+      await client.query('DELETE FROM s2t_glossaries WHERE user_id = $1', [ownerId])
+      await client.query('COMMIT')
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
+  }
   async put(scope, key, value) { await this.ready; await this.pool.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb) ON CONFLICT(scope, record_key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()', [safePart(scope, 'scope'), safePart(key, 'record key'), JSON.stringify(value)]) }
   async compareAndSwap(scope, key, expectedVersion, value) {
     await this.ready
@@ -202,8 +223,9 @@ class PostgresConfigStore {
   }
   async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
     await this.ready
+    const ownerId = safePart(userId, 'user id')
     const result = await this.pool.query(`INSERT INTO s2t_diarization_jobs(id, user_id, session_id, audio_key, payload)
-      VALUES($1, $2, $3, $4, $5::jsonb)
+      SELECT $1, account.id, $3, $4, $5::jsonb FROM s2t_users account WHERE account.id = $2 AND account.deletion_state = 'active'
       ON CONFLICT(user_id, session_id, audio_key) DO UPDATE SET
       payload = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.payload ELSE EXCLUDED.payload END,
       state = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.state ELSE 'queued' END,
@@ -212,7 +234,8 @@ class PostgresConfigStore {
       lease_until = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.lease_until ELSE NULL END,
       error = CASE WHEN EXCLUDED.payload->>'processingToken' IS NOT NULL AND s2t_diarization_jobs.payload->>'processingToken' = EXCLUDED.payload->>'processingToken' THEN s2t_diarization_jobs.error ELSE NULL END,
       updated_at = NOW()
-      RETURNING id, state, attempts, created_at AS "createdAt", updated_at AS "updatedAt"`, [safePart(id, 'job id'), safePart(userId, 'user id'), safePart(sessionId, 'session id'), safePart(audioKey, 'audio key'), JSON.stringify(payload)])
+      RETURNING id, state, attempts, created_at AS "createdAt", updated_at AS "updatedAt"`, [safePart(id, 'job id'), ownerId, safePart(sessionId, 'session id'), safePart(audioKey, 'audio key'), JSON.stringify(payload)])
+    if (!result.rowCount) throw new Error('帳號已不存在或正在刪除中')
     return result.rows[0]
   }
   async getDiarizationJob(userId, id) { await this.ready; const result = await this.pool.query('SELECT id, state, attempts, error, created_at AS "createdAt", updated_at AS "updatedAt" FROM s2t_diarization_jobs WHERE user_id = $1 AND id = $2', [safePart(userId, 'user id'), safePart(id, 'job id')]); return result.rows[0] ?? null }
@@ -220,8 +243,9 @@ class PostgresConfigStore {
   async claimDiarizationJob(owner, id = null) {
     await this.ready
     const result = await this.pool.query(`WITH candidate AS (
-      SELECT id FROM s2t_diarization_jobs
-      WHERE ($2::text IS NULL OR id = $2) AND ((state = 'queued' AND (lease_until IS NULL OR lease_until < NOW())) OR (state = 'running' AND lease_until < NOW()))
+      SELECT job.id FROM s2t_diarization_jobs job
+      JOIN s2t_users account ON account.id = job.user_id AND account.deletion_state = 'active'
+      WHERE ($2::text IS NULL OR job.id = $2) AND ((job.state = 'queued' AND (job.lease_until IS NULL OR job.lease_until < NOW())) OR (job.state = 'running' AND job.lease_until < NOW()))
       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1
     ) UPDATE s2t_diarization_jobs AS job SET state = 'running', attempts = attempts + 1, lease_generation = lease_generation + 1, lease_owner = $1, lease_until = NOW() + INTERVAL '5 minutes', updated_at = NOW()
       FROM candidate WHERE job.id = candidate.id
@@ -260,6 +284,8 @@ class PostgresConfigStore {
       await client.query('BEGIN')
       const job = await client.query("SELECT id FROM s2t_diarization_jobs WHERE id = $1 AND user_id = $2 AND state = 'running' AND lease_owner = $3 AND lease_generation = $4 AND lease_until > clock_timestamp() FOR UPDATE", [safePart(id, 'job id'), safePart(userId, 'user id'), safePart(owner, 'owner'), generation])
       if (!job.rowCount) { await client.query('ROLLBACK'); return 'lost' }
+      const account = await client.query("SELECT id FROM s2t_users WHERE id = $1 AND deletion_state = 'active' FOR KEY SHARE", [safePart(userId, 'user id')])
+      if (!account.rowCount) { await client.query('ROLLBACK'); return 'lost' }
       const record = await client.query("SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = 'sessions' FOR UPDATE", [userId])
       if (!record.rowCount || (record.rows[0].value?.version ?? 0) !== expectedVersion) { await client.query('ROLLBACK'); return 'conflict' }
       // Recheck using wall time after potentially waiting for the record lock.

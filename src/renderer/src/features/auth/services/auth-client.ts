@@ -11,9 +11,8 @@ export { authFetch, retryableAuthFetch } from '../../../shared/http/authenticate
 const synchronizeDesktopSession = async (): Promise<void> => {
   const accessToken = token()
   if (!window.s2t || !accessToken) return
-  // A development renderer may use Vite's relative /api proxy. The main
-  // process cannot validate a relative URL, so only synchronize when an
-  // explicit external (or explicitly configured local-test) gateway exists.
+  // The renderer loads local files; the main process validates the same
+  // explicitly configured gateway used for authenticated HTTP requests.
   if (await getGatewayUrl()) await window.s2t.authenticateGatewaySession(accessToken)
 }
 const request = async <T,>(path: string, input?: unknown): Promise<T> => {

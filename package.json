@@ -5,11 +5,10 @@
   "description": "Local-first desktop shell for real-time speech-to-text and translation",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "npm run build && electron-vite preview",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "web:serve": "node server/index.cjs",
-    "web:preview": "vite preview --config config/vite.web.config.ts",
     "storage:smoke": "node tests/smoke/storage-smoke-test.cjs",
     "storage:remote:smoke": "node tests/smoke/remote-storage-smoke-test.cjs",
     "storage:gateway:smoke": "node tests/smoke/gateway-storage-startup-smoke-test.cjs",

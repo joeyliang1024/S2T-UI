@@ -7,6 +7,7 @@ const runDurableDiarizationJob = async (auth, owner) => {
   if (typeof storage.config.claimDiarizationJob !== 'function') return
   const job = await storage.config.claimDiarizationJob(owner)
   if (!job) return
+  const execute = async () => {
   if (job.attempts > diarizationJobMaxAttempts) {
     logger.warn('diarization.job.abandoned', { jobId: job.id, attempt: job.attempts, maxAttempts: diarizationJobMaxAttempts, owner })
     await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, `超過最大重試次數（${diarizationJobMaxAttempts}）`).catch(() => undefined)
@@ -79,6 +80,15 @@ const runDurableDiarizationJob = async (auth, owner) => {
     else logger.error('diarization.job.failed', fields)
     if (!leaseLost) await storage.config.finishDiarizationJob(job.id, owner, job.leaseGeneration, reason)
   } finally { if (leaseTimer) cancel(leaseTimer) }
+  }
+  // Keep already-claimed work inside the same account admission as HTTP writes.
+  // Deletion waits for this lease before touching blobs, vectors or sessions.
+  if (typeof storage.withAccountWrite !== 'function') return execute()
+  try { return await storage.withAccountWrite(job.userId, execute) }
+  catch (error) {
+    if (!['ACCOUNT_DELETING', 'ACCOUNT_UNAVAILABLE'].includes(error.code)) throw error
+    logger.info('diarization.job.account-unavailable', { jobId: job.id, userId: job.userId })
+  }
 }
 return runDurableDiarizationJob
 }

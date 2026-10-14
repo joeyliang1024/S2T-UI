@@ -26,7 +26,7 @@ const main = async () => {
     cwd: directory,
     // Run outside the repository with a minimal environment so developer
     // dotenv/remote audio-service/Redis settings cannot leak into this test.
-    env: { PATH: process.env.PATH, S2T_MODELS_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
+    env: { PATH: process.env.PATH, S2T_MODELS_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: `http://127.0.0.1:${port},null`, S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let output = ''
@@ -56,7 +56,7 @@ const main = async () => {
     const rateLimitedDiarization = await request(base, '/api/diarizations', { method: 'POST', body: Buffer.from('x') })
     assert.equal(rateLimitedDiarization.response.status, 429)
     assert.match(rateLimitedDiarization.response.headers.get('retry-after') || '', /^[1-9]/)
-    for (const origin of ['http://127.0.0.1:5173', 'null']) {
+    for (const origin of [base, 'null']) {
       const preflight = await request(base, '/api/voiceprints/example', { method: 'OPTIONS', headers: { origin, 'access-control-request-method': 'DELETE' } })
       assert.equal(preflight.response.status, 204)
       assert.equal(preflight.response.headers.get('access-control-allow-origin'), origin)
