@@ -7,7 +7,9 @@ const createStorage = (environment = process.env) => {
   const blob = config.minio ? new MinioBlobStore(config.minio) : new LocalBlobStore(config.localDataDirectory)
   const configStore = config.postgres ? new PostgresConfigStore(config.postgres) : new LocalConfigStore(config.localDataDirectory)
   const vector = config.milvus ? new MilvusVectorStore(config.milvus) : new LocalVectorStore(config.localDataDirectory)
+  let closing
   return {
+    close: () => closing ??= Promise.all([blob, configStore, vector].map(store => Promise.resolve().then(() => store.close?.()))).then(() => undefined),
     blob,
     config: configStore,
     vector,

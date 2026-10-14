@@ -1,4 +1,4 @@
-import type { UiLanguage } from './index'
+import type { UiLanguage } from './types'
 
 /**
  * Status copy (batch B): transient toast text, inline import errors,

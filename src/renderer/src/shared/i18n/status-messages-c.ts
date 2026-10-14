@@ -1,4 +1,4 @@
-import type { UiLanguage } from './index'
+import type { UiLanguage } from './types'
 
 /**
  * Status copy produced by `useAppController` (slice C): segment rerecording,

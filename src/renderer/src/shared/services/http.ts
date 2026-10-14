@@ -29,3 +29,7 @@ export const readJsonResponse = async <T,>(response: Response, service: string):
   }
   return payload as T
 }
+
+/** Includes abort messages forwarded by the gateway or Electron IPC. */
+export const isRequestAborted = (error: unknown): boolean => error instanceof Error &&
+  (error.name === 'AbortError' || /signal is aborted without reason|(?:operation|request) was aborted/i.test(error.message))

@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/app/services/environment-settings.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['src/renderer/src/features/settings/domain/environment-settings.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }
 new Function('module', 'exports', 'require', code)(m, m.exports, require)
 const { applyEnvironmentSettings } = m.exports

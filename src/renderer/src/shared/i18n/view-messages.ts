@@ -1,4 +1,4 @@
-import type { UiLanguage } from './index'
+import type { UiLanguage } from './types'
 
 /**
  * Static UI copy: labels, headings, hints, placeholders and option text that

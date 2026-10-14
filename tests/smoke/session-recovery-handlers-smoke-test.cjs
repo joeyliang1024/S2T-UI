@@ -1,23 +1,27 @@
-const assert=require('node:assert/strict'),fs=require('node:fs'),{buildSync,transformSync}=require('esbuild')
+const assert=require('node:assert/strict'),fs=require('node:fs'),{buildSync}=require('esbuild')
 const load=path=>{const code=buildSync({entryPoints:[path],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text;const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);return m.exports}
-const recovery=load('src/renderer/src/features/app/services/session-recovery.ts'),wav=load('src/renderer/src/features/transcript/wav-batch.ts'),http=load('src/renderer/src/shared/services/http.ts')
-const source=fs.readFileSync('src/renderer/src/features/app/hooks/useAppController.ts','utf8');const fragment=source.slice(source.indexOf('const retryFailedSession ='),source.indexOf('const finalizeSession ='))
-const code=transformSync(fragment,{loader:'ts',target:'es2022'}).code
+const recovery=load('src/renderer/src/features/sessions/domain/recovery.ts'),wav=load('src/renderer/src/features/transcript/wav-batch.ts'),http=load('src/renderer/src/shared/services/http.ts')
+const {retrySession}=load('src/renderer/src/features/sessions/services/recovery-handlers.ts')
 const data=Buffer.alloc(44+64000);data.write('RIFF');data.writeUInt32LE(data.length-8,4);data.write('WAVEfmt ',8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(16000,24);data.writeUInt32LE(32000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write('data',36);data.writeUInt32LE(64000,40);const audio=new Blob([data],{type:'audio/wav'})
 const good={id:'good',status:'final',startMs:1000,endMs:2000,sourceText:'kept',translatedText:'keep translation',translationStatus:'completed',speaker:'manual',speakerManuallyEdited:true}
 const base={diarizationJobId:'old-job',id:'record',title:'test',audioKey:'record',durationMs:2000,createdAt:'2026-10-11',source:'test',processingState:'failed',processingError:'failed',segments:[good],transcript:'kept'}
 async function run(entry,options={}){
  let sessions=[entry],requests=[],asr=0,translations=0,uploads=0,status=[]
  const context={...recovery,...wav,...http,crypto:require('node:crypto').webcrypto,window:{},File,Blob,AbortSignal,
- recoveryActiveRef:{current:new Set()},qualityCorrectionActiveRef:{current:new Set()},settings:{sourceLanguage:'en',targetLanguage:'zh-TW',glossary:'',diarizationEndpoint:'/api/diarizations',diarizationModel:'mock'},selectedModel:{kind:'openai-http',id:'mock',endpoint:'/api/transcriptions',model:'mock',capabilities:{supportedSampleRates:[16000]}},webGatewayAsrProfileId:'default',translationReady:true,
+ recoveryActiveRef:{current:new Set()},qualityCorrectionActiveRef:{current:new Set()},settings:{translationModel:'mock-translation',translationEndpoint:'/api/translations',sourceLanguage:'en',targetLanguage:'zh-TW',glossary:'',diarizationEndpoint:'/api/diarizations',diarizationModel:'mock'},selectedModel:{kind:'openai-http',id:'mock',endpoint:'/api/transcriptions',model:'mock',capabilities:{supportedSampleRates:[16000]}},webGatewayAsrProfileId:'default',translationReady:true,
  loadSessionAudio:async()=>{if(options.audioFails)throw Error('audio unavailable');return audio},activeAudioVersionFor:e=>({audioKey:e.audioKey}),audioVersionsFor:e=>e.audioVersions?.length?e.audioVersions:[{id:'original',audioKey:e.audioKey,transcript:e.transcript,segments:e.segments}],activeTranslate:key=>key,
  setSessions:update=>{sessions=update(sessions)},setStatus:message=>status.push(message),makeTranscriptText:entries=>entries.filter(e=>e.status==='final').map(e=>e.sourceText).join('\n'),chooseModelSampleRate:rate=>rate,resampleAudioForAsr:async a=>a,asrLanguage:()=> 'en',headerValue:encodeURIComponent,
- shouldSkipTranslation:()=>false,resolveTranslationTarget:()=> 'zh-TW',translationTransportRef:{current:async e=>{translations++;if(options.translationFails)throw Error('legacy translation failed');return 'recovered '+e.sourceText}},
- remoteSessionStorage:{saveAudio:async(id,audio,attempts)=>{assert.equal(attempts,1);uploads++}},authFetch:async(path,init)=>{requests.push(path);if(path.includes('diarizations'))return new Response(JSON.stringify({turns:[{start:0,end:2,speaker:'fixed'}]}));return new Response(JSON.stringify(options.saveFails?{error:'storage retry failed'}:{}),{status:options.saveFails?503:200})},
+ shouldSkipTranslation:()=>false,resolveTranslationTarget:()=> 'zh-TW',translationTransportRef:{current:async e=>{translations++;if(options.translationFails)throw Error('legacy translation failed');return {text:'recovered '+e.sourceText}}},
+ remoteSessionStorage:{saveAudio:async(id,audio,attempts)=>{assert.equal(attempts,1);uploads++}},authFetch:async(path,init)=>{requests.push(path);if(path.includes('diarizations'))return new Response(JSON.stringify({exclusive_diarization:[{start:0,end:2,speaker:'fixed'}]}));return new Response(JSON.stringify(options.saveFails?{error:'storage retry failed'}:{}),{status:options.saveFails?503:200})},
  requestBrowserAsr:async init=>{asr++;const layout=await wav.readPcmWavFileLayout(new File([init.body],'chunk.wav'));assert.ok(layout.dataBytes<=(options.legacyStage==='asr'||entry.recoveryFullAsr||entry.activeAudioVersionId?64000:32000),'requested audio range is bounded');if(options.asrFailsAt===asr)throw Error('ASR retry failed');return new Response(JSON.stringify({text:'recovered range'}))},
  parseSpeakerTurns:p=>p.turns,assignSpeakersByOverlap:entries=>entries.map(e=>({...e,speaker:'fixed'}))}
- const retry=new Function(...Object.keys(context),code+';return retryFailedSession')(...Object.values(context))
- await retry(entry,options.backup,options.legacyStage)
+ const dependencies={
+   ...context, saveAudio: context.remoteSessionStorage.saveAudio, activeRecoveries: context.recoveryActiveRef.current,
+   qualityCorrectionActive: context.qualityCorrectionActiveRef.current,
+   translate: context.translationTransportRef.current,
+   publish:(updated,previousToken,token)=>{sessions=sessions.map(item=>item.id===updated.id&&(item.processingToken===previousToken||item.processingToken===token)?updated:item)}
+ }
+ await retrySession(dependencies,entry,options.backup,options.legacyStage)
  return {session:sessions[0],requests,asr,translations,uploads,status}
 }
 ;(async()=>{
@@ -32,8 +36,8 @@ async function run(entry,options={}){
  const legacy={...base,diarizationJobId:undefined,processingFailures:undefined,segments:[good]}
  const legacyTranslation=await run(legacy,{legacyStage:'translation'});assert.equal(legacyTranslation.translations,1);assert.equal(legacyTranslation.asr,0);assert.equal(legacyTranslation.session.processingState,'completed');assert.equal(legacyTranslation.session.segments[0].sourceText,'kept')
  const legacyFailed=await run(legacy,{legacyStage:'translation',translationFails:true});assert.deepEqual(legacyFailed.session.processingFailures,['translation']);assert.equal(legacyFailed.session.segments[0].translatedText,'keep translation');assert.equal(legacyFailed.translations,1);assert.equal((await run(legacyFailed.session)).translations,1)
- const textOnly=await run({...legacy,segments:[]},{legacyStage:'translation'});assert.equal(textOnly.translations,1);assert.equal(textOnly.session.transcript,'kept')
- const legacyAsr=await run(legacy,{legacyStage:'asr'});assert.equal(legacyAsr.asr,1);assert.equal(legacyAsr.session.processingState,'completed');assert.equal(legacyAsr.session.audioVersions[0].transcript,'kept');assert.equal(legacyAsr.session.audioVersions[1].transcript,'recovered range');assert.notEqual(legacyAsr.session.activeAudioVersionId,'original')
+ const textOnly=await run({...legacy,segments:[]},{legacyStage:'translation'});assert.equal(textOnly.translations,1);assert.equal(textOnly.session.segments[0].sourceText,'kept');assert.match(textOnly.session.transcript,/recovered kept/)
+ const legacyAsr=await run(legacy,{legacyStage:'asr'});assert.equal(legacyAsr.asr,1);assert.equal(legacyAsr.session.processingState,'completed');assert.equal(legacyAsr.session.audioVersions[0].transcript,'kept');assert.match(legacyAsr.session.audioVersions[1].transcript,/recovered range/);assert.notEqual(legacyAsr.session.activeAudioVersionId,'original')
  const legacyAsrFailed=await run(legacy,{legacyStage:'asr',asrFailsAt:1});assert.equal(legacyAsrFailed.session.processingState,'failed');assert.deepEqual(legacyAsrFailed.session.processingFailures,['asr']);assert.equal(legacyAsrFailed.session.audioVersions[0].transcript,'kept');const legacyAsrRetry=await run(legacyAsrFailed.session);assert.equal(legacyAsrRetry.asr,1);assert.equal(legacyAsrRetry.session.processingState,'completed')
  const audioFailed=await run(legacy,{legacyStage:'asr',audioFails:true});assert.equal(audioFailed.session.recoveryFullAsr,true);assert.equal(audioFailed.asr,0);assert.equal((await run(audioFailed.session)).session.processingState,'completed')
  const legacyMetadataFailed=await run(legacy,{legacyStage:'saving',saveFails:true});assert.equal(legacyMetadataFailed.uploads,0);const legacyMetadataRetry=await run(legacyMetadataFailed.session);assert.equal(legacyMetadataRetry.uploads,0);assert.equal(legacyMetadataRetry.session.processingState,'completed')

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { OpenAiChunkedModelAdapter } from '../../src/renderer/src/features/models/model-adapter'
+import { createOpenAiChunkedModelAdapter } from '../../src/renderer/src/features/models/model-adapter'
 import { speedToVadConfig } from '../../src/renderer/src/features/capture/vad'
-import { TranslationQueue } from '../../src/renderer/src/features/app/services/translation-queue'
-import { upsertLiveCaption, renderedLiveCaptionWindow } from '../../src/renderer/src/features/app/services/live-caption'
+import { TranslationQueue } from '../../src/renderer/src/features/translation/services/queue'
+import { upsertLiveCaption, renderedLiveCaptionWindow } from '../../src/renderer/src/features/transcript/domain/live-caption'
 import { readJsonResponse } from '../../src/renderer/src/shared/services/http'
-import { BufferedPcmWriter, pcm16 } from '../../src/renderer/src/shared/services/audio'
-import { OpfsPcmRecording } from '../../src/renderer/src/shared/services/opfs-pcm-recording'
+import { pcm16 } from '../../src/renderer/src/shared/services/audio'
+import { BufferedPcmWriter } from '../../src/renderer/src/features/capture/recording/buffered-writer'
+import { OpfsPcmRecording } from '../../src/renderer/src/features/capture/recording/adapters/opfs-pcm-recording'
 
 const durationMs = window.localTestDurationMs
 const originalFetch = window.fetch.bind(window)
@@ -30,7 +31,7 @@ const options = () => ({ targetLanguage: 'en', strategy: 'realtime', elapsedMs: 
 const translate = async (entry, signal) => (await readJsonResponse(await fetch('/api/translations', {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: entry.sourceText }), signal
 }), 'Local mock translation')).text
-const adapter = new OpenAiChunkedModelAdapter({ id: 'local-test', endpoint: '/api/transcriptions', model: 'local-mock', gatewayProfileId: 'default', vadConfig: speedToVadConfig('normal') })
+const adapter = createOpenAiChunkedModelAdapter({ id: 'local-test', endpoint: '/api/transcriptions', model: 'local-mock', gatewayProfileId: 'default', vadConfig: speedToVadConfig('normal') })
 adapter.onError(message => { fatal = message })
 adapter.onTranscript(event => {
   if (event.status === 'final') asrLag.push({ at: event.endMs, lag: performance.now() - start - event.endMs })

@@ -1,6 +1,8 @@
+import type { DesktopBridge } from '../shared/contracts/desktop'
 import { contextBridge, ipcRenderer } from 'electron'
 
-contextBridge.exposeInMainWorld('s2t', {
+const bridge: DesktopBridge = {
+  systemLanguages: ipcRenderer.sendSync('app:system-languages') as string[],
   getGatewayUrl: () => ipcRenderer.invoke('gateway:url'),
   authenticateGatewaySession: (accessToken: string) => ipcRenderer.invoke('gateway:authenticate', accessToken),
   clearGatewaySession: () => ipcRenderer.invoke('gateway:clear-session'),
@@ -10,7 +12,7 @@ contextBridge.exposeInMainWorld('s2t', {
   loadModelConfig: () => ipcRenderer.invoke('models:load-config'),
   saveModelConfig: (config: unknown) => ipcRenderer.invoke('models:save-config', config),
   transcribeAudioChunk: (input: { profileId: string; endpoint: string; model: string; language: string; requiresApiKey?: boolean; prompt?: string; filename?: string; contentType?: string; audio: ArrayBuffer }) => ipcRenderer.invoke('model:transcribe', input),
-  completeText: (input: { requestId?: string; profileId: string; endpoint: string; model: string; messages: Array<{ role: 'system' | 'user'; content: string }> }) => ipcRenderer.invoke('model:complete', input),
+  completeText: (input: { requestId?: string; profileId: string; endpoint: string; model: string; requiresApiKey?: boolean; messages: Array<{ role: 'system' | 'user'; content: string }> }) => ipcRenderer.invoke('model:complete', input),
   cancelCompleteText: (requestId: string) => ipcRenderer.invoke('model:cancel-complete', requestId),
   diarizeAudio: (input: { endpoint: string; model: string; audio: ArrayBuffer; embeddings?: boolean }) => ipcRenderer.invoke('model:diarize', input),
   startPcmRecording: (sampleRate: number) => ipcRenderer.invoke('recording:start', sampleRate),
@@ -40,4 +42,6 @@ contextBridge.exposeInMainWorld('s2t', {
     ipcRenderer.on('captions:floating-closed', handler)
     return () => ipcRenderer.removeListener('captions:floating-closed', handler)
   }
-})
+}
+
+contextBridge.exposeInMainWorld('s2t', bridge)

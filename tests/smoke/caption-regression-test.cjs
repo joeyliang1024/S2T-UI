@@ -2,10 +2,10 @@ const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 const { readFileSync, writeFileSync, mkdirSync } = require('node:fs')
 const { requestLimits, createRequestLimiter, upstreamRateLimit } = require('../../server/request-limits.cjs')
-const exportsCode = `export * from './src/renderer/src/shared/services/settings'; export * from './src/renderer/src/features/app/services/translation-queue'; export * from './src/renderer/src/features/app/services/translation-policy'; export * from './src/renderer/src/features/app/services/live-caption'; export * from './src/renderer/src/features/models/model-adapter'; export * from './src/renderer/src/features/capture/vad'; export * from './src/renderer/src/shared/services/http'; export * from './src/renderer/src/features/speakers/diarization';`
+const exportsCode = `export * from './src/renderer/src/shared/services/settings'; export * from './src/renderer/src/features/translation/services/queue'; export * from './src/renderer/src/features/translation/domain/policy'; export * from './src/renderer/src/features/transcript/domain/live-caption'; export * from './src/renderer/src/features/models/model-adapter'; export * from './src/renderer/src/features/models/transports/web-asr'; export * from './src/renderer/src/features/capture/vad'; export * from './src/renderer/src/shared/services/http'; export * from './src/renderer/src/features/speakers/diarization';`
 const code = buildSync({ stdin: { contents: exportsCode, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }; new Function('module','exports','require',code)(m,m.exports,require)
-const { normalizeSettings, TranslationQueue, HttpServiceError, readJsonResponse, upsertLiveCaption, editCaptionContent, renderedLiveCaptionWindow, OpenAiChunkedModelAdapter, speedToVadConfig, assignSpeakersByOverlap, groupLiveCaptions, freezeCaptionGroups } = m.exports
+const { normalizeSettings, TranslationQueue, HttpServiceError, readJsonResponse, upsertLiveCaption, editCaptionContent, renderedLiveCaptionWindow, createOpenAiChunkedModelAdapter, createWebAsrTransport, speedToVadConfig, assignSpeakersByOverlap, groupLiveCaptions, freezeCaptionGroups } = m.exports
 const flush = async () => { for(let i=0;i<40;i++) await Promise.resolve() }
 class Clock {
  constructor(){this.now=0;this.id=0;this.tasks=new Map()}
@@ -82,18 +82,18 @@ async function regressions(){
  assert.ok(stop.indexOf('.drain(')<stop.indexOf('const finalSegments'))
  const stopClock=new Clock();global.window=stopClock.window();let aborted=0
  global.fetch=async(_url,init)=>{init.signal.addEventListener('abort',()=>aborted++);await stopClock.wait(1000);return response(200,{text:'尾段'})}
- const stopAdapter=new OpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default'})
+ const stopAdapter=createOpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default'})
  const stoppedEvents=[];stopAdapter.onTranscript(e=>stoppedEvents.push(e));await stopAdapter.start({sampleRate:16000,language:'zh-TW',targetLanguage:'en'})
  const smallAudio=new Float32Array(1600).fill(.05)
  for(let i=0;i<4;i++)stopAdapter.enqueue(smallAudio,i*1600)
  stopAdapter.pendingChunks=[smallAudio];stopAdapter.pendingSamples=smallAudio.length;stopAdapter.pendingStart=6400;stopAdapter.pendingContainsSpeech=true
  await flush();const stopPromise=stopAdapter.stop();await stopClock.advance(6000);await stopPromise
- assert.equal(aborted,0,'normal stop must not abort healthy in-flight ASR');assert.equal(stoppedEvents.length,5,'full queue must drain before the final flush');assert.equal(stopAdapter.activeGatewayRequests.size,0)
+ assert.equal(aborted,0,'normal stop must not abort healthy in-flight ASR');assert.equal(stoppedEvents.length,5,'full queue must drain before the final flush');assert.equal(stopClock.tasks.size,0)
  const bodyClock=new Clock();global.window=bodyClock.window()
  global.fetch=async(_url,init)=>({ok:true,status:200,headers:new Headers(),text:()=>new Promise((_resolve,reject)=>init.signal.addEventListener('abort',()=>reject(new DOMException('timeout','AbortError'))))})
- const bodyAdapter=new OpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default'});bodyAdapter.gatewayTimeoutMs=1000
- await bodyAdapter.start({sampleRate:16000,language:'zh-TW',targetLanguage:'en'})
- const timedOut=assert.rejects(bodyAdapter.transcribeThroughWebGateway(new ArrayBuffer(44)),e=>e.name==='TimeoutError');await flush();await bodyClock.advance(1000);await timedOut;assert.equal(bodyAdapter.activeGatewayRequests.size,0)
+ const bodyTransport=createWebAsrTransport({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default'})
+ await bodyTransport.ensureReady()
+ const timedOut=assert.rejects(bodyTransport.transcribe({audio:new ArrayBuffer(44),key:'body-timeout',language:'zh'}),e=>e.name==='TimeoutError');await flush();await bodyClock.advance(30000);await timedOut;assert.equal(bodyClock.tasks.size,0)
  // Translation must not write `captionGroupId`: that field is the display-row lock
  // set by freezeCaptionGroups. Translation strategy may only change how requests
  // are emitted, never how the live caption display is grouped.
@@ -127,7 +127,7 @@ async function virtualCapture(speed,inject=false){
   assert.equal(translatedIds.has(e.id),false,'no unnecessary duplicate model request');translatedIds.add(e.id);acceptedTranslations++
   await h.clock.wait(100);latencies.push({at:e.endMs,lag:h.clock.now-e.endMs});return {text:'譯文'}
  }
- const adapter=new OpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default',vadConfig:speedToVadConfig(speed)})
+ const adapter=createOpenAiChunkedModelAdapter({id:'test',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default',vadConfig:speedToVadConfig(speed)})
  adapter.onTranscript(e=>{if(e.status==='final')asrTexts.push(e.sourceText);h.update(es=>upsertLiveCaption(es,e,-1,id=>h.queue.isActive(id)))})
  await adapter.start({sampleRate:16000,language:'zh-TW',targetLanguage:'en'})
  const opts=()=>({...options,elapsedMs:h.clock.now})
@@ -140,7 +140,7 @@ async function virtualCapture(speed,inject=false){
   const stopping=adapter.stop();await h.clock.advance(604000);await stopping
   const draining=h.queue.drain(opts(),translate);await h.clock.advance(610000);assert.equal(await draining,true)
   assert.equal(h.entries.filter(e=>e.status==='gap').length,0);assert.ok(h.entries.every(e=>e.translatedText));assert.equal(h.entries.map(e=>e.sourceText).join(''),asrTexts.join(''),'merging must preserve all ASR content');assert.equal(h.queue.retryCount,0);assert.equal(h.queue.inFlight,0)
-  assert.equal(adapter.diagnostics.inFlight,0);assert.equal(adapter.queuedChunks,0);assert.equal(adapter.pendingSamples,0);assert.equal(adapter.activeGatewayRequests.size,0)
+  assert.equal(adapter.diagnostics.inFlight,0);assert.equal(adapter.queuedChunks,0);assert.equal(adapter.pendingSamples,0);assert.equal(h.clock.tasks.size,0)
   const report={speed,injectedFaults:inject,asrCalls,translationCalls,acceptedTranslations,captions:h.entries.length,asr:adapter.diagnostics,translation:h.queue.diagnostics,untranslated:0,gaps:0}
   console.log('10-minute virtual capture',JSON.stringify(report));return report
  }finally{Date.now=originalNow}

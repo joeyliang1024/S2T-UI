@@ -26,7 +26,7 @@ const main = async () => {
     cwd: directory,
     // Run outside the repository with a minimal environment so developer
     // dotenv/remote audio-service/Redis settings cannot leak into this test.
-    env: { PATH: process.env.PATH, S2T_MODELS_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
+    env: { PATH: process.env.PATH, S2T_MODELS_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: 'http://127.0.0.1:5173,null', S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let output = ''
@@ -149,6 +149,16 @@ const main = async () => {
     assert.equal(result.response.status, 400, 'the selected summary model must resolve before input validation')
     result = await request(base, '/api/data/model-credentials/asr-one', { method: 'DELETE', headers: bearer(activeAlice) })
     assert.equal(result.response.status, 204)
+    const draftHeaders = { ...bearer(activeAlice), 'content-type': 'application/json' }
+    result = await request(base, '/api/data/live-draft', { method: 'POST', headers: draftHeaders, body: JSON.stringify({ value: { id: 'new-recording', segments: [] } }) })
+    assert.equal(result.response.status, 204)
+    result = await request(base, '/api/data/live-draft?expectedId=old-recording', { method: 'DELETE', headers: bearer(activeAlice) })
+    assert.equal(result.response.status, 204)
+    result = await request(base, '/api/data/live-draft', { headers: bearer(activeAlice) })
+    assert.equal(result.body.value.id, 'new-recording', 'old cleanup must preserve a newer draft')
+    await request(base, '/api/data/live-draft?expectedId=new-recording', { method: 'DELETE', headers: bearer(activeAlice) })
+    result = await request(base, '/api/data/live-draft', { headers: bearer(activeAlice) })
+    assert.equal(result.body.value, null, 'matching cleanup clears its own draft')
     const templates = [{ id: 'meeting', name: 'Meeting', content: '# Summary' }]
     result = await request(base, '/api/data/summary-templates', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, templates, selectedTemplateId: 'meeting' }) })
     assert.deepEqual(result.body, { saved: true, version: 1 })

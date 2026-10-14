@@ -4,7 +4,7 @@ const { join } = require('node:path')
 const { tmpdir } = require('node:os')
 const { buildSync } = require('esbuild')
 const { createStorage } = require('../../server/storage/index.cjs')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/app/services/environment-settings.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['src/renderer/src/features/settings/domain/environment-settings.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }
 new Function('module', 'exports', 'require', code)(m, m.exports, require)
 const { applyEnvironmentSettings } = m.exports

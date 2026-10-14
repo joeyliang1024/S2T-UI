@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{buildSync}=require('esbuild'),{gunzipSync}=require('node:zlib')
-const code=buildSync({entryPoints:['src/renderer/src/features/app/services/remote-session-storage.ts'],bundle:true,platform:'node',format:'cjs',write:false,external:['../../auth/services/auth-client','../../../shared/i18n']}).outputFiles[0].text
+const code=buildSync({entryPoints:['src/renderer/src/features/sessions/services/remote-session-storage.ts'],bundle:true,platform:'node',format:'cjs',write:false,external:['../../auth/services/auth-client','../../../shared/i18n']}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,id=>id.includes('auth-client')?{retryableAuthFetch:(...args)=>globalThis.__sessionFetch(...args)}:{activeTranslate:key=>key})
 const {remoteSessionStorage}=m.exports
 const fixture=[{id:'record',title:'large',transcript:'字幕'.repeat(150000),segments:[],audioKey:'',nativeAudioPath:'/private/local.wav',savedToDisk:true}]

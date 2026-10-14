@@ -8,7 +8,7 @@ global.performance = { now: () => -1 }
 global.window = {}; global.metricSamples = samples
 const source = fs.readFileSync('src/renderer/src/shared/services/caption-metrics.ts', 'utf8')
   .replace(/import .* from '\.\/caption-metric-transport'/, 'class CaptionMetricTransport { constructor(sender: unknown) {} enqueue(samples: unknown[]) { globalThis.metricSamples.push(...samples) } } type CaptionMetricSample = {stage: string; seconds: number}')
-  .replace(/import .* from .*auth-client'/, 'const authFetch = async () => ({ok: true})')
+  .replace(/import .* from .*(?:auth-client|authenticated-client)'/, 'const authFetch = async () => ({ok: true})')
 const code = buildSync({ stdin: { contents: source, loader: 'ts' }, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text
 const mod = { exports: {} }; new Function('module', 'exports', code)(mod, mod.exports)
 const m = mod.exports

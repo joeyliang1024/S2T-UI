@@ -1,5 +1,5 @@
 import { CaptionMetricTransport, type CaptionMetricSample, type CaptionMetricEvent } from './caption-metric-transport'
-import { authFetch } from '../../features/auth/services/auth-client'
+import { authFetch } from '../http/authenticated-client'
 
 /** Gateway Server-Timing values (milliseconds) for one model request. */
 export type CaptionServerTiming = { upload?: number; queue?: number; pre?: number; model?: number; total: number }

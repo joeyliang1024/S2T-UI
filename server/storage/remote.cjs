@@ -34,6 +34,8 @@ class MinioBlobStore {
   }
 }
 class PostgresConfigStore {
+  close() { return this.pool.end() }
+
   constructor(config) {
     const maxConnections = Number.parseInt(config.S2T_POSTGRES_MAX_CONNECTIONS || '10', 10)
     this.pool = new Pool({
@@ -313,9 +315,16 @@ class PostgresConfigStore {
       await client.query('COMMIT')
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
   }
-  async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
+  async findVisibleVoiceprintIds({ userId, embeddingModel, embeddingVersion }) {
     await this.ready
-    const result = await this.pool.query(`SELECT v.vector_id FROM s2t_voiceprint_records v JOIN s2t_users owner ON owner.id = v.user_id WHERE v.embedding_model = $3 AND v.embedding_version = $4 AND (v.user_id = $1 OR v.sharing_scope = 'organization' OR (v.sharing_scope = 'department' AND owner.department = $2))`, [safePart(userId, 'user id'), String(department).slice(0, 256), String(embeddingModel).slice(0, 512), String(embeddingVersion).slice(0, 128)])
+    const result = await this.pool.query(`SELECT v.vector_id FROM s2t_voiceprint_records v
+      LEFT JOIN s2t_config_records owner_auth ON owner_auth.scope = v.user_id AND owner_auth.record_key = 'sharing-authorization'
+      LEFT JOIN s2t_config_records viewer_auth ON viewer_auth.scope = $1 AND viewer_auth.record_key = 'sharing-authorization'
+      WHERE v.embedding_model = $2 AND v.embedding_version = $3 AND (v.user_id = $1 OR
+        (viewer_auth.value->>'approved' = 'true' AND owner_auth.value->>'approved' = 'true' AND
+          (v.sharing_scope = 'organization' OR (v.sharing_scope = 'department' AND
+            COALESCE(viewer_auth.value->>'department', '') <> '' AND owner_auth.value->>'department' = viewer_auth.value->>'department'))))`,
+      [safePart(userId, 'user id'), String(embeddingModel).slice(0, 512), String(embeddingVersion).slice(0, 128)])
     return result.rows.map((row) => row.vector_id)
   }
   async removeVoiceprint(vectorId, userId) {

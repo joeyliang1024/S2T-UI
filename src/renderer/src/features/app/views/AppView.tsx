@@ -1,28 +1,28 @@
-import { CorrectedText, CorrectedCaptionText } from './CorrectedText'
-import { displayedSessionStorageState } from '../services/session-storage-state'
-import { sessionRecoveryStages } from '../services/session-recovery'
-import { CaptionPaintMetric } from './CaptionPaintMetric'
+import { CorrectedText, CorrectedCaptionText } from '../../transcript/views/CorrectedText'
+import { displayedSessionStorageState } from '../../sessions/domain/storage-state'
+import { sessionRecoveryStages } from '../../sessions/domain/recovery'
+import { CaptionPaintMetric } from '../../captions/views/CaptionPaintMetric'
 import { NavigationGlyph } from './NavigationGlyph'
 import { importFileAccept } from '../../transcript/import-formats'
-import { CaptionPopout } from './CaptionPopout'
-import { CaptionMemberDetails } from './CaptionMemberDetails'
-import { TooltipButton } from './TooltipButton'
+import { CaptionPopout } from '../../captions/views/CaptionPopout'
+import { CaptionMemberDetails } from '../../captions/views/CaptionMemberDetails'
+import { TooltipButton } from '../../../shared/ui/TooltipButton'
 import { createPortal } from 'react-dom'
 import { type SavedSession, type ModelCapabilities, type View } from '../../../shared/types'
 import { dbfsLabel, meterPercent } from '../../../shared/services/audio'
-import { groupLiveCaptions } from '../services/live-caption'
+import { groupLiveCaptions } from '../../transcript/domain/live-caption'
 import { timestamp } from '../../../shared/services/transcript'
 import { modelEndpoint, textEndpoint } from '../../../shared/services/settings'
-import { ResponseSpeedControl } from './ResponseSpeedControl'
+import { ResponseSpeedControl } from '../../capture/views/ResponseSpeedControl'
 import { interfaceTranslate, resolveUiLanguage, setActiveUiLanguage, translate } from '../../../shared/i18n'
-import { addSummaryTemplate as createSummaryTemplate, removeSelectedSummaryTemplate, selectSummaryTemplate as resolveSummaryTemplate } from '../services/summary-templates'
-import { downloadSummaryBlob, summaryBlob, type SummaryDownloadFormat } from '../services/summary-document'
+import { addSummaryTemplate as createSummaryTemplate, removeSelectedSummaryTemplate, selectSummaryTemplate as resolveSummaryTemplate } from '../../summary/domain/templates'
+import { downloadSummaryBlob, summaryBlob, type SummaryDownloadFormat } from '../../summary/services/document'
 import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactElement, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { MarkdownSummary } from './MarkdownSummary'
+import { MarkdownSummary } from '../../summary/views/MarkdownSummary'
 import { DownloadPicker, type DownloadPick, type DownloadScope } from './DownloadPicker'
-import { SpeakerBatchRename } from './SpeakerBatchRename'
-import { SummaryWorkspace } from './SummaryWorkspace'
-import { SettingsView } from './settings/SettingsView'
+import { SpeakerBatchRename } from '../../speakers/views/SpeakerBatchRename'
+import { SummaryWorkspace } from '../../summary/views/SummaryWorkspace'
+import { SettingsView } from '../../settings/views/SettingsView'
 
 import type { AppController } from '../hooks/useAppController'
 import type { AuthUser } from '../../auth/services/auth-client'
@@ -592,7 +592,28 @@ const workspace = view === 'live' ? liveWorkspace : view === 'history' ? (
   ) : (
     <SettingsView
       user={user}
-      controller={controller}
+      model={{
+        settings: controller.settings,
+        setSettings: controller.setSettings,
+        setStatus: controller.setStatus,
+        saveSettings: controller.saveSettings,
+        settingsSaved: controller.settingsSaved,
+        captureState: controller.captureState,
+        denoiseApplied: controller.denoiseApplied,
+        browserRecordingStorage: controller.browserRecordingStorage,
+        remoteSessionSyncState: controller.remoteSessionSyncState,
+        storageHealth: controller.storageHealth,
+        audioMigrationStatus: controller.audioMigrationStatus,
+        storageCompensations: controller.storageCompensations,
+        storageOrphanAudio: controller.storageOrphanAudio,
+        sileroVadAvailable: controller.sileroVadAvailable,
+        modelHealth: controller.modelHealth,
+        remoteSessionConflicts: controller.remoteSessionConflicts,
+        retryRemoteSessionSync: controller.retryRemoteSessionSync,
+        retryStorageCompensations: controller.retryStorageCompensations,
+        cleanOrphanAudio: controller.cleanOrphanAudio,
+        resolveSessionConflict: controller.resolveSessionConflict,
+      }}
       settingsReturnView={settingsReturnView}
       onNavigate={navigate}
       leaveRequest={leaveRequest}

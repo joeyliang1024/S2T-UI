@@ -1,4 +1,4 @@
-import { type TranscriptEvent } from '../../features/models/model-adapter'
+import { type TranscriptEvent } from '../../../../shared/contracts/transcript'
 import { activeTranslate } from '../i18n'
 
 export const joinCaptionText = (previous: string, next: string): string => {
