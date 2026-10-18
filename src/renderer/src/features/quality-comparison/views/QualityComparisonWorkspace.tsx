@@ -1,3 +1,4 @@
+import { StudioArtwork } from '../../../shared/ui/StudioArtwork'
 import { memo, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import type { SavedSession } from '../../../shared/types'
 import { comparisonRows, comparisonText, type ComparisonKind, type DiffRow } from '../domain/comparison'
@@ -55,7 +56,7 @@ export function QualityComparisonWorkspace({ sessionId, onSelectSession, session
   }
   const stageKey = state?.stage === 'asr' ? 'qualityCorrectionAsr' : state?.stage === 'diarization' ? 'recordProcessingDiarization' : state?.stage === 'translation' ? 'translation' : state?.stage === 'completed' ? 'recordProcessingCompleted' : state?.stage === 'failed' ? 'recordProcessingFailed' : 'qualityCorrectionLoading'
   return <section className="page-panel quality-comparison">
-    <div className="page-title"><div><p className="eyebrow">QUALITY COMPARISON</p><h2 title={ui('qualityCompareHint')}>{ui('qualityCompare')}</h2></div></div>
+    <div className="page-title"><div><p className="eyebrow">QUALITY COMPARISON</p><h2 title={ui('qualityCompareHint')}>{ui('qualityCompare')}</h2></div><StudioArtwork variant="quality" className="page-art" /></div>
     <div className="quality-comparison-controls">
       <label>{ui('qualityCompareRecord')}<select value={session?.id ?? ''} onChange={event => { setSelectedId(event.target.value); onSelectSession?.(event.target.value) }}><option value="" disabled>{ui('notSelected')}</option>{sessions.map(entry => <option key={entry.id} value={entry.id}>{entry.title || ui('untitledRecord')} · {new Date(entry.createdAt).toLocaleString(locale)}</option>)}</select></label>
       <div className="quality-correction-picker" ref={picker} onKeyDown={event => { if (event.key === 'Escape') { setPickerOpen(false); picker.current?.querySelector('button')?.focus() } }}>

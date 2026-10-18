@@ -1,3 +1,4 @@
+import { StudioArtwork } from '../../../shared/ui/StudioArtwork'
 import { type Dispatch, type ReactElement, type SetStateAction, useEffect, useRef, useState } from 'react'
 import { type SavedSession, type Settings } from '../../../shared/types'
 import { resolveUiLanguage } from '../../../shared/i18n/index'
@@ -75,7 +76,7 @@ export function SummaryWorkspace(props: Props): ReactElement {
   useEffect(() => { if (journeyContent) recordJourney('L3') }, [journeyContent])
   const activeText = summaryTab === 'translation' ? (hasCurrentTranslation && !translating && !translationError ? session?.summaryTranslation ?? '' : '') : session?.summary ?? ''
   return <section className="page-panel summary-workspace">
-    <div className="page-title"><div><p className="eyebrow">SUMMARY</p><h2>{ui('summaryTitle')}</h2></div></div>
+    <div className="page-title"><div><p className="eyebrow">SUMMARY</p><h2>{ui('summaryTitle')}</h2></div><StudioArtwork variant="summary" className="page-art" /></div>
     <div className="summary-workspace-grid">
       <section className="summary-setup">
         <label>{ui('selectRecord')}<select value={sessionId ?? ''} onChange={(event) => setSessionId(event.target.value || null)}><option value="">{ui('chooseHistoryRecord')}</option>{sessions.map((entry) => <option key={entry.id} value={entry.id}>{entry.title} · {new Date(entry.createdAt).toLocaleDateString(resolveUiLanguage(settings.uiLanguage))}</option>)}</select></label>
@@ -91,7 +92,7 @@ export function SummaryWorkspace(props: Props): ReactElement {
       <section className="summary-result"><div className="summary-result-heading"><div><p className="eyebrow">{ui('formattedOutput').toUpperCase()}</p><h3>{session ? session.title : ui('notSelected')}</h3></div>{activeText && <div className="summary-actions"><button className="text-button" onClick={() => void copySummary(activeText)}>▣ {ui('copy')}</button><button className="text-button" onClick={() => openSummaryDownload(activeText, session?.title ?? ui('summaryTitle'))}>↓ {ui('download')}</button></div>}</div>{session?.summaryState === 'generating' && <p className="summary-translation-status" role="status">{ui('summaryGeneratingTitle')} {ui('summaryGeneratingHint')}</p>}<div className="summary-toolbar"><div className="summary-tabs" role="tablist"><button type="button" role="tab" aria-selected={summaryTab === 'original'} onClick={() => setSummaryTab('original')}>{ui('sourceText')}</button><button type="button" role="tab" aria-selected={summaryTab === 'translation'} onClick={openTranslationTab}>{ui('translateSummary')}</button></div>
         {summaryTab === 'original' && <p className="summary-language-hint">{ui(window.s2t ? 'summaryLanguageHint' : 'summaryBrowserLanguageHint')}</p>}
         {summaryTab === 'translation' && <label className="summary-target-language">{ui('translationLanguage')}<select value={activeTarget} disabled={translating || Boolean(session && props.generatingIds.includes(session.id))} onChange={event => changeTranslationTarget(event.target.value)}>{supportedTargetLanguages.map(language => <option key={language} value={language}>{languageName(language)}</option>)}</select></label>}</div>
-        {translating && summaryTab === 'translation' ? <p className="summary-translation-status" role="status">{ui('summaryTranslating')}</p> : translationError && summaryTab === 'translation' ? <p className="summary-translation-error" role="alert">{translationError}</p> : activeText ? <MarkdownSummary text={activeText} /> : session?.summaryState === 'generating' ? <div className="empty compact"><h2>{ui('summaryGeneratingTitle')}</h2><p>{ui('summaryGeneratingHint')}</p></div> : <div className="empty compact"><h2>{ui('preparingSummary')}</h2><p>{ui('summaryReadyHint')}</p></div>}</section>
+        {translating && summaryTab === 'translation' ? <p className="summary-translation-status" role="status">{ui('summaryTranslating')}</p> : translationError && summaryTab === 'translation' ? <p className="summary-translation-error" role="alert">{translationError}</p> : activeText ? <MarkdownSummary text={activeText} /> : session?.summaryState === 'generating' ? <div className="empty compact"><h2>{ui('summaryGeneratingTitle')}</h2><p>{ui('summaryGeneratingHint')}</p></div> : <div className="empty compact summary-studio-empty"><h2>{ui('preparingSummary')}</h2><p>{ui('summaryReadyHint')}</p></div>}</section>
     </div>
   </section>
 }
