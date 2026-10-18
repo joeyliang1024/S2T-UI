@@ -17,10 +17,9 @@ docker build --platform linux/amd64 -f Dockerfile.web.hardened -t s2t-ui:release
 前端輸出不包含處理器架構相關程式；可在原生建置主機產生，避免以 QEMU 執行
 前端 bundler。最終映像的 OS、Node、正式套件與 native runtime 必須全部驗證為 x64。
 
-發布會額外封裝原始碼快照與所需本機模型。原始碼不含 `.env`、API key、使用者資料、
-Git metadata 與其他平台的離線二進位。模型另保留各自授權及 provenance。
-若包含模型的映像超過 2,000,000,000 bytes，改發布不含模型的版本，透過唯讀
-`/models` 掛載使用；版本標籤與發布紀錄須說明是否包含模型。
+映像只啟動此 repo 的 gateway，包含前端與必要執行相依，不封裝其他服務或額外原始碼壓縮檔。
+完整映像（包含模型）的未壓縮大小不超過 2,000,000,000 bytes 時一併放入模型；
+超過上限則不包含模型，改由 `/models` 唯讀掛載。版本發布紀錄應註明是否含模型。
 
 ## 執行
 
