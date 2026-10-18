@@ -276,3 +276,24 @@ npm 指令名稱保留。見 [背景處理生命週期檢查](docs/research/SESS
 ### Docker 相容與 K8s 多副本
 
 未設定 `S2T_KUBERNETES_MODE=true` 時維持同容器 `all` 模式，不新增 Redis 或獨立 worker 必要依賴。多副本部署、共享限流、任務交易、音訊 ACK、migration 與 HPA 範例見 [多副本部署指南](docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)；[容量測試](docs/guide/CAPACITY_TEST.zh-TW.md) 支援不同帳號與固定到達率，正式 100 人容量仍須實測。
+
+## 授權
+
+本專案以 [CC BY-NC-SA 4.0](LICENSE) 釋出，SPDX 識別碼為 `CC-BY-NC-SA-4.0`。
+
+- **姓名標示（BY）**：轉載或改作時須標示原作者 Joey Liang，並提供本授權的連結。
+- **非商業性（NC）**：僅限非商業用途。若不確定你的使用情境是否算商業用途，請先自行評估或洽詢法律意見。
+- **相同方式分享（SA）**：改作後的衍生作品必須以相同授權條款釋出。
+
+### 第三方元件
+
+上述授權**只涵蓋本專案自行撰寫的程式碼與文件**。隨附或引用的第三方元件各自維持其原有授權，不因此改變：
+
+| 元件 | 授權 |
+| --- | --- |
+| Qwen3.5-0.8B-Base 基底權重（KEV 模型） | Apache-2.0，見 `docker/kev-models/README.zh-TW.md` |
+| NeMo-Speech.cpp runtime、Nemotron-3-Diarization 權重 | 見 `models/` 目錄下的 README 與 `provenance.json` |
+| npm 相依套件 | 見各套件自身的 `LICENSE` |
+| `dependencies/` 內的離線依賴 | 見該目錄各自的授權宣告 |
+
+`models/` 與 `dependencies/` 不在 Git 版本控制內，其授權資訊以各自目錄內的宣告為準。
