@@ -1,0 +1,17 @@
+flowchart TB
+  MIC["麥克風／系統音訊"] --> PCM["AudioWorklet · PCM 樣本時鐘"]
+  PCM --> WRITER["持續寫入錄音 sink<br/>與 ASR 送出速度解耦"]
+  PCM --> VAD["VAD／分句<br/>停頓＋回應速度設定<br/>t2：偵測／分句／可選 Silero gate"]
+  VAD --> QUEUE["ASR 佇列／編碼／上傳<br/>t1：queue＋encode＋upload"]
+  QUEUE --> GW["Gateway<br/>帳號限流／並行 admission"]
+  GW --> ASR["外部 ASR<br/>t3：gateway／queue／model"]
+  ASR --> POST["文字清理與字幕群組<br/>t4：postprocess"]
+  POST --> PAINT["字幕實際呈現<br/>t5：network＋paint"]
+  POST --> TQ["翻譯策略與佇列<br/>僅針對需要翻譯的字幕"]
+  TQ --> TR["Gateway → 翻譯模型<br/>t6：wait／queue／model／gateway"]
+  TR --> TP["譯文實際呈現<br/>t7：network＋paint"]
+  VAD -. "最後語音樣本時間" .-> E2E["E2E translation tail<br/>最後語音 → 譯文實際呈現<br/>P90 目標小於 3 秒"]
+  TP --> E2E
+  GW -. "Server-Timing" .-> METRIC["caption-metrics<br/>只計算 live view 新資料的實際 paint"]
+  PAINT & TP & E2E --> METRIC
+  METRIC --> TELE["/api/telemetry/captions → /metrics"]

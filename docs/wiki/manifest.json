@@ -1,0 +1,17 @@
+{
+  "repository": "joeyliang1024/S2T-UI",
+  "sourceRef": "feat/bug-fix",
+  "reviewedSourceCommit": "071aeb62d1490aba3722d83440593c89fbee4abc",
+  "pages": [
+    "Home.md",
+    "Getting-Started.md",
+    "Repository-Layout.md",
+    "Development-Standards.md",
+    "Documentation-Standards.md",
+    "Testing-and-Validation.md",
+    "Deployment-and-Operations.md",
+    "Wiki-Maintenance.md",
+    "_Sidebar.md",
+    "_Footer.md"
+  ]
+}

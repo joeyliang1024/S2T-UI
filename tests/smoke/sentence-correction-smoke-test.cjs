@@ -53,11 +53,18 @@ assert.doesNotMatch(html, /<mark[^>]*>今天/)
 // Render the production history preview, with editing details collapsed.
 const viewSource = readFileSync('src/renderer/src/features/app/views/AppView.tsx', 'utf8')
 const previewSource = viewSource.slice(viewSource.indexOf('const sessionTranscript ='), viewSource.indexOf('const liveCaptionGroups ='))
-const previewBundle = buildSync({ stdin: { contents: `import React from 'react'; import { CorrectedCaptionText } from './src/renderer/src/features/transcript/views/CorrectedText'; import { groupLiveCaptions } from './src/renderer/src/features/transcript/domain/live-caption'; const timestamp = value => String(value); const ui = value => value; const editingSessionSegmentId = null; const CaptionMemberDetails = () => null; ${previewSource}; export { sessionTranscript };`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
+const previewBundle = buildSync({ stdin: { contents: `import React from 'react'; import { CorrectedCaptionText } from './src/renderer/src/features/transcript/views/CorrectedText'; import { groupLiveCaptions } from './src/renderer/src/features/transcript/domain/live-caption'; import { searchCaptionGroups } from './src/renderer/src/features/transcript/domain/search'; import { createTextSearch } from './src/renderer/src/shared/services/search'; const timestamp = value => String(value); const ui = value => value; const editingSessionSegmentId = null; const CaptionMemberDetails = () => null; ${previewSource}; export { sessionTranscript };`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
 const previewModule = { exports: {} }; new Function('module', 'exports', 'require', previewBundle)(previewModule, previewModule.exports, require)
 const savedPreview = render(previewModule.exports.sessionTranscript({ segments: [correctedCaption(correctionGroups([caption('saved', 0, 1000, '今天天氣好', true)])[0], '今天天氣很好')] }, ''))
-assert.match(savedPreview, /<mark class="correction-highlight">很<\/mark>/, 'manual quality correction highlights the default history preview')
-assert.doesNotMatch(savedPreview, /<mark[^>]*>今天/)
+assert.match(savedPreview, /今天天氣很好/, 'history displays the latest text without legacy comparison highlights')
+assert.doesNotMatch(savedPreview, /<mark/)
+const legacy = { segments: [], transcript: 'Legacy HELLO transcript' }
+assert.match(render(previewModule.exports.sessionTranscript(legacy, ' ＨＥＬＬＯ ')), /Legacy HELLO transcript/)
+const legacyMiss = render(previewModule.exports.sessionTranscript(legacy, 'missing'))
+assert.doesNotMatch(legacyMiss, /Legacy HELLO transcript/)
+assert.match(legacyMiss, /noSearchMatches/)
+assert.match(render(previewModule.exports.sessionTranscript({segments:[caption('search',0,1000,'content',true)]}, 'missing')), /noSearchMatches/)
+
 async function modelRouting() {
   const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
   const source = hook.slice(hook.indexOf('const transcribeCorrection ='), hook.indexOf('liveCorrectionRunnerRef.current = async'))

@@ -44,6 +44,12 @@ env:
 
 不要在每個 Pod 啟動時生成新值，也不要把此值寫進 ConfigMap、image、Git repository 或前端 `VITE_*` 變數。輪替密鑰會使既有登入 token 與已加密的帳號模型 API key 失效，應安排重新登入與模型憑證更新。
 
+### 重新部署後保留自訂模型
+
+自訂模型清單與加密 API key 存在帳號的 config storage；重新部署必須沿用相同的 config 資料與 `S2T_AUTH_SECRET`。Docker Compose 的 `gateway-data:/data` 包含預設本機資料與自動產生的密鑰，請保留該 volume；遠端 config 使用原本的 PostgreSQL 資料庫。不要在重新部署時重建 Secret 或改用新的資料目錄。若舊密鑰已遺失，現有 API key 無法解密，需恢復原密鑰或由使用者重新保存 API key，不能靠重加模型清單復原。
+
+模型燈號是檢查結果：綠色代表模型清單確認或本機 runtime 就緒；黃色代表服務可達但模型／檢查能力尚未確認；紅色代表認證、連線或 runtime 明確失敗；灰色代表尚未檢查／缺設定或此次檢查無法取得結果。OpenAI 相容服務不支援 `/models` 的 404／405 顯示黃色，不直接推論為不能使用。燈號不會禁止使用模型，也不代表推論品質已驗收。
+
 ## Linux x64 離線 sherpa 模型
 
 若公司環境無法讓 gateway 下載 sherpa-onnx 講者分離模型，可使用已發布的 Linux x64 模型 image。它是模型傳遞媒介，不會啟動 gateway：
@@ -171,3 +177,7 @@ user ID 存在才遷移；沒有 mapping 時仍維持跳過，不會猜測帳號
 可執行 `npm run settings:environment:smoke` 驗證預設選擇、帳號模型保留與載入優先順序。
 
 本機講者分離模型會從共用 `models/` 根目錄偵測：Sherpa 需要 segmentation 與 embedding ONNX；Nemotron 需要 GGUF 與符合執行平台的 runtime。兩套模型都完整時，兩者都列在模型頁與「目前使用」選單。`S2T_DIARIZATION_MODEL` 只決定啟動預設，選單切換的模型會傳給即時預覽、完整音檔及背景工作。偵測清單不會預先對兩套模型同時執行推論。
+
+## H100／H200 GPU worker
+
+可透過環境變數選擇 CPU／CUDA；GPU image、Compose overlay、K8s worker 設定與硬體驗收限制見 [GPU 部署指南](GPU.zh-TW.md)。

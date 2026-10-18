@@ -20,12 +20,12 @@ const jsx = (type, props) => ({ type, props })
 const m = { exports: {} }
 new Function('module', 'exports', 'require', code)(m, m.exports, name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : require(name))
 global.window = {}
-const calls = []
+const calls = [], cancellations = []
 const session = { id: 'a', title: 'A', summary: 'Original A', transcript: 'transcript', segments: [], createdAt: '2026-10-13', processingState: 'failed', processingError: 'translation failure' }
 let props = {
   generatingIds: [], ui: key => key, sessions: [session, { ...session, id: 'b', title: 'B', summary: 'Original B' }], sessionId: 'a',
   settings: { uiLanguage: 'en', targetLanguage: 'ja', summaryTemplates: [], summaryTemplate: '' },
-  setSessionId: () => {}, selectTemplate: () => {}, openSettings: () => {}, summarizeSession: async () => {}, copySummary: async () => {}, openSummaryDownload: () => {},
+  setSessionId: () => {}, selectTemplate: () => {}, openSettings: () => {}, summarizeSession: async () => {}, cancelSummary: id => cancellations.push(id), copySummary: async () => {}, openSummaryDownload: () => {},
   translateSummary: (_session, target) => new Promise((resolve, reject) => calls.push({ id: _session.id, target, resolve, reject }))
 }
 let tree
@@ -39,22 +39,28 @@ function targetSelect() { return nodes(tree).find(node => node.type === 'select'
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); render() }
 ;(async () => {
   render()
-  assert.equal(button('regenerateSummary').props.disabled, false, 'a translation failure cannot disable summary generation')
-  button('translation').props.onClick(); render()
+  assert.equal(button('generateSummary').props.disabled, false, 'a translation failure cannot disable summary generation')
+  props = { ...props, generatingIds: ['a'], sessions: [{ ...session, summaryState: 'generating' }, props.sessions[1]] }; render()
+  assert.ok(button('cancelSummary'), 'generation replaces both generate and regenerate with a cancel action')
+  button('cancelSummary').props.onClick()
+  assert.deepEqual(cancellations, ['a'])
+  props = { ...props, generatingIds: [], sessions: [session, props.sessions[1]] }; render()
+  assert.ok(button('generateSummary'), 'after cancellation the retained summary can be regenerated again')
+  button('translateSummary').props.onClick(); render()
   // Switching tabs or languages must not fire the request; an explicit
   // button triggers the translation instead.
   assert.equal(calls.length, 0, 'opening the tab does not auto-translate')
-  assert.ok(button('translateSummary'), 'an explicit translate button is shown without a translation')
-  button('translateSummary').props.onClick(); render()
+  assert.ok(button('generateSummary'), 'one shared generate button is available')
+  button('generateSummary').props.onClick(); render()
   assert.equal(calls.length, 1)
   assert.ok(nodes(tree).some(node => node.props?.role === 'status' && node.props.children === 'summaryTranslating'))
   calls[0].reject(Error('timeout')); await flush()
   assert.ok(nodes(tree).some(node => node.props?.role === 'alert'))
-  button('retryTranslation').props.onClick(); render()
+  button('generateSummary').props.onClick(); render()
   assert.equal(calls.length, 2)
   targetSelect().props.onChange({ target: { value: 'de' } }); render()
   assert.equal(calls.length, 2, 'changing the target language does not auto-translate')
-  button('translateSummary').props.onClick(); render()
+  button('generateSummary').props.onClick(); render()
   assert.equal(calls.length, 3)
   calls[1].reject(Error('stale timeout')); await flush()
   assert.ok(nodes(tree).some(node => node.props?.role === 'status' && node.props.children === 'summaryTranslating'), 'old failure must not clear new loading state')
@@ -63,10 +69,10 @@ const flush = async () => { await Promise.resolve(); await Promise.resolve(); aw
   calls[2].reject(Error('old session error')); await flush()
   assert.ok(!nodes(tree).some(node => node.props?.role === 'alert'), 'old session cannot set the new session error')
   props.sessions[1] = { ...props.sessions[1], summaryTranslation: 'Old German', summaryTranslationTargetLanguage: 'de' }
-  render(); button('translation').props.onClick(); render()
+  render(); button('translateSummary').props.onClick(); render()
   // The cached translation is for another language: show the button, wait.
   assert.equal(calls.length, 3, 'a cached translation for a different language waits for the explicit button')
-  button('translateSummary').props.onClick(); render()
+  button('generateSummary').props.onClick(); render()
   assert.equal(calls.length, 4)
   calls[3].resolve(); await flush()
   console.log('PASS summary workspace translates only on explicit click, keeps failure/retry, guards target and session races, validates cached language and permits summaries after translation failure')

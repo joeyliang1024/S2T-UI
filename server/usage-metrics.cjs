@@ -2,6 +2,14 @@
 const operations = new Set(['transcriptions', 'translations', 'summaries', 'diarizations'])
 const requestOperations = new Set([...operations, 'telemetry/captions', 'config', 'storage', 'audio/object', 'data/sessions', 'data/settings', 'data/glossary', 'data/voiceprints', 'data/diarization-jobs', 'data/storage-status', 'data/storage-audit', 'data/storage-retry', 'data/model-registry', 'data/model-health', 'data/model-credentials/id', 'data/summary-templates', 'auth/session', 'auth/logout', 'admin/users', 'audio-processing/silero-vad', 'audio-processing/status', 'audio-processing/import-wav', 'other'])
 const users = new Map()
+const journeys = new Map()
+const observeJourney = (userId, stage) => {
+  if (!['L1', 'L2', 'L3'].includes(stage) || !users.has(userId) || userId === '__overflow__') return false
+  const value = journeys.get(userId)
+  if (!value) return false
+  value[stage]++
+  return true
+}
 const maxUsers = 10000
 const entry = userId => {
   if (typeof userId !== 'string' || !userId) return null
@@ -12,6 +20,7 @@ const entry = userId => {
 }
 const registerUser = user => {
   const account = entry(user?.id)
+  if (account && !journeys.has(user.id) && users.has(user.id)) journeys.set(user.id, { L1: 0, L2: 0, L3: 0 })
   if (account && account.nt === undefined) {
     account.nt = typeof user.NT === 'string' && user.NT ? user.NT : '未提供 NT'
     account.department = typeof user.Department === 'string' && user.Department ? user.Department : '未提供部門'
@@ -74,6 +83,11 @@ const render = () => {
     for (const outcome of ['success', 'client_error', 'server_error', 'aborted']) lines.push(`s2t_user_requests_total{${labels},outcome="${outcome}"} ${value.requests[outcome] || 0}`)
     for (const [field, suffix] of Object.entries(fields)) lines.push(`s2t_user_${suffix}_total{${labels}} ${value[field]}`)
   }
+  lines.push('# TYPE s2t_user_journey_events_total counter')
+  for (const [userId, counts] of journeys) {
+    const account = users.get(userId)
+    for (const [stage, count] of Object.entries(counts)) lines.push(`s2t_user_journey_events_total{user_id=${JSON.stringify(userId)},nt=${JSON.stringify(account.nt || '未提供 NT')},department=${JSON.stringify(account.department || '未提供部門')},stage=${JSON.stringify(stage)}} ${count}`)
+  }
   return lines.join('\n') + '\n'
 }
-module.exports = { registerUser, observeRequest, observeExecution, render, wavSeconds }
+module.exports = { observeJourney, registerUser, observeRequest, observeExecution, render, wavSeconds }

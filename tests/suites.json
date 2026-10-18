@@ -65,7 +65,18 @@
     "session-sync-coordinator-smoke-test.cjs",
     "native-recording-recovery-smoke-test.cjs",
     "account-fence-smoke-test.cjs",
-    "account-deletion-smoke-test.cjs"
+    "account-deletion-smoke-test.cjs",
+    "session-history-smoke-test.cjs",
+    "remote-session-response-smoke-test.cjs",
+    "summary-cancellation-smoke-test.cjs",
+    "summary-preview-rollback-smoke-test.cjs",
+    "model-health-smoke-test.cjs",
+    "inference-config-smoke-test.cjs",
+    "nemotron-backend-smoke-test.cjs",
+    "quality-comparison-smoke-test.cjs",
+    "failed-record-summary-smoke-test.cjs",
+    "search-smoke-test.cjs",
+    "model-api-test-smoke-test.cjs"
   ],
   "http": [
     "gateway-env-smoke-test.cjs",
@@ -79,7 +90,8 @@
     "sharing-authorization-http-smoke-test.cjs",
     "gateway-lifecycle-smoke-test.cjs",
     "gateway-single-origin-smoke-test.cjs",
-    "account-deletion-http-smoke-test.cjs"
+    "account-deletion-http-smoke-test.cjs",
+    "model-health-restart-http-smoke-test.cjs"
   ],
   "models": [
     "gateway-auth-smoke-test.cjs",
@@ -97,7 +109,11 @@
     "session-outbox-browser-smoke-test.cjs",
     "opfs-recording-browser-smoke-test.cjs",
     "recording-recovery-browser-smoke-test.cjs",
-    "admin-accounts-browser-smoke-test.cjs"
+    "admin-accounts-browser-smoke-test.cjs",
+    "summary-cancellation-browser-smoke-test.cjs",
+    "model-health-browser-smoke-test.cjs",
+    "quality-comparison-browser-smoke-test.cjs",
+    "ui-navigation-browser-smoke-test.cjs"
   ],
   "external": [
     "remote-storage-smoke-test.cjs",

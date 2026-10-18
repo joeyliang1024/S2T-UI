@@ -4,8 +4,9 @@
 
 - **待辦與需求（唯一來源）**：[Enhancement.md](docs/Enhancement.md)
 - **文件索引（四類分檔）**：[docs/README.md](docs/README.md)
+- **開發與文件規範**：[CONTRIBUTING.md](CONTRIBUTING.md) · [GitHub Wiki](https://github.com/joeyliang1024/S2T-UI/wiki)
 
-ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；模型 key 只由 gateway 或 Electron 主程序持有，不進瀏覽器。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](docs/Enhancement.md) 為準。
+ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；已保存的模型 key 由 gateway 或 Electron 主程序持有，不回傳瀏覽器；新增或更換 key 時由使用者輸入後提交。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](docs/Enhancement.md) 為準。
 
 即時字幕／翻譯限流與排程修正、零 API 用量的 10 分鐘本機驗證及重跑方式，見 [穩定性報告](docs/reports/CAPTION_STABILITY.zh-TW.md)。Web 的 ASR／翻譯每帳號每分鐘額度可分別透過 `S2T_ASR_REQUESTS_PER_MINUTE`、`S2T_TRANSLATION_REQUESTS_PER_MINUTE` 設定，預設各 180。
 
@@ -14,50 +15,16 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 
 ```mermaid
 flowchart TB
-    subgraph client["用戶端"]
-        browser["瀏覽器 UI<br/>(React renderer，Web Gateway :8787)"]
-        electron["Electron 桌面版<br/>(main + preload + renderer)"]
-    end
-
-    subgraph gateway["Web Gateway · server/bootstrap.cjs + server/http/routes (:8787)"]
-        auth["登入／JWT、每帳號限流"]
-        proxy["ASR／翻譯／摘要／分離代理"]
-        cred["模型 key 加密持有"]
-    end
-
-    subgraph workers["背景 Worker"]
-        sherpa["sherpa 講者分離池"]
-        silero["Silero VAD"]
-        nemotron["Nemotron CPU 分離"]
-    end
-
-    subgraph storage["Storage（本機 fallback 或遠端）"]
-        blob["blob · MinIO"]
-        config["config · PostgreSQL"]
-        vector["vector · Milvus"]
-    end
-
-    subgraph models["外部模型 API（OpenAI 相容）"]
-        asr["ASR"]
-        trans["翻譯"]
-        summ["摘要"]
-        dia["遠端講者分離"]
-    end
-
-    infra["Redis + Sentinel（多副本共享限流）"]
-    monitor["Prometheus + Grafana"]
-
-    browser -- "/api" --> gateway
-    electron -- "本機或 /api" --> gateway
-    gateway --> workers
-    gateway --> models
-    workers --> models
-    gateway --> storage
-    gateway -.-> infra
-    gateway -.-> monitor
+  UI["Web React UI<br/>即時字幕／紀錄／摘要／品質校正／模型管理"] --> AP["Gateway :8787<br/>認證／限流／模型代理／設定與紀錄 API"]
+  AP --> MODEL["外部模型 API<br/>ASR／Translation／Summary"]
+  AP --> AUDIO["本機音訊 runtime<br/>VAD／Sherpa／Nemotron／FFmpeg"]
+  AP --> STORE["Storage adapters<br/>目前 local：config／blob／vector"]
+  STORE --> VOL[("持久化 /data<br/>設定／加密 API key／音訊／聲紋／auth-secret")]
+  AP -. "/metrics" .-> PROM["Prometheus → Grafana"]
+  SCALE["可選 K8s：API／Audio Service／Worker 分工<br/>PostgreSQL／MinIO／Milvus／Redis Sentinel"] -. "另行部署；非目前本機拓撲" .-> AP
 ```
 
-目錄責任細節見 [程式目錄與架構](docs/reference/ARCHITECTURE.zh-TW.md)。
+完整架構、9 張詳細流程圖與重新部署的資料／密鑰邊界見 [系統架構](docs/reference/ARCHITECTURE.zh-TW.md)。
 
 ## 功能狀態
 

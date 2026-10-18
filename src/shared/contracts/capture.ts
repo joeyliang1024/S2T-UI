@@ -4,6 +4,8 @@ export type VadFrame = {
   speechEnded: boolean
   speaking: boolean
   levelDbfs: number
+  /** Samples since the most recent voiced audio, excluding VAD silence confirmation. */
+  trailingSilenceSamples?: number
 }
 
 /**

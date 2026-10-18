@@ -1,0 +1,19 @@
+flowchart TB
+  PCM["收音 PCM"] --> SINK["Buffered writer／PCM sink<br/>序列寫入 · 排空後完成"]
+  SINK --> OPFS[("瀏覽器 OPFS<br/>錄音片段／manifest／checkpoint")]
+  SINK --> REMOTE["可選遠端 PCM recording API<br/>chunk 冪等／完成確認"]
+  OPFS --> STOP["停止錄音<br/>保留已寫入音訊 · 排空 ASR／翻譯"]
+  REMOTE --> STOP
+  STOP --> SNAP["SavedSession＋AudioVersion<br/>逐字稿／譯文／時間／講者／模型快照"]
+  SNAP --> IDB[("IndexedDB session outbox<br/>尚未確認同步的本機快照")]
+  IDB --> SYNC["Session sync coordinator<br/>版本 CAS · 衝突三方合併<br/>遠端 ACK 前保留本機資料"]
+  SYNC --> CONFIG[("config store<br/>目前 local；可選 PostgreSQL")]
+  STOP --> BLOB[("blob store<br/>目前 local；可選 MinIO")]
+  CONFIG --> JOB["可恢復的講者分離 job<br/>claim／lease renew／generation fencing"]
+  BLOB --> JOB
+  JOB --> DIA["講者分離＋聲紋比對"]
+  DIA --> CONFIG
+  RELOAD["重新整理／中斷後登入"] --> RECOVER["恢復 manifest／outbox<br/>檢查帳號與音訊版本"]
+  OPFS & IDB --> RECOVER
+  RECOVER --> SYNC
+  SYNC -- "音訊＋metadata 已確認後" --> CLEAN["對應資料安全清理<br/>失敗或未確認資料保留"]

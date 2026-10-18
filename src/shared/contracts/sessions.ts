@@ -51,6 +51,8 @@ export type SavedSession = {
   qualityCorrectionState?: 'completed' | 'failed'
   qualityCorrectionError?: string
   summary?: string
+  /** A persisted in-flight summary is recovered as interrupted after reload. */
+  summaryState?: 'generating' | 'interrupted'
   summaryError?: string
   /** Deterministic signature of the transcript used when this summary was generated. */
   summarySourceSignature?: string
@@ -89,4 +91,3 @@ export type ImportCheckpoint = {
   mergedText: string
   updatedAt: string
 }
-

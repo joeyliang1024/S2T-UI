@@ -67,14 +67,28 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     await page.getByRole('heading', { name: 'Account management' }).waitFor()
     await page.getByRole('heading', { name: 'Admin: advanced VAD and translation parameters' }).waitFor()
   }
-  const assertSharingButtonsDoNotOverlap = async (page) => {
-    const rows = page.locator('.admin-sharing-editor .settings-button-row')
-    await rows.first().waitFor()
-    assert.equal(await rows.count(), accounts.length)
-    for (let index = 0; index < await rows.count(); index++) {
-      const buttons = rows.nth(index).getByRole('button')
-      const first = await buttons.nth(0).boundingBox(), second = await buttons.nth(1).boundingBox()
-      assert.ok(first && second && first.x + first.width <= second.x, `sharing buttons overlap in row ${index}`)
+  // The sharing column stacks two controls: trusted department (label and field
+  // sharing one line) above, approval toggle below. Assert that arrangement —
+  // not merely that the row fits — so a regression back to the cramped
+  // side-by-side layout is caught.
+  const assertSharingControlsFit = async (page) => {
+    const editors = page.locator('.admin-sharing-editor')
+    await editors.first().waitFor()
+    assert.equal(await editors.count(), accounts.length)
+    for (let index = 0; index < await editors.count(); index++) {
+      const editor = editors.nth(index)
+      assert.equal(await editor.locator('input[type="checkbox"]').count(), 1, `row ${index} must expose exactly one sharing toggle`)
+      const box = await editor.boundingBox(), cell = await editor.locator('..').boundingBox()
+      assert.ok(box && cell && box.x + box.width <= cell.x + cell.width + 1, `sharing editor overflows its cell in row ${index}`)
+
+      const departmentLabel = editor.locator('label:not(.admin-sharing-toggle)')
+      const department = departmentLabel.locator('input')
+      const toggle = editor.locator('.admin-sharing-toggle input[type="checkbox"]')
+      const labelBox = await departmentLabel.boundingBox(), departmentBox = await department.boundingBox(), toggleBox = await toggle.boundingBox()
+      assert.ok(labelBox && departmentBox && toggleBox, `row ${index} sharing controls must be laid out`)
+      assert.ok(Math.abs(labelBox.y - departmentBox.y) < 2, `row ${index} trusted department label and field must share one line`)
+      assert.ok(departmentBox.x > labelBox.x, `row ${index} trusted department field must sit beside its label`)
+      assert.ok(toggleBox.y >= departmentBox.y + departmentBox.height - 1, `row ${index} approval toggle must sit below the trusted department`)
     }
   }
   try {
@@ -82,7 +96,24 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     desktop.on('pageerror', error => errors.push(error.message))
     await openAccounts(desktop)
     assert.equal(await desktop.locator('html').getAttribute('data-theme'), 'light')
-    await assertSharingButtonsDoNotOverlap(desktop)
+    await assertSharingControlsFit(desktop)
+    // The toggle must survive the save round-trip: flip it and confirm the
+    // refreshed record — not just the optimistic click — agrees.
+    const toggle = desktop.locator('.admin-sharing-editor input[type="checkbox"]').nth(1)
+    const before = await toggle.isChecked()
+    await toggle.click()
+    await desktop.waitForFunction((checked) => document.querySelectorAll('.admin-sharing-editor input[type="checkbox"]')[1].checked === checked, !before)
+    assert.notEqual(await toggle.isChecked(), before, 'sharing toggle must show the saved approval state')
+    const filters = desktop.locator('.admin-account-filters')
+    await filters.getByRole('searchbox').fill('  ＴＡＲＧＥＴ  ')
+    assert.equal(await desktop.locator('.admin-account-table tbody tr').count(), 1)
+    await filters.getByRole('searchbox').fill('')
+    await filters.getByLabel('Department', { exact: true }).selectOption('Security')
+    assert.equal(await desktop.locator('.admin-account-table tbody tr').count(), 1)
+    await filters.getByLabel('Role', { exact: true }).selectOption('user')
+    await desktop.getByText('No matching accounts', { exact: true }).waitFor()
+    await filters.getByLabel('Department', { exact: true }).selectOption('')
+    await filters.getByLabel('Role', { exact: true }).selectOption('')
     await desktop.screenshot({ path: '/tmp/s2t-admin-settings-desktop.png', fullPage: true })
 
     const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' })
@@ -90,7 +121,7 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     mobile.on('pageerror', error => errors.push(error.message))
     await openAccounts(mobile)
     assert.equal(await mobile.locator('html').getAttribute('data-theme'), 'dark')
-    await assertSharingButtonsDoNotOverlap(mobile)
+    await assertSharingControlsFit(mobile)
     const mobileDelete = mobile.getByRole('button', { name: 'Delete account: target' })
     await mobileDelete.scrollIntoViewIfNeeded()
     await mobileDelete.click()

@@ -1,5 +1,7 @@
 # 文件入口
 
+開發者先看 [CONTRIBUTING](../CONTRIBUTING.md)、[目錄規範](wiki/Repository-Layout.md) 與 [文件規範](wiki/Documentation-Standards.md)。Wiki 來源位於 `docs/wiki/`，分類文件範本位於 `docs/templates/`。
+
 操作方式以 guide 為準，API／資料格式以 reference 為準；量測證據集中在 [experiment](../experiment/README.md)。產品需求與待辦維持在 [Enhancement.md](Enhancement.md)。
 
 | 要做的事 | 文件 |
@@ -17,7 +19,7 @@
 
 ## 開發契約
 
-[架構](reference/ARCHITECTURE.zh-TW.md)、[模型 adapter](reference/MODEL_ADAPTER.md)、[Web Gateway](reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](reference/DIARIZATION_API.zh-TW.md)、[音訊品質](reference/AUDIO_QUALITY.zh-TW.md)、[介面與匯入](reference/INTERFACE.zh-TW.md)。
+[詳細架構與 9 張流程圖](reference/ARCHITECTURE.zh-TW.md)、[模型 adapter](reference/MODEL_ADAPTER.md)、[Web Gateway](reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](reference/DIARIZATION_API.zh-TW.md)、[音訊品質](reference/AUDIO_QUALITY.zh-TW.md)、[介面與匯入](reference/INTERFACE.zh-TW.md)。
 
 ## 品質研究與量測
 
@@ -27,8 +29,10 @@
 
 [整合計劃](reports/REFACTOR_PLAN_2026-10-13.zh-TW.md)、[第一批進度](reports/REFACTOR_PROGRESS_2026-10-14.zh-TW.md)。
 
+H100／H200 的環境變數與部署方式見 [GPU 部署指南](guide/GPU.zh-TW.md)。
+
 ## 設計研究（research）
 
-架構起源與可行性研究，作為設計背景參考，不取代現行部署指南或當成已驗證功能：[早期功能研究與架構起源](research/PLAN.zh-TW.md)、[開源後端方案](research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[Kubernetes 擴充規劃](research/K8S_SCALE_PLAN.zh-TW.md)、[自動切分可行性](research/AUTO_CHUNKING.zh-TW.md)、[背景工作生命週期](research/SESSION_LIFECYCLE.zh-TW.md)。
+架構起源與可行性研究，作為設計背景參考，不取代現行部署指南或當成已驗證功能：[早期功能研究與架構起源](research/PLAN.zh-TW.md)、[開源後端方案](research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[Kubernetes 擴充規劃](research/K8S_SCALE_PLAN.zh-TW.md)、[自動切分可行性](research/AUTO_CHUNKING.zh-TW.md)、[背景工作生命週期](research/SESSION_LIFECYCLE.zh-TW.md)、[現有模型 GPU 加速評估](research/GPU_ACCELERATION_2026-10-17.zh-TW.md)。
 
 需要追蹤的缺口與待辦以 [Enhancement.md](Enhancement.md) 為準。
