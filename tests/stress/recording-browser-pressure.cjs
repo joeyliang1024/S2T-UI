@@ -2,7 +2,6 @@ const assert=require('node:assert/strict')
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os')
 const {createServer}=require('node:http')
 const {build}=require('esbuild')
-const ts=require('typescript')
 const { chromium, browserOptions } = require('../helpers/browser.cjs')
 const option=(name,defaultValue)=>{const at=process.argv.indexOf(name);return at<0?defaultValue:process.argv[at+1]}
 const duration=Number(option('--seconds','600'))*1000

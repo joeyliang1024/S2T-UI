@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
 const { buildSync } = require('esbuild')
-const ts = require('typescript')
+const transpile = require('../helpers/transpile-typescript.cjs')
 const code = buildSync({ stdin: { contents: `export * from './src/renderer/src/features/transcript/services/quality-correction'; export * from './src/renderer/src/features/transcript/domain/live-caption'; export * from './src/renderer/src/shared/services/audio'; export * from './src/renderer/src/features/transcript/wav-batch'; export * from './src/renderer/src/features/transcript/views/CorrectedText';`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
 const mod = { exports: {} }; new Function('module', 'exports', 'require', code)(mod, mod.exports, require)
 const { correctionGroups, correctedCaption, applySentenceCorrection, correctionRuns, CorrectionAudioBuffer, captionGroupSignature, makeWav, readPcmWavFileLayout, readPcmWavSentence, CorrectedText } = mod.exports
@@ -68,7 +68,7 @@ assert.match(render(previewModule.exports.sessionTranscript({segments:[caption('
 async function modelRouting() {
   const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
   const source = hook.slice(hook.indexOf('const transcribeCorrection ='), hook.indexOf('liveCorrectionRunnerRef.current = async'))
-  const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const js = transpile(source).code
   const calls = []
   const context = { selectedModel: { id: 'selected', model: 'new' }, settings: { sourceLanguage: 'zh-TW', glossary: 'new prompt' },
     gatewayAsrProfileId: id => id, window: {}, asrLanguage: language => language, headerValue: text => text,
@@ -94,7 +94,7 @@ async function live(stale = false, edit = false) {
   const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
   const start = hook.indexOf('liveCorrectionRunnerRef.current = async')
   const source = hook.slice(start, hook.indexOf('\nuseEffect(', start))
-  const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const js = transpile(source).code
   new Function(...Object.keys(context), js)(...Object.values(context))
   await context.liveCorrectionRunnerRef.current(); assert.equal(requests, 0, 'no correction before 30 seconds')
   buffer.push(new Float32Array(16000))

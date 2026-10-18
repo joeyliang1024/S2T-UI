@@ -77,7 +77,8 @@
     "failed-record-summary-smoke-test.cjs",
     "search-smoke-test.cjs",
     "model-api-test-smoke-test.cjs",
-    "data-directory-prompts-smoke-test.cjs"
+    "data-directory-prompts-smoke-test.cjs",
+    "s3-client-smoke-test.cjs"
   ],
   "http": [
     "gateway-env-smoke-test.cjs",

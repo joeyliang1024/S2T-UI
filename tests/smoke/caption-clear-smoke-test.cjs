@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
-const ts = require('typescript')
+const transpile = require('../helpers/transpile-typescript.cjs')
 const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
 const source = hook.slice(hook.indexOf('const clearCaptions ='), hook.indexOf('const saveLiveCaptionsBeforeSwitch ='))
-const code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+const code = transpile(source).code
 async function check(captureState) {
   const calls = []
   const ref = current => ({ current })

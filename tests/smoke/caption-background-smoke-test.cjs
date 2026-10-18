@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
 const { buildSync } = require('esbuild')
-const ts = require('typescript')
+const transpile = require('../helpers/transpile-typescript.cjs')
 const { finalizeDiarizationSession, matchesJob } = require('../../server/diarization-session.cjs')
 const { loadSessionSnapshot } = require('../../server/session-snapshot.cjs')
 const code = buildSync({ stdin: { contents: `export * from './src/renderer/src/features/transcript/domain/live-caption'; export * from './src/renderer/src/features/translation/services/queue'; export * from './src/renderer/src/features/translation/domain/policy'; export * from './src/renderer/src/features/sessions/domain/session-merge'; export * from './src/renderer/src/shared/services/transcript'; export * from './src/renderer/src/features/speakers/diarization'; export * from './src/renderer/src/shared/services/http';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
@@ -9,7 +9,7 @@ const m = { exports: {} }; new Function('module', 'exports', 'require', code)(m,
 const { freezeCaptionGroups, HttpServiceError, TranslationQueue, makeTranscriptText, mergeSessions, recoverStaleProcessing, assignSpeakersByOverlap, parseSpeakerTurns, readJsonResponse, shouldSkipTranslation, resolveTranslationTarget } = m.exports
 const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
 const stopSource = hook.slice(hook.indexOf('const stopCapture ='), hook.indexOf('const exportTranscript ='))
-const stopCode = ts.transpileModule(stopSource, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+const stopCode = transpile(stopSource).code
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b }); return { promise, resolve, reject } }
 const flush = async () => { for (let i=0;i<60;i++) await Promise.resolve() }
 const ref = current => ({ current })
@@ -115,7 +115,7 @@ async function main(){
   let saved=0
   const preview=running.segments
   const saveContext={transcriptsRef:ref(preview),makeTranscriptText,liveSessionIdRef:ref(done.id),sessions:[done],savedLiveSnapshotRef:ref(preview),setSessions:()=>{saved++}}
-  const saveCode=ts.transpileModule(saveSource,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
+  const saveCode=transpile(saveSource).code
   await new Function(...Object.keys(saveContext),saveCode+';return saveLiveCaptionsBeforeSwitch')(...Object.values(saveContext))()
   assert.equal(saved,0,'unchanged live preview cannot overwrite final history speaker labels')
   const other={...running,id:'other',title:'new unrelated edit'}

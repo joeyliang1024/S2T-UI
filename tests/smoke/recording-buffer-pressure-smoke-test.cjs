@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
 const { buildSync } = require('esbuild')
-const ts = require('typescript')
+const transpile = require('../helpers/transpile-typescript.cjs')
 const code = buildSync({ entryPoints: ['src/renderer/src/features/capture/recording/buffered-writer.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const moduleResult = { exports: {} }; new Function('module', 'exports', 'require', code)(moduleResult, moduleResult.exports, require)
 const { BufferedPcmWriter, pcmRecordingBufferLimits } = moduleResult.exports
@@ -31,7 +31,7 @@ function preview() {
   const start = hook.indexOf('          const maximumPreviewSamples =')
   const end = hook.indexOf('\n        }', start)
   const source = 'liveDiarizationChunksRef.current.push(samples);\n' + hook.slice(start, end)
-  const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const js = transpile(source).code
   const ref = current => ({ current })
   const context = { sampleRateRef: ref(48000), liveDiarizationChunksRef: ref([]), liveDiarizationHeadRef: ref(0), liveDiarizationSamplesRef: ref(0), liveDiarizationStartSampleRef: ref(0) }
   const push = new Function(...Object.keys(context), 'samples', js)
