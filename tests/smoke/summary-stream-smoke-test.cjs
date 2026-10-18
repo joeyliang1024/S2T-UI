@@ -1,10 +1,10 @@
 const assert = require('node:assert/strict')
 const http = require('node:http')
 const { streamSummary } = require('../../server/summary-stream.cjs')
-const ts = require('typescript')
+const transpile = require('../helpers/transpile-typescript.cjs')
 const fs = require('node:fs')
-const code = ts.transpileModule(fs.readFileSync('src/renderer/src/features/summary/services/stream.ts','utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
-const mod = { exports: {} }; new Function('exports', code)(mod.exports)
+const code = transpile(fs.readFileSync('src/renderer/src/features/summary/services/stream.ts','utf8')).code
+const mod = { exports: {} }; new Function('module', 'exports', 'require', code)(mod, mod.exports, require)
 ;(async () => {
   let requests = 0; let first
   const mock = http.createServer(async (req,res) => {
