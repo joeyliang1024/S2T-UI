@@ -30,7 +30,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
   const users = storage.mode.config === 'postgres' ? new PostgresUserStore(storage.config.pool) : new LocalUserStore(storage.config)
   const configuredSecret = environment.S2T_AUTH_SECRET?.trim()
   if ((environment.NODE_ENV === 'production' || environment.S2T_KUBERNETES_MODE === 'true') && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
-  const secret = configuredSecret || await localSecret(environment.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data'))
+  const secret = configuredSecret || await localSecret(require('../../src/shared/validation/data-paths.cjs').dataPaths(environment).root)
   const revokedTokensKey = 'revoked-auth-tokens'
   const requestToken = (request) => {
     const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '')

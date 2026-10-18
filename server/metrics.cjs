@@ -5,8 +5,8 @@ const { monitorEventLoopDelay } = require('node:perf_hooks')
 //   t1 音訊擷取與上傳 · t2 VAD 偵測與分段 · t3 ASR 模型推論 · t4 文字後處理
 //   t5 回傳轉錄與呈現 · t6 翻譯模型 · t7 翻譯回傳與呈現
 const captionStageMetric = 's2t_caption_stage_duration_seconds'
-const captionStages = ['e2e_asr', 'e2e_translation', 't1_queue', 't1_encode', 't1_upload', 't2_vad', 't2_segment', 't2_gate', 't3_queue', 't3_preprocess', 't3_model', 't3_gateway', 't4_postprocess', 't5_network', 't5_paint', 't6_wait', 't6_queue', 't6_model', 't6_gateway', 't7_network', 't7_paint']
-const phaseOf = stage => stage.startsWith('t') ? stage.slice(0, 2) : 'e2e'
+const captionStages = ['phase_t1', 'phase_t2', 'phase_t3', 'phase_t4', 'phase_t5', 'phase_t6', 'phase_t7', 'e2e_asr', 'e2e_translation', 'e2e_translation_tail', 't1_queue', 't1_encode', 't1_upload', 't2_vad', 't2_segment', 't2_gate', 't3_queue', 't3_preprocess', 't3_model', 't3_gateway', 't4_postprocess', 't5_network', 't5_paint', 't6_wait', 't6_queue', 't6_model', 't6_gateway', 't7_network', 't7_paint']
+const phaseOf = stage => stage.startsWith('phase_') ? stage.slice(6) : stage.startsWith('t') ? stage.slice(0, 2) : 'e2e'
 const stages = new Set(captionStages)
 const buckets = [.025, .05, .1, .15, .25, .4, .6, .8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120, 300]
 const histograms = new Map()
@@ -17,7 +17,8 @@ const allowedEvents = new Set(['speech_detected', 'asr_empty', 'asr_failed', 'au
 // Label order must match observe() below or a sample would create a second series.
 for (const stage of stages) {
   const labels = `stage=${JSON.stringify(stage)},phase=${JSON.stringify(phaseOf(stage))}`
-  histograms.set(`${captionStageMetric}:${labels}`, { name: captionStageMetric, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
+  const name = stage.startsWith('phase_') ? 's2t_caption_phase_duration_seconds' : captionStageMetric
+  histograms.set(`${name}:${labels}`, { name, labels, sum: 0, count: 0, errors: 0, buckets: buckets.map(() => 0) })
 }
 for (const event of allowedEvents) events.set(event, 0)
 const observe = (name, labels, seconds, failed = false) => {
@@ -75,7 +76,7 @@ const acceptCaptionSamples = body => {
   if (eventEntries.some(([name, count]) => !allowedEvents.has(name) || !Number.isSafeInteger(count) || count < 1 || count > 1000)) return false
   if (!body.samples.every(sample => stages.has(sample?.stage) && Number.isFinite(sample.seconds) && sample.seconds >= 0 && sample.seconds <= 300)) return false
   for (const [name, count] of eventEntries) events.set(name, (events.get(name) || 0) + count)
-  for (const sample of body.samples) observe(captionStageMetric, { stage: sample.stage, phase: phaseOf(sample.stage) }, sample.seconds)
+  for (const sample of body.samples) observe(sample.stage.startsWith('phase_') ? 's2t_caption_phase_duration_seconds' : captionStageMetric, { stage: sample.stage, phase: phaseOf(sample.stage) }, sample.seconds)
   return true
 }
 module.exports = { observe, measure, render, instrumentStorage, acceptCaptionSamples }

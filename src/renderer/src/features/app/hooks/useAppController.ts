@@ -1,3 +1,7 @@
+import { prompt, setPromptCatalog } from '../../../shared/services/prompts'
+import type { ComparisonKind } from '../../quality-comparison/domain/comparison'
+import { createTextSearch } from '../../../shared/services/search'
+import { searchCaptionGroups } from '../../transcript/domain/search'
 import { createSessionSyncCoordinator, type SessionSyncCoordinator, type SessionConflict } from '../../sessions/services/sync-coordinator'
 import { requestEpoch } from '../../../shared/http/authenticated-client'
 import { startRecordingCheckpoints } from '../../capture/recording/checkpoint'
@@ -9,6 +13,7 @@ import { translateSessionSummary } from '../../summary/services/translate-summar
 import { createTextPort } from '../../translation/transports/create-text-port'
 import { summarizeTranscript as summarizeTranscriptWorkflow } from '../../summary/services/summarize-transcript'
 import { createSessionOutbox } from '../../sessions/services/session-outbox'
+import { sessionHistory } from '../../sessions/domain/history'
 import { retrySession } from '../../sessions/services/recovery-handlers'
 import { correctionGroups, correctedCaption, applySentenceCorrection, CorrectionAudioBuffer } from '../../transcript/services/quality-correction'
 import { sessionStorageStatesForSnapshot } from '../../sessions/domain/storage-state'
@@ -40,6 +45,7 @@ import { resolveTranslationTarget, shouldSkipTranslation, throttledTranslationDe
 import { TranslationQueue, type TranslateCaption } from '../../translation/services/queue'
 import { groupLiveCaptions, upsertLiveCaption, renderedLiveCaptionWindow, editCaptionContent, completedCaptionGroups, freezeCaptionGroups, captionGroupSignature } from '../../transcript/domain/live-caption'
 import { transcriptSignature } from '../../summary/domain/plan'
+import { revertSummaryPreview } from '../../summary/domain/summary-preview'
 import { authFetch, retryableAuthFetch } from '../../auth/services/auth-client'
 import { activeTranslate, interfaceTranslate, resolveUiLanguage } from '../../../shared/i18n'
 import { RemotePcmRecording } from '../../capture/recording/adapters/remote-pcm-recording'
@@ -71,7 +77,7 @@ export function useAppController(userId: string, userRole: 'admin' | 'user' = 'u
 const isFloatingCaptionWindow = window.location.hash === '#floating'
 const viewFromLocation = (): View => {
   const candidate = window.location.protocol === 'file:' ? window.location.hash.replace(/^#\/?/, '') : window.location.pathname.replace(/^\//, '')
-  return (['live', 'history', 'summary', 'import', 'models', 'voiceprints', 'settings'] as const).includes(candidate as View) ? candidate as View : 'live'
+  return (['live', 'history', 'quality-comparison', 'summary', 'import', 'models', 'voiceprints', 'settings'] as const).includes(candidate as View) ? candidate as View : 'live'
 }
 
 const [devices, setDevices] = useState<AudioDevice[]>([])
@@ -113,7 +119,7 @@ const setSessions = useCallback((update: SavedSession[] | ((current: SavedSessio
   storeSessions(next)
 }, [])
 const [qualityCorrectionProgress, setQualityCorrectionProgress] = useState<Record<string, {
-  stage: 'loading' | 'asr' | 'diarization' | 'completed' | 'failed'; completed: number; total: number; error?: string
+  stage: 'loading' | 'asr' | 'diarization' | 'translation' | 'completed' | 'failed'; completed: number; total: number; error?: string
 }>>({})
 const liveCorrectionAudioRef = useRef<CorrectionAudioBuffer | null>(null)
 const liveCorrectionEpochRef = useRef(0)
@@ -346,13 +352,19 @@ const [summaryText, setSummaryText] = useState('')
 
 const [summaryStatus, setSummaryStatus] = useState('')
 
-const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization' | 'embedding'>('all')
+const [modelFilter, setModelFilter] = useState<'all' | 'asr' | 'translation' | 'summary' | 'diarization' | 'others'>('all')
 const [modelHealth, setModelHealth] = useState<Record<string, { state: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'; reason: string; checkedAt: number }>>({})
 // Silero VAD model availability on the Web gateway CPU worker. `null` means the
 // status check has not answered yet, so the enable checkbox stays hidden.
 const [sileroVadAvailable, setSileroVadAvailable] = useState<boolean | null>(null)
 
+const modelHealthRequestRef = useRef(0)
+const acceptModelApiTestResult = useCallback((result: { id: string; state: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'; reason: string; checkedAt: number }): void => {
+  modelHealthRequestRef.current++
+  setModelHealth(current => ({ ...current, [result.id]: result }))
+}, [])
 const refreshModelHealth = useCallback(async (): Promise<void> => {
+  const request = ++modelHealthRequestRef.current
   try {
     const response = await authFetch('/api/data/model-health', { method: 'POST' })
     const payload = await response.json().catch(() => ({})) as { health?: Array<{ id?: unknown; state?: unknown; reason?: unknown; checkedAt?: unknown }>; error?: string }
@@ -362,8 +374,18 @@ const refreshModelHealth = useCallback(async (): Promise<void> => {
       if (typeof item.id !== 'string' || !['healthy', 'degraded', 'unhealthy', 'unknown'].includes(String(item.state))) continue
       next[item.id] = { state: item.state as 'healthy' | 'degraded' | 'unhealthy' | 'unknown', reason: typeof item.reason === 'string' ? item.reason : activeTranslate('stNotConfirmed'), checkedAt: typeof item.checkedAt === 'number' ? item.checkedAt : Date.now() }
     }
-    setModelHealth(next)
-  } catch (error) { setStatus(error instanceof Error ? activeTranslate('stModelHealthCheckFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stModelHealthCheckFailed')) }
+    if (request === modelHealthRequestRef.current) setModelHealth(next)
+  } catch (error) {
+    if (request !== modelHealthRequestRef.current) return
+    const reason = error instanceof Error ? activeTranslate('stModelHealthCheckFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stModelHealthCheckFailed')
+    // A failed refresh cannot leave an old healthy badge looking current, but it
+    // must not erase what was known either — carrying the previous verdict
+    // forward is what lets an operator tell a gateway blip from a model that
+    // has never answered.
+    const label = (state: string): string => activeTranslate(state === 'healthy' ? 'modelHealthHealthy' : state === 'degraded' ? 'modelHealthDegraded' : state === 'unhealthy' ? 'modelHealthFailed' : 'modelHealthUnknown')
+    setModelHealth(current => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, { state: 'unknown' as const, reason: `${reason}；${activeTranslate('modelHealthLastKnown').replace('{state}', label(value.state))}`, checkedAt: Date.now() }])))
+    setStatus(reason)
+  }
 }, [])
 
 const streamRef = useRef<MediaStream | null>(null)
@@ -466,7 +488,21 @@ const translationTransportRef = useRef<TranslateCaption | null>(null)
 // A newer request for the same saved session wins. This prevents a slow first
 // request from replacing a manually requested regeneration.
 const summaryGenerationRef = useRef(new Map<string, number>())
+type SummaryRequest = { generation: number; controller: AbortController; owner: number; userId: string; transcriptSignature: string; sourceVersionId?: string; /** Last fragment this request streamed onto the record, if any. */ preview?: string; previous: Pick<SavedSession, 'summary' | 'summaryState' | 'summaryError' | 'summarySourceSignature' | 'summarySourceVersionId' | 'summaryTranslation' | 'summaryTranslationTargetLanguage'> }
+const summaryRequestsRef = useRef(new Map<string, SummaryRequest>())
+/** A request that ends without committing rolls its streaming preview back; a
+ *  newer request already owning the record must be left alone. */
+const rollbackSummaryPreview = (sessionId: string, request: SummaryRequest): void => {
+    const owner = summaryRequestsRef.current.get(sessionId)
+    if (owner !== undefined && owner !== request) return
+    setSessions(current => current.map(entry => entry.id === sessionId ? revertSummaryPreview(entry, request) : entry))
+  }
 const [summaryGeneratingIds, setSummaryGeneratingIds] = useState<string[]>([])
+
+useEffect(() => () => {
+  for (const request of summaryRequestsRef.current.values()) request.controller.abort()
+  summaryRequestsRef.current.clear()
+}, [userId])
 
 const cancelImportRef = useRef(false)
 
@@ -862,7 +898,11 @@ useEffect(() => {
       }
       if (!window.s2t && queued.status === 'rejected') { version = null; setStatus(queued.reason instanceof Error ? queued.reason.message : 'Session recovery queue is unavailable') }
       const merged = mergeSessions(primarySessions, recovery)
-      const restoredSessions = recoverStaleProcessing(merged, { finishing: finishingSessionRef.current, durableJobs: !window.s2t }).map(entry => entry.summary === '正在產生摘要…' ? { ...entry, summary: undefined, summaryError: activeTranslate('stSummaryGenerationFailedShort') } : entry)
+      // Old persisted records encoded generation as a display string. Convert it
+      // only while loading; normal summary behavior always relies on summaryState.
+      const restoredSessions = recoverStaleProcessing(merged, { finishing: finishingSessionRef.current, durableJobs: !window.s2t }).map(entry => entry.summaryState === 'generating' || (entry.summaryState === undefined && entry.summary === '正在產生摘要…')
+        ? { ...entry, summary: entry.summary === '正在產生摘要…' ? undefined : entry.summary, summaryState: 'interrupted' as const, summaryError: entry.summaryError ?? activeTranslate('stSummaryGenerationInterrupted') }
+        : entry)
       setSessions(restoredSessions)
       setSessionStorageStates(Object.fromEntries(merged.map(session => [session.id, window.s2t || remote.status !== 'fulfilled' ? 'local' : 'remote'])))
       sync?.initialize({ baseline, local: restoredSessions, version, conflict })
@@ -921,7 +961,7 @@ useEffect(() => {
   }, [userId])
 
 useEffect(() => {
-    if (window.s2t || !environmentModelsHydrated) return
+    if (window.s2t || !environmentModelsHydrated || !remoteSettingsHydrated) return
     void authFetch('/api/data/model-registry').then(async (response) => {
       if (!response.ok) return
       const payload = await response.json() as { models?: Array<{ id: string; name: string; endpoint: string; model: string; purpose: string; requiresApiKey?: boolean; capabilities?: ModelCapabilities }>; version?: unknown }
@@ -942,7 +982,7 @@ useEffect(() => {
         return applyEnvironmentSettings({ ...current, modelProfiles: [...current.modelProfiles.filter((item) => item.id === 'none' || item.id.startsWith('web-')), ...asr], translationProfiles: [...current.translationProfiles.filter((item) => item.id.startsWith('web-')), ...translation], ...(summaryModel ? { summaryEndpoint: summaryModel.endpoint, summaryModel: summaryModel.model, summaryRequiresApiKey: summaryModel.requiresApiKey !== false } : {}), ...(diarizationModel ? { diarizationEndpoint: diarizationModel.endpoint, diarizationModel: diarizationModel.model, diarizationRequiresApiKey: diarizationModel.requiresApiKey !== false } : {}), ...(embeddingModel ? { embeddingEndpoint: embeddingModel.endpoint, embeddingModel: embeddingModel.model, embeddingRequiresApiKey: embeddingModel.requiresApiKey !== false } : {}) }, environmentConfigRef.current, false)
       })
     }).catch(() => undefined)
-  }, [userId, environmentModelsHydrated])
+  }, [userId, environmentModelsHydrated, remoteSettingsHydrated])
 
 useEffect(() => {
     void refreshModelHealth()
@@ -1143,6 +1183,7 @@ useEffect(() => {
         ])
         : [null, await readJsonResponse<EnvironmentModels>(await authFetch('/api/config'), activeTranslate('stModelSettings'))]
       if (canceled) return
+      setPromptCatalog(config.prompts)
       environmentConfigRef.current = config
       setProductTitleImage(config.branding?.titleImage || '')
       setSettings((previous) => {
@@ -1807,7 +1848,7 @@ const stopCapture = async (): Promise<void> => {
         audioVersions: [version], activeAudioVersionId: version.id,
         nativeAudioPath: desktopSession?.audioPath ?? existingAudioPath ?? recordingPath,
         savedToDisk: Boolean(desktopSession?.audioPath), audioUnavailable: !audioAvailable,
-        segments: finalSegments, summary: undefined, summarySourceSignature: undefined,
+        segments: finalSegments, summary: undefined, summaryState: undefined, summarySourceSignature: undefined,
         summarySourceVersionId: undefined, summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined, processingError,
         processingFailures: [...(translationDrainTimedOut || finalSegments.some(entry => entry.translationStatus === 'failed') ? ['translation' as const] : []), ...(audioFailures.length ? ['saving' as const] : []), ...(finalSegments.some(entry => entry.status === 'gap') ? ['asr' as const] : [])],
         processingState: finalDiarizationRequired && finalSegments.length ? 'running' : processingError || finalSegments.some(entry => entry.status === 'gap') ? 'failed' : 'completed',
@@ -1938,7 +1979,14 @@ const renameLiveSpeaker = (from: string, to: string): void => {
     setStatus(changed ? activeTranslate('stSpeakerRenamedCount').replace('{count}', String(changed)).replace('{previous}', String(previous)).replace('{replacement}', String(replacement)) : activeTranslate('stSpeakerNotFound').replace('{name}', String(previous)))
   }
 
+const sessionMutationBlocked = (id: string): boolean => {
+    const blocked = qualityCorrectionActiveRef.current.has(id) || sessionsRef.current.find(entry => entry.id === id)?.processingState === 'running'
+    if (blocked) setStatus(activeTranslate('stRecordStillProcessingInBackground'))
+    return blocked
+  }
+
 const updateSessionSpeaker = (sessionId: string, segmentId: string, speaker: string): void => {
+    if (sessionMutationBlocked(sessionId)) return
     setSessions((current) => current.map((session) => {
       if (session.id !== sessionId) return session
       const segments = session.segments.map((segment) => segment.id === segmentId ? { ...segment, speaker: speaker || undefined, speakerManuallyEdited: true } : segment)
@@ -1949,6 +1997,7 @@ const updateSessionSpeaker = (sessionId: string, segmentId: string, speaker: str
   }
 
 const updateSavedTranscript = (sessionId: string, segmentId: string, update: { sourceText?: string; translatedText?: string }): void => {
+    if (sessionMutationBlocked(sessionId)) return
     setSessions((current) => current.map((session) => {
       if (session.id !== sessionId) return session
       const segments = session.segments.map((segment) => {
@@ -1964,6 +2013,7 @@ const updateSavedTranscript = (sessionId: string, segmentId: string, update: { s
   }
 
 const updateSavedTranscriptTiming = (sessionId: string, segmentId: string, update: { startMs?: number; endMs?: number }): void => {
+    if (sessionMutationBlocked(sessionId)) return
     const currentStart = update.startMs
     const currentEnd = update.endMs
     if ((currentStart !== undefined && (!Number.isFinite(currentStart) || currentStart < 0)) || (currentEnd !== undefined && !Number.isFinite(currentEnd))) { setStatus(activeTranslate('stInvalidTimingRange')); return }
@@ -2384,48 +2434,84 @@ useEffect(() => {
     return () => window.clearInterval(timer)
   }, [captureState, isFloatingCaptionWindow])
 
-const finalizeSession = async (entry: SavedSession): Promise<void> => {
+const finalizeSession = async (entry: SavedSession, items: ComparisonKind[] = ['transcript', 'diarization']): Promise<void> => {
+    if (!items.length) return
+    const doAsr = items.includes('transcript'), doDiarization = items.includes('diarization'), doTranslation = items.includes('translation')
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessing')); return }
-    if (selectedModel.kind !== 'openai-http') { setStatus(activeTranslate('stSelectOpenAiCompatibleAsrModel')); return }
+    if (doAsr && selectedModel.kind !== 'openai-http') { setStatus(activeTranslate('stSelectOpenAiCompatibleAsrModel')); return }
+    if (doDiarization && !settings.diarizationModel) { setStatus(activeTranslate('stDiarizationModelRequired')); return }
+    if (doTranslation && !settings.translationModel) { setStatus(activeTranslate('stTranslationModelRequired')); return }
     qualityCorrectionActiveRef.current.add(entry.id)
-    const progress = (stage: 'loading' | 'asr' | 'diarization' | 'completed', completed = 0, total = 0): void => {
-      setQualityCorrectionProgress((current) => ({ ...current, [entry.id]: { stage, completed, total } }))
+    // One controller for the whole run: an early failure tears down the request
+    // already in flight instead of leaving it to finish against a dead record.
+    const abort = new AbortController()
+    const progress = (stage: 'loading' | 'asr' | 'diarization' | 'translation' | 'completed', completed = 0, total = 0): void => {
+      setQualityCorrectionProgress(current => ({ ...current, [entry.id]: { stage, completed, total } }))
     }
     progress('loading')
     try {
-      const audio = await loadSessionAudio(entry)
-      if (!audio) throw new Error(activeTranslate('stFullWavRecordingNotFound'))
-      const file = new File([audio], 'finalization.wav', { type: 'audio/wav' })
-      const layout = await readPcmWavFileLayout(file)
-      const groups = correctionGroups(entry.segments, true)
-      if (!groups.length) throw new Error('沒有可供品質校正的分句結果')
-      const total = groups.length
-      progress('asr', 0, total + 1)
-      let segments: TranscriptEvent[] = []
-      for (let index = 0; index < total; index += 1) {
-        const group = groups[index]
-        const chunk = await readPcmWavSentence(file, layout, group.startMs, group.endMs)
-        const rate = chooseModelSampleRate(layout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? [])
-        const data = rate === layout.sampleRate ? chunk.audio : await resampleAudioForAsr(chunk.audio, rate)
-        const asr = await transcribeCorrection(data)
-        if (!asr.text.trim()) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
-        segments.push(correctedCaption(group, asr.text.trim()))
-        progress('asr', index + 1, total + 1)
+      const audio = doAsr || doDiarization ? await loadSessionAudio(entry) : null
+      if ((doAsr || doDiarization) && !audio) throw new Error(activeTranslate('stFullWavRecordingNotFound'))
+      const groups = doAsr ? correctionGroups(entry.segments, true) : []
+      if (doAsr && !groups.length) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
+      const total = groups.length + Number(doDiarization) + Number(doTranslation)
+      let completed = 0
+      let segments: TranscriptEvent[] = entry.segments.map(segment => ({ ...segment }))
+      if (doAsr && audio) {
+        const file = new File([audio], 'finalization.wav', { type: 'audio/wav' })
+        const layout = await readPcmWavFileLayout(file)
+        segments = []
+        progress('asr', 0, total)
+        for (const group of groups) {
+          const chunk = await readPcmWavSentence(file, layout, group.startMs, group.endMs)
+          const rate = chooseModelSampleRate(layout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? [])
+          const data = rate === layout.sampleRate ? chunk.audio : await resampleAudioForAsr(chunk.audio, rate)
+          const asr = await transcribeCorrection(data)
+          if (!asr.text.trim()) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
+          segments.push(correctedCaption(group, asr.text.trim()))
+          progress('asr', ++completed, total)
+        }
+        const groupedIds = new Set(groups.flatMap(group => group.members.map(member => member.id)))
+        segments = [...segments, ...entry.segments.filter(segment => !groupedIds.has(segment.id))].sort((a,b) => a.startMs - b.startMs)
       }
-      // Preserve gap evidence and incomplete records outside the correction groups.
-      const groupedIds = new Set(groups.flatMap(group => group.members.map(member => member.id)))
-      segments = [...segments, ...entry.segments.filter(segment => !groupedIds.has(segment.id))].sort((a, b) => a.startMs - b.startMs)
-      if (!segments.length) throw new Error(activeTranslate('stAsrReturnedNoTranscript'))
-      progress('diarization', total, total + 1)
-      const diarized = !settings.diarizationModel ? null : window.s2t
-        ? await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio: await audio.arrayBuffer() })
-        : await readJsonResponse<unknown>(await authFetch('/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }), activeTranslate('stFinalDiarizationServiceLabel'))
-      if (diarized) segments = assignSpeakersByOverlap(segments, parseSpeakerTurns(diarized)).map((segment, index) => segments[index].speakerManuallyEdited ? { ...segment, speaker: segments[index].speaker } : segment)
+      if (doDiarization && audio) {
+        progress('diarization', completed, total)
+        let diarized: unknown
+        if (window.s2t) diarized = await window.s2t.diarizeAudio({ endpoint: settings.diarizationEndpoint, model: settings.diarizationModel, audio: await audio.arrayBuffer() })
+        else {
+          const local = settings.diarizationProfiles?.some(profile => profile.model === settings.diarizationModel && profile.endpoint === settings.diarizationEndpoint)
+          const response = await authFetch('/api/diarizations', { method: 'POST', headers: { 'content-type': 'audio/wav', ...(local ? { 'x-s2t-diarization-model': settings.diarizationModel } : settings.diarizationEndpoint && settings.diarizationEndpoint !== '/api/diarizations' ? { 'x-s2t-model-id': 'managed-diarization' } : {}) }, body: audio, signal: AbortSignal.timeout(120000) })
+          const payload = await readJsonResponse<{ error?: string }>(response, activeTranslate('stFinalDiarizationServiceLabel'))
+          if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`)
+          diarized = payload
+        }
+        const turns = parseSpeakerTurns(diarized)
+        if (!turns.length) throw new Error(activeTranslate('stDiarizationNoSpeakerSegments'))
+        segments = assignSpeakersByOverlap(segments, turns).map((segment,index) => segments[index].speakerManuallyEdited ? { ...segment, speaker: segments[index].speaker } : segment)
+        progress('diarization', ++completed, total)
+      }
+      if (doTranslation) {
+        progress('translation', completed, total)
+        const translate = translationTransportRef.current!
+        for (let index = 0; index < segments.length; index++) {
+          const segment = segments[index]
+          if (segment.status !== 'final' || !segment.sourceText.trim()) continue
+          // A single shared signal: it outlives no request, and any future
+          // cancellation of this run reaches every segment at once.
+          const result = await translate(segment, abort.signal)
+          if (!result.text.trim()) throw new Error(activeTranslate('stTranslationServiceEmpty'))
+          segments[index] = { ...segment, translatedText: result.text, translationStatus: 'completed' }
+        }
+        progress('translation', ++completed, total)
+      }
       const transcript = makeTranscriptText(segments)
       const correctedVersionId = crypto.randomUUID()
-      setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, qualityCorrectionState: 'completed', qualityCorrectionError: undefined, title: automaticSessionTitle(transcript, item.createdAt), transcript, segments, audioVersions: [...audioVersionsFor(item), { ...activeAudioVersionFor(item), id: correctedVersionId, audioKey: activeAudioVersionFor(item).audioKey, createdAt: new Date().toISOString(), label: activeTranslate('qualityCorrection'), parentId: activeAudioVersionFor(item).id, segments, transcript }], activeAudioVersionId: correctedVersionId } : item))
-      void generateSessionTitle(entry.id, transcript)
-      progress('completed', total + 1, total + 1)
+      // Only a re-transcription produces a title worth regenerating. A
+      // diarization-only or translation-only pass leaves the transcript the
+      // user already named untouched.
+      setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, qualityCorrectionState: 'completed', qualityCorrectionError: undefined, ...(doAsr ? { title: automaticSessionTitle(transcript, item.createdAt) } : {}), transcript, segments, audioVersions: [...audioVersionsFor(item), { ...activeAudioVersionFor(item), id: correctedVersionId, audioKey: activeAudioVersionFor(item).audioKey, createdAt: new Date().toISOString(), label: activeTranslate('qualityCorrection'), parentId: activeAudioVersionFor(item).id, segments, transcript }], activeAudioVersionId: correctedVersionId } : item))
+      if (doAsr) void generateSessionTitle(entry.id, transcript)
+      progress('completed', total, total)
       setStatus(activeTranslate('stFullRecordingCorrectionCompleted'))
     } catch (error) {
       const message = error instanceof Error ? error.message : activeTranslate('stQualityCorrectionFailed')
@@ -2434,7 +2520,7 @@ const finalizeSession = async (entry: SavedSession): Promise<void> => {
       } }))
       setSessions((current) => current.map((item) => item.id === entry.id ? { ...item, qualityCorrectionState: 'failed', qualityCorrectionError: message } : item))
       setStatus(activeTranslate('stQualityCorrectionFailedDetail').replace('{error}', String(message)))
-    } finally { qualityCorrectionActiveRef.current.delete(entry.id) }
+    } finally { qualityCorrectionActiveRef.current.delete(entry.id); abort.abort() }
   }
 const appendAudio = async (first: Blob, second: Blob): Promise<Blob> => {
     const context = new AudioContext()
@@ -2498,6 +2584,7 @@ const selectAudioVersion = (sessionId: string, versionId: string): void => {
     setStatus(activeTranslate('stAudioVersionSwitched'))
   }
 const replaceSessionSegmentAudio = async (entry: SavedSession, segment: TranscriptEvent, replacement: Blob): Promise<void> => {
+    if (sessionMutationBlocked(entry.id)) return
     if (!replacement.size) { setStatus(activeTranslate('stRerecordAudioEmpty')); return }
     try {
       setStatus(activeTranslate('stCreatingRerecordVersion'))
@@ -2724,6 +2811,7 @@ const saveModelApiKey = async (profileId: string, key: string): Promise<void> =>
     if (window.s2t) { await window.s2t.saveModelApiKey(profileId, key.trim()); return }
     const response = await authFetch(`/api/data/model-credentials/${encodeURIComponent(profileId)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: key.trim() }) })
     if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
+    void refreshModelHealth()
   }
 
 const validateVoiceprintSample = async (audio: Blob): Promise<void> => {
@@ -2803,12 +2891,12 @@ const stopVoiceprintCapture = async (): Promise<void> => {
   }
 
 const summaryPort = useMemo(() => createSummaryPort({ endpoint: settings.summaryEndpoint, model: settings.summaryModel, requiresApiKey: settings.summaryRequiresApiKey }), [settings.summaryEndpoint, settings.summaryModel, settings.summaryRequiresApiKey, userId])
-const completeSummary = (messages: Array<{ role: 'system' | 'user'; content: string }>, singleAttempt = false, onText?: (text: string) => void): Promise<{ text: string }> =>
-  summaryPort.complete({ messages, singleAttempt, onText })
+const completeSummary = (messages: Array<{ role: 'system' | 'user'; content: string }>, singleAttempt = false, onText?: (text: string) => void, signal?: AbortSignal): Promise<{ text: string }> =>
+  summaryPort.complete({ messages, singleAttempt, onText, signal })
 
-const summaryInstruction = (): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(resolveUiLanguage('system'))}輸出，保留標題結構並填入內容。\n\n模板：\n${settings.summaryTemplate}`
+const summaryInstruction = (targetLanguage?: string): string => prompt('summary', { language: languageName(targetLanguage ?? resolveUiLanguage('system')), template: settings.summaryTemplate })
 
-const summarizeTranscript = (transcript: string, onText?: (text: string) => void): Promise<string> => summarizeTranscriptWorkflow(transcript, { completeSummary, summaryInstruction, compressionFailure: () => new Error(activeTranslate('stSummaryCompressionFailed')) }, onText)
+const summarizeTranscript = (transcript: string, onText?: (text: string) => void, signal?: AbortSignal): Promise<string> => summarizeTranscriptWorkflow(transcript, { completeSummary, summaryInstruction, compressionFailure: () => new Error(activeTranslate('stSummaryCompressionFailed')) }, onText, signal)
 
 const generateSessionTitle = async (sessionId: string, transcript: string): Promise<void> => {
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim() || titleActiveRef.current.has(sessionId)) return
@@ -2817,7 +2905,7 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
     const language = ({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: 'English', ja: '日本語', de: 'Deutsch' } as const)[resolveUiLanguage(settings.uiLanguage)]
     try {
       const result = await completeSummary([
-        { role: 'system', content: `請以${language}為下列逐字稿生成一個精準標題。只輸出標題本身，不要引號、Markdown 或說明；標題不得超過 ${maximumGeneratedSessionTitleLength} 個字元。` },
+        { role: 'system', content: prompt('title', { language, maximum: maximumGeneratedSessionTitleLength }) },
         { role: 'user', content: transcript.slice(0, 24_000) }
       ])
       const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()
@@ -2842,7 +2930,7 @@ const regenerateSessionTitle = async (entry: SavedSession): Promise<void> => {
   setTitleGeneratingIds(current => [...current, entry.id])
   try {
     const result = await completeSummary([
-      { role: 'system', content: `請使用${languageName(resolveUiLanguage(settings.uiLanguage))}為逐字稿生成精準標題。只輸出標題，不要 Markdown 或說明，最多 ${maximumGeneratedSessionTitleLength} 個字元。` },
+      { role: 'system', content: prompt('title', { language: languageName(resolveUiLanguage(settings.uiLanguage)), maximum: maximumGeneratedSessionTitleLength }) },
       { role: 'user', content: transcript.slice(0, 24_000) }
     ], true)
     const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()
@@ -2857,35 +2945,91 @@ const regenerateSessionTitle = async (entry: SavedSession): Promise<void> => {
   }
 }
 
-const createSessionSummary = async (sessionId: string, transcript: string): Promise<boolean> => {
-    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim()) return false
-    if (summaryGeneratingIds.includes(sessionId)) return false
-    setSummaryGeneratingIds(current => [...current, sessionId])
-    const generation = (summaryGenerationRef.current.get(sessionId) ?? 0) + 1
-    summaryGenerationRef.current.set(sessionId, generation)
-    // A translation of the previous summary must not land after regeneration.
-    summaryTranslationRef.current.delete(sessionId)
-    const previous = sessions.find(entry => entry.id === sessionId)
-    const sourceVersionId = previous ? previous.activeAudioVersionId ?? audioVersionsFor(previous)[0]?.id : undefined
-    setSessions((current) => current.map((entry) => {
+const cancelSessionSummary = (sessionId: string): void => {
+    const request = summaryRequestsRef.current.get(sessionId)
+    if (!request) return
+    request.controller.abort()
+    summaryRequestsRef.current.delete(sessionId)
+    summaryGenerationRef.current.set(sessionId, request.generation + 1)
+    setSummaryGeneratingIds(current => current.filter(id => id !== sessionId))
+    setSessions(current => current.map(entry => {
       if (entry.id !== sessionId) return entry
-      return { ...entry, ...(!entry.transcript.trim() ? { transcript, audioVersions: entry.audioVersions?.map(version => version.id === sourceVersionId ? { ...version, transcript } : version) } : {}), summary: '正在產生摘要…', summaryError: undefined, summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined }
+      const currentTranscript = entry.transcript.trim() || makeTranscriptText(entry.segments)
+      const sameSource = transcriptSignature(currentTranscript) === request.transcriptSignature && (entry.activeAudioVersionId ?? audioVersionsFor(entry)[0]?.id) === request.sourceVersionId
+      // The rollback belongs here too: the aborted promise settles later, and a
+      // source that changed while generating must not keep the preview either.
+      const reverted = revertSummaryPreview(entry, request)
+      return sameSource ? { ...reverted, ...request.previous } : { ...reverted, summaryState: undefined }
+    }))
+  }
+
+const createSessionSummary = async (sessionId: string, transcript: string, targetLanguage?: string): Promise<boolean> => {
+    if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim() || !transcript.trim() || summaryRequestsRef.current.has(sessionId)) return false
+    const previousEntry = sessions.find(entry => entry.id === sessionId)
+    if (!previousEntry) return false
+    const generation = (summaryGenerationRef.current.get(sessionId) ?? 0) + 1
+    const request: SummaryRequest = {
+      generation, controller: new AbortController(), owner: requestEpoch(), userId, transcriptSignature: transcriptSignature(transcript), sourceVersionId: previousEntry.activeAudioVersionId ?? audioVersionsFor(previousEntry)[0]?.id,
+      previous: { summary: previousEntry.summary, summaryState: previousEntry.summaryState, summaryError: previousEntry.summaryError, summarySourceSignature: previousEntry.summarySourceSignature, summarySourceVersionId: previousEntry.summarySourceVersionId, summaryTranslation: previousEntry.summaryTranslation, summaryTranslationTargetLanguage: previousEntry.summaryTranslationTargetLanguage }
+    }
+    summaryGenerationRef.current.set(sessionId, generation)
+    summaryRequestsRef.current.set(sessionId, request)
+    setSummaryGeneratingIds(current => current.includes(sessionId) ? current : [...current, sessionId])
+    const sourceVersionId = request.sourceVersionId
+    const ownsRequest = (): boolean => summaryRequestsRef.current.get(sessionId) === request && requestEpoch() === request.owner
+    const sourceStillCurrent = (): boolean => {
+      const entry = sessionsRef.current.find(item => item.id === sessionId)
+      if (!entry) return false
+      const currentTranscript = entry.transcript.trim() || makeTranscriptText(entry.segments)
+      return transcriptSignature(currentTranscript) === request.transcriptSignature && (entry.activeAudioVersionId ?? audioVersionsFor(entry)[0]?.id) === request.sourceVersionId
+    }
+    setSessions(current => current.map(entry => entry.id !== sessionId ? entry : {
+      ...entry,
+      ...(!entry.transcript.trim() ? { transcript, audioVersions: entry.audioVersions?.map(version => version.id === sourceVersionId ? { ...version, transcript } : version) } : {}),
+      summaryState: 'generating', summaryError: undefined
     }))
     try {
-      const text = await summarizeTranscript(transcript, text => {
-        if (summaryGenerationRef.current.get(sessionId) === generation) setSessions(current => current.map(entry => entry.id === sessionId ? { ...entry, summary: text } : entry))
-      })
-      if (summaryGenerationRef.current.get(sessionId) !== generation) return false
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: text || undefined, summaryError: text ? undefined : activeTranslate('stSummaryServiceEmpty'), summarySourceSignature: text ? transcriptSignature(transcript) : undefined, summarySourceVersionId: text ? sourceVersionId : undefined, summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined } : entry))
-      if (!text) setStatus(activeTranslate('stSummaryServiceEmpty'))
-      return Boolean(text)
+      let previewed = false
+      const text = await (targetLanguage ? summarizeTranscriptWorkflow(transcript, { completeSummary, summaryInstruction: () => summaryInstruction(targetLanguage), compressionFailure: () => new Error(activeTranslate('stSummaryCompressionFailed')) }, undefined, request.controller.signal) : summarizeTranscript(transcript, partial => {
+        // Keep streaming previews, but only the owning request may replace the
+        // display. cancelSessionSummary restores the captured summary/translation.
+        if (ownsRequest() && sourceStillCurrent()) {
+          if (!previewed) { previewed = true; summaryTranslationRef.current.delete(sessionId) }
+          request.preview = partial
+          setSessions(current => current.map(entry => entry.id === sessionId ? {
+            ...entry, summary: partial, summarySourceSignature: undefined, summarySourceVersionId: undefined,
+            summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined
+          } : entry))
+        }
+      }, request.controller.signal))
+      if (!ownsRequest() || !sourceStillCurrent()) { rollbackSummaryPreview(sessionId, request); return false }
+      if (!text) throw new Error(activeTranslate('stSummaryServiceEmpty'))
+      // Invalidate a previous translation only after a new source summary won.
+      summaryTranslationRef.current.delete(sessionId)
+      setSessions(current => current.map(entry => entry.id === sessionId && transcriptSignature(entry.transcript.trim() || makeTranscriptText(entry.segments)) === request.transcriptSignature && (entry.activeAudioVersionId ?? audioVersionsFor(entry)[0]?.id) === request.sourceVersionId ? {
+        ...entry, summaryState: undefined, summaryError: undefined,
+        ...(targetLanguage ? { summaryTranslation: text, summaryTranslationTargetLanguage: targetLanguage } : { summary: text, summarySourceSignature: transcriptSignature(transcript), summarySourceVersionId: sourceVersionId, summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined })
+      } : entry))
+      return true
     } catch (error) {
-      if (summaryGenerationRef.current.get(sessionId) !== generation) return false
+      if (!ownsRequest()) { rollbackSummaryPreview(sessionId, request); return false }
       const message = error instanceof Error ? activeTranslate('stSummaryGenerationFailed').replace('{error}', error.message) : activeTranslate('stSummaryGenerationFailedShort')
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, summary: previous?.summary === '正在產生摘要…' ? undefined : previous?.summary, summarySourceSignature: previous?.summarySourceSignature, summarySourceVersionId: previous?.summarySourceVersionId, summaryTranslation: previous?.summaryTranslation, summaryTranslationTargetLanguage: previous?.summaryTranslationTargetLanguage, summaryError: message } : entry))
+      setSessions(current => current.map(entry => {
+        if (entry.id !== sessionId) return entry
+        const currentTranscript = entry.transcript.trim() || makeTranscriptText(entry.segments)
+        const sameSource = transcriptSignature(currentTranscript) === request.transcriptSignature && (entry.activeAudioVersionId ?? audioVersionsFor(entry)[0]?.id) === request.sourceVersionId
+        const reverted = revertSummaryPreview(entry, request)
+        return sameSource ? { ...reverted, ...request.previous, summaryError: message } : { ...reverted, summaryState: undefined }
+      }))
       setStatus(message)
       return false
-    } finally { setSummaryGeneratingIds(current => current.filter(id => id !== sessionId)) }
+    } finally {
+      if (summaryRequestsRef.current.get(sessionId) === request) {
+        summaryRequestsRef.current.delete(sessionId)
+        setSummaryGeneratingIds(current => current.filter(id => id !== sessionId))
+        setSessions(current => current.map(entry => entry.id === sessionId && entry.summaryState === 'generating' ? { ...entry, summaryState: undefined } : entry))
+      }
+    }
   }
 
 const summaryTranslationRef = useRef(new Map<string, string>())
@@ -2894,12 +3038,12 @@ const summaryTranslationRef = useRef(new Map<string, string>())
  *  The result is stored beside the summary and is replaced only when the
  *  summary itself is regenerated (the field is cleared on every rewrite).
  *  A newer call supersedes an in-flight one for the same session. */
-const translateSummary = (entry: SavedSession, targetOverride?: string): Promise<void> => {
+const translateSummary = (entry: SavedSession, targetOverride?: string, signal?: AbortSignal): Promise<void> => {
   const sourceLanguage = ({ 'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en-US', ja: 'ja-JP', de: 'de-DE' } as const)[resolveUiLanguage('system')]
-  return translateSessionSummary(entry, { sourceLanguage, targetLanguage: targetOverride ?? resolveTranslationTarget(sourceLanguage, settings.targetLanguage), glossary: settings.glossary }, {
+  return translateSessionSummary(entry, { sourceLanguage, targetLanguage: targetOverride ?? resolveTranslationTarget(sourceLanguage, settings.targetLanguage), glossary: settings.glossary, signal }, {
     generations: summaryTranslationRef.current, complete: textCompletionPort.complete,
     emptyError: () => new Error(activeTranslate('stTranslationServiceEmpty')),
-    publish: (source, text, translated, targetLanguage) => setSessions(current => current.map(item => item.id === source.id && item.summary === text ? { ...item, summaryTranslation: translated, summaryTranslationTargetLanguage: targetLanguage } : item))
+    publish: (source, text, translated, targetLanguage) => setSessions(current => current.map(item => item.id === source.id && item.summary?.trim() === text ? { ...item, summaryTranslation: translated, summaryTranslationTargetLanguage: targetLanguage } : item))
   })
 }
 
@@ -2917,40 +3061,27 @@ const createSummary = async (): Promise<void> => {
     } catch (error) { setSummaryStatus(error instanceof Error ? error.message : activeTranslate('stSummaryCreationFailed')) }
   }
 
-const summarizeSession = async (entry: SavedSession): Promise<void> => {
+const summarizeSession = async (entry: SavedSession, targetLanguage?: string): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessingInBackground')); return }
     const transcript = entry.transcript.trim() || makeTranscriptText(entry.segments)
     if (!transcript.trim()) { setStatus(activeTranslate('stNoTranscriptToSummarize')); return }
     if (!settings.summaryEndpoint.trim() || !settings.summaryModel.trim()) { setStatus(activeTranslate('stSummaryApiAndModelRequired')); return }
-    if (await createSessionSummary(entry.id, transcript)) setStatus(activeTranslate('stMeetingSummaryUpdated'))
+    if (await createSessionSummary(entry.id, transcript, targetLanguage)) setStatus(activeTranslate('stMeetingSummaryUpdated'))
   }
 
 const canRecord = captureState === 'idle'
 
-const filteredSessions = sessions.filter((entry) => {
-    const query = historySearch.trim().toLocaleLowerCase()
-    return !query || `${entry.title} ${entry.source} ${entry.transcript} ${entry.segments.map((segment) => `${segment.speaker ?? ''} ${segment.sourceText} ${segment.translatedText ?? ''}`).join(' ')}`.toLocaleLowerCase().includes(query)
-  })
-
-const sortedSessions = [...filteredSessions].sort((left, right) => {
-    const comparison = historySort === 'title' ? left.title.localeCompare(right.title, 'zh-Hant') : historySort === 'durationMs' ? left.durationMs - right.durationMs : left.createdAt.localeCompare(right.createdAt)
-    return historySortDirection === 'asc' ? comparison : -comparison
-  })
-
-const historyPageCount = Math.max(1, Math.ceil(sortedSessions.length / historyPageSize))
-
-const currentHistoryPage = Math.min(historyPage, historyPageCount)
-
-const pagedSessions = sortedSessions.slice((currentHistoryPage - 1) * historyPageSize, currentHistoryPage * historyPageSize)
+const { filteredSessions, historyPageCount, currentHistoryPage, pagedSessions } = useMemo(() => sessionHistory(sessions, {
+  search: historySearch, sort: historySort, direction: historySortDirection, page: historyPage,
+  pageSize: historyPageSize, locale: resolveUiLanguage(settings.uiLanguage)
+}), [sessions, historySearch, historySort, historySortDirection, historyPage, historyPageSize, settings.uiLanguage])
 
 const viewingSession = sessions.find((entry) => entry.id === viewingSessionId) ?? null
 
-const visibleTranscripts = transcripts.filter((entry) => entry.status !== 'gap' && entry.startMs >= clearedThroughMs)
-
-const searchedTranscripts = visibleTranscripts.filter((entry) => `${entry.sourceText} ${entry.translatedText ?? ''}`.toLowerCase().includes(transcriptSearch.toLowerCase()))
-// Keep the complete timeline for saving, export, summary generation and explicit search,
-// while preventing a long unattended recording from growing the live DOM without bound.
-const renderedLiveTranscripts = renderedLiveCaptionWindow(searchedTranscripts, Boolean(transcriptSearch.trim()))
+const visibleTranscripts = useMemo(() => transcripts.filter(entry => entry.status !== 'gap' && entry.startMs >= clearedThroughMs), [transcripts, clearedThroughMs])
+const captionSearch = useMemo(() => createTextSearch(transcriptSearch), [transcriptSearch])
+// Group before matching, and search the complete visible timeline when active.
+const searchedLiveCaptionGroups = useMemo(() => searchCaptionGroups(renderedLiveCaptionWindow(visibleTranscripts, captionSearch.active), captionSearch), [visibleTranscripts, captionSearch])
 
 const clearCaptions = async (): Promise<void> => {
     if (captureState === 'starting' || captureState === 'saving') return
@@ -3013,7 +3144,7 @@ const saveLiveCaptionsBeforeSwitch = async (): Promise<void> => {
           audioVersions: existing.audioVersions?.map((version) => version.id === existing.activeAudioVersionId
             ? { ...version, segments, transcript }
             : version),
-          ...(transcriptChanged ? { summary: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined, summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined } : {})
+          ...(transcriptChanged ? { summary: undefined, summaryState: undefined, summarySourceSignature: undefined, summarySourceVersionId: undefined, summaryTranslation: undefined, summaryTranslationTargetLanguage: undefined } : {})
         }
       : {
           id: sessionId,
@@ -3050,6 +3181,7 @@ const loadSessionIntoLive = async (entry: SavedSession): Promise<void> => {
   }
 
 const renameSession = (id: string): void => {
+    if (sessionMutationBlocked(id)) { setRenamingSessionId(null); return }
     const title = titleDraft.trim().slice(0, 200)
     if (!title) { setRenamingSessionId(null); return }
     setSessions((current) => current.map((entry) => entry.id === id ? { ...entry, title } : entry))
@@ -3166,6 +3298,7 @@ summaryStatus,
 modelFilter,
 setModelFilter,
 modelHealth,
+acceptModelApiTestResult,
 refreshModelHealth,
 sileroVadAvailable,
 systemStreamRef,
@@ -3228,6 +3361,7 @@ startVoiceprintCapture,
 stopVoiceprintCapture,
 createSummary,
 summarizeSession,
+cancelSessionSummary,
 translateSummary,
 canRecord,
 canContinueRecording: sessions.some((entry) => entry.id === liveSessionIdRef.current),
@@ -3238,7 +3372,7 @@ pagedSessions,
 filteredSessions,
 viewingSession,
 visibleTranscripts,
-renderedLiveTranscripts,
+searchedLiveCaptionGroups,
 clearCaptions,
 loadSessionIntoLive,
 renameSession,

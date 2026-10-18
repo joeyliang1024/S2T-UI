@@ -1,8 +1,10 @@
+import { StudioArtwork } from '../../../shared/ui/StudioArtwork'
+import { createTextSearch } from '../../../shared/services/search'
 import { SessionSyncConflicts } from '../../sessions/views/SessionSyncConflicts'
 import { SummaryTemplateManager } from './SummaryTemplateManager'
 import { AdminSettingsPanel } from './AdminSettingsPanel'
 import type { AuthUser } from '../../auth/services/auth-client'
-import { type ReactElement, type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactElement, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { interfaceTranslate } from '../../../shared/i18n/index'
 import type { Settings, View } from '../../../shared/types'
 import { parseGlossaryJson } from '../domain/glossary-json'
@@ -191,11 +193,12 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
     ...(user.role === 'admin' ? [{ id: 'account' as const, label: ui('adminAccountTab') }] : [])
   ]
 
-  const filteredGlossaryEntries = glossaryEntries.filter((entry) => entry.value.toLocaleLowerCase().includes(glossarySearch.trim().toLocaleLowerCase()))
+  const glossaryTextSearch = useMemo(() => createTextSearch(glossarySearch), [glossarySearch])
+  const filteredGlossaryEntries = glossaryEntries.filter(entry => glossaryTextSearch.matches(entry.value))
 
   return (
     <section className="page-panel settings-panel">
-      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>{ui('settingsTitle')}</h2></div></div>
+      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>{ui('settingsTitle')}</h2></div><StudioArtwork variant="settings" className="page-art" /></div>
       <nav className="settings-category-nav" aria-label={ui('settingsTitle')}>{categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'nav-active' : ''} aria-current={category === entry.id ? 'true' : undefined} onClick={() => setCategory(entry.id)}>{entry.label}</button>)}</nav>
 
       {category === 'account' && user.role === 'admin' && <AdminSettingsPanel user={user} settings={settings} update={update} />}
@@ -239,7 +242,7 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
 
         <SettingsCard eyebrow="GLOSSARY" title={ui('glossary')}>
           <label className="settings-search-field">{ui('searchGlossary')}<input value={glossarySearch} placeholder={ui('glossarySearchPlaceholder')} onChange={(event) => setGlossarySearch(event.target.value)} /></label>
-          <div className="glossary-editor">{filteredGlossaryEntries.map((entry) => <div key={entry.index}><input defaultValue={entry.value} aria-label={ui('glossaryTerm')} onBlur={(event) => replaceGlossaryEntry(entry.index, event.currentTarget.value)} /><button className="text-button danger" aria-label={ui('deleteGlossary')} onClick={() => replaceGlossaryEntry(entry.index, '')}>{ui('deleteGlossary')}</button></div>)}{glossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}{glossaryEntries.length > 0 && filteredGlossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}<div className="glossary-add-row"><input value={newGlossaryTerm} aria-label={ui('addGlossary')} placeholder={ui('glossaryExample')} onChange={(event) => setNewGlossaryTerm(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addGlossaryEntry() } }} /><button className="secondary" onClick={addGlossaryEntry}>{ui('addGlossary')}</button></div></div>
+          <div className="glossary-editor">{filteredGlossaryEntries.map((entry) => <div key={entry.index}><input defaultValue={entry.value} aria-label={ui('glossaryTerm')} onBlur={(event) => replaceGlossaryEntry(entry.index, event.currentTarget.value)} /><button className="text-button danger" aria-label={ui('deleteGlossary')} onClick={() => replaceGlossaryEntry(entry.index, '')}>{ui('deleteGlossary')}</button></div>)}{glossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}{glossaryEntries.length > 0 && filteredGlossaryEntries.length === 0 && <p className="hint">{ui('noSearchMatches')}</p>}<div className="glossary-add-row"><input value={newGlossaryTerm} aria-label={ui('addGlossary')} placeholder={ui('glossaryExample')} onChange={(event) => setNewGlossaryTerm(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addGlossaryEntry() } }} /><button className="secondary" onClick={addGlossaryEntry}>{ui('addGlossary')}</button></div></div>
           <label className="glossary-json-import">{ui('loadGlossaryJson')}<input type="file" accept="application/json,.json" onChange={(event) => { const file = event.currentTarget.files?.[0] ?? null; event.currentTarget.value = ''; void importGlossaryJson(file) }} /></label>
           <details className="help-disclosure"><summary>{ui('advancedHelp')}</summary><p className="hint">{ui('glossaryHelp')}</p></details>
         </SettingsCard>

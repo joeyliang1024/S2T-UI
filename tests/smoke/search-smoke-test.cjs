@@ -1,0 +1,47 @@
+const assert = require('node:assert/strict')
+const {buildSync}=require('esbuild')
+const load=path=>{
+ const code=buildSync({entryPoints:[path],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
+ const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);return m.exports
+}
+const {createTextSearch,normalizeSearchText}=load('src/renderer/src/shared/services/search.ts')
+const {searchCaptionGroups}=load('src/renderer/src/features/transcript/domain/search.ts')
+const {sessionHistory}=load('src/renderer/src/features/sessions/domain/history.ts')
+assert.equal(normalizeSearchText('  Ｈｅｌｌｏ\t World\n '),'hello world')
+assert.equal(createTextSearch('  HELLO  ').matches('hello'),true)
+assert.equal(createTextSearch('Café').matches('Cafe\u0301'),true)
+assert.equal(createTextSearch('straße').matches('STRASSE'),false,'no fuzzy expansion')
+assert.equal(createTextSearch(' Hello   world ').matches('HELLO\nWORLD'),true)
+assert.equal(createTextSearch('hello world').matches('world hello'),false,'keep phrase order')
+assert.equal(createTextSearch('meeting ASR').matches('meeting','ASR'),false,'do not match across unrelated fields')
+assert.equal(createTextSearch('[a]+').matches('literal [a]+ text'),true,'literal, not regexp')
+assert.equal(createTextSearch(' \t　').active,false)
+assert.equal(createTextSearch(' ').matches(undefined,null,''),true)
+assert.equal(createTextSearch('missing').matches(undefined,null,''),false)
+const caption=(id,text,extra={})=>({id,revision:1,status:'final',startMs:0,endMs:1000,sourceText:text,speaker:'Speaker Lee',...extra})
+const captions=[caption('a','產品上'),caption('b','線計畫',{startMs:1000,endMs:2000,isSentenceBoundary:true,translatedText:'Launch Plan'})]
+const snapshot=JSON.stringify(captions)
+const found=searchCaptionGroups(captions,createTextSearch('  產品上線  '))
+assert.equal(found.length,1)
+assert.deepEqual(found[0].members.map(x=>x.id),['a','b'],'return complete visible group, not fragments')
+assert.equal(searchCaptionGroups(captions,createTextSearch(' ｓｐｅａｋｅｒ ＬＥＥ ')).length,1)
+assert.equal(searchCaptionGroups(captions,createTextSearch('launch plan')).length,1)
+assert.equal(searchCaptionGroups(captions,createTextSearch('unmatched')).length,0)
+assert.equal(searchCaptionGroups([caption('gap','missing',{status:'gap'})],createTextSearch('missing')).length,0)
+assert.equal(JSON.stringify(captions),snapshot)
+const record={id:'r',title:'Weekly Meeting',source:'microphone',transcript:'',durationMs:2000,createdAt:'2026-10-18',segments:captions}
+const options={search:'  產品上線 ',sort:'createdAt',direction:'desc',page:1,pageSize:10,locale:'zh-TW'}
+assert.equal(sessionHistory([record],options).filteredSessions.length,1)
+assert.equal(sessionHistory([record],{...options,search:' ＷＥＥＫＬＹ '}).filteredSessions.length,1)
+assert.equal(sessionHistory([record],{...options,search:' SPEAKER LEE '}).filteredSessions.length,1)
+assert.equal(sessionHistory([record],{...options,search:'launch plan'}).filteredSessions.length,1)
+assert.equal(sessionHistory([record],{...options,search:'no match'}).filteredSessions.length,0)
+for(const locale of ['zh-TW','en','ja','de'])assert.equal(sessionHistory([record],{...options,search:'WEEKLY',locale}).filteredSessions.length,1)
+// Legacy records without segments must apply the same matcher to their full text.
+assert.equal(sessionHistory([{...record,segments:[],transcript:'Legacy HELLO'}],{...options,search:' hello '}).filteredSessions.length,1)
+const {renderedLiveCaptionWindow}=load('src/renderer/src/features/transcript/domain/live-caption.ts')
+const many=Array.from({length:520},(_,i)=>caption(String(i),i===0?'older searchable caption':'recent caption',{startMs:i*1000,endMs:(i+1)*1000,isSentenceBoundary:true}))
+const needle=createTextSearch('older searchable')
+assert.equal(searchCaptionGroups(renderedLiveCaptionWindow(many,needle.active),needle)[0].members[0].id,'0','explicit search includes older captions beyond the 500-entry live window')
+assert.equal(renderedLiveCaptionWindow(many,createTextSearch('  ').active).length,500,'blank queries retain the bounded live window')
+console.log('PASS shared search: Unicode/fullwidth/case/whitespace normalization, literal ordered phrases, independent fields, complete caption groups, speaker/translation lookup and locale-stable record search')

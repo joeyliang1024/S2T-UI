@@ -1,4 +1,4 @@
-// Official native CPU runtime. One full recording retains one native stream;
+// Official native runtime, with explicit CPU/CUDA backend selection. One full recording retains one native stream;
 // separate preview requests are still independent windows, not a live session.
 const { mkdtempSync, writeFileSync, readFileSync, rmSync, accessSync, constants } = require('node:fs')
 const { join } = require('node:path')
@@ -6,21 +6,35 @@ const { tmpdir } = require('node:os')
 const { execFileSync } = require('node:child_process')
 const { createHash } = require('node:crypto')
 const { nemotronPaths } = require('./local-diarization.cjs')
+const { inferenceConfig, verifyNemotronCuda } = require('./inference-config.cjs')
 const { readWavSamples, resampleMono } = require('./sherpa-diarization.cjs')
 const { logger } = require('./logger.cjs')
 const SHA256 = '08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1'
 let verifiedPath
+let runtimeVerification
 const verifyRuntime = () => {
   const paths = nemotronPaths()
-  try { accessSync(paths.runtime, constants.X_OK) } catch { throw new Error(`找不到可執行的 Nemotron CPU runtime（${process.platform}-${process.arch}）：${paths.runtime}`) }
-  if (verifiedPath !== paths.model) {
+  const config = inferenceConfig(process.env)
+  try { accessSync(paths.runtime, constants.X_OK) } catch { throw new Error(`找不到可執行的 Nemotron runtime（${process.platform}-${process.arch}）：${paths.runtime}`) }
+  const modelKey = JSON.stringify([paths.model, paths.runtime])
+  if (verifiedPath !== modelKey) {
     let model
     try { model = readFileSync(paths.model) } catch { throw new Error(`找不到 Nemotron 模型權重：${paths.model}`) }
     if (createHash('sha256').update(model).digest('hex') !== SHA256) throw new Error('Nemotron 模型 SHA256 不符，請重新安裝本輪驗證的 Q8_0 權重')
     execFileSync(paths.runtime, ['--version'], { timeout: 5000, maxBuffer: 65536, stdio: ['ignore', 'pipe', 'pipe'] })
-    verifiedPath = paths.model
+    verifiedPath = modelKey
   }
-  return paths
+  const runtimeKey = JSON.stringify([paths.runtime, config.backend, config.deviceId])
+  if (runtimeVerification?.key !== runtimeKey) {
+    if (config.backend === 'cuda') {
+      let doctor
+      try { doctor = JSON.parse(execFileSync(paths.runtime, ['doctor', '--json'], { timeout: 10000, maxBuffer: 1024 * 1024, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })) }
+      catch { throw new Error('Nemotron CUDA runtime 診斷失敗；請檢查 CUDA 映像、相依函式庫與 NVIDIA driver') }
+      verifyNemotronCuda(doctor, config.deviceId)
+    }
+    runtimeVerification = { key: runtimeKey }
+  }
+  return { ...paths, inference: config }
 }
 const parseRttm = (text, duration) => text.split(/\r?\n/).filter(line => line.trim()).map(line => {
   const fields = line.trim().split(/\s+/)
@@ -52,7 +66,7 @@ const diarizeWav = audio => {
     const budget = Math.min(positive(process.env.S2T_SHERPA_JOB_TIMEOUT_MS, 1800000),
       positive(process.env.S2T_SHERPA_JOB_TIMEOUT_BASE_MS, 60000) + positive(process.env.S2T_SHERPA_JOB_TIMEOUT_PER_AUDIO_SEC, 400) * duration)
     // Full-file v3-offline is still the streaming state machine, not --offline.
-    execFileSync(paths.runtime, ['diarize', input, '--model', paths.model, '--backend', 'cpu',
+    execFileSync(paths.runtime, ['diarize', input, '--model', paths.model, '--backend', paths.inference.backend === 'cuda' ? `cuda:${paths.inference.deviceId}` : 'cpu',
       // CLI presets replace overrides in v0.2.0. Specify ALL geometry explicitly.
       '--diar.chunk', '264', '--diar.right_context', '1', '--diar.left_context', '1',
       '--diar.fifo', '0', '--diar.spkcache', '528', '--diar.update_period', '188', '--format', 'rttm', '--recording-id', 'recording', '--output', output],
@@ -62,9 +76,9 @@ const diarizeWav = audio => {
     return parseRttm(readFileSync(output, 'utf8'), duration)
   } catch (error) {
     logger.error('nemotron.inference.failed', { durationSec: duration, code: error.code || null, exitStatus: error.status ?? null, signal: error.signal || null, phase: error.message === 'Nemotron RTTM 格式無效' ? 'parse' : error.path === join(directory, 'turns.rttm') ? 'output' : 'runtime' })
-    if (error.code === 'ETIMEDOUT') throw new Error('Nemotron CPU 推論逾時')
+    if (error.code === 'ETIMEDOUT') throw new Error(`Nemotron ${paths.inference.backend.toUpperCase()} 推論逾時`)
     // Do not expose command, temporary filenames, or raw native diagnostics to API clients.
-    throw new Error(error.message === 'Nemotron RTTM 格式無效' ? error.message : 'Nemotron CPU 推論失敗；請確認 runtime 與權重版本')
+    throw new Error(error.message === 'Nemotron RTTM 格式無效' ? error.message : `Nemotron ${paths.inference.backend.toUpperCase()} 推論失敗；請確認 runtime、GPU 裝置與權重版本`)
   } finally { rmSync(directory, { recursive: true, force: true }) }
 }
 module.exports = { diarizeWav, verifyRuntime, parseRttm, pcmWav }

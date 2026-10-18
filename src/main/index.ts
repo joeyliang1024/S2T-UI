@@ -341,7 +341,7 @@ app.whenReady().then(() => {
     }
     const localRequire = createRequire(join(process.cwd(), 'package.json'))
     const localModels = localRequire(join(process.cwd(), 'server', 'local-diarization.cjs'))
-    return { diarizationProfiles: localModels.localDiarizationProfiles(), branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
+    return { prompts: localRequire(join(process.cwd(), 'server', 'prompts.cjs')).loadPrompts(), diarizationProfiles: localModels.localDiarizationProfiles(), branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
   })
   ipcMain.handle('models:load-config', async (event) => {
     try { const config = JSON.parse(await readFile(modelConfigPath(requireDesktopUser(event)), 'utf8')); if (desktopRoles.get(event.sender.id) !== 'admin') delete config.adminParameters; return config } catch { return null }

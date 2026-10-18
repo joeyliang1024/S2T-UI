@@ -1,0 +1,17 @@
+flowchart LR
+  subgraph V["頁面與入口"]
+    LIVE["即時字幕／收音"]
+    HIST["紀錄<br/>搜尋／排序／分頁／更多操作"]
+    QUALITY["品質校正<br/>修正項目複選<br/>字幕／講者／翻譯比對"]
+    SUMMARY["摘要<br/>原文／翻譯分頁<br/>依當前分頁生成"]
+    MODEL["模型管理<br/>六類篩選／註冊<br/>卡片：設定／API 測試"]
+    SETTINGS["設定／Admin<br/>模板／術語／帳號／分享授權"]
+  end
+  HIST -- "導頁＋選中紀錄；不自動執行" --> QUALITY & SUMMARY
+  LIVE & HIST & QUALITY & SUMMARY & MODEL & SETTINGS --> APP["features/app<br/>AppView 組裝<br/>useAppController 編排"]
+  APP --> DOMAIN["功能 domain／services<br/>字幕群組 · 搜尋正規化 · 差異<br/>摘要分層 · session rebase · 講者映射"]
+  DOMAIN --> PORT["ports／adapters<br/>ASR · Text completion · Summary<br/>Session storage · PCM sinks"]
+  PORT --> WEB["Web：authenticated HTTP<br/>同源 Gateway :8787"]
+  PORT -. "Electron 保留路徑" .-> BRIDGE["preload DesktopBridge<br/>IPC → main → 模型／本機錄音"]
+  CONTRACT["src/shared/contracts + validation<br/>跨 renderer／main／server 中立契約"] -. "型別與 runtime 驗證" .-> APP & PORT
+  APP --> GUARD["操作保護<br/>處理中鎖定 · AbortSignal<br/>帳號 epoch · request generation"]

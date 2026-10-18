@@ -404,7 +404,14 @@ module.exports = {
   extractDiarizedSpeakerBlocks: (audio, segments) => heavyPool.execute('extractSpeakerBlocks', { audio, segments }, { retainAudio: true }),
   extractSpeakerLabelEmbeddings: (audio, segments) => heavyPool.execute('speakerLabelEmbeddings', { audio, segments }, { retainAudio: true }),
   diarizeWav: (audio, backend = localModelName()) => heavyPool.execute('diarizeWav', { audio, backend, segments: [] }, { retainAudio: true }),
-  nemotronStatus: () => heavyPool.execute('nemotronStatus', {}, { timeoutMs: 10000 }),
+  warmSherpaRuntime: (purpose) => interactivePool.execute('sherpaStatus', { purpose }, { priority: 'interactive', timeoutMs: 30000 }),
+  // Runtime verification is not a cheap ping: the first call hashes the model
+  // weights, runs `--version` and (under S2T_INFERENCE_BACKEND=cuda) the `doctor`
+  // probe, whose own deadline is 10 s. A 10 s job budget therefore lets the
+  // child consume the whole window, times the job out and quarantines the only
+  // heavy worker — failing a concurrent diarization with "worker 正在恢復逾時工作".
+  // Match the sherpa warmup budget instead; later calls hit the verification cache.
+  nemotronStatus: () => heavyPool.execute('nemotronStatus', {}, { timeoutMs: 30_000 }),
   // Silero runs on its own pool (S2T_SILERO_VAD_WORKERS): live-caption chunk
   // gating must keep answering while voiceprint/embedding jobs occupy the
   // interactive pool. Warmup touches every worker so no session is cold.

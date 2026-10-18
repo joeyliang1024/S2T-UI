@@ -1,6 +1,7 @@
 import { retryableAuthFetch } from '../../auth/services/auth-client'
 import { activeTranslate } from '../../../shared/i18n/index'
 import type { ImportCheckpoint, LiveTranscriptDraft, SavedSession } from '../../../shared/types'
+import { parseImportCheckpointResponse, parseLiveDraftResponse, parseSessionsResponse } from '../../../../../shared/validation/remote-session-payload.cjs'
 
 const check = async (response: Response): Promise<void> => { if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) } }
 
@@ -12,8 +13,7 @@ const remoteSession = (session: SavedSession): Omit<SavedSession, 'nativeAudioPa
 export const remoteSessionStorage = {
   async load(): Promise<{ sessions: SavedSession[]; version: number }> {
     const response = await retryableAuthFetch('/api/data/sessions'); await check(response)
-    const body = await response.json() as { sessions?: SavedSession[]; version?: number }
-    return { sessions: Array.isArray(body.sessions) ? body.sessions : [], version: Number.isSafeInteger(body.version) && body.version! >= 0 ? body.version! : 0 }
+    return parseSessionsResponse(await response.json())
   },
   async save(sessions: SavedSession[], version: number): Promise<number> {
     const requestBody = JSON.stringify({ sessions: sessions.map(remoteSession), version })
@@ -38,10 +38,10 @@ export const remoteSessionStorage = {
   async saveAudio(id: string, audio: Blob, attempts = 3): Promise<void> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio }, attempts); await check(response) },
   async loadAudio(id: string, attempts = 3): Promise<Blob | undefined> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, {}, attempts); if (response.status === 404) return undefined; await check(response); return response.blob() },
   async deleteAudio(id: string): Promise<void> { const response = await retryableAuthFetch(`/api/data/audio/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (response.status !== 404) await check(response) },
-  async loadLiveDraft(): Promise<LiveTranscriptDraft | undefined> { const response = await retryableAuthFetch('/api/data/live-draft'); await check(response); const body = await response.json() as { value?: LiveTranscriptDraft }; return body.value?.id && Array.isArray(body.value.segments) ? body.value : undefined },
+  async loadLiveDraft(): Promise<LiveTranscriptDraft | undefined> { const response = await retryableAuthFetch('/api/data/live-draft'); await check(response); return parseLiveDraftResponse(await response.json()) },
   async saveLiveDraft(value: LiveTranscriptDraft): Promise<void> { await check(await retryableAuthFetch('/api/data/live-draft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ value }) })) },
   async deleteLiveDraft(expectedId?: string): Promise<void> { await check(await retryableAuthFetch(`/api/data/live-draft${expectedId ? `?expectedId=${encodeURIComponent(expectedId)}` : ''}`, { method: 'DELETE' })) },
-  async loadImportCheckpoint(): Promise<ImportCheckpoint | undefined> { const response = await retryableAuthFetch('/api/data/import-checkpoint'); await check(response); const body = await response.json() as { value?: ImportCheckpoint }; return body.value?.fingerprint && Array.isArray(body.value.segments) ? body.value : undefined },
+  async loadImportCheckpoint(): Promise<ImportCheckpoint | undefined> { const response = await retryableAuthFetch('/api/data/import-checkpoint'); await check(response); return parseImportCheckpointResponse(await response.json()) },
   async saveImportCheckpoint(value: ImportCheckpoint): Promise<void> { await check(await retryableAuthFetch('/api/data/import-checkpoint', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ value }) })) },
   async deleteImportCheckpoint(): Promise<void> { await check(await retryableAuthFetch('/api/data/import-checkpoint', { method: 'DELETE' })) }
 }

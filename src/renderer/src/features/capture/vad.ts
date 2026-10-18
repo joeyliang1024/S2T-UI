@@ -89,6 +89,6 @@ export class EnergyVad implements BoundaryVad {
       }
     } else this.silenceSamples = 0
 
-    return { onsetSamples: this.onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs }
+    return { onsetSamples: this.onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs, trailingSilenceSamples: this.silenceSamples }
   }
 }

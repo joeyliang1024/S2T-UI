@@ -22,7 +22,7 @@ WORKDIR /app
 ARG NPM_REGISTRY
 ENV NODE_ENV=production \
     S2T_WEB_PORT=8787 \
-    S2T_MODELS_DIR=/models
+    S2T_MODELS_DIR=/models DATA_DIR=/data
 COPY package.json package-lock.json ./
 COPY dependencies/npm ./dependencies/npm
 COPY dependencies/ffmpeg-static /opt/s2t-dependencies/ffmpeg-static
@@ -34,6 +34,8 @@ COPY --from=build /app/out ./out
 COPY server ./server
 COPY src/shared/validation ./src/shared/validation
 COPY scripts/storage ./scripts/storage
+COPY LICENSE ./
 COPY icon ./icon
+COPY data ./data
 EXPOSE 8787
 CMD ["node", "server/index.cjs"]

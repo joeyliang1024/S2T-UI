@@ -122,6 +122,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   manageTemplates: { 'zh-TW': '管理模板與摘要模型', 'zh-CN': '管理模板与摘要模型', en: 'Manage templates and summary model', ja: 'テンプレートと要約モデルを管理', de: 'Vorlagen und Zusammenfassungsmodell verwalten' },
   generateSummary: { 'zh-TW': '產生摘要', 'zh-CN': '生成摘要', en: 'Generate summary', ja: '要約を作成', de: 'Zusammenfassung erstellen' },
   regenerateSummary: { 'zh-TW': '重新產生摘要', 'zh-CN': '重新生成摘要', en: 'Regenerate summary', ja: '要約を再生成', de: 'Zusammenfassung neu erstellen' },
+  cancelSummary: { 'zh-TW': '取消產生', 'zh-CN': '取消生成', en: 'Cancel generation', ja: '生成をキャンセル', de: 'Erstellung abbrechen' },
   generating: { 'zh-TW': '正在產生…', 'zh-CN': '正在生成…', en: 'Generating…', ja: '生成中…', de: 'Wird erstellt…' },
   formattedOutput: { 'zh-TW': '格式化輸出', 'zh-CN': '格式化输出', en: 'Formatted output', ja: '整形済み出力', de: 'Formatiertes Ergebnis' },
   notSelected: { 'zh-TW': '尚未選擇紀錄', 'zh-CN': '尚未选择记录', en: 'No recording selected', ja: '記録が選択されていません', de: 'Keine Aufzeichnung ausgewählt' },

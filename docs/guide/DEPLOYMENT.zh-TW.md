@@ -14,13 +14,13 @@ Docker 服務已連線。
 5. 使用 fallback 時，執行 `npm run storage:smoke` 驗證本機 blob、config、vector 的
    隔離與 CRUD。
 
-本機 fallback 使用 `S2T_LOCAL_DATA_DIR`，預設為專案下的 `.s2t-data`。它包含設定、文字紀錄、音檔 blob、向量資料與本機登入資料；請以作業系統帳號權限保護此目錄。
+本機 fallback 使用 `DATA_DIR`，預設為專案下的 `.s2t-data`。它包含設定、文字紀錄、音檔 blob、向量資料與本機登入資料；請以作業系統帳號權限保護此目錄。
 
 ## Kubernetes 的 `S2T_AUTH_SECRET`
 
 Kubernetes 部署**必須**設定 `S2T_AUTH_SECRET`，且所有 gateway Pod 必須使用同一個值。程式在 `S2T_KUBERNETES_MODE=true` 時若缺少此值，會讓 readiness 失敗，避免不同 Pod 使用不同的 JWT 簽章與模型憑證加密密鑰。
 
-本機開發未設定時，gateway 會在 `S2T_LOCAL_DATA_DIR/auth-secret` 自動產生並保存一把私有密鑰；這個便利行為不適用於多 Pod、Pod 重建或正式環境。
+本機開發未設定時，gateway 會在 `DATA_DIR/auth-secret` 自動產生並保存一把私有密鑰；這個便利行為不適用於多 Pod、Pod 重建或正式環境。
 
 請以 Kubernetes Secret 保存長且隨機的值，例如：
 
@@ -43,6 +43,12 @@ env:
 ```
 
 不要在每個 Pod 啟動時生成新值，也不要把此值寫進 ConfigMap、image、Git repository 或前端 `VITE_*` 變數。輪替密鑰會使既有登入 token 與已加密的帳號模型 API key 失效，應安排重新登入與模型憑證更新。
+
+### 重新部署後保留自訂模型
+
+自訂模型清單與加密 API key 存在帳號的 config storage；重新部署必須沿用相同的 config 資料與 `S2T_AUTH_SECRET`。Docker Compose 的 `gateway-data:/data` 包含預設本機資料與自動產生的密鑰，請保留該 volume；遠端 config 使用原本的 PostgreSQL 資料庫。不要在重新部署時重建 Secret 或改用新的資料目錄。若舊密鑰已遺失，現有 API key 無法解密，需恢復原密鑰或由使用者重新保存 API key，不能靠重加模型清單復原。
+
+模型燈號是檢查結果：綠色代表模型清單確認或本機 runtime 就緒；黃色代表服務可達但模型／檢查能力尚未確認；紅色代表認證、連線或 runtime 明確失敗；灰色代表尚未檢查／缺設定或此次檢查無法取得結果。OpenAI 相容服務不支援 `/models` 的 404／405 顯示黃色，不直接推論為不能使用。燈號不會禁止使用模型，也不代表推論品質已驗收。
 
 ## Linux x64 離線 sherpa 模型
 
@@ -148,7 +154,7 @@ user ID 存在才遷移；沒有 mapping 時仍維持跳過，不會猜測帳號
 
 ## 備份
 
-- **本機模式**：在 gateway 停止後備份整個 `S2T_LOCAL_DATA_DIR`。還原時以備份目錄覆蓋目標目錄，再啟動 gateway。
+- **本機模式**：在 gateway 停止後備份整個 `DATA_DIR`。還原時以備份目錄覆蓋目標目錄，再啟動 gateway。
 - **MinIO**：使用 bucket versioning 與物件備份工具備份指定 bucket；保留使用者 scope 的完整 key hierarchy。
 - **PostgreSQL**：使用 `pg_dump` 備份資料庫，並定期執行還原演練。
 - **Milvus**：依部署版本使用官方 backup 工具或 collection export；向量備份必須和 PostgreSQL 的聲紋 metadata 同一時間點保存。
@@ -171,3 +177,19 @@ user ID 存在才遷移；沒有 mapping 時仍維持跳過，不會猜測帳號
 可執行 `npm run settings:environment:smoke` 驗證預設選擇、帳號模型保留與載入優先順序。
 
 本機講者分離模型會從共用 `models/` 根目錄偵測：Sherpa 需要 segmentation 與 embedding ONNX；Nemotron 需要 GGUF 與符合執行平台的 runtime。兩套模型都完整時，兩者都列在模型頁與「目前使用」選單。`S2T_DIARIZATION_MODEL` 只決定啟動預設，選單切換的模型會傳給即時預覽、完整音檔及背景工作。偵測清單不會預先對兩套模型同時執行推論。
+
+## H100／H200 GPU worker
+
+可透過環境變數選擇 CPU／CUDA；GPU image、Compose overlay、K8s worker 設定與硬體驗收限制見 [GPU 部署指南](GPU.zh-TW.md)。
+
+## DATA_DIR、prompt 與模板
+
+設定 `DATA_DIR=/data` 後，程式自動使用 `/data/prompt/prompts.json` 與
+`/data/template/*.md`。映像內附預設檔案，首次載入會建立缺少的目錄與預設檔；
+既有設定與自訂檔案保留。Compose 延用原本 `/data` volume，無須搬移帳號資料。
+只讀模板掛載若已有 Markdown 檔，程式不會額外寫入預設模板。
+
+既有環境未設定 `DATA_DIR` 時仍支援舊變數；明確指定 `DATA_DIR` 後不再使用個別
+模板路徑。若要改到另一個資料根目錄，請先停機並完整搬移舊目錄（含
+`auth-secret`），不要只搬 prompt。詳細 prompt 欄位與更新方式見
+[Prompt 設定](../../data/prompt/README.md)。

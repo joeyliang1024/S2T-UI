@@ -397,4 +397,10 @@ const diarizeWav = (audio) => {
   return instance.process(samples).map((segment) => ({ start: segment.start, end: segment.end, speaker: `SPEAKER_${String(segment.speaker).padStart(2, '0')}` }))
 }
 
-module.exports = { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording, clusteringThresholdFor }
+const verifySherpaRuntime = (purpose = 'diarization') => {
+  if (purpose === 'diarization') getDiarizer()
+  else getEmbeddingExtractor()
+  return { backend: 'cpu', deviceId: 0 }
+}
+
+module.exports = { verifySherpaRuntime, diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, readWavSamples, resampleMono, shouldVetoRecording, clusteringThresholdFor }

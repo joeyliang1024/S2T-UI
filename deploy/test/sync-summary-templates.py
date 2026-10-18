@@ -14,6 +14,6 @@ config = {'apiVersion': 'v1', 'kind': 'ConfigMap', 'metadata': {'name': 's2t-sum
 subprocess.run(k + ['apply', '-f', '-'], input=json.dumps(config), text=True, check=True)
 exists = subprocess.run(k + ['get', 'deployment/gateway'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 if exists:
-    pod = {'volumes': [{'name': 'summary-templates', 'configMap': {'name': 's2t-summary-templates', 'items': items}}], 'containers': [{'name': 'gateway', 'env': [{'name': 'S2T_SUMMARY_TEMPLATES_DIR', 'value': '/data/template'}], 'volumeMounts': [{'name': 'summary-templates', 'mountPath': '/data/template', 'readOnly': True}]}]}
+    pod = {'volumes': [{'name': 'summary-templates', 'configMap': {'name': 's2t-summary-templates', 'items': items}}], 'containers': [{'name': 'gateway', 'env': [{'name': 'DATA_DIR', 'value': '/data'}], 'volumeMounts': [{'name': 'summary-templates', 'mountPath': '/data/template', 'readOnly': True}]}]}
     subprocess.run(k + ['patch', 'deployment/gateway', '--type=strategic', '-p', json.dumps({'spec': {'template': {'spec': pod}}})], check=True)
 print(f'Synced {len(templates)} Markdown templates; credentials and personal account templates were not changed.')

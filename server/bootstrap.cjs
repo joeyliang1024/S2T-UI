@@ -23,7 +23,7 @@ const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { createAudioClient, handleAudioService, proxyImport } = require('./audio-service.cjs')
 const audioClient = createAudioClient(process.env)
-const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, dynaudnormWav, transcodeM4a } = audioClient
+const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, warmSherpaRuntime, dynaudnormWav, transcodeM4a } = audioClient
 const { localModelName, NEMOTRON_MODEL, localDiarizationProfiles, resolveLocalDiarizationModel } = require('./local-diarization.cjs')
 const { nemotronStatus } = audioClient
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
@@ -150,7 +150,7 @@ const observeRequest = (path, status, startedAt) => {
   if (!path.startsWith('/api/')) return
   // IDs and object keys must never become metric labels.
   path = path.replace(/\/api\/data\/model-credentials\/[^/]+/, '/api/data/model-credentials/id').replace(/\/api\/audio\/.*/, '/api/audio/object')
-  if (!new Set(['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/summaries', '/api/config', '/api/storage', '/api/telemetry/captions', '/api/audio/object', '/api/data/sessions', '/api/data/settings', '/api/data/glossary', '/api/data/voiceprints', '/api/data/diarization-jobs', '/api/data/storage-status', '/api/data/storage-audit', '/api/data/storage-retry', '/api/data/model-registry', '/api/data/model-health', '/api/data/model-credentials/id', '/api/data/summary-templates', '/api/auth/login', '/api/auth/register', '/api/auth/session', '/api/auth/logout', '/api/audio-processing/silero-vad', '/api/audio-processing/status', '/api/audio-processing/import-wav']).has(path)) path = '/api/other'
+  if (!new Set(['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/summaries', '/api/config', '/api/storage', '/api/telemetry/captions', '/api/audio/object', '/api/data/sessions', '/api/data/settings', '/api/data/glossary', '/api/data/voiceprints', '/api/data/diarization-jobs', '/api/data/storage-status', '/api/data/storage-audit', '/api/data/storage-retry', '/api/data/model-registry', '/api/data/model-health', '/api/data/model-test', '/api/data/model-credentials/id', '/api/data/summary-templates', '/api/auth/login', '/api/auth/register', '/api/auth/session', '/api/auth/logout', '/api/audio-processing/silero-vad', '/api/audio-processing/status', '/api/audio-processing/import-wav']).has(path)) path = '/api/other'
   const metric = requestLatency.get(path) || { count: 0, errors: 0, sum: 0, buckets: latencyBuckets.map(() => 0) }
   const seconds = Math.max(0, (performance.now() - startedAt) / 1000)
   metric.count += 1; metric.sum += seconds; if (status >= 400) metric.errors += 1
@@ -249,7 +249,8 @@ const accountModelService = async (auth, user, id, purpose) => {
   let apiKey = ''
   if (model.requiresApiKey !== false) {
     const encrypted = await storage.config.get(user.id, `model-credential-${id}`)
-    apiKey = decryptCredential(auth.secret, encrypted)
+    try { apiKey = decryptCredential(auth.secret, encrypted) }
+    catch { throw new Error('已保存的模型 API key 無法解密；請確認重新部署及所有 Pod 使用相同的 S2T_AUTH_SECRET。若已更換密鑰，請重新保存此模型 API key。') }
     if (!apiKey) return null
   }
   return { endpoint: model.endpoint, model: model.model, apiKey }
@@ -257,14 +258,7 @@ const accountModelService = async (auth, user, id, purpose) => {
 // OpenAI-compatible services are probed through GET /models (the standard
 // healthy check). Local sherpa-onnx and Silero services expose no such
 // endpoint, so they get dedicated validations below.
-const isLocalEndpoint = (endpoint) => typeof endpoint === 'string' && (endpoint === 's2t-local://diarization' || endpoint.startsWith('/api/') || /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i.test(endpoint))
-const modelProbeKind = (model) => {
-  const haystack = `${model.name || ''} ${model.model || ''} ${model.endpoint || ''}`.toLowerCase()
-  if (haystack.includes('silero')) return 'silero'
-  if (haystack.includes('sherpa')) return 'sherpa'
-  if (isLocalEndpoint(model.endpoint)) return 'sherpa'
-  return 'openai'
-}
+const { modelProbeKind } = require('./model-health.cjs')
 // Custom validation for sherpa-onnx: packaged model files must exist, the
 // native runtime must load, and the CPU worker must answer a lightweight ping.
 const sherpaHealth = async (model) => {
@@ -273,8 +267,9 @@ const sherpaHealth = async (model) => {
     const paths = modelPaths()
     if (model.purpose === 'diarization' && model.model === NEMOTRON_MODEL) {
       if (!existsSync(paths.embedding)) throw new Error('找不到姓名辨識所需的 sherpa embedding 模型')
-      await nemotronStatus()
-      return { id: model.id, state: 'healthy', reason: 'Nemotron CPU runtime、權重校驗與 embedding 已就緒（最多 8 人）', checkedAt }
+      const status = await nemotronStatus()
+      await warmSherpaRuntime('embedding')
+      return { id: model.id, state: 'healthy', reason: `Nemotron ${status.inference?.backend === 'cuda' ? 'CUDA' : 'CPU'} runtime、權重校驗與 embedding 已就緒（最多 8 人）`, checkedAt }
     }
     const required = model.purpose === 'diarization'
       ? [['講者分離 segmentation 模型', paths.segmentation], ['聲紋 embedding 模型', paths.embedding]]
@@ -283,10 +278,10 @@ const sherpaHealth = async (model) => {
     if (missing.length) return { id: model.id, state: 'unhealthy', reason: `找不到 sherpa-onnx 模型檔：${missing.map(([label]) => label).join('、')}`, checkedAt }
     try { require('sherpa-onnx-node') } catch (error) { return { id: model.id, state: 'unhealthy', reason: `sherpa-onnx runtime 無法載入：${error instanceof Error ? error.message.slice(0, 120) : '未知錯誤'}`, checkedAt } }
     try {
-      await audioPreprocessStatus()
-      return { id: model.id, state: 'healthy', reason: required.length ? 'sherpa-onnx 模型檔、runtime 與 worker 均就緒' : 'sherpa-onnx runtime 與 worker 均就緒', checkedAt }
+      const runtime = await warmSherpaRuntime(model.purpose)
+      return { id: model.id, state: 'healthy', reason: `sherpa-onnx ${runtime.backend.toUpperCase()} 模型、runtime 與 worker 均就緒`, checkedAt }
     } catch (error) {
-      return { id: model.id, state: 'degraded', reason: `模型已就緒，但本機 worker 暫無回應：${error instanceof Error ? error.message.slice(0, 120) : '逾時'}`, checkedAt }
+      return { id: model.id, state: 'unhealthy', reason: `模型 runtime 初始化失敗或 worker 暫無回應：${error instanceof Error ? error.message.slice(0, 120) : '逾時'}`, checkedAt }
     }
   } catch (error) { return { id: model.id, state: 'unhealthy', reason: error instanceof Error ? error.message.slice(0, 160) : 'sherpa-onnx 驗證失敗', checkedAt } }
 }
@@ -296,21 +291,12 @@ const sileroHealth = async (model) => {
   const checkedAt = Date.now()
   try {
     const status = await warmSileroVad()
-    return { id: model.id, state: 'healthy', reason: 'Silero VAD 模型、checksum 與 ONNX runtime 已載入', checkedAt }
+    const backend = status[0]?.inference?.backend === 'cuda' ? 'CUDA' : 'CPU'
+    return { id: model.id, state: 'healthy', reason: `Silero VAD ${backend} 模型、checksum 與 ONNX runtime 已載入`, checkedAt }
   } catch (error) { return { id: model.id, state: 'unhealthy', reason: error instanceof Error ? error.message.slice(0, 160) : 'Silero VAD 驗證失敗', checkedAt } }
 }
-const openaiHealth = async (model, service) => {
-  const checkedAt = Date.now()
-  if (!service) return { id: model.id, state: 'unknown', reason: model.requiresApiKey === false ? '模型設定不完整' : '尚未保存可用 API key', checkedAt }
-  try {
-    const root = baseUrl(service.endpoint)
-    const probe = await fetch(`${root}/models`, { headers: service.apiKey ? { authorization: `Bearer ${service.apiKey}` } : {}, signal: AbortSignal.timeout(8_000) })
-    if (!probe.ok) return { id: model.id, state: 'unhealthy', reason: `模型服務 HTTP ${probe.status}`, checkedAt }
-    const body = await probe.json().catch(() => ({}))
-    const available = Array.isArray(body?.data) && body.data.some((item) => item?.id === service.model)
-    return { id: model.id, state: available ? 'healthy' : 'degraded', reason: available ? '服務與指定模型均可用' : '服務可達，但未確認指定模型', checkedAt }
-  } catch (error) { return { id: model.id, state: 'unhealthy', reason: error instanceof Error ? error.message.slice(0, 160) : '無法連線至模型服務', checkedAt } }
-}
+const { openaiHealth: probeOpenaiHealth } = require('./model-health.cjs')
+const openaiHealth = (model, service) => probeOpenaiHealth(model, service, { baseUrl })
 const modelHealth = async (auth, user, model) => {
   const key = `${user.id}:${model.id}`
   const cached = modelHealthChecks.get(key)
@@ -323,11 +309,11 @@ const modelHealth = async (auth, user, model) => {
     if (kind === 'sherpa') return sherpaHealth(model)
     const service = model.service || await accountModelService(auth, user, model.id, model.purpose)
     return openaiHealth(model, service)
-  })()
+  })().catch(error => ({ id: model.id, state: 'unhealthy', reason: error instanceof Error ? error.message : '模型健康檢查失敗', checkedAt: Date.now() }))
   modelHealthChecks.set(key, { pending })
   try {
     const value = await pending
-    modelHealthChecks.set(key, { value })
+    if (modelHealthChecks.get(key)?.pending === pending) modelHealthChecks.set(key, { value })
     // Only log a transition: a Pod that is missing a model file would
     // otherwise repeat the same warning on every cached probe refresh.
     const previous = modelHealthLastState.get(key)
@@ -741,6 +727,17 @@ const handleHttpRequest = async (request, response) => {
 const handleAuthenticatedRequest = async (request, response, auth) => {
   const requestPath = new URL(request.url, 'http://localhost').pathname
   if (await auth.handle(request, response, send)) return
+  if (request.method === 'POST' && requestPath === '/api/telemetry/journey') {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    const limit = await acceptsRequest(request, 'telemetry', user.id)
+    if (!limit.accepted) return rateLimitResponse(response, limit, 'Telemetry rate limited')
+    try {
+      const payload = JSON.parse((await readBody(request, 1024)).toString('utf8'))
+      if (!usageMetrics.observeJourney(user.id, payload?.stage)) return send(response, 400, { error: 'Invalid journey stage' })
+      return send(response, 200, { accepted: true })
+    } catch (error) { return send(response, error.status || 400, { error: 'Invalid journey event' }) }
+  }
   if (request.method === 'POST' && request.url === '/api/telemetry/captions') {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
@@ -753,6 +750,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     } catch (error) { return send(response, error.status || 400, { error: 'Invalid caption measurements' }) }
   }
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
+    prompts: require('./prompts.cjs').loadPrompts(),
     capabilities: { durableRecordingChunks: true, distributed: process.env.S2T_KUBERNETES_MODE === 'true' },
     branding: { titleImage: productTitleImage },
     asr: publicService(asr, '/api/transcriptions'),
@@ -880,6 +878,9 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
       return send(response, 200, { saved: true, version: value.version })
     } catch (error) { return storageFailure(response, error, '無法保存模型清單') }
   }
+  if (storagePath === '/api/data/model-test' && request.method === 'POST') {
+    return require('./model-api-test.cjs').handleModelApiTest(request, response, { auth, send, readBody, storage, accountModelService, configuredAsrProfiles, translation, summary, diarization, localDiarizationProfiles, localModelName, sherpaHealth, sileroHealth, baseUrl, acceptsRequest, rateLimitResponse })
+  }
   if (storagePath === '/api/data/model-health' && request.method === 'POST') {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
@@ -993,11 +994,13 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
       const key = `model-credential-${id}`
       if (request.method === 'DELETE') {
         await storage.config.remove(user.id, key)
+        modelHealthChecks.delete(`${user.id}:${id}`)
         return send(response, 204, '')
       }
       const body = JSON.parse((await readBody(request, 16 * 1024)).toString('utf8'))
       if (typeof body.apiKey !== 'string' || !body.apiKey.trim() || body.apiKey.length > 8_000) return send(response, 400, { error: 'API key 無效' })
       await storage.config.put(user.id, key, encryptCredential(auth.secret, body.apiKey.trim()))
+      modelHealthChecks.delete(`${user.id}:${id}`)
       return send(response, 204, '')
     } catch (error) { return storageFailure(response, error, '無法保存 API key') }
   }
@@ -1256,7 +1259,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
       const localModel = resolveLocalDiarizationModel(String(request.headers['x-s2t-diarization-model'] || ''))
       const segments = await diarizeWav(audio, localModel)
       const labeledSegments = await labelDiarizationTurns(user, audio, segments)
-      const payload = { model: localModel, ...(localModel === NEMOTRON_MODEL ? { speaker_capacity: 8, runtime: 'cpu', preset: 'v3-offline', speaker_cache_frames: 528 } : {}), threshold: voiceprintThreshold, exclusive_diarization: labeledSegments }
+      const payload = { model: localModel, ...(localModel === NEMOTRON_MODEL ? { speaker_capacity: 8, runtime: (await nemotronStatus()).inference.backend, preset: 'v3-offline', speaker_cache_frames: 528 } : {}), threshold: voiceprintThreshold, exclusive_diarization: labeledSegments }
       // Only the sliding-window preview asks for these. The full-track pass
       // would pay the same RTF across the entire recording for a signal only
       // the stabilizer reads, so the cost stays opt-in per request.

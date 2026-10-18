@@ -51,6 +51,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
   private explicitBoundaries = new Set<number>()
   private vadSpeaking = false
   private lastSpeechSample = 0
+  private lastVoicedSample = 0
   private readonly maximumPendingSeconds = 30
   private prompt?: string
   /** Tail of the last successful caption; conditions the next short chunk. */
@@ -86,6 +87,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.explicitBoundaries.clear()
     this.vadSpeaking = false
     this.lastSpeechSample = 0
+    this.lastVoicedSample = 0
     this.rollingContext = ''
     this.lastTranscript = undefined
     this.overflowGap = undefined
@@ -118,6 +120,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     const configuredMaximumMs = Math.max(configuredMinimum, configuredMaximum, 200)
     this.vadSpeaking = Boolean(vadFrame?.speaking)
     if (this.vadSpeaking || vadFrame?.speechStarted) this.lastSpeechSample = startSample + chunk.length
+    if (this.vadSpeaking || vadFrame?.speechStarted || vadFrame?.speechEnded) this.lastVoicedSample = startSample + chunk.length - (vadFrame?.trailingSilenceSamples ?? 0)
     this.pendingContainsSpeech ||= Boolean(vadFrame?.speechStarted || this.vadSpeaking)
     if (this.pendingContainsSpeech && vadFrame?.speechEnded) this.pendingBoundaries.push(startSample + chunk.length)
     if (!this.pendingContainsSpeech && this.pendingSamples > this.sampleRate * configuredMaximumMs / 1000) {
@@ -237,6 +240,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     // Sample-clock backdating retains collection time even when the queue is full.
     const chunkStartAt = this.audioClock.at - (this.audioClock.sample - startSample) / this.sampleRate * 1000
     const chunkOnset = this.speechOnsets.find(onset => onset.sample >= startSample && onset.sample < endSample)
+    const speechEndSample = Math.min(endSample, this.lastVoicedSample)
+    const speechEndAt = speechEndSample > startSample ? this.audioClock.at - (this.audioClock.sample - speechEndSample) / this.sampleRate * 1000 : undefined
     const chunkSpeechAt = chunkOnset?.at ?? chunkStartAt
     const chunkDetectedAt = chunkOnset ? Math.max(chunkSpeechAt, Math.min(queuedAt, chunkOnset.detected)) : chunkSpeechAt
     this.queued = this.queued.catch(() => undefined).then(async () => {
@@ -290,7 +295,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
       const timing: CaptionTiming = {
-        chunkSpeechAt, chunkDetectedAt, queuedAt, dequeuedAt, requestAt, responseAt, postEndAt,
+        chunkSpeechAt, chunkDetectedAt, queuedAt, dequeuedAt, requestAt, responseAt, postEndAt, speechEndAt,
         ...(sileroStartAt !== undefined && sileroEndAt !== undefined ? { sileroStartAt, sileroEndAt } : {}),
         ...(response.server ? { server: response.server } : {}),
         ...(onsets[0] ? { speechAt: onsets[0].at } : {})

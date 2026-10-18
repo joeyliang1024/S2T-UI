@@ -1,0 +1,51 @@
+# H100/H200 Linux x64: CUDA-capable Nemotron worker + existing Web gateway.
+# The stock npm ONNX packages are retained; sherpa/Silero default to CPU here.
+ARG CUDA_DEVEL_IMAGE=nvidia/cuda:12.8.1-devel-ubuntu24.04
+ARG CUDA_RUNTIME_IMAGE=nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04
+FROM ${CUDA_DEVEL_IMAGE} AS native
+ARG NEMO_SPEECH_REF=v0.2.0
+ARG CUDA_ARCHITECTURES=90
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ca-certificates build-essential cmake ninja-build pkg-config libsentencepiece-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --branch "${NEMO_SPEECH_REF}" --depth 1 https://github.com/NVIDIA/NeMo-Speech.cpp.git /source
+WORKDIR /source
+RUN git submodule update --init llama.cpp \
+    && scripts/configure.sh cuda-diar -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES}" \
+    && cmake --build --preset cuda-diar --parallel 4 \
+    && cmake --install build/cuda-diar --prefix /opt/nemo-speech
+
+FROM node:22-bookworm-slim AS application
+ARG NPM_REGISTRY
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY dependencies/npm ./dependencies/npm
+RUN test -n "$NPM_REGISTRY" && npm ci --ignore-scripts --no-audit --no-fund \
+    --registry="$NPM_REGISTRY" --replace-registry-host=npmjs
+COPY . .
+RUN npm run build:web && npm prune --omit=dev --ignore-scripts
+
+FROM ${CUDA_RUNTIME_IMAGE}
+ENV NODE_ENV=production S2T_WEB_PORT=8787 S2T_MODELS_DIR=/models DATA_DIR=/data \
+    S2T_INFERENCE_BACKEND=cuda \
+    LD_LIBRARY_PATH=/opt/nemo-speech/lib:/opt/nemo-speech/lib64:/usr/local/cuda/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsentencepiece0 libgomp1 libatomic1 libstdc++6 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=application /usr/local /usr/local
+COPY --from=native /opt/nemo-speech /opt/nemo-speech
+WORKDIR /app
+COPY --from=application /app/node_modules ./node_modules
+COPY --from=application /app/out ./out
+COPY server ./server
+COPY src/shared/validation ./src/shared/validation
+COPY scripts/storage ./scripts/storage
+COPY scripts/benchmarks/gpu-diarization.cjs ./scripts/benchmarks/gpu-diarization.cjs
+COPY LICENSE ./LICENSE
+COPY icon ./icon
+COPY data ./data
+COPY dependencies/ffmpeg-static/ffmpeg-linux-x64 /app/node_modules/ffmpeg-static/ffmpeg
+RUN chmod 0755 /app/node_modules/ffmpeg-static/ffmpeg \
+    && test -x /opt/nemo-speech/bin/nemo-speech
+EXPOSE 8787
+CMD ["node", "server/index.cjs"]

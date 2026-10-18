@@ -1,0 +1,14 @@
+# Use with docker-compose.gateway.yml. Build the GPU image separately first;
+# `up --no-build` prevents the base Compose build from replacing it with CPU.
+services:
+  gateway:
+    image: s2t-ui:h100-h200-cuda
+    environment:
+      S2T_INFERENCE_BACKEND: ${S2T_INFERENCE_BACKEND:-cuda}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

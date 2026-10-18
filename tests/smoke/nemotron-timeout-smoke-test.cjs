@@ -7,5 +7,6 @@ if(name==='node:child_process')return {execFileSync:(_file,args,options)=>{if(ar
 if(name==='node:crypto')return {createHash:()=>({update(){return this},digest:()=> '08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1'})};
 if(name==='./local-diarization.cjs')return {nemotronPaths:()=>({model:'model',runtime:'runtime'})};
 if(name==='./sherpa-diarization.cjs')return {readWavSamples:()=>({samples,sampleRate:16000}),resampleMono:s=>s};
+if(name==='./inference-config.cjs')return require('../../server/inference-config.cjs');
 if(name==='./logger.cjs')return {logger:{error:()=>{}}};return require(name)};
 const m={exports:{}};new Function('require','module','exports','process',source)(mockRequire,m,m.exports,{platform:process.platform,arch:process.arch,env});assert.deepEqual(m.exports.diarizeWav(Buffer.alloc(0)),[]);assert.ok(Number.isInteger(timeout)&&timeout>=1);assert.equal(cleaned,true);console.log(JSON.stringify({seconds,timeout,valid:true}));}

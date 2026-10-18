@@ -7,7 +7,9 @@ const requestLimits = (env = process.env) => ({
   transcriptions: positiveLimit(env.S2T_ASR_REQUESTS_PER_MINUTE, 180),
   translations: positiveLimit(env.S2T_TRANSLATION_REQUESTS_PER_MINUTE, 180),
   'silero-vad': positiveLimit(env.S2T_VAD_REQUESTS_PER_MINUTE, env.S2T_KUBERNETES_MODE === 'true' ? 180 : 30),
-  telemetry: 240, summaries: 12, diarizations: 8, audioUploads: 30, voiceprintUploads: 12
+  // Model tests are a deliberate admin action and must not be starved by (or
+  // starve) caption telemetry, which shares no pacing with them.
+  telemetry: 240, modelTests: 60, summaries: 12, diarizations: 8, audioUploads: 30, voiceprintUploads: 12
 })
 
 const createRequestLimiter = (limits, now = Date.now) => {
