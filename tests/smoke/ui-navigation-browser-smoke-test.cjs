@@ -8,7 +8,7 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     let file = path.join(root,new URL(req.url,'http://fixture').pathname)
     if (!file.startsWith(root+path.sep)) return res.writeHead(403).end()
     if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file=path.join(root,'index.html')
-    res.setHeader('content-type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync(file))
+    res.setHeader('content-type',file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html');res.end(fs.readFileSync(file))
   })
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
   const origin=`http://127.0.0.1:${server.address().port}`
@@ -33,7 +33,7 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
       else if(pathname==='/api/data/settings')result=request.method()==='POST'?{version:1}:{settings:{uiLanguage:'en'},version:0}
       else if(pathname==='/api/data/sessions'){if(request.method()==='POST'){sessions=body.sessions;sessionVersion++}result=request.method()==='POST'?{version:sessionVersion}:{sessions,version:sessionVersion}}
       else if(pathname==='/api/data/model-registry')result={models:[],version:0}
-      else if(pathname==='/api/data/summary-templates')result={templates:[{id:'base',name:'Base',content:'# Summary'}],selectedTemplateId:'base',version:0}
+      else if(pathname==='/api/data/summary-templates')result=request.method()==='POST'?{version:1}:{templates:[{id:'base',name:'Base',content:'# Summary'}],selectedTemplateId:'base',version:0}
       else if(pathname==='/api/data/voiceprints')result={voiceprints:[]}
       else if(pathname==='/api/data/storage-status')result={audioPending:0,voiceprintPending:0}
       else if(pathname==='/api/data/storage-audit')result={orphanAudio:0}
@@ -117,8 +117,24 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     await page.keyboard.press('Escape')
     assert.equal(await page.locator('.quality-correction-trigger').getAttribute('aria-expanded'),'false')
     // Common widths/themes; page controls remain reachable without document overflow.
-    for(const route of ['history','summary','quality-comparison','models','settings','voiceprints','import']){
+    for(const route of ['live','history','summary','quality-comparison','models','settings','voiceprints','import']){
       await page.goto(origin+'/'+route);await page.locator('.workspace-content').waitFor()
+      const art=page.locator('.studio-artwork-image').first()
+      await art.waitFor()
+      const loaded=await art.evaluate(async el=>{
+        const style=getComputedStyle(el),url=style.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1]
+        if(!url)return false
+        const image=new Image();image.src=url;await image.decode()
+        return image.naturalWidth>0 && style.animationName!=='none'
+      })
+      assert.equal(loaded,true,route+': generated artwork loads and animates')
+      await page.emulateMedia({reducedMotion:'reduce'})
+      assert.equal(await art.evaluate(el=>getComputedStyle(el).animationName),'none',route+': reduced motion is respected')
+      await page.emulateMedia({reducedMotion:'no-preference'})
+      if(route==='live'){
+        const bar=page.locator('.sidebar-nav button.active .nav-live-wave').first()
+        assert.equal(await bar.evaluate(el=>getComputedStyle(el).animationPlayState),'running','active live caption icon animates')
+      }
       for(const theme of ['dark','light'])for(const width of [1440,768,390]){
         await page.evaluate(value=>document.documentElement.dataset.theme=value,theme)
         await page.setViewportSize({width,height:1000})
@@ -130,6 +146,6 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     assert.equal(await page.getByRole('button',{name:'Accounts / admin parameters',exact:true}).count(),0,'normal users cannot enter admin UI')
     assert.equal(modelCalls,0)
     assert.deepEqual(errors,[])
-    console.log('PASS history paging/sort/search, transcript searches/close/reset, cancelled rename, selected-record redirects, no accidental inference, 42 responsive/theme page combinations and admin visibility')
+    console.log('PASS history paging/sort/search, transcript searches/close/reset, cancelled rename, selected-record redirects, no accidental inference, 48 responsive/theme page combinations, generated artwork on all eight pages, live icon motion and reduced-motion support and admin visibility')
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
 })().catch(error=>{console.error(error);process.exitCode=1})

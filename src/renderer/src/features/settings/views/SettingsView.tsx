@@ -1,3 +1,4 @@
+import { StudioArtwork } from '../../../shared/ui/StudioArtwork'
 import { createTextSearch } from '../../../shared/services/search'
 import { SessionSyncConflicts } from '../../sessions/views/SessionSyncConflicts'
 import { SummaryTemplateManager } from './SummaryTemplateManager'
@@ -197,7 +198,7 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
 
   return (
     <section className="page-panel settings-panel">
-      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>{ui('settingsTitle')}</h2></div></div>
+      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>{ui('settingsTitle')}</h2></div><StudioArtwork variant="settings" className="page-art" /></div>
       <nav className="settings-category-nav" aria-label={ui('settingsTitle')}>{categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'nav-active' : ''} aria-current={category === entry.id ? 'true' : undefined} onClick={() => setCategory(entry.id)}>{entry.label}</button>)}</nav>
 
       {category === 'account' && user.role === 'admin' && <AdminSettingsPanel user={user} settings={settings} update={update} />}

@@ -26,7 +26,7 @@ COPY . .
 RUN npm run build:web && npm prune --omit=dev --ignore-scripts
 
 FROM ${CUDA_RUNTIME_IMAGE}
-ENV NODE_ENV=production S2T_WEB_PORT=8787 S2T_MODELS_DIR=/models \
+ENV NODE_ENV=production S2T_WEB_PORT=8787 S2T_MODELS_DIR=/models DATA_DIR=/data \
     S2T_INFERENCE_BACKEND=cuda \
     LD_LIBRARY_PATH=/opt/nemo-speech/lib:/opt/nemo-speech/lib64:/usr/local/cuda/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -41,7 +41,9 @@ COPY server ./server
 COPY src/shared/validation ./src/shared/validation
 COPY scripts/storage ./scripts/storage
 COPY scripts/benchmarks/gpu-diarization.cjs ./scripts/benchmarks/gpu-diarization.cjs
+COPY LICENSE ./LICENSE
 COPY icon ./icon
+COPY data ./data
 COPY dependencies/ffmpeg-static/ffmpeg-linux-x64 /app/node_modules/ffmpeg-static/ffmpeg
 RUN chmod 0755 /app/node_modules/ffmpeg-static/ffmpeg \
     && test -x /opt/nemo-speech/bin/nemo-speech

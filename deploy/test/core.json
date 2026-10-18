@@ -50,8 +50,8 @@
                     "value": "default"
                   },
                   {
-                    "name": "S2T_SUMMARY_TEMPLATES_DIR",
-                    "value": "/data/template"
+                    "name": "DATA_DIR",
+                    "value": "/data"
                   }
                 ],
                 "envFrom": [

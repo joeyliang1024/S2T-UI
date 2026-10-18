@@ -1,3 +1,4 @@
+const { renderPrompt } = require('../prompts.cjs')
 const languageNames = {
   auto: '自动检测（中文、英语、日语或德语）',
   'zh-TW': '繁体中文',
@@ -16,15 +17,13 @@ const supportedTargetLanguages = new Set(['zh-TW', 'en', 'ja', 'de'])
 
 const languageName = (value) => languageNames[value] || '自动检测（中文、英语、日语或德语）'
 const isChineseLanguage = (value) => /^zh/.test(value)
-const markdownFormatHint = (sourceLanguage, targetLanguage) => isChineseLanguage(sourceLanguage) || isChineseLanguage(targetLanguage)
-  ? '输入为 Markdown，保留标题、列表、表格与代码块等结构，只翻译文字内容。'
-  : 'The input is Markdown: keep headings, lists, tables and code blocks intact and translate only the prose.'
 const createTranslationPrompt = (text, sourceLanguage, targetLanguage, glossary, format) => {
-  const terms = glossary ? `\n术语表：${glossary}` : ''
-  const structure = format === 'markdown' ? `\n${markdownFormatHint(sourceLanguage, targetLanguage)}` : ''
-  return isChineseLanguage(sourceLanguage) || isChineseLanguage(targetLanguage)
-    ? `以下输入只会是中文、英语、日语或德语。将其翻译为${languageName(targetLanguage)}；来源语言为${languageName(sourceLanguage)}。只输出译文，不要额外解释。${structure}${terms}\n\n${text}`
-    : `The input is Chinese, English, Japanese, or German. Translate it into ${languageName(targetLanguage)}. The source language is ${languageName(sourceLanguage)}. Return only the translation.${structure}${terms}\n\n${text}`
+  const chinese = isChineseLanguage(sourceLanguage) || isChineseLanguage(targetLanguage)
+  return renderPrompt(chinese ? 'gatewayTranslationZh' : 'gatewayTranslationEn', {
+    target: languageName(targetLanguage), source: languageName(sourceLanguage), text,
+    terms: glossary ? renderPrompt('gatewayTerms', { glossary }) : '',
+    structure: format === 'markdown' ? '\n' + renderPrompt(chinese ? 'gatewayMarkdownZh' : 'gatewayMarkdownEn') : ''
+  })
 }
 
 const normalizeTranslationInput = (input) => {

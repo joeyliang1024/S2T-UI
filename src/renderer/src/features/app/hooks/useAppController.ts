@@ -1,3 +1,4 @@
+import { prompt, setPromptCatalog } from '../../../shared/services/prompts'
 import type { ComparisonKind } from '../../quality-comparison/domain/comparison'
 import { createTextSearch } from '../../../shared/services/search'
 import { searchCaptionGroups } from '../../transcript/domain/search'
@@ -1182,6 +1183,7 @@ useEffect(() => {
         ])
         : [null, await readJsonResponse<EnvironmentModels>(await authFetch('/api/config'), activeTranslate('stModelSettings'))]
       if (canceled) return
+      setPromptCatalog(config.prompts)
       environmentConfigRef.current = config
       setProductTitleImage(config.branding?.titleImage || '')
       setSettings((previous) => {
@@ -2892,7 +2894,7 @@ const summaryPort = useMemo(() => createSummaryPort({ endpoint: settings.summary
 const completeSummary = (messages: Array<{ role: 'system' | 'user'; content: string }>, singleAttempt = false, onText?: (text: string) => void, signal?: AbortSignal): Promise<{ text: string }> =>
   summaryPort.complete({ messages, singleAttempt, onText, signal })
 
-const summaryInstruction = (targetLanguage?: string): string => `請依照下列 Markdown 模板整理逐字稿，使用${languageName(targetLanguage ?? resolveUiLanguage('system'))}輸出，保留標題結構並填入內容。\n\n模板：\n${settings.summaryTemplate}`
+const summaryInstruction = (targetLanguage?: string): string => prompt('summary', { language: languageName(targetLanguage ?? resolveUiLanguage('system')), template: settings.summaryTemplate })
 
 const summarizeTranscript = (transcript: string, onText?: (text: string) => void, signal?: AbortSignal): Promise<string> => summarizeTranscriptWorkflow(transcript, { completeSummary, summaryInstruction, compressionFailure: () => new Error(activeTranslate('stSummaryCompressionFailed')) }, onText, signal)
 
@@ -2903,7 +2905,7 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
     const language = ({ 'zh-TW': '繁體中文', 'zh-CN': '簡體中文', en: 'English', ja: '日本語', de: 'Deutsch' } as const)[resolveUiLanguage(settings.uiLanguage)]
     try {
       const result = await completeSummary([
-        { role: 'system', content: `請以${language}為下列逐字稿生成一個精準標題。只輸出標題本身，不要引號、Markdown 或說明；標題不得超過 ${maximumGeneratedSessionTitleLength} 個字元。` },
+        { role: 'system', content: prompt('title', { language, maximum: maximumGeneratedSessionTitleLength }) },
         { role: 'user', content: transcript.slice(0, 24_000) }
       ])
       const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()
@@ -2928,7 +2930,7 @@ const regenerateSessionTitle = async (entry: SavedSession): Promise<void> => {
   setTitleGeneratingIds(current => [...current, entry.id])
   try {
     const result = await completeSummary([
-      { role: 'system', content: `請使用${languageName(resolveUiLanguage(settings.uiLanguage))}為逐字稿生成精準標題。只輸出標題，不要 Markdown 或說明，最多 ${maximumGeneratedSessionTitleLength} 個字元。` },
+      { role: 'system', content: prompt('title', { language: languageName(resolveUiLanguage(settings.uiLanguage)), maximum: maximumGeneratedSessionTitleLength }) },
       { role: 'user', content: transcript.slice(0, 24_000) }
     ], true)
     const title = result.text.replace(/[\r\n]+/g, ' ').replace(/^[-#*\s]+|[-#*\s]+$/g, '').trim()

@@ -4,7 +4,7 @@ const { createHash } = require('node:crypto')
 const FILE_PREFIX = 'file-summary-'
 const DEFAULT_NAMES = new Set(['會議摘要', '会议摘要', 'Meeting summary', '会議要約', 'Besprechungszusammenfassung'])
 const DEFAULT_CONTENT = '# 會議摘要\n\n## 重點\n\n## 決策\n\n## 待辦事項\n'
-const loadFileTemplates = async (directory = process.env.S2T_SUMMARY_TEMPLATES_DIR || '/data/template') => {
+const loadFileTemplates = async (directory = require('../src/shared/validation/data-paths.cjs').initializeDataFiles().template) => {
   let entries
   try { entries = await fs.readdir(directory, { withFileTypes: true }) } catch (error) { if (error.code === 'ENOENT') return []; throw error }
   const names = entries.filter(entry => (entry.isFile() || entry.isSymbolicLink()) && /\.(md|markdown)$/i.test(entry.name)).map(entry => entry.name).sort((a, b) => a.localeCompare(b, 'en'))

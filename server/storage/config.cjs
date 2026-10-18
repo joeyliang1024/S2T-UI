@@ -1,4 +1,3 @@
-const path = require('node:path')
 
 class StorageConfigurationError extends Error {}
 
@@ -34,7 +33,7 @@ const readStorageConfig = (environment = process.env) => {
     minio,
     postgres,
     milvus,
-    localDataDirectory: path.resolve(environment.S2T_LOCAL_DATA_DIR || path.join(process.cwd(), '.s2t-data'))
+    localDataDirectory: require('../../src/shared/validation/data-paths.cjs').dataPaths(environment).root
   }
 }
 

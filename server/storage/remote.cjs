@@ -1,4 +1,4 @@
-const { Client: MinioClient } = require('minio')
+const { S3CompatibleClient: MinioClient } = require('./s3.cjs')
 const { Pool } = require('pg')
 const { safePart, validateEmbedding, validateVectorRecord } = require('./local.cjs')
 const { logger } = require('../logger.cjs')
@@ -15,7 +15,7 @@ class MinioBlobStore {
     // tell an operator whether MinIO, Postgres or Milvus is the broken one.
     this.ready = this.ensureBucket().catch((error) => { logger.error('storage.blob.unavailable', { bucket: this.bucket, error }); throw error })
   }
-  async ensureBucket() { if (!await this.client.bucketExists(this.bucket)) { try { await this.client.makeBucket(this.bucket) } catch (error) { if (!['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'].includes(error.code) || !await this.client.bucketExists(this.bucket)) throw error } } }
+  async ensureBucket() { if (!await this.client.bucketExists(this.bucket)) { try { await this.client.makeBucket(this.bucket) } catch (error) { if (!['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'].includes(error.code || error.name) || !await this.client.bucketExists(this.bucket)) throw error } } }
   key(scope, key) { return `${safePart(scope, 'scope')}/${key.split('/').map((part) => safePart(part, 'blob key')).join('/')}` }
   async put(scope, key, bytes) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), bytes) }
   async putStream(scope, key, stream, size) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), stream, size) }

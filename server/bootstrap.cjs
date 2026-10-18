@@ -750,6 +750,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     } catch (error) { return send(response, error.status || 400, { error: 'Invalid caption measurements' }) }
   }
   if (request.method === 'GET' && request.url === '/api/config') return send(response, 200, {
+    prompts: require('./prompts.cjs').loadPrompts(),
     capabilities: { durableRecordingChunks: true, distributed: process.env.S2T_KUBERNETES_MODE === 'true' },
     branding: { titleImage: productTitleImage },
     asr: publicService(asr, '/api/transcriptions'),

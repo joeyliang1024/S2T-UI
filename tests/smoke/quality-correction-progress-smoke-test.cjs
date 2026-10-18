@@ -1,7 +1,7 @@
-const assert=require('node:assert/strict'), {readFileSync}=require('node:fs'),ts=require('typescript'),{buildSync}=require('esbuild')
+const assert=require('node:assert/strict'), {readFileSync}=require('node:fs'),transpile=require('../helpers/transpile-typescript.cjs'),{buildSync}=require('esbuild')
 const hook=readFileSync('src/renderer/src/features/app/hooks/useAppController.ts','utf8')
 const source=hook.slice(hook.indexOf('const finalizeSession ='),hook.indexOf('const appendAudio ='))
-const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
+const code=transpile(source).code
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}}
 const flush=async()=>{for(let i=0;i<50;i++)await Promise.resolve()}
 async function scenario(fail=false,failedStage){

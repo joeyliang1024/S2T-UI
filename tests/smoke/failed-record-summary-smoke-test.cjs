@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
-const ts = require('typescript')
+const transpile = require('../helpers/transpile-typescript.cjs')
 const source = fs.readFileSync('src/renderer/src/features/app/hooks/useAppController.ts','utf8')
-const code = ts.transpileModule(source.slice(source.indexOf('const summarizeSession ='),source.indexOf('const canRecord =',source.indexOf('const summarizeSession ='))),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
+const code = transpile(source.slice(source.indexOf('const summarizeSession ='),source.indexOf('const canRecord =',source.indexOf('const summarizeSession =')))).code
 ;(async()=>{
   const calls=[],statuses=[],active={current:new Set()}
   const ctx={qualityCorrectionActiveRef:active,setStatus:s=>statuses.push(s),activeTranslate:key=>key,settings:{summaryEndpoint:'/api/summaries',summaryModel:'test'},makeTranscriptText:segments=>segments.map(s=>s.sourceText).join('\n'),createSessionSummary:async(id,text)=>{calls.push({id,text});return true}}

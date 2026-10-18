@@ -1,0 +1,35 @@
+const assert = require('node:assert/strict')
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path')
+const { dataPaths, initializeDataFiles } = require('../../src/shared/validation/data-paths.cjs')
+const { loadPrompts, renderPrompt } = require('../../server/prompts.cjs')
+const { readStorageConfig } = require('../../server/storage/config.cjs')
+const { buildSync } = require('esbuild')
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), 's2t-prompts-'))
+try {
+ const env = { DATA_DIR: directory, S2T_LOCAL_DATA_DIR: '/legacy', S2T_SUMMARY_TEMPLATES_DIR: '/legacy-templates' }
+ assert.deepEqual(dataPaths(env), { root: directory, prompt: path.join(directory,'prompt'), template:path.join(directory,'template') })
+ assert.equal(readStorageConfig(env).localDataDirectory, directory)
+ assert.equal(dataPaths({S2T_LOCAL_DATA_DIR:directory}).root,directory)
+ assert.equal(dataPaths({S2T_SUMMARY_TEMPLATES_DIR:directory}).template,directory)
+ const paths = initializeDataFiles(env)
+ fs.writeFileSync(path.join(directory, 'auth-secret'), 'keep-existing-secret')
+ assert.ok(fs.existsSync(path.join(paths.template,'會議摘要.md')))
+ const catalog = loadPrompts(env)
+ catalog.title = 'TITLE {{language}} {{maximum}}'
+ fs.writeFileSync(path.join(paths.prompt,'prompts.json'),JSON.stringify(catalog))
+ assert.equal(renderPrompt('title',{language:'{{maximum}}',maximum:40},env),'TITLE {{maximum}} 40','interpolation must not recursively expand user data')
+ initializeDataFiles(env)
+ assert.equal(loadPrompts(env).title,catalog.title,'restart does not overwrite custom prompts')
+ assert.equal(fs.readFileSync(path.join(directory,'auth-secret'),'utf8'),'keep-existing-secret')
+ assert.throws(()=>renderPrompt('title',{language:'en'},env),/Missing prompt variable/)
+ const output=buildSync({stdin:{contents:"export * from './src/renderer/src/shared/services/prompts'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
+ const m={exports:{}};new Function('module','exports','require',output)(m,m.exports,require)
+ m.exports.setPromptCatalog(catalog)
+ assert.equal(m.exports.prompt('title',{language:'ja',maximum:20}),'TITLE ja 20')
+ const broken={...catalog,title:'No variables'}
+ assert.throws(()=>m.exports.setPromptCatalog(broken),/Missing prompt variable/)
+ assert.equal(m.exports.prompt('title',{language:'de',maximum:20}),'TITLE de 20','invalid catalog cannot partially replace live prompts')
+ fs.writeFileSync(path.join(paths.prompt,'prompts.json'),JSON.stringify(broken))
+ assert.throws(()=>loadPrompts(env),/Missing prompt variable/)
+ console.log('PASS DATA_DIR precedence, legacy paths, first-run seeding, custom prompt persistence, auth secret preservation, runtime reload, safe interpolation and atomic renderer validation')
+} finally { fs.rmSync(directory,{recursive:true,force:true}) }
