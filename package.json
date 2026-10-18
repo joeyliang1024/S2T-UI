@@ -5,11 +5,10 @@
   "description": "Local-first desktop shell for real-time speech-to-text and translation",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "npm run build && electron-vite preview",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "web:serve": "node server/index.cjs",
-    "web:preview": "vite preview --config config/vite.web.config.ts",
     "storage:smoke": "node tests/smoke/storage-smoke-test.cjs",
     "storage:remote:smoke": "node tests/smoke/remote-storage-smoke-test.cjs",
     "storage:gateway:smoke": "node tests/smoke/gateway-storage-startup-smoke-test.cjs",
@@ -50,6 +49,9 @@
     "caption:reference": "node scripts/audio/build-reference-tsv.cjs",
     "recording:stress": "node tests/stress/recording-browser-pressure.cjs",
     "opfs:smoke": "node tests/smoke/opfs-pcm-recording-smoke-test.cjs",
+    "summary-workspace:smoke": "node tests/smoke/summary-workspace-smoke-test.cjs",
+    "summary-translation:smoke": "node tests/smoke/summary-translation-smoke-test.cjs",
+    "session-recovery:smoke": "node tests/smoke/session-recovery-smoke-test.cjs",
     "summary-plan:smoke": "node tests/smoke/summary-plan-smoke-test.cjs",
     "summary-templates:smoke": "node tests/smoke/summary-templates-smoke-test.cjs",
     "i18n:smoke": "node tests/smoke/i18n-smoke-test.cjs",
@@ -66,7 +68,16 @@
     "storage:migrate:schema": "node scripts/storage/migrate-schema.cjs",
     "scale:smoke": "node tests/smoke/scale-safety-smoke-test.cjs",
     "scale:integration": "node tests/integration/scale-safety-integration.cjs",
-    "redis:sentinel:smoke": "node tests/smoke/redis-sentinel-config-smoke-test.cjs"
+    "redis:sentinel:smoke": "node tests/smoke/redis-sentinel-config-smoke-test.cjs",
+    "session-sync:smoke": "node tests/smoke/session-rebase-smoke-test.cjs && node tests/smoke/session-storage-state-smoke-test.cjs",
+    "test": "node scripts/testing/run-tests.cjs unit",
+    "test:http": "node scripts/testing/run-tests.cjs http",
+    "test:models": "node scripts/testing/run-tests.cjs models",
+    "test:e2e": "node scripts/testing/run-tests.cjs e2e",
+    "test:external": "node scripts/testing/run-tests.cjs external",
+    "check:architecture": "node scripts/analysis/check-architecture.cjs",
+    "check": "npm run typecheck && npm run check:architecture && npm test && npm run test:http && npm run build && npm run build:web",
+    "build:web": "vite build --config config/vite.web.config.ts"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -96,12 +107,17 @@
     "electron": "^44.4.3",
     "electron-vite": "^4.0.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.5"
+    "vite": "^7.1.5",
+    "esbuild": "^0.25.12",
+    "playwright": "^1.62.1"
   },
   "allowScripts": {
     "electron@38.8.6": true,
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "@swc/core@1.16.2": true
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

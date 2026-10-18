@@ -1,3 +1,5 @@
+const { createAccountDeletionService, bootstrapRetirementKey } = require('./delete-account.cjs')
+const { readSharingAuthorization, setSharingAuthorization } = require('./sharing-authorization.cjs')
 const usageMetrics = require('../usage-metrics.cjs')
 const { randomBytes } = require('node:crypto')
 const { mkdir, readFile, rename, writeFile } = require('node:fs/promises')
@@ -27,7 +29,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
   if (storage?.ready) await storage.ready
   const users = storage.mode.config === 'postgres' ? new PostgresUserStore(storage.config.pool) : new LocalUserStore(storage.config)
   const configuredSecret = environment.S2T_AUTH_SECRET?.trim()
-  if (environment.S2T_KUBERNETES_MODE === 'true' && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
+  if ((environment.NODE_ENV === 'production' || environment.S2T_KUBERNETES_MODE === 'true') && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
   const secret = configuredSecret || await localSecret(environment.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data'))
   const revokedTokensKey = 'revoked-auth-tokens'
   const requestToken = (request) => {
@@ -45,17 +47,27 @@ const createAuth = async (storage, environment = process.env, limits = require('
     // Environment values define the initial user. Later users can always
     // register independently; if a matching account already exists it is
     // intentionally left unchanged.
-    const username = environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin'
-    const password = environment.S2T_BOOTSTRAP_ADMIN_PASSWORD?.trim() || 'admin'
+    const configuredUsername = environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim()
+    const configuredPassword = environment.S2T_BOOTSTRAP_ADMIN_PASSWORD?.trim()
+    if (!configuredUsername && (await users.list()).some(user => user.role === 'admin')) return
+    const username = configuredUsername || 'admin'
+    const developmentDefaults = environment.NODE_ENV !== 'production' && environment.S2T_KUBERNETES_MODE !== 'true' && environment.S2T_ALLOW_DEFAULT_ADMIN === 'true'
+    const password = configuredPassword || (developmentDefaults ? 'admin' : '')
     const existing = await users.findByUsername(username)
     if (existing?.role === 'admin') return
+    // An explicitly deleted bootstrap identity must not be recreated on restart.
+    if (!existing && await storage.config.get('auth', bootstrapRetirementKey(username))) return
     if (existing) throw new Error('Bootstrap admin 名稱已被一般帳號使用，請更換 S2T_BOOTSTRAP_ADMIN_USERNAME')
+    if ((!configuredUsername || !configuredPassword) && !developmentDefaults) throw new Error('首次啟動必須設定 S2T_BOOTSTRAP_ADMIN_USERNAME 與 S2T_BOOTSTRAP_ADMIN_PASSWORD；開發環境可明確啟用 S2T_ALLOW_DEFAULT_ADMIN=true')
+    if ((environment.NODE_ENV === 'production' || environment.S2T_KUBERNETES_MODE === 'true') && (password.length < 12 || password === 'admin')) throw new Error('正式環境 bootstrap 密碼至少需要 12 個字元')
     try {
-      await users.create({ username, passwordHash: await bcrypt.hash(password, 12), NT: username, Department: 'admin', role: 'admin' })
+      const admin = await users.create({ username, passwordHash: await bcrypt.hash(password, 12), NT: username, Department: 'admin', role: 'admin' })
+      await setSharingAuthorization(storage.config, admin.id, { approved: true, department: 'admin' }, admin.id)
       logger.info('auth.bootstrap-admin.created', { username })
     } catch (error) { const winner = await users.findByUsername(username); if (!winner || winner.role !== 'admin') throw error }
   }
   await ensureBootstrapAdmin()
+  const deleteAccount = createAccountDeletionService({ storage, users, bootstrapUsername: environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin' })
   const activeRevocations = async (userId) => {
     const now = Math.floor(Date.now() / 1000)
     const active = (value) => (Array.isArray(value) ? value.filter((entry) => entry && typeof entry.jti === 'string' && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now) : [])
@@ -83,30 +95,27 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async login(input) {
       const account = await users.findByUsername(normalizeUsername(input?.username))
-      if (!account || !await bcrypt.compare(typeof input?.password === 'string' ? input.password : '', account.passwordHash)) throw new Error('帳號或密碼錯誤')
+      if (!account || account.deletionState === 'deleting' || !await bcrypt.compare(typeof input?.password === 'string' ? input.password : '', account.passwordHash)) throw new Error('帳號或密碼錯誤')
       const user = publicUser(account); return { user, token: issue(user) }
     },
     async session(token) {
-      try {
-        const payload = jwt.verify(token, secret, { algorithms: ['HS256'] })
-        if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string') return null
-        const user = await users.findById(payload.sub)
-        if (!user || (await activeRevocations(user.id)).some((entry) => entry.jti === payload.jti)) return null
-        return publicUser(user)
-      } catch { return null }
+      let payload
+      try { payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) } catch { return null }
+      if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string') return null
+      const user = await users.findById(payload.sub)
+      if (!user || user.deletionState === 'deleting' || (await activeRevocations(user.id)).some(entry => entry.jti === payload.jti)) return null
+      return publicUser(user)
     },
     async revoke(token) {
-      try {
-        const payload = jwt.verify(token, secret, { algorithms: ['HS256'] })
-        if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string' || !Number.isSafeInteger(payload.exp)) return
-        await activeRevocations(payload.sub)
-        // Two tabs logging out together must not overwrite each other's
-        // revocation, so append through the atomic update instead of put().
-        await storage.config.update(payload.sub, revokedTokensKey, (value) => {
-          const entries = Array.isArray(value) ? value : []
-          return entries.some((entry) => entry?.jti === payload.jti) ? undefined : [...entries, { jti: payload.jti, expiresAt: payload.exp }]
-        })
-      } catch { /* An expired or invalid token is already unusable. */ }
+      let payload
+      try { payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) } catch { return }
+      if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string' || !Number.isSafeInteger(payload.exp)) return
+      await activeRevocations(payload.sub)
+      // Storage failures must propagate: an uncommitted revocation is not logout success.
+      await storage.config.update(payload.sub, revokedTokensKey, value => {
+        const entries = Array.isArray(value) ? value : []
+        return entries.some(entry => entry?.jti === payload.jti) ? undefined : [...entries, { jti: payload.jti, expiresAt: payload.exp }]
+      })
     },
     async requireUser(request) {
       if (Object.hasOwn(request, 's2tAuthUser')) return request.s2tAuthUser
@@ -117,16 +126,40 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
+      const deleteMatch = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})$/.exec(url)
+      if (deleteMatch && request.method === 'DELETE') {
+        const admin = await this.requireUser(request)
+        if (!admin) { send(response, 401, { error: '需要登入' }); return true }
+        if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可刪除帳號' }); return true }
+        try { send(response, 200, await deleteAccount(deleteMatch[1], admin.id)) }
+        catch (error) { send(response, error.status || 503, { error: error.message || '帳號資料清理失敗，請重試' }) }
+        return true
+      }
+      const sharingMatch = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})\/sharing-authorization$/.exec(url)
+      if (sharingMatch) {
+        const admin = await this.requireUser(request)
+        if (!admin) { send(response, 401, { error: '需要登入' }); return true }
+        if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可核准共享授權' }); return true }
+        const target = await users.findById(sharingMatch[1])
+        if (!target) { send(response, 404, { error: '找不到帳號' }); return true }
+        try {
+          if (request.method === 'GET') send(response, 200, { authorization: await readSharingAuthorization(storage.config, target.id) })
+          else if (request.method === 'PUT') send(response, 200, { authorization: await setSharingAuthorization(storage.config, target.id, await readJson(request), admin.id) })
+          else send(response, 405, { error: 'Method not allowed' })
+        } catch (error) { send(response, error.status || 503, { error: error.message }) }
+        return true
+      }
       if (url === '/api/admin/users') {
         const admin = await this.requireUser(request)
         if (!admin) { send(response, 401, { error: '需要登入' }); return true }
         if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可管理帳號' }); return true }
         try {
-          if (request.method === 'GET') send(response, 200, { users: await users.list() })
+          if (request.method === 'GET') send(response, 200, { users: await Promise.all((await users.list()).map(async user => ({ ...user, sharingAuthorization: await readSharingAuthorization(storage.config, user.id) }))) })
           else if (request.method === 'POST') {
             const input = await readJson(request)
             if (typeof input.password !== 'string' || input.password.length < 8 || Buffer.byteLength(input.password) > 72) throw new Error('密碼須為 8 至 72 bytes')
             const user = await users.create({ username: input.username, NT: input.NT, Department: input.Department, role: input.role, passwordHash: await bcrypt.hash(input.password, 12) })
+            await storage.withAccountWrite(user.id, () => setSharingAuthorization(storage.config, user.id, { approved: true, department: user.Department }, admin.id))
             send(response, 201, { user })
           } else send(response, 405, { error: 'Method not allowed' })
         } catch (error) { send(response, ['帳號已存在', 'NT 已存在'].includes(error.message) ? 409 : 400, { error: error.message }) }

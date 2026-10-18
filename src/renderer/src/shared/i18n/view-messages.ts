@@ -1,4 +1,4 @@
-import type { UiLanguage } from './index'
+import type { UiLanguage } from './types'
 
 /**
  * Static UI copy: labels, headings, hints, placeholders and option text that
@@ -6,13 +6,45 @@ import type { UiLanguage } from './index'
  * across every supported language.
  */
 export const viewMessages: Record<string, Record<UiLanguage, string>> = {
+  adminSearchAccounts: { 'zh-TW': '搜尋帳號', 'zh-CN': '搜索账号', en: 'Search accounts', ja: 'アカウント検索', de: 'Konten suchen' },
+  adminSearchAccountsHint: { 'zh-TW': '帳號、NT 或部門', 'zh-CN': '账号、NT 或部门', en: 'Account, NT or department', ja: 'アカウント、NT、部門', de: 'Konto, NT oder Abteilung' },
+  adminNoMatchingAccounts: { 'zh-TW': '沒有符合條件的帳號', 'zh-CN': '没有符合条件的账号', en: 'No matching accounts', ja: '一致するアカウントがありません', de: 'Keine passenden Konten' },
+  qualityCorrectionItems: { 'zh-TW': '修正項目', 'zh-CN': '修正项目', en: 'Correction items', ja: '修正項目', de: 'Korrekturbereiche' },
+  qualityCompareTranscript: { 'zh-TW': '字幕', 'zh-CN': '字幕', en: 'Transcript', ja: '字幕', de: 'Transkript' },
+  qualityCompareNoData: { 'zh-TW': '此項目尚無比對資料', 'zh-CN': '此项目尚无比对数据', en: 'No comparison data for this category yet', ja: 'この項目の比較データはありません', de: 'Noch keine Vergleichsdaten für diese Kategorie' },
+  modelEnvironmentManaged: { 'zh-TW': '此模型由服務管理，設定為唯讀；仍可執行 API 測試。', 'zh-CN': '此模型由服务管理，设置为只读；仍可执行 API 测试。', en: 'This model is service-managed. Settings are read-only; API testing remains available.', ja: 'サービス管理のモデルです。設定は読み取り専用ですが、API テストは利用できます。', de: 'Dieses Modell wird vom Dienst verwaltet. Die Einstellungen sind schreibgeschützt; API-Tests bleiben verfügbar.' },
+  modelSettingsTab: {"zh-TW": "設定", "zh-CN": "设置", "en": "Settings", "ja": "設定", "de": "Einstellungen"},
+  modelApiTestTab: {"zh-TW": "API 測試", "zh-CN": "API 测试", "en": "API test", "ja": "API テスト", "de": "API-Test"},
+  modelDialogSections: {"zh-TW": "模型內容", "zh-CN": "模型内容", "en": "Model sections", "ja": "モデルの内容", "de": "Modellbereiche"},
+  modelCategoryDiarization: { 'zh-TW': '講者分離', 'zh-CN': '说话人分离', en: 'Diarization', ja: '話者分離', de: 'Sprechertrennung' },
+  modelApiTest: {"zh-TW": "測試 API", "zh-CN": "测试 API", "en": "Test API", "ja": "API をテスト", "de": "API testen"},
+  modelApiTesting: {"zh-TW": "測試中…", "zh-CN": "测试中…", "en": "Testing…", "ja": "テスト中…", "de": "Test läuft…"},
+  modelApiTestHint: {"zh-TW": "測試連線、認證及模型清單，不執行推論，也不儲存目前輸入的設定或金鑰。", "zh-CN": "测试连接、认证及模型列表，不执行推理，也不保存当前设置或密钥。", "en": "Checks connectivity, authentication and model availability without inference or saving this draft or key.", "ja": "接続・認証・モデル一覧を確認します。推論や設定・キーの保存は行いません。", "de": "Prüft Verbindung, Anmeldung und Modellliste ohne Inferenz oder Speicherung von Entwurf und Schlüssel."},
+  modelApiTestTimeout: {"zh-TW": "API 測試逾時，請稍後再試。", "zh-CN": "API 测试超时，请稍后重试。", "en": "API test timed out. Please retry.", "ja": "API テストがタイムアウトしました。", "de": "Zeitüberschreitung beim API-Test."},
+  modelApiTestFailed: {"zh-TW": "API 測試失敗。", "zh-CN": "API 测试失败。", "en": "API test failed.", "ja": "API テストに失敗しました。", "de": "API-Test fehlgeschlagen."},
+  modelOthers: {"zh-TW": "其他", "zh-CN": "其他", "en": "Others", "ja": "その他", "de": "Sonstige"},
+  noSearchMatches: { 'zh-TW': '沒有符合的搜尋結果。', 'zh-CN': '没有匹配的搜索结果。', en: 'No matching results.', ja: '一致する検索結果はありません。', de: 'Keine passenden Ergebnisse.' },
+  qualityCompare: {"zh-TW": "品質校正比對", "zh-CN": "质量校正对比", "en": "Quality comparison", "ja": "品質補正の比較", "de": "Qualitätsvergleich"},
+  qualityCompareHint: {"zh-TW": "比較校正前後的逐字稿，左側為舊版，右側為新版。", "zh-CN": "比较校正前后的转录，左侧为旧版，右侧为新版。", "en": "Compare transcripts before and after correction: old on the left, new on the right.", "ja": "補正前後の文字起こしを比較します。左が旧版、右が新版です。", "de": "Transkripte vergleichen: links vorher, rechts nachher."},
+  qualityCompareRecord: {"zh-TW": "選擇紀錄", "zh-CN": "选择记录", "en": "Select recording", "ja": "記録を選択", "de": "Aufnahme auswählen"},
+  qualityCompareBefore: {"zh-TW": "校正前 · 舊版", "zh-CN": "校正前 · 旧版", "en": "Before · Old", "ja": "補正前 · 旧版", "de": "Vorher · Alt"},
+  qualityCompareAfter: {"zh-TW": "校正後 · 新版", "zh-CN": "校正后 · 新版", "en": "After · New", "ja": "補正後 · 新版", "de": "Nachher · Neu"},
+  qualityCompareRunning: {"zh-TW": "品質校正中…", "zh-CN": "质量校正中…", "en": "Correcting…", "ja": "補正中…", "de": "Korrektur läuft…"},
+  qualityCompareWaiting: {"zh-TW": "校正完成後，新版內容會顯示在右側。", "zh-CN": "校正完成后，新版内容会显示在右侧。", "en": "The corrected transcript will appear on the right when complete.", "ja": "完了すると右側に補正結果が表示されます。", "de": "Nach Abschluss erscheint die Korrektur rechts."},
+  qualityCompareModelRequired: {"zh-TW": "請先選擇支援品質校正的 ASR 模型。", "zh-CN": "请先选择支持质量校正的 ASR 模型。", "en": "Select an ASR model that supports quality correction first.", "ja": "品質補正に対応する ASR モデルを選択してください。", "de": "Zuerst ein ASR-Modell mit Korrekturunterstützung auswählen."},
+  qualityCompareAudioRequired: {"zh-TW": "這筆紀錄缺少錄音檔，無法執行品質校正。", "zh-CN": "此记录缺少录音文件，无法执行质量校正。", "en": "The audio is unavailable for this recording.", "ja": "音声ファイルがないため補正できません。", "de": "Die Audiodatei fehlt; eine Korrektur ist nicht möglich."},
+  qualityCompareNoBaseline: {"zh-TW": "尚未校正；目前兩側顯示相同原文，按下品質校正開始比對。", "zh-CN": "尚未校正；两侧显示相同原文，点击质量校正开始对比。", "en": "Not corrected yet. Both sides show the original; run quality correction to compare.", "ja": "未補正です。両側に原文を表示しています。品質補正で比較を開始します。", "de": "Noch nicht korrigiert. Beide Seiten zeigen das Original; Korrektur starten."},
+  qualityCompareChanges: {"zh-TW": "有 {count} 行變更", "zh-CN": "有 {count} 行变更", "en": "{count} changed lines", "ja": "{count} 行の変更", "de": "{count} geänderte Zeilen"},
+  qualityCompareUnchanged: {"zh-TW": "校正前後內容相同。", "zh-CN": "校正前后内容相同。", "en": "No changes between versions.", "ja": "補正前後の変更はありません。", "de": "Keine Änderungen zwischen den Versionen."},
   noExportableSummary: { 'zh-TW': '沒有可匯出的摘要內容。', 'zh-CN': '没有可导出的摘要内容。', en: 'There is no summary content to export.', ja: 'エクスポート可能な要約内容がありません。', de: 'Kein exportierbarer Zusammenfassungsinhalt vorhanden.' },
   downloadPickFailed: { 'zh-TW': '下載失敗', 'zh-CN': '下载失败', en: 'Download failed', ja: 'ダウンロードに失敗しました', de: 'Download fehlgeschlagen' },
+  modelHealthReason: { 'zh-TW': '健康檢查說明', 'zh-CN': '健康检查说明', en: 'Health check details', ja: 'ヘルスチェックの詳細', de: 'Details zur Zustandsprüfung' },
   modelHealthHealthy: { 'zh-TW': '健康', 'zh-CN': '健康', en: 'Healthy', ja: '正常', de: 'Einwandfrei' },
   modelHealthDegraded: { 'zh-TW': '降級', 'zh-CN': '降级', en: 'Degraded', ja: '劣化', de: 'Eingeschränkt' },
   modelHealthFailed: { 'zh-TW': '失敗', 'zh-CN': '失败', en: 'Failed', ja: '失敗', de: 'Fehlgeschlagen' },
   modelHealthUnknown: { 'zh-TW': '未確認', 'zh-CN': '未确认', en: 'Unknown', ja: '未確認', de: 'Unbekannt' },
   modelHealthNotChecked: { 'zh-TW': '尚未執行健康檢查', 'zh-CN': '尚未执行健康检查', en: 'Health check has not run yet', ja: '健康チェックはまだ実行されていません', de: 'Der Gesundheitstest wurde noch nicht ausgeführt.' },
+  modelHealthLastKnown: { 'zh-TW': '上次檢查結果：{state}', 'zh-CN': '上次检查结果：{state}', en: 'Last checked result: {state}', ja: '前回のチェック結果：{state}', de: 'Letztes Prüfergebnis: {state}' },
   modelApiKeySaveFailed: { 'zh-TW': '模型設定已更新，但 API key 保存失敗。', 'zh-CN': '模型设置已更新，但 API key 保存失败。', en: 'Model settings were updated, but the API key could not be saved.', ja: 'モデル設定は更新されましたが、API キーの保存に失敗しました。', de: 'Die Modelleinstellungen wurden aktualisiert, aber der API-Schlüssel konnte nicht gespeichert werden.' },
   asrModelSwitchSaveFailed: { 'zh-TW': 'ASR 模型已切換，但設定檔保存失敗。', 'zh-CN': 'ASR 模型已切换，但配置文件保存失败。', en: 'The ASR model was switched, but saving the settings file failed.', ja: 'ASR モデルは切り替わりましたが、設定ファイルの保存に失敗しました。', de: 'Das ASR-Modell wurde gewechselt, aber das Speichern der Einstellungsdatei ist fehlgeschlagen.' },
   asrModelSwitchApplied: { 'zh-TW': '已切換 ASR 模型；下次開始收音生效。', 'zh-CN': '已切换 ASR 模型；下次开始录音生效。', en: 'ASR model switched; it takes effect the next time recording starts.', ja: 'ASR モデルを切り替えました。次の録音開始時に有効になります。', de: 'ASR-Modell gewechselt; wirkt ab der nächsten Aufnahme.' },

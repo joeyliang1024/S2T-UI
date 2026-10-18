@@ -8,8 +8,8 @@ Docker 服務已連線。
 
 1. 複製 `.env.example` 為 `.env`。若要測試 fallback，將三組 Storage 變數全部留空；
    若要測試 Docker，依下方「本機 Docker Compose 整合測試」設定 `.env.local-storage`。
-2. 執行 `npm run web:serve` 啟動本機 gateway；預設為 `http://127.0.0.1:8787`。
-3. 執行 `npm run dev` 啟動 Electron，或以 Web 開發伺服器連線。
+2. 執行 `npm run build:web`，再以 `npm run web:serve` 啟動同時提供 UI 與 API 的本機 gateway；預設為 `http://127.0.0.1:8787`。
+3. 需要桌面版時執行 `npm run dev` 啟動 Electron。它會先建置再以 preview 啟動，沒有 renderer HMR。
 4. 以 `admin`／`admin` 登入。正式部署前必須在第一次啟動前設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`；之後更改 bootstrap 密碼不會覆蓋既有帳號。
 5. 使用 fallback 時，執行 `npm run storage:smoke` 驗證本機 blob、config、vector 的
    隔離與 CRUD。
@@ -44,6 +44,12 @@ env:
 
 不要在每個 Pod 啟動時生成新值，也不要把此值寫進 ConfigMap、image、Git repository 或前端 `VITE_*` 變數。輪替密鑰會使既有登入 token 與已加密的帳號模型 API key 失效，應安排重新登入與模型憑證更新。
 
+### 重新部署後保留自訂模型
+
+自訂模型清單與加密 API key 存在帳號的 config storage；重新部署必須沿用相同的 config 資料與 `S2T_AUTH_SECRET`。Docker Compose 的 `gateway-data:/data` 包含預設本機資料與自動產生的密鑰，請保留該 volume；遠端 config 使用原本的 PostgreSQL 資料庫。不要在重新部署時重建 Secret 或改用新的資料目錄。若舊密鑰已遺失，現有 API key 無法解密，需恢復原密鑰或由使用者重新保存 API key，不能靠重加模型清單復原。
+
+模型燈號是檢查結果：綠色代表模型清單確認或本機 runtime 就緒；黃色代表服務可達但模型／檢查能力尚未確認；紅色代表認證、連線或 runtime 明確失敗；灰色代表尚未檢查／缺設定或此次檢查無法取得結果。OpenAI 相容服務不支援 `/models` 的 404／405 顯示黃色，不直接推論為不能使用。燈號不會禁止使用模型，也不代表推論品質已驗收。
+
 ## Linux x64 離線 sherpa 模型
 
 若公司環境無法讓 gateway 下載 sherpa-onnx 講者分離模型，可使用已發布的 Linux x64 模型 image。它是模型傳遞媒介，不會啟動 gateway：
@@ -77,7 +83,7 @@ Web 版驗證可使用本機 Docker Compose 的 MinIO、PostgreSQL 與 Milvus，
    綁定 localhost。MinIO credentials 也會傳給 Milvus，避免 Milvus 使用預設帳密連線
    失敗。
 
-3. 需要驗證 Milvus 時啟用 profile：
+3. 需要驗證 Milvus 時，先在 `.env.local-storage` 成套填入 `S2T_MILVUS_ENDPOINT=127.0.0.1:19530`、`S2T_MILVUS_DB_NAME=default`、`S2T_MILVUS_COLLECTION=s2t_voiceprints` 與 `S2T_MILVUS_TOKEN=local-milvus-token`（若服務啟用認證，改用實際 token），再啟用 profile：
 
    ```bash
    docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml --profile milvus up -d
@@ -85,14 +91,15 @@ Web 版驗證可使用本機 Docker Compose 的 MinIO、PostgreSQL 與 Milvus，
 
    啟用後可用 `docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml --profile milvus ps` 確認四個服務；Milvus gRPC 位於 `127.0.0.1:19530`，HTTP 位於 `127.0.0.1:9091`。
 
-4. 在另一個終端載入同一份環境變數後啟動 gateway：
+4. 在另一個終端載入同一份環境變數後建置 Web UI 並啟動 gateway：
 
    ```bash
    set -a; source .env.local-storage; set +a
+   npm run build:web
    npm run web:serve
    ```
 
-5. 先執行 `npm run storage:remote:smoke` 驗證 MinIO、PostgreSQL 與 Milvus 的實際
+5. 完成上一步 Milvus profile 與四項設定後，先執行 `npm run storage:remote:smoke` 驗證 MinIO、PostgreSQL 與 Milvus 的實際
    adapter CRUD、兩個獨立程序的 PostgreSQL CAS 與 Milvus 向量查詢；它會建立隨機測試資料並在結束時刪除。
    gateway 啟動後再執行 `npm run storage:compensation:smoke`，驗證未提交 session 的音檔補償、已提交音檔保留與聲紋補償清理。
    `npm run storage:outage:smoke` 會暫停本機 Compose 的 MinIO 與 Milvus，再驗證音檔／聲紋補償保留與服務恢復後重試成功；不可對共享／正式服務執行。
@@ -105,7 +112,7 @@ Web 版驗證可使用本機 Docker Compose 的 MinIO、PostgreSQL 與 Milvus，
    - `npm run storage:grace:smoke`：純本機、不需外部服務，回歸驗證「上傳後尚未提交的音檔不會被無關的 session 儲存刪除」。提交寬限期由 `S2T_STORAGE_COMPENSATION_GRACE_MS` 控制（預設 30 秒），過期後才會被補償佇列清除。
    - `npm run storage:voiceprint-backup:smoke`：驗證聲紋快照包含 PostgreSQL metadata 與 Milvus embedding，刪除後可還原兩者。
 
-   gateway 啟動後可用 `curl http://127.0.0.1:5173/api/storage` 檢查（`5173` 是 `web:preview` 的 Vite proxy；直連 gateway 則用 `8787`）。fallback 會回傳三個 `local` adapter；外部模式回傳 `minio`、`postgres`、`milvus` 與 `001-core-storage`。瀏覽器重新整理後，設定頁的 Remote Storage 也會顯示實際 adapter 與 schema version。結束後執行：
+   gateway 啟動後可用 `curl http://127.0.0.1:8787/api/storage` 檢查。fallback 會回傳三個 `local` adapter；外部模式回傳 `minio`、`postgres`、`milvus` 與 `002-account-deletion`。瀏覽器重新整理後，設定頁的 Remote Storage 也會顯示實際 adapter 與 schema version。結束後執行：
 
     ```bash
     docker-compose --env-file .env.local-storage -f docker-compose.local-storage.yml \
@@ -156,9 +163,8 @@ user ID 存在才遷移；沒有 mapping 時仍維持跳過，不會猜測帳號
 
 ## Web 常見問題
 
-- **登入出現 HTTP 404**：確認瀏覽器網址是 `http://127.0.0.1:5173/`，且 `web:serve`、`web:preview` 兩個程序都在執行。不要直接開 `8787`，也不要沿用先前 Vite 程序的 `4173`／`4174` 網址。
-- **顯示 `Origin is not allowed`**：預設只允許 `http://127.0.0.1:5173` 與 `http://localhost:5173`。若從自訂網域或 port 開啟，將完整 origin 加入 `.env` 的 `S2T_WEB_ORIGINS`（多個值以逗號分隔），再重啟 gateway。
-- **`5173` 無法開啟或 port 已被占用**：停止舊的 `vite preview` 程序後重新執行 `npm run web:preview`。此專案固定使用 `5173`，避免 proxy origin 與 gateway 設定不一致。
+- **登入出現 HTTP 404**：確認已先執行 `npm run build:web`，再啟動 `npm run web:serve`，並開啟 `http://127.0.0.1:8787/`。
+- **顯示 `Origin is not allowed`**：同源 Web UI 不需額外設定。若由其他網域反向代理或獨立前端呼叫 API，將完整 origin 加入 `.env` 的 `S2T_WEB_ORIGINS`（多個值以逗號分隔），再重啟 gateway。
 
 ## 還原檢查
 
@@ -171,3 +177,7 @@ user ID 存在才遷移；沒有 mapping 時仍維持跳過，不會猜測帳號
 可執行 `npm run settings:environment:smoke` 驗證預設選擇、帳號模型保留與載入優先順序。
 
 本機講者分離模型會從共用 `models/` 根目錄偵測：Sherpa 需要 segmentation 與 embedding ONNX；Nemotron 需要 GGUF 與符合執行平台的 runtime。兩套模型都完整時，兩者都列在模型頁與「目前使用」選單。`S2T_DIARIZATION_MODEL` 只決定啟動預設，選單切換的模型會傳給即時預覽、完整音檔及背景工作。偵測清單不會預先對兩套模型同時執行推論。
+
+## H100／H200 GPU worker
+
+可透過環境變數選擇 CPU／CUDA；GPU image、Compose overlay、K8s worker 設定與硬體驗收限制見 [GPU 部署指南](GPU.zh-TW.md)。

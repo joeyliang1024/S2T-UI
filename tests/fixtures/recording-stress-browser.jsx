@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BufferedPcmWriter, pcm16, pcmRecordingBufferLimits, makeWav } from '../../src/renderer/src/shared/services/audio'
-import { OpfsPcmRecording } from '../../src/renderer/src/shared/services/opfs-pcm-recording'
-import { CorrectionAudioBuffer, correctionGroups, applySentenceCorrection } from '../../src/renderer/src/features/app/services/quality-correction'
-import { captionGroupSignature, upsertLiveCaption, renderedLiveCaptionWindow } from '../../src/renderer/src/features/app/services/live-caption'
-import { OpenAiChunkedModelAdapter } from '../../src/renderer/src/features/models/model-adapter'
+import { pcm16, makeWav } from '../../src/renderer/src/shared/services/audio'
+import { BufferedPcmWriter, pcmRecordingBufferLimits } from '../../src/renderer/src/features/capture/recording/buffered-writer'
+import { OpfsPcmRecording } from '../../src/renderer/src/features/capture/recording/adapters/opfs-pcm-recording'
+import { CorrectionAudioBuffer, correctionGroups, applySentenceCorrection } from '../../src/renderer/src/features/transcript/services/quality-correction'
+import { captionGroupSignature, upsertLiveCaption, renderedLiveCaptionWindow } from '../../src/renderer/src/features/transcript/domain/live-caption'
+import { createOpenAiChunkedModelAdapter } from '../../src/renderer/src/features/models/model-adapter'
 import { StreamingResampler } from '../../src/renderer/src/features/capture/resample'
-import { CaptionPaintMetric } from '../../src/renderer/src/features/app/views/CaptionPaintMetric'
+import { CaptionPaintMetric } from '../../src/renderer/src/features/captions/views/CaptionPaintMetric'
 import { installCorrection, pushPreview } from './recording-stress-production.generated'
 
 const config = window.stressConfig
@@ -37,7 +38,7 @@ const main = async () => {
     setTranscripts:update=>{entries=update(entries);correctionContext.transcriptsRef.current=entries;publish()},setStatus:message=>errors.push(message),activeTranslate:key=>key}
   installCorrection(correctionContext)
   const preview = {sampleRateRef:ref(rate),liveDiarizationChunksRef:ref([]),liveDiarizationHeadRef:ref(0),liveDiarizationSamplesRef:ref(0),liveDiarizationStartSampleRef:ref(0)}
-  const adapter = new OpenAiChunkedModelAdapter({id:'stress',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default',requiresApiKey:false})
+  const adapter = createOpenAiChunkedModelAdapter({id:'stress',endpoint:'/api/transcriptions',model:'mock',gatewayProfileId:'default',requiresApiKey:false})
   adapter.onError(message=>{fatal=message})
   adapter.onTranscript(event=>{entries=upsertLiveCaption(entries,event,-1,()=>false);correctionContext.transcriptsRef.current=entries;publish()})
   await adapter.start({sampleRate:16000,language:'zh-TW',targetLanguage:'en'})

@@ -1,4 +1,4 @@
-import type { UiLanguage } from './index'
+import type { UiLanguage } from './types'
 
 /**
  * Service copy: user-visible errors and labels raised outside the view layer
@@ -7,6 +7,12 @@ import type { UiLanguage } from './index'
  * user-visible string, always complete across every supported language.
  */
 export const serviceMessages: Record<string, Record<UiLanguage, string>> = {
+  svcConflictTitle: {"zh-TW": "紀錄同步衝突", "zh-CN": "记录同步冲突", "en": "Recording sync conflicts", "ja": "記録の同期競合", "de": "Synchronisierungskonflikte"},
+  svcConflictHint: {"zh-TW": "兩個版本都已保留。請逐筆選擇要保存的版本；遠端再次變更時會重新確認。", "zh-CN": "两个版本都已保留。请逐项选择要保存的版本；远端再次变更时会重新确认。", "en": "Both versions are retained. Choose which version to save for each recording; newer remote changes require another decision.", "ja": "両方の版を保持しています。記録ごとに保存する版を選んでください。新たなリモート変更は再確認します。", "de": "Beide Versionen bleiben erhalten. Wählen Sie je Aufnahme die zu speichernde Version. Neue Remote-Änderungen erfordern eine weitere Entscheidung."},
+  svcConflictDeleted: {"zh-TW": "此版本已刪除", "zh-CN": "此版本已删除", "en": "Deleted in this version", "ja": "この版では削除済み", "de": "In dieser Version gelöscht"},
+  svcConflictKeepLocal: {"zh-TW": "保留本機版本", "zh-CN": "保留本地版本", "en": "Keep local version", "ja": "ローカル版を保持", "de": "Lokale Version behalten"},
+  svcConflictKeepRemote: {"zh-TW": "保留遠端版本", "zh-CN": "保留远端版本", "en": "Keep remote version", "ja": "リモート版を保持", "de": "Remote-Version behalten"},
+  svcSessionSyncConflict: { 'zh-TW': '紀錄同步衝突：{ids}。本機變更已保留；請先處理衝突紀錄再重試。', 'zh-CN': '记录同步冲突：{ids}。本地变更已保留；请先处理冲突记录再重试。', en: 'Session sync conflict: {ids}. Local changes retained; resolve the conflicting records before retrying.', ja: '記録の同期が競合しました：{ids}。ローカルの変更は保持されています。競合を解決してから再試行してください。', de: 'Synchronisierungskonflikt: {ids}. Lokale Änderungen bleiben erhalten. Konflikte vor einem erneuten Versuch lösen.' },
   svcModelNotConnected: { 'zh-TW': '未連接模型', 'zh-CN': '未连接模型', en: 'No model connected', ja: '未接続のモデル', de: 'Kein Modell verbunden' },
   svcLanguageAuto: { 'zh-TW': '自動偵測', 'zh-CN': '自动检测', en: 'Auto-detect', ja: '自動検出', de: 'Automatisch erkennen' },
   svcLanguageTraditionalChinese: { 'zh-TW': '繁體中文', 'zh-CN': '繁体中文', en: 'Traditional Chinese', ja: '繁体字中国語', de: 'Traditionelles Chinesisch' },
@@ -27,6 +33,7 @@ export const serviceMessages: Record<string, Record<UiLanguage, string>> = {
   svcTranslationEmptyResult: { 'zh-TW': '翻譯服務回傳空白譯文，正在重新排隊。', 'zh-CN': '翻译服务返回空白译文，正在重新排队。', en: 'The translation service returned empty text; requeueing.', ja: '翻訳サービスが空の訳文を返しました。再キューしています。', de: 'Der Übersetzungsdienst hat leeren Text zurückgegeben; die Warteschlange wird neu befüllt.' },
   svcTranslationRateLimited: { 'zh-TW': '翻譯服務暫時限流，將在 {seconds} 秒後自動補翻。', 'zh-CN': '翻译服务暂时限流，将在 {seconds} 秒后自动补翻。', en: 'The translation service is rate-limiting; translation will retry automatically in {seconds}s.', ja: '翻訳サービスが一時的にレート制限中です。{seconds} 秒後に自動で再試行します。', de: 'Der Übersetzungsdienst begrenzt vorübergehend die Rate; erneuter Versuch in {seconds} s.' },
   svcTranslationFailedRetry: { 'zh-TW': '翻譯失敗，正在重新排隊。', 'zh-CN': '翻译失败，正在重新排队。', en: 'Translation failed; requeueing.', ja: '翻訳に失敗しました。再キューしています。', de: 'Übersetzung fehlgeschlagen; die Warteschlange wird neu befüllt.' },
+  svcTranslationTimeout: { 'zh-TW': '翻譯請求逾時，請稍後重試。', 'zh-CN': '翻译请求超时，请稍后重试。', en: 'The translation request timed out. Try again later.', ja: '翻訳リクエストがタイムアウトしました。しばらくしてから再試行してください。', de: 'Die Übersetzungsanfrage hat das Zeitlimit überschritten. Versuchen Sie es später erneut.' },
   svcTranslationCancelled: { 'zh-TW': '已取消翻譯', 'zh-CN': '已取消翻译', en: 'Translation cancelled', ja: '翻訳をキャンセルしました', de: 'Übersetzung abgebrochen' },
   svcRemoteInvalidVersion: { 'zh-TW': '遠端沒有回傳有效的紀錄版本', 'zh-CN': '远端没有返回有效的记录版本', en: 'The remote service returned no valid record version', ja: 'リモートから有効な記録バージョンが返されませんでした', de: 'Der Remote-Dienst hat keine gültige Datensatzversion zurückgegeben' },
   svcModelConnectTimeout: { 'zh-TW': '模型連線逾時', 'zh-CN': '模型连接超时', en: 'Model connection timed out', ja: 'モデル接続がタイムアウトしました', de: 'Zeitlimit für die Modellverbindung überschritten' },

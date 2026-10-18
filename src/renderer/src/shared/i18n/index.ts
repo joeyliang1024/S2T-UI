@@ -1,14 +1,15 @@
-export const supportedUiLanguages = ['zh-TW', 'zh-CN', 'en', 'ja', 'de'] as const
-export type UiLanguage = typeof supportedUiLanguages[number]
+export { supportedUiLanguages } from './types'
+import type { UiLanguage } from './types'
+export type { UiLanguage } from './types'
 /**
  * The display-language preference may be 'system': the OS language on desktop
- * (Electron renderer follows the Windows/Linux/macOS locale) or the browser
+ * (provided by Electron's native system language API) or the browser
  * language on the web. resolveUiLanguage maps it onto a supported language.
  */
 export type UiLanguagePreference = UiLanguage | 'system'
 
 const matchLanguageTag = (tag: string): UiLanguage | null => {
-  const lower = tag.toLowerCase()
+  const lower = tag.replace(/_/g, '-').toLowerCase()
   if (lower.startsWith('zh')) {
     if (lower.includes('hans') || lower.startsWith('zh-cn') || lower.startsWith('zh-sg')) return 'zh-CN'
     return 'zh-TW'
@@ -23,7 +24,8 @@ let systemUiLanguage: UiLanguage | null = null
 export const resolveUiLanguage = (preference: UiLanguagePreference): UiLanguage => {
   if (preference !== 'system') return preference
   if (systemUiLanguage === null) {
-    const tags = typeof navigator === 'undefined' ? [] : (navigator.languages?.length ? [...navigator.languages] : [navigator.language])
+    const desktopTags = typeof window === 'undefined' ? undefined : window.s2t?.systemLanguages
+    const tags = desktopTags?.length ? desktopTags : typeof navigator === 'undefined' ? [] : (navigator.languages?.length ? [...navigator.languages] : [navigator.language])
     const matched = tags.map((tag) => matchLanguageTag(tag)).find(Boolean) ?? null
     // No supported system language (e.g. fr, ko): fall back to English rather
     // than to the app's default Chinese.
@@ -91,6 +93,8 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   saveSettings: { 'zh-TW': '儲存設定', 'zh-CN': '保存设置', en: 'Save settings', ja: '設定を保存', de: 'Einstellungen speichern' },
   returnPrevious: { 'zh-TW': '返回上一頁', 'zh-CN': '返回上一页', en: 'Back', ja: '戻る', de: 'Zurück' },
   theme: { 'zh-TW': '主題', 'zh-CN': '主题', en: 'Theme', ja: 'テーマ', de: 'Design' },
+  followBrowserLanguage: { 'zh-TW': '跟隨瀏覽器語言', 'zh-CN': '跟随浏览器语言', en: 'Follow browser language', ja: 'ブラウザーの言語に合わせる', de: 'Browsersprache verwenden' },
+  followSystemLanguage: { 'zh-TW': '跟隨系統語言', 'zh-CN': '跟随系统语言', en: 'Follow system language', ja: 'システム言語に合わせる', de: 'Systemsprache verwenden' },
   followSystem: { 'zh-TW': '跟隨系統', 'zh-CN': '跟随系统', en: 'System', ja: 'システムに合わせる', de: 'Systemeinstellung' },
   light: { 'zh-TW': '淺色', 'zh-CN': '浅色', en: 'Light', ja: 'ライト', de: 'Hell' },
   dark: { 'zh-TW': '深色', 'zh-CN': '深色', en: 'Dark', ja: 'ダーク', de: 'Dunkel' },
@@ -118,6 +122,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   manageTemplates: { 'zh-TW': '管理模板與摘要模型', 'zh-CN': '管理模板与摘要模型', en: 'Manage templates and summary model', ja: 'テンプレートと要約モデルを管理', de: 'Vorlagen und Zusammenfassungsmodell verwalten' },
   generateSummary: { 'zh-TW': '產生摘要', 'zh-CN': '生成摘要', en: 'Generate summary', ja: '要約を作成', de: 'Zusammenfassung erstellen' },
   regenerateSummary: { 'zh-TW': '重新產生摘要', 'zh-CN': '重新生成摘要', en: 'Regenerate summary', ja: '要約を再生成', de: 'Zusammenfassung neu erstellen' },
+  cancelSummary: { 'zh-TW': '取消產生', 'zh-CN': '取消生成', en: 'Cancel generation', ja: '生成をキャンセル', de: 'Erstellung abbrechen' },
   generating: { 'zh-TW': '正在產生…', 'zh-CN': '正在生成…', en: 'Generating…', ja: '生成中…', de: 'Wird erstellt…' },
   formattedOutput: { 'zh-TW': '格式化輸出', 'zh-CN': '格式化输出', en: 'Formatted output', ja: '整形済み出力', de: 'Formatiertes Ergebnis' },
   notSelected: { 'zh-TW': '尚未選擇紀錄', 'zh-CN': '尚未选择记录', en: 'No recording selected', ja: '記録が選択されていません', de: 'Keine Aufzeichnung ausgewählt' },
@@ -132,6 +137,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   summaryTitle: { 'zh-TW': '會議摘要', 'zh-CN': '会议摘要', en: 'Meeting summary', ja: '会議要約', de: 'Besprechungszusammenfassung' },
   summaryGeneratingTitle: { 'zh-TW': '正在整理', 'zh-CN': '正在整理', en: 'Preparing summary', ja: '要約を整理中', de: 'Zusammenfassung wird vorbereitet' },
   summaryGeneratingHint: { 'zh-TW': '完成後會顯示格式化摘要。', 'zh-CN': '完成后将显示格式化摘要。', en: 'The formatted summary will appear when it is ready.', ja: '完了すると整形済みの要約が表示されます。', de: 'Die formatierte Zusammenfassung wird anschließend angezeigt.' },
+  summaryBrowserLanguageHint: { 'zh-TW': '摘要使用瀏覽器語言產生。', 'zh-CN': '摘要使用浏览器语言生成。', en: 'The summary is generated in the browser language.', ja: '要約はブラウザーの言語で生成されます。', de: 'Die Zusammenfassung wird in der Browsersprache erstellt.' },
   summaryLanguageHint: { 'zh-TW': '摘要生成的語言使用的是系統語言。', 'zh-CN': '摘要生成的语言使用的是系统语言。', en: 'The summary is generated in the system language.', ja: '要約はシステム言語で生成されます。', de: 'Die Zusammenfassung wird in der Systemsprache erstellt.' },
   summaryTranslating: { 'zh-TW': '正在翻譯摘要…', 'zh-CN': '正在翻译摘要…', en: 'Translating summary…', ja: '要約を翻訳中…', de: 'Zusammenfassung wird übersetzt…' },
   translateSummary: { 'zh-TW': '翻譯摘要', 'zh-CN': '翻译摘要', en: 'Translate summary', ja: '要約を翻訳', de: 'Zusammenfassung übersetzen' },
@@ -262,6 +268,7 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   searchCaptions: { 'zh-TW': '搜尋字幕', 'zh-CN': '搜索字幕', en: 'Search captions', ja: '字幕を検索', de: 'Untertitel durchsuchen' },
   decreaseCaptionSize: { 'zh-TW': '縮小字幕', 'zh-CN': '缩小字幕', en: 'Decrease caption size', ja: '字幕を小さくする', de: 'Untertitel verkleinern' },
   increaseCaptionSize: { 'zh-TW': '放大字幕', 'zh-CN': '放大字幕', en: 'Increase caption size', ja: '字幕を大きくする', de: 'Untertitel vergrößern' },
+  cancel: { 'zh-TW': '取消', 'zh-CN': '取消', en: 'Cancel', ja: 'キャンセル', de: 'Abbrechen' },
   cancelTranslation: { 'zh-TW': '取消翻譯', 'zh-CN': '取消翻译', en: 'Cancel translation', ja: '翻訳をキャンセル', de: 'Übersetzung abbrechen' },
   clearScreen: { 'zh-TW': '清除畫面', 'zh-CN': '清除画面', en: 'Clear screen', ja: '画面をクリア', de: 'Anzeige leeren' },
   backToLatest: { 'zh-TW': '回到最新', 'zh-CN': '回到最新', en: 'Back to latest', ja: '最新に戻る', de: 'Zum neuesten zurück' },
@@ -443,7 +450,52 @@ const interfaceMessages: Record<string, Record<UiLanguage, string>> = {
   modelSelectionHint: { 'zh-TW': '模型選擇已移到「模型管理」；註冊新模型後即可在此切換，未指定時會使用環境變數提供的模型。', 'zh-CN': '模型选择已移到“模型管理”；注册新模型后即可在此切换，未指定时会使用环境变量提供的模型。', en: 'Model selection moved to Model management. After registering a model you can switch here; when nothing is selected the environment-provided model is used.', ja: 'モデルの選択は「モデル管理」へ移動しました。モデルを登録するとここで切り替えられ、未選択の時は環境変数のモデルを使用します。', de: 'Die Modellauswahl wurde in die Modellverwaltung verschoben. Nach der Registrierung können Sie hier wechseln; ohne Auswahl wird das aus der Umgebung bereitgestellte Modell verwendet.' },
   modelSwitchHint: { 'zh-TW': '選擇各用途目前使用的模型；切換後立即生效並自動保存。', 'zh-CN': '选择各用途当前使用的模型；切换后立即生效并自动保存。', en: 'Choose the model used for each purpose; switching takes effect immediately and is saved automatically.', ja: '各用途で使用するモデルを選択します。切り替えは即時に有効になり、自動保存されます。', de: 'Wählen Sie das Modell für jeden Zweck; der Wechsel wird sofort wirksam und automatisch gespeichert.' },
   noSelection: { 'zh-TW': '未指定', 'zh-CN': '未指定', en: 'Not selected', ja: '未選択', de: 'Nicht ausgewählt' },
-  singleSlotModel: { 'zh-TW': '單一模型；註冊或編輯即為目前使用', 'zh-CN': '单一模型；注册或编辑即为当前使用', en: 'Single slot; registering or editing sets the active model', ja: '単一スロット；登録または編集で使用中になります', de: 'Einzelner Platz; Registrieren oder Bearbeiten legt das aktive Modell fest.' }
+  singleSlotModel: { 'zh-TW': '單一模型；註冊或編輯即為目前使用', 'zh-CN': '单一模型；注册或编辑即为当前使用', en: 'Single slot; registering or editing sets the active model', ja: '単一スロット；登録または編集で使用中になります', de: 'Einzelner Platz; Registrieren oder Bearbeiten legt das aktive Modell fest.' },
+  adminAccountTab: { 'zh-TW': '帳號／Admin 參數', 'zh-CN': '账号／Admin 参数', en: 'Accounts / admin parameters', ja: 'アカウント／Admin パラメーター', de: 'Konten / Admin-Parameter' },
+  adminDeletionPending: {"zh-TW": "清理尚未完成；帳號已停用", "zh-CN": "清理尚未完成；账号已停用", "en": "Cleanup pending; account disabled", "ja": "削除処理中：アカウントは無効です", "de": "Bereinigung ausstehend; Konto deaktiviert"},
+  adminRetryDeletion: {"zh-TW": "重試清理", "zh-CN": "重试清理", "en": "Retry cleanup", "ja": "削除を再試行", "de": "Bereinigung wiederholen"},
+  adminDeleteAccount: {"zh-TW": "刪除帳號", "zh-CN": "删除账号", "en": "Delete account", "ja": "アカウントを削除", "de": "Konto löschen"},
+  adminDeleteAccountHint: {"zh-TW": "將永久刪除帳號及其錄音、設定、紀錄與聲紋資料，無法復原。", "zh-CN": "将永久删除账号及其录音、设置、记录与声纹数据，无法恢复。", "en": "Permanently deletes the account and its recordings, settings, history and voiceprints. This cannot be undone.", "ja": "アカウントと録音、設定、履歴、音紋データを完全に削除します。元に戻せません。", "de": "Löscht das Konto und seine Aufnahmen, Einstellungen, den Verlauf und die Stimmabdrücke dauerhaft. Dies kann nicht rückgängig gemacht werden."},
+  adminDeleteConfirmName: {"zh-TW": "輸入帳號名稱以確認", "zh-CN": "输入账号名称以确认", "en": "Type the account name to confirm", "ja": "確認のためアカウント名を入力", "de": "Zur Bestätigung den Kontonamen eingeben"},
+  adminDeleteAccountFailed: {"zh-TW": "刪除未完成，請重試清理", "zh-CN": "删除未完成，请重试清理", "en": "Deletion incomplete. Retry cleanup.", "ja": "削除が完了していません。再試行してください。", "de": "Löschung unvollständig. Bereinigung erneut versuchen."},
+  adminAccountDeleted: {"zh-TW": "帳號及其資料已刪除", "zh-CN": "账号及其数据已删除", "en": "Account and its data deleted.", "ja": "アカウントとデータを削除しました。", "de": "Konto und Daten gelöscht."},
+  adminDeletingAccount: {"zh-TW": "正在刪除帳號與資料…", "zh-CN": "正在删除账号与数据…", "en": "Deleting account and data…", "ja": "アカウントとデータを削除中…", "de": "Konto und Daten werden gelöscht…"},
+  adminOwnAccount: {"zh-TW": "目前登入帳號", "zh-CN": "当前登录账号", "en": "Signed-in account", "ja": "ログイン中のアカウント", "de": "Angemeldetes Konto"},
+  adminAccountActions: {"zh-TW": "帳號操作", "zh-CN": "账号操作", "en": "Account actions", "ja": "アカウント操作", "de": "Kontoaktionen"},
+  adminAccountManagement: { 'zh-TW': '帳號管理', 'zh-CN': '账号管理', en: 'Account management', ja: 'アカウント管理', de: 'Kontenverwaltung' },
+  adminCurrentAccount: { 'zh-TW': '目前：', 'zh-CN': '当前：', en: 'Current: ', ja: '現在：', de: 'Aktuell: ' },
+  adminAccount: { 'zh-TW': '帳號', 'zh-CN': '账号', en: 'Account', ja: 'アカウント', de: 'Konto' },
+  adminRole: { 'zh-TW': '角色', 'zh-CN': '角色', en: 'Role', ja: 'ロール', de: 'Rolle' },
+  adminFieldPassword: { 'zh-TW': '初始密碼', 'zh-CN': '初始密码', en: 'Initial password', ja: '初期パスワード', de: 'Initiales Passwort' },
+  adminFieldDepartment: { 'zh-TW': '部門', 'zh-CN': '部门', en: 'Department', ja: '部署', de: 'Abteilung' },
+  adminRoleUser: { 'zh-TW': '一般帳號', 'zh-CN': '普通账号', en: 'Standard account', ja: '一般アカウント', de: 'Standardkonto' },
+  adminCreateAccount: { 'zh-TW': '新增帳號', 'zh-CN': '新增账号', en: 'Create account', ja: 'アカウントを作成', de: 'Konto erstellen' },
+  adminAccountCreated: { 'zh-TW': '帳號已建立，不會切換目前的 admin 登入', 'zh-CN': '账号已建立，不会切换当前的 admin 登录', en: 'Account created. The signed-in admin session is unchanged.', ja: 'アカウントを作成しました。現在の admin ログインは切り替わりません', de: 'Konto erstellt. Die aktuelle admin-Anmeldung bleibt unverändert.' },
+  adminAccountsLoadFailed: { 'zh-TW': '無法載入帳號', 'zh-CN': '无法加载账号', en: 'Could not load accounts', ja: 'アカウントを読み込めません', de: 'Konten konnten nicht geladen werden' },
+  adminCreateAccountFailed: { 'zh-TW': '新增帳號失敗', 'zh-CN': '新增账号失败', en: 'Could not create the account', ja: 'アカウント作成に失敗しました', de: 'Konto konnte nicht erstellt werden' },
+  adminCreateFailed: { 'zh-TW': '新增失敗', 'zh-CN': '新增失败', en: 'Create failed', ja: '作成に失敗しました', de: 'Erstellen fehlgeschlagen' },
+  adminAdvancedParams: { 'zh-TW': 'Admin：VAD 與翻譯進階參數', 'zh-CN': 'Admin：VAD 与翻译高级参数', en: 'Admin: advanced VAD and translation parameters', ja: 'Admin：VAD と翻訳の詳細パラメーター', de: 'Admin: erweiterte VAD- und Übersetzungsparameter' },
+  adminAdvancedParamsHint: { 'zh-TW': '只影響此 admin 帳號。啟用後，客製 VAD 值優先於回應速度滑桿。VAD 與排程在下一個 chunk／排程週期套用；Web 設定會隨帳號保存；桌面版請按頁面儲存。正在執行的翻譯不會更換參數。', 'zh-CN': '只影响此 admin 账号。启用后，自定义 VAD 值优先于响应速度滑杆。VAD 与排程在下一个 chunk／排程周期生效；Web 设置会随账号保存；桌面版请按页面保存。正在执行的翻译不会更换参数。', en: 'Applies to this admin account only. Custom VAD values take priority over the response-speed slider. VAD and scheduling apply on the next chunk/scheduling cycle; Web settings are saved with the account, on desktop save from the page. Running translations keep the current parameters.', ja: 'この admin アカウントにのみ影響します。有効にするとカスタム VAD 値が応答速度スライダーより優先されます。VAD とスケジューリングは次の chunk／排程周期から適用され、Web 設定はアカウントに保存、デスクトップはページから保存します。実行中の翻訳ではパラメーターは変わりません。', de: 'Gilt nur für dieses admin-Konto. Eigene VAD-Werte haben Vorrang vor dem Schalter für die Reaktionsgeschwindigkeit. VAD und Planung greifen im nächsten Chunk-/Planungszyklus; Web-Einstellungen werden mit dem Konto gespeichert, im Desktop Version über die Seite. Laufende Übersetzungen behalten die Parameter.' },
+  adminUseCustomParams: { 'zh-TW': '使用客製化參數', 'zh-CN': '使用自定义参数', en: 'Use custom parameters', ja: 'カスタムパラメーターを使用', de: 'Eigene Parameter verwenden' },
+  adminParamInvalid: { 'zh-TW': '參數無效', 'zh-CN': '参数无效', en: 'Invalid parameter', ja: '無効なパラメーター', de: 'Ungültiger Parameter' },
+  admParamMinSpeechMs: { 'zh-TW': 'VAD 語音確認時間（ms）', 'zh-CN': 'VAD 语音确认时间（ms）', en: 'VAD speech confirmation (ms)', ja: 'VAD 音声確認時間（ms）', de: 'VAD-Sprachbestätigung (ms)' },
+  admParamMinSilenceMs: { 'zh-TW': 'VAD 停頓時間（ms）', 'zh-CN': 'VAD 停顿时间（ms）', en: 'VAD silence duration (ms)', ja: 'VAD 無音時間（ms）', de: 'VAD-Stillezeit (ms)' },
+  admParamPreRollMs: { 'zh-TW': '語音前卷（ms）', 'zh-CN': '语音前卷（ms）', en: 'Voice pre-roll (ms)', ja: '音声プリロール（ms）', de: 'Sprach-Pre-Roll (ms)' },
+  admParamNoiseFloorOffsetDb: { 'zh-TW': '噪音底線偏移（dB）', 'zh-CN': '噪音底线偏移（dB）', en: 'Noise floor offset (dB)', ja: 'ノイズフロアオフセット（dB）', de: 'Rauschpegel-Offset (dB)' },
+  admParamChunkMinMs: { 'zh-TW': 'Chunk 最短時間（ms）', 'zh-CN': 'Chunk 最短时间（ms）', en: 'Minimum chunk length (ms)', ja: 'Chunk 最小時間（ms）', de: 'Minimale Chunk-Länge (ms)' },
+  admParamChunkMaxMs: { 'zh-TW': 'Chunk 最長時間（ms）', 'zh-CN': 'Chunk 最长时间（ms）', en: 'Maximum chunk length (ms)', ja: 'Chunk 最大時間（ms）', de: 'Maximale Chunk-Länge (ms)' },
+  admParamTranslationAggregationMs: { 'zh-TW': '翻譯排程間隔（ms）', 'zh-CN': '翻译排程间隔（ms）', en: 'Translation scheduling interval (ms)', ja: '翻訳スケジュール間隔（ms）', de: 'Intervall der Übersetzungsplanung (ms)' },
+  admParamTranslationThrottledMs: { 'zh-TW': '節流翻譯間隔（ms）', 'zh-CN': '节流翻译间隔（ms）', en: 'Throttled translation interval (ms)', ja: 'スロットル翻訳間隔（ms）', de: 'Intervall gedrosselter Übersetzungen (ms)' },
+  admParamTranslationSentenceWaitMs: { 'zh-TW': '整句等待上限（ms）', 'zh-CN': '整句等待上限（ms）', en: 'Sentence wait limit (ms)', ja: '文節待ち上限（ms）', de: 'Maximale Satzwartezeit (ms)' },
+  admParamTranslationConcurrency: { 'zh-TW': '翻譯並行請求數', 'zh-CN': '翻译并行请求数', en: 'Concurrent translation requests', ja: '翻訳の同時リクエスト数', de: 'Gleichzeitige Übersetzungsanfragen' },
+  admParamTranslationTemperature: { 'zh-TW': '翻譯 temperature', 'zh-CN': '翻译 temperature', en: 'Translation temperature', ja: '翻訳の temperature', de: 'Temperatur der Übersetzung' },
+  adminShareAuthColumn: { 'zh-TW': '聲紋共享授權', 'zh-CN': '声纹共享授权', en: 'Voiceprint sharing', ja: '音紋共有の許可', de: 'Stimmabdruck-Freigabe' },
+  adminShareAuthDepartment: { 'zh-TW': '可信部門', 'zh-CN': '可信部门', en: 'Trusted department', ja: '信頼できる部署', de: 'Vertrauensabteilung' },
+  adminShareAuthApproved: { 'zh-TW': '已核准共享', 'zh-CN': '已批准共享', en: 'Sharing approved', ja: '共有が承認済み', de: 'Freigabe genehmigt' },
+  adminShareAuthNotApproved: { 'zh-TW': '未核准共享', 'zh-CN': '未批准共享', en: 'Sharing not approved', ja: '共有が未承認', de: 'Freigabe nicht genehmigt' },
+  adminShareAuthApprove: { 'zh-TW': '核准共享', 'zh-CN': '批准共享', en: 'Approve sharing', ja: '共有を承認', de: 'Freigabe genehmigen' },
+  adminShareAuthRevoke: { 'zh-TW': '撤銷共享', 'zh-CN': '撤销共享', en: 'Revoke sharing', ja: '共有を取り消す', de: 'Freigabe widerrufen' },
+  adminShareAuthSaveFailed: { 'zh-TW': '共享授權保存失敗', 'zh-CN': '共享授权保存失败', en: 'Could not save the sharing authorization', ja: '共有許可の保存に失敗しました', de: 'Freigabeberechtigung konnte nicht gespeichert werden' }
 }
 
 export const interfaceTranslate = (language: UiLanguagePreference, key: keyof typeof interfaceMessages): string => interfaceMessages[key]?.[resolveUiLanguage(language)] ?? key

@@ -2,35 +2,8 @@ import type { ResponseSpeed } from '../../../../shared/response-speed'
 export { normalizeResponseSpeed, responseSpeeds } from '../../../../shared/response-speed'
 export type { ResponseSpeed } from '../../../../shared/response-speed'
 
-export type VadFrame = {
-  onsetSamples: number
-  speechStarted: boolean
-  speechEnded: boolean
-  speaking: boolean
-  levelDbfs: number
-}
-
-/**
- * The synchronous contract OpenAiChunkedModelAdapter needs from any boundary
- * detector. EnergyVad (RMS) and SileroBoundaryVad (ML) both satisfy it, and
- * the adapter accepts a factory so evaluations or future on-device runtimes
- * can swap the detector without touching the chunking logic.
- */
-export interface BoundaryVad {
-  process(samples: Float32Array): VadFrame
-  /** Clear utterance state while retaining the detector's audio position. */
-  reset?(): void
-}
-
-export type VadConfig = {
-  minSpeechMs: number
-  minSilenceMs: number
-  preRollMs: number
-  noiseFloorOffsetDb: number
-  /** Lower and upper limits for each HTTP ASR request. */
-  chunkMinMs: number
-  chunkMaxMs: number
-}
+import type { VadFrame, BoundaryVad, VadConfig } from '../../../../shared/contracts/capture'
+export type { VadFrame, BoundaryVad, VadConfig } from '../../../../shared/contracts/capture'
 
 export const defaultVadConfig: VadConfig = {
   minSpeechMs: 120,
@@ -116,6 +89,6 @@ export class EnergyVad implements BoundaryVad {
       }
     } else this.silenceSamples = 0
 
-    return { onsetSamples: this.onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs }
+    return { onsetSamples: this.onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs, trailingSilenceSamples: this.silenceSamples }
   }
 }

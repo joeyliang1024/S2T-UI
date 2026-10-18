@@ -12,6 +12,7 @@ const operations = {
   extractSpeakerBlocks: ({ audio, segments }) => sherpa.extractDiarizedSpeakerBlocks(audio, segments),
   speakerLabelEmbeddings: ({ audio, segments }) => sherpa.extractSpeakerLabelEmbeddings(audio, segments),
   diarizeWav: ({ audio, backend }) => backend === 'nemotron-3-diarization' ? nemotron.diarizeWav(audio) : sherpa.diarizeWav(audio),
+  sherpaStatus: ({ purpose }) => sherpa.verifySherpaRuntime(purpose),
   nemotronStatus: () => nemotron.verifyRuntime(),
   sileroVad: ({ audio, options }) => silero.analyzeWav(audio, options),
   sileroStatus: () => silero.modelStatus(),

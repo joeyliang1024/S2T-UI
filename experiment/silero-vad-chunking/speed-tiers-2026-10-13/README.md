@@ -41,4 +41,4 @@
 node scripts/evaluation/caption-latency-eval.cjs --preset speedFast,speedFastNormal,speedNormal,speedNormalSlow,speedSlow --audio music/taiwan-tongues/fixture-300s.wav --tsv music/taiwan-tongues/fixture-300s.tsv --out experiment/silero-vad-chunking/speed-tiers-rerun
 ```
 
-現行參數與介面說明見[字幕速度指南](../../../docs/guide/CAPTION_SPEED.zh-TW.md)。原始 JSON 在 full/；總表 comparison.json／comparison.csv。原始 dataset 音檔不納入 Git。
+現行參數與介面說明見[字幕速度指南](../../../docs/guide/CAPTION_SPEED.zh-TW.md)。各檔位量測以本表與前輪紀錄保存；原始 dataset 音檔與逐句明細不納入 Git，可由重跑指令重建。

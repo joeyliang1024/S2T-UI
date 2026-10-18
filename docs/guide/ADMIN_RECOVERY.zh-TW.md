@@ -1,6 +1,16 @@
 # Admin 與 Storage 恢復
 
-Admin 以資料庫的 `role=admin` 判定，不以帳號名稱或 Department 判定。設定頁的「帳號／Admin 參數」只有 admin 可見，後端也檢查角色。Admin 可以列出／新增帳號；新增帳號不會取代目前登入。公開註冊一律產生一般帳號，不能指定 admin。
+Admin 以資料庫的 `role=admin` 判定，不以帳號名稱或 Department 判定。設定頁的「帳號／Admin 參數」只有 admin 可見，後端也檢查角色。Admin 可以列出／新增／刪除帳號；新增帳號不會取代目前登入。公開註冊一律產生一般帳號，不能指定 admin。
+
+## 刪除帳號與資料
+
+在「帳號／Admin 參數」選擇目標帳號的「刪除帳號」，輸入帳號名稱後確認。不能刪除目前登入的帳號，也不能刪除最後一個可用 admin。後端入口為 `DELETE /api/admin/users/:id`，只接受 admin。
+
+刪除會先停用帳號，讓舊 token 與新登入失效，拒絕新寫入並等待進行中的請求／背景工作排空，再刪除該帳號全部 blob（含錄音與分塊）、vector（含未完成註冊的補償資料）、config、glossary、聲紋 metadata 與背景工作，最後移除帳號。其他帳號與共享儲存服務保持不變。已刪除的 bootstrap admin 不會在重啟時自動重建；系統只保留防止重建用的雜湊標記。
+
+若任一儲存服務失敗或寫入尚未排空，API 不會回報成功；帳號保持停用、清理意圖保留。在帳號列表選「重試清理」即可繼續；重試可重複執行。清理在 gateway 執行，不代表清除使用者另行匯出的檔案、外部備份或關閉中瀏覽器的本機資料。
+
+PostgreSQL schema 已升級為 `002-account-deletion`，新增 `deletion_state` 欄位。使用 `S2T_STORAGE_MIGRATIONS=verify` 的部署，需先執行既有 migration Job，再更新 gateway／worker。帳號請求的 shared/exclusive 圍欄使用獨立連線池；兩個池各受 `S2T_POSTGRES_MAX_CONNECTIONS` 限制，資料庫容量應預留合計上限。
 
 ## 自己的字幕參數
 

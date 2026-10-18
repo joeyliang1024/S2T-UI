@@ -146,23 +146,69 @@ class LocalConfigStore {
       return { changed: true, value: outcome }
     })
   }
+  // Accounts share this JSON document. Perform account state transitions
+  // under its mutation lock so the last active administrator cannot race.
+  async updateAuthAccounts(transform) {
+    return mutateFile(this.file, async () => {
+      const records = await this.records()
+      const accounts = Object.entries(records).flatMap(([key, entry]) => key.startsWith('auth:account-') && entry?.value && typeof entry.value === 'object' ? [{ key, value: entry.value }] : [])
+      const outcome = await transform(accounts)
+      if (outcome === undefined) return null
+      await atomicJson(this.file, records)
+      return outcome
+    })
+  }
+  async removeAuthAccount(userId, reservationKey) {
+    safePart(userId, 'user id'); safePart(reservationKey, 'record key')
+    return mutateFile(this.file, async () => {
+      const records = await this.records()
+      const entry = Object.entries(records).find(([key, value]) => key.startsWith('auth:account-') && value?.value?.id === userId)
+      if (!entry) return false
+      if (entry[1].value.deletionState !== 'deleting') throw Object.assign(new Error('帳號尚未標記刪除'), { status: 409 })
+      delete records[entry[0]]; delete records[this.key('auth', reservationKey)]
+      await atomicJson(this.file, records)
+      return true
+    })
+  }
+  async getUserState(userId) {
+    safePart(userId, 'user id')
+    const account = (await this.list('auth', 'account-')).map((entry) => entry.value).find((value) => value?.id === userId)
+    return !account ? null : account.deletionState === 'deleting' ? 'deleting' : 'active'
+  }
+  async purgeAccount(userId) {
+    safePart(userId, 'user id')
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); let changed = false; const prefix = `${userId}:`
+      for (const key of Object.keys(records)) if (key.startsWith(prefix)) { delete records[key]; changed = true }
+      const jobsKey = this.key('diarization-system', 'jobs'); const jobs = records[jobsKey]?.value?.jobs
+      if (Array.isArray(jobs)) {
+        const retained = jobs.filter((job) => job?.userId !== userId)
+        if (retained.length !== jobs.length) { records[jobsKey] = { value: { ...records[jobsKey].value, jobs: retained }, updatedAt: new Date().toISOString() }; changed = true }
+      }
+      if (changed) await atomicJson(this.file, records)
+    })
+  }
   async list(scope, prefix = '') {
     const records = await this.records(); const start = `${safePart(scope, 'scope')}:`; const cleanPrefix = prefix ? safePart(prefix, 'prefix') : ''
     return Object.entries(records).flatMap(([key, entry]) => key.startsWith(start) && key.slice(start.length).startsWith(cleanPrefix) ? [{ key: key.slice(start.length), value: entry.value, updatedAt: entry.updatedAt }] : [])
   }
   async mutateDiarizationJobs(transform) {
-    let result
-    await this.update('diarization-system', 'jobs', current => {
-      const jobs = current?.jobs || []
-      const before = JSON.stringify(jobs)
-      result = transform(jobs)
-      return before === JSON.stringify(jobs) ? undefined : { jobs }
+    return mutateFile(this.file, async () => {
+      const records = await this.records(); const key = this.key('diarization-system', 'jobs')
+      const jobs = records[key]?.value?.jobs || []; const before = JSON.stringify(jobs)
+      const userState = (userId) => {
+        const account = Object.entries(records).find(([accountKey, entry]) => accountKey.startsWith('auth:account-') && entry?.value?.id === userId)?.[1]?.value
+        return !account ? null : account.deletionState === 'deleting' ? 'deleting' : 'active'
+      }
+      const result = await transform(jobs, userState)
+      if (before !== JSON.stringify(jobs)) { records[key] = { value: { jobs }, updatedAt: new Date().toISOString() }; await atomicJson(this.file, records) }
+      return result
     })
-    return result
   }
   async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
     for (const [value, label] of [[id, 'job id'], [userId, 'user id'], [sessionId, 'session id'], [audioKey, 'audio key']]) safePart(value, label)
-    return this.mutateDiarizationJobs(jobs => {
+    return this.mutateDiarizationJobs((jobs, userState) => {
+      if (userState(userId) !== 'active') throw new Error('帳號已不存在或正在刪除中')
       const now = new Date().toISOString()
       let job = jobs.find(j => j.userId === userId && j.sessionId === sessionId && j.audioKey === audioKey)
       if (!job) { job = { id, userId, sessionId, audioKey, createdAt: now, leaseGeneration: 0 }; jobs.push(job) }
@@ -183,9 +229,9 @@ class LocalConfigStore {
   }
   async claimDiarizationJob(owner, id = null) {
     safePart(owner, 'job owner'); if (id) safePart(id, 'job id')
-    return this.mutateDiarizationJobs(jobs => {
+    return this.mutateDiarizationJobs((jobs, userState) => {
       const now = Date.now()
-      const job = jobs.filter(j => (!id || j.id === id) && ['queued', 'running'].includes(j.state) && (!j.leaseUntil || j.leaseUntil < now)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
+      const job = jobs.filter(j => userState(j.userId) === 'active' && (!id || j.id === id) && ['queued', 'running'].includes(j.state) && (!j.leaseUntil || j.leaseUntil < now)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]
       if (!job) return null
       Object.assign(job, { state: 'running', attempts: job.attempts + 1, leaseGeneration: job.leaseGeneration + 1, leaseOwner: owner, leaseUntil: now + 300000, updatedAt: new Date(now).toISOString() })
       return { ...job }
@@ -223,6 +269,8 @@ class LocalConfigStore {
       const jobsKey = this.key('diarization-system', 'jobs')
       const job = records[jobsKey]?.value?.jobs?.find(j => j.id === id && j.userId === userId && j.state === 'running' && j.leaseOwner === owner && j.leaseGeneration === generation && j.leaseUntil > Date.now())
       if (!job) return 'lost'
+      const account = Object.entries(records).find(([accountKey, entry]) => accountKey.startsWith('auth:account-') && entry?.value?.id === userId)?.[1]?.value
+      if (!account || account.deletionState === 'deleting') return 'lost'
       const key = this.key(userId, 'sessions')
       if (!records[key] || (records[key].value?.version ?? 0) !== expectedVersion) return 'conflict'
       const updatedAt = new Date().toISOString()
@@ -244,12 +292,14 @@ class LocalConfigStore {
     const pending = jobs.filter(j => ['queued', 'running'].includes(j.state))
     return { pending: pending.length, audioSeconds: pending.reduce((sum, job) => sum + (Number.isFinite(job.payload?.audioSeconds) ? job.payload.audioSeconds : 60), 0), oldest: pending.length ? Math.max(0, (Date.now() - Math.min(...pending.map(j => Date.parse(j.createdAt)))) / 1000) : 0 }
   }
-  async findVisibleVoiceprintIds({ userId, department, embeddingModel, embeddingVersion }) {
+  async findVisibleVoiceprintIds({ userId, embeddingModel, embeddingVersion }) {
     const records = await this.records()
+    const authorization = records[`${userId}:sharing-authorization`]?.value
     return Object.entries(records).flatMap(([key, entry]) => {
       if (!key.endsWith(':voiceprints') || !Array.isArray(entry?.value)) return []
       const ownerId = key.slice(0, -':voiceprints'.length)
-      return entry.value.filter((item) => item && typeof item.id === 'string' && item.embeddingModel === embeddingModel && item.embeddingVersion === embeddingVersion && (ownerId === userId || item.sharingScope === 'organization' || (item.sharingScope === 'department' && item.Department === department))).map((item) => item.id)
+      const ownerAuthorization = records[`${ownerId}:sharing-authorization`]?.value
+      return entry.value.filter((item) => item && typeof item.id === 'string' && item.embeddingModel === embeddingModel && item.embeddingVersion === embeddingVersion && (ownerId === userId || authorization?.approved === true && ownerAuthorization?.approved === true && (item.sharingScope === 'organization' || item.sharingScope === 'department' && authorization.department && authorization.department === ownerAuthorization.department))).map((item) => item.id)
     })
   }
 }

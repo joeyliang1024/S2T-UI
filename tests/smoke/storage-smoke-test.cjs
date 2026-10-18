@@ -84,6 +84,8 @@ const main = async () => {
     assert.deepEqual(await storage.vector.nearest([.9, .1, 0], 1), [])
     await storage.config.put('alice', 'voiceprints', [{ id: 'alice-shared', Department: 'R&D', embeddingModel: 'model', embeddingVersion: 'v1', sharingScope: 'department' }, { id: 'alice-private', Department: 'R&D', embeddingModel: 'model', embeddingVersion: 'v1', sharingScope: 'private' }])
     await storage.config.put('bob', 'voiceprints', [{ id: 'bob-global', Department: 'Sales', embeddingModel: 'model', embeddingVersion: 'v1', sharingScope: 'organization' }])
+    assert.deepEqual(await storage.config.findVisibleVoiceprintIds({ userId: 'carol', department: 'R&D', embeddingModel: 'model', embeddingVersion: 'v1' }), [], 'self-declared department grants no sharing rights')
+    for (const [id, department] of [['alice', 'R&D'], ['bob', 'Sales'], ['carol', 'R&D']]) await storage.config.put(id, 'sharing-authorization', { approved: true, department })
     assert.deepEqual((await storage.config.findVisibleVoiceprintIds({ userId: 'carol', department: 'R&D', embeddingModel: 'model', embeddingVersion: 'v1' })).sort(), ['alice-shared', 'bob-global'])
     await storage.vector.remove('alice-v1')
     assert.equal((await storage.vector.nearest([1, 0, 0], 5, ['alice-v1'])).some((item) => item.NT === 'alice'), false)

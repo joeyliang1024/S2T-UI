@@ -4,10 +4,27 @@
 
 - **待辦與需求（唯一來源）**：[Enhancement.md](docs/Enhancement.md)
 - **文件索引（四類分檔）**：[docs/README.md](docs/README.md)
+- **開發與文件規範**：[CONTRIBUTING.md](CONTRIBUTING.md) · [GitHub Wiki](https://github.com/joeyliang1024/S2T-UI/wiki)
 
-ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；模型 key 只由 gateway 或 Electron 主程序持有，不進瀏覽器。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](docs/Enhancement.md) 為準。
+ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表設定；已保存的模型 key 由 gateway 或 Electron 主程序持有，不回傳瀏覽器；新增或更換 key 時由使用者輸入後提交。講者分離可選用本機 sherpa-onnx，Linux x64 可直接從 Docker Hub 取得離線模型包。實作不等於上線驗收，三項急迫需求（語者分離、斷句速度、翻譯模式）與具體缺口以 [Enhancement.md](docs/Enhancement.md) 為準。
 
 即時字幕／翻譯限流與排程修正、零 API 用量的 10 分鐘本機驗證及重跑方式，見 [穩定性報告](docs/reports/CAPTION_STABILITY.zh-TW.md)。Web 的 ASR／翻譯每帳號每分鐘額度可分別透過 `S2T_ASR_REQUESTS_PER_MINUTE`、`S2T_TRANSLATION_REQUESTS_PER_MINUTE` 設定，預設各 180。
+
+
+## 系統架構
+
+```mermaid
+flowchart TB
+  UI["Web React UI<br/>即時字幕／紀錄／摘要／品質校正／模型管理"] --> AP["Gateway :8787<br/>認證／限流／模型代理／設定與紀錄 API"]
+  AP --> MODEL["外部模型 API<br/>ASR／Translation／Summary"]
+  AP --> AUDIO["本機音訊 runtime<br/>VAD／Sherpa／Nemotron／FFmpeg"]
+  AP --> STORE["Storage adapters<br/>目前 local：config／blob／vector"]
+  STORE --> VOL[("持久化 /data<br/>設定／加密 API key／音訊／聲紋／auth-secret")]
+  AP -. "/metrics" .-> PROM["Prometheus → Grafana"]
+  SCALE["可選 K8s：API／Audio Service／Worker 分工<br/>PostgreSQL／MinIO／Milvus／Redis Sentinel"] -. "另行部署；非目前本機拓撲" .-> AP
+```
+
+完整架構、9 張詳細流程圖與重新部署的資料／密鑰邊界見 [系統架構](docs/reference/ARCHITECTURE.zh-TW.md)。
 
 ## 功能狀態
 
@@ -27,7 +44,7 @@ ASR／翻譯等模型由使用者提供並以環境變數或帳號模型列表�
 | 操作指南 `guide` | [部署、Storage 與遷移](docs/guide/DEPLOYMENT.zh-TW.md)、[環境設定](docs/guide/ENVIRONMENT.zh-TW.md)、[驗收手冊](docs/guide/VALIDATION.zh-TW.md)、[sherpa-onnx 安裝](docs/guide/SHERPA_ONNX.zh-TW.md)、[Silero VAD worker](docs/guide/SILERO_VAD.zh-TW.md)、[Kubernetes 多副本](docs/guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)、[K8s 容量測試](docs/guide/CAPACITY_TEST.zh-TW.md)、[監控指南](docs/guide/OBSERVABILITY.zh-TW.md) |
 | 契約與架構 `reference` | [程式目錄責任](docs/reference/ARCHITECTURE.zh-TW.md)、[模型接入契約](docs/reference/MODEL_ADAPTER.md)、[Web Gateway](docs/reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](docs/reference/DIARIZATION_API.zh-TW.md)、[音訊品質與取樣率](docs/reference/AUDIO_QUALITY.zh-TW.md) |
 | 研究與規劃 `research` | [K8s 擴充計畫（0930）](docs/research/K8S_SCALE_PLAN.zh-TW.md)、[Chunking 自動切分可行性（1011）](docs/research/AUTO_CHUNKING.zh-TW.md)、[早期功能研究](docs/research/PLAN.zh-TW.md)、[開源後端方案](docs/research/OPEN_SOURCE_BACKENDS.zh-TW.md)、[背景處理生命週期](docs/research/SESSION_LIFECYCLE.zh-TW.md) |
-| 量測報告 `reports` | [字幕延遲歷史調校](docs/reports/CAPTION_LATENCY.zh-TW.md)、[字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[五分鐘字幕比較與顯示修正](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)；已套用的修正與環境盤點見 [docs/README.md](docs/README.md) 的「修正與盤點記錄」 |
+| 量測報告 `reports` | [字幕穩定性](docs/reports/CAPTION_STABILITY.zh-TW.md)、[聲紋準確率量測](docs/reports/VOICEPRINT_ACCURACY.zh-TW.md)、[字幕延遲與 VAD 調校實驗](experiment/silero-vad-chunking/README.md)、[五分鐘字幕比較與顯示修正](experiment/captions/comparison-2026-10-04/README.md)；量測證據集中在 [experiment](experiment/README.md) |
 
 研究類文件為歷史參考，不覆蓋 Enhancement.md 的決策。
 
@@ -40,32 +57,33 @@ npm install
 cp .env.example .env
 ```
 
-編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`（OpenAI 相容 Breeze ASR 的預設值已附在範例）。`.env` 會被忽略，不應提交到 Git。
+編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`。`.env` 會被忽略，不應提交到 Git。
 
-首次使用本機資料可先以 `admin`／`admin` 登入；正式環境務必在第一次啟動前設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
+開發環境明確設定 `S2T_ALLOW_DEFAULT_ADMIN=true` 後可用 `admin`／`admin`；正式環境禁止預設帳號，首次啟動前必須設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
 
 ### 2. Electron 桌面版
+
+先依下節啟動 gateway。桌面開發在 `.env` 設定 `S2T_GATEWAY_URL=http://127.0.0.1:8787`，並在 `S2T_WEB_ORIGINS` 加入 `null`，讓本機檔案 renderer 連線；打包版仍須設定外部 HTTPS gateway。
 
 ```bash
 npm run dev
 ```
 
-首次啟動請允許麥克風權限。生產建置用 `npm run build`（不等於可安裝包，打包待辦見 Enhancement.md F04）。停止收音只會建立尚未保存的記錄，請在「記錄」頁按「保存工作階段」才選擇正式資料夾。自有模型整合入口在 `src/renderer/src/features/models/model-adapter.ts`，契約見 [MODEL_ADAPTER.md](docs/reference/MODEL_ADAPTER.md)。
+首次啟動請允許麥克風權限。`npm run dev` 會先建置再以 Electron preview 啟動，沒有 renderer HMR；生產建置用 `npm run build`（不等於可安裝包，打包待辦見 Enhancement.md F04）。停止收音只會建立尚未保存的記錄，請在「記錄」頁按「保存工作階段」才選擇正式資料夾。自有模型整合入口在 `src/renderer/src/features/models/model-adapter.ts`，契約見 [MODEL_ADAPTER.md](docs/reference/MODEL_ADAPTER.md)。
 
 ### 3. Web 版
 
-Web 版需要同時執行兩個本機程序：
+Web gateway 在同一個 origin 提供 UI 與 API：
 
 ```bash
-# 終端 A：gateway（登入、模型 key、Storage，預設 8787）
-npm run build
-npm run web:serve
+# 建置 Web renderer 到 out/web
+npm run build:web
 
-# 終端 B：瀏覽器介面（固定 5173，將 /api 轉送給 gateway）
-npm run web:preview
+# gateway（登入、模型 key、Storage、Web UI，預設 8787）
+npm run web:serve
 ```
 
-開啟 [http://127.0.0.1:5173/](http://127.0.0.1:5173/)；`8787` 只提供 API，不是網頁頁面。Storage 可用本機 fallback（三組 MinIO／PostgreSQL／Milvus 變數全部留空）或 Docker 外部服務；Docker Compose 啟動、驗證 smoke、備份還原與 Web 常見問題（404／Origin／port）見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md)。
+開啟 [http://127.0.0.1:8787/](http://127.0.0.1:8787/)；同一個 origin 也提供 `/api`。Storage 可用本機 fallback（三組 MinIO／PostgreSQL／Milvus 變數全部留空）或 Docker 外部服務；Docker Compose 啟動、驗證 smoke、備份還原與 Web 常見問題見 [部署文件](docs/guide/DEPLOYMENT.zh-TW.md)。
 
 ### 4. 公司 Nexus 的離線 Docker Web build
 
@@ -95,7 +113,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 | 類別 | 指令 |
 | --- | --- |
-| 開發與建置 | `npm run dev`（Electron）、`npm run build`、`npm run typecheck`、`npm run web:serve`、`npm run web:preview` |
+| 開發與建置 | `npm run dev`（Electron preview，無 HMR）、`npm run build`、`npm run build:web`、`npm run typecheck`、`npm run web:serve` |
 | 核心 smoke | `gateway:auth-smoke`、`import-checkpoint:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`i18n:smoke`、`vad:smoke`、`storage:smoke` |
 | Storage smoke | `storage:remote:smoke`、`storage:gateway:smoke`、`storage:compensation:smoke`、`storage:grace:smoke`、`storage:outage:smoke`、`storage:voiceprint-backup:smoke`、`storage:migrate:remote` |
 | 講者與聲紋 | `diarization:smoke`、`sherpa:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
@@ -107,7 +125,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 > 本節保留舊三速調校結果與當時目標；表中「正常／慢」參數不適用現行版本。最新設定與有效成績見[五檔實驗](experiment/silero-vad-chunking/speed-tiers-2026-10-13/README.md)。
 
-當時目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見[字幕延遲調校報告](docs/reports/CAPTION_LATENCY.zh-TW.md)。
+當時目標：**開始說話 → 首筆字幕上屏，端到端 P95 ≤ 2500 ms**（不含翻譯）。以真實收音節奏把音訊喂進 App 的 `EnergyVad + OpenAiChunkedModelAdapter` 切段邏輯、chunk 真送 Breeze-ASR-25 量測（`npm run caption:eval`）；素材為 13:47 對話影片前 300 秒、32 句標準時間軸（Silero VAD 自動產生，CER 為跨組相對比較），另有 22:36 無 BGM 旁白影片前 300 秒、18 段參考用於驗證 `minSilence/chunkMin`（見「無 BGM 素材驗證」）。完整方法與數據見 [silero-vad-chunking 實驗索引](experiment/silero-vad-chunking/README.md)。
 
 ### 當時三速設定（已由現行五格取代）
 
@@ -155,7 +173,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 
 本輪未更動 ASR、VAD 切段、模型設定或翻譯排程。移除未翻譯片段的資料合併後，部分策略的翻譯請求數可能改變。Electron 獨立浮窗仍沿用既有純文字流程。
 
-五分鐘旁白的獨立實驗中，正常檔顯示列由 200 降為 34，短列比例由 40% 降為 0%；這是顯示投影的結果，不是辨識準確率提升或正式畫面延遲保證。參考 TSV 尚未人工校對，報告的差異率不是正式 CER。300 ms 重疊、長上下文與 LocalAgreement 均未套用到正式辨識流程。完整方法、反例及限制見[比較報告](docs/reports/CAPTION_COMPARISON_2026-10-04.zh-TW.md)。
+五分鐘旁白的獨立實驗中，正常檔顯示列由 200 降為 34，短列比例由 40% 降為 0%；這是顯示投影的結果，不是辨識準確率提升或正式畫面延遲保證。參考 TSV 尚未人工校對，報告的差異率不是正式 CER。300 ms 重疊、長上下文與 LocalAgreement 均未套用到正式辨識流程。完整方法、反例及限制見 [五分鐘字幕比較報告](experiment/captions/comparison-2026-10-04/字幕實驗報告.md)。
 
 並排回放、五分鐘音訊、核對案例與 CSV／JSON 保存在 [experiment/captions/comparison-2026-10-04](experiment/captions/comparison-2026-10-04/README.md)。從專案根目錄啟動：
 
@@ -235,7 +253,7 @@ Electron 的本機設定使用 `s2t-local://diarization`，直接載入工作目
 
 驗證：`node tests/smoke/import-audio-smoke-test.cjs`。已在 Mac 與 Linux ARM64 Docker 實測上述 18 個副檔名；Chrome 驗證 95 秒 MP3 分三段，以及約 110 MiB 的 300 秒浮點 WAV 轉換後分七段，並驗證取消。ASR 在整合測試使用隔離回應，這些測試驗證轉換與切段，不代表各格式的辨識準確率。
 
-瀏覽器分頁小圖示來源為 `icon/favicon.svg`，由 Vite 打包為網站資產；獨立字幕視窗沿用相同圖示。
+瀏覽器分頁小圖示來源為 `icon/favicon.svg`，由 Web build 打包為網站資產；獨立字幕視窗沿用相同圖示。
 
 側邊欄導覽採共用 SVG 圖示網格、圓角線條與深淺色配色；選取、滑鼠提示及鍵盤焦點跟隨主題，並尊重減少動態效果設定。紀錄卡片右側功能按鈕上下置中。
 

@@ -83,8 +83,8 @@ const main = async () => {
         S2T_BOOTSTRAP_ADMIN_USERNAME: 'startup-smoke-admin',
         S2T_BOOTSTRAP_ADMIN_PASSWORD: 'startup-smoke-password',
         S2T_WEB_PORT: String(port),
-        S2T_WEB_ORIGINS: 'http://127.0.0.1:5173',
-        S2T_LOCAL_DATA_DIR: dataDirectory,
+        S2T_WEB_ORIGINS: `http://127.0.0.1:${port}`,
+        S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: dataDirectory,
         S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '',
         S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: ''
       },

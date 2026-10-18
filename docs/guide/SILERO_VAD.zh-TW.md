@@ -58,7 +58,7 @@ S2T_VOICEPRINT_AUDIO_VAD_MIN_RATIO=0.05
 
 逐塊比例門檻 `S2T_VOICEPRINT_VAD=1` 仍為選配，兩者並存。
 
-`Dockerfile.sherpa-models` 已將該模型放入 `/models/silero-vad/`；主 gateway image 需要將該目錄以 image layer 或唯讀 volume 提供給上述環境變數。
+先將通過 checksum 驗證的模型放在 `models/silero-vad/silero_vad.onnx`。`docker-compose.gateway.yml` 已將主機 `./models` 唯讀掛載至容器 `/models`；主 gateway image 不包含模型檔，也不會在請求時下載。其他部署須提供相同唯讀掛載或設定 `S2T_SILERO_VAD_MODEL`。
 
 ## 研究回饋的修正（2026-10-12）
 

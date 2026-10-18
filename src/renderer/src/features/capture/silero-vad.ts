@@ -98,6 +98,6 @@ export class SileroBoundaryVad implements BoundaryVad {
     const onsetSamples = this.speaking
       ? Math.max(0, Math.round(this.cursor - this.onset16k / this.rateRatio))
       : 0
-    return { onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs }
+    return { onsetSamples, speechStarted, speechEnded, speaking: this.speaking, levelDbfs, trailingSilenceSamples: Math.round(this.silentSamples / this.rateRatio) }
   }
 }

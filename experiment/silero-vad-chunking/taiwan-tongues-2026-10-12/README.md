@@ -61,7 +61,7 @@
 - `defaultVadConfig` 與「正常」檔套用勝出參數，未指定 config 的 adapter 也使用同一預設。快檔保留 1200ms／150ms；慢檔共用 6000ms 上限、保留 800ms 停頓等待與 1000ms minimum。慢檔不是本輪 CER 排名的方案，未宣稱其已獲相同結果。既有管理員覆寫仍有效。
 - UI 回應速度提示明確說明正常檔優先準度、可能等待數秒。自然句界仍優先於 6 秒上限：兩秒語音加停頓的 mock 收音會在三秒內一次送出，不必等滿六秒。
 
-原始完整報告在 `main-baseline/`、`full-feature/`；摘要在 [comparison.json](comparison.json) 與 [comparison.csv](comparison.csv)。摘要保存套用後 adapter/VAD 的 hash。編譯後的 `defaultVadConfig`、`speedToVadConfig('normal')` 已逐欄與勝出報告的參數比對相同；候選 presets 固定參數，產品 default 變動不會令兩個歴史候選变成同一組。
+原始完整報告在 `main-baseline/`、`full-feature/`；摘要保存套用後 adapter/VAD 的 hash。編譯後的 `defaultVadConfig`、`speedToVadConfig('normal')` 已逐欄與勝出報告的參數比對相同；候選 presets 固定參數，產品 default 變動不會令兩個歴史候選变成同一組。
 
 本輪 benchmark 沒有套用管理員 `strictChunkLimits` 覆寫。工作區另有同步進行的管理員 strict limits 與清空字幕修改，本輪保留它們，並在整合後重跑 adapter／caption regression、typecheck 與 build；不能把本輪 ASR 數字宣稱為清空字幕流程或管理員覆寫組的實測結果。
 

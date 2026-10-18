@@ -1,4 +1,6 @@
-# 0930：即時字幕效能、辨識品質與 K8s 多副本可靠性計畫
+# 即時字幕效能、辨識品質與 K8s 多副本可靠性研究
+
+研究即時字幕在多副本 K8s 下的效能目標、可靠性設計與驗收方法。部署模式、角色與 Redis／Sentinel 設定以 [K8s 多副本部署](../guide/K8S_SCALE_DEPLOYMENT.zh-TW.md) 為準；容量測試的負載指令、同步指標與門檻以 [K8s 容量測試](../guide/CAPACITY_TEST.zh-TW.md) 為準，本檔不重複其操作細節。
 
 ## 目標與驗收
 
@@ -53,6 +55,8 @@
 
 ## K8s 一致性
 
+部署與設定的操作面見 [K8s 多副本部署](../guide/K8S_SCALE_DEPLOYMENT.zh-TW.md)；本節記錄多副本一致性的設計原則：
+
 - PostgreSQL 為錄音、版本、任務、租約、去重、補償可靠來源。
 - Redis Sentinel 加速快取／通知／限流；失效以 PostgreSQL 協調及輪詢。工作取得／提交始終經 PostgreSQL 驗證，避免雙重擁有權。
 - 全 Pod 共用穩定登入及加密密鑰；K8s 缺設定拒絕啟動。
@@ -68,22 +72,25 @@
 - 瀏覽器只保留有限未確認記憶體緩衝，超限提示／暫停。
 - shutdown 排空，強制終止租約接手；提供 probes、grace period、PDB、HPA。
 
-## 測試與交付
+## 測試與驗收
+
+測試範圍：
 
 1. 效能基線及階段指標。
 2. Docker Milvus 與 storage 一致性。
 3. worker、停止補全、聲紋修正。
 4. 健康、前處理、NVIDIA。
 5. 多副本與故障注入。
-6. 目標 K8s 容量壓測、調整重測。
+6. 容量壓測、調整重測。
 7. 型別、smoke、整合、Web build、文件。
 
 覆蓋停止 <15 秒／tick 後／執行中／暫停／長錄音／關閉；worker crash、刷新、斷線、kill Pod、滾動及擴縮容；多 Pod 並發寫、重複亂序、手動編輯競爭；Redis failover／全斷、各 storage outage／恢復；100 帳號與同帳號多視窗；前處理正確性、flush、時間戳、CPU／記憶體。確認無跨帳號混用、重複錄音、已確認資料遺失及舊結果覆寫。
 
-容量以 1／10／25／50／100 路逐階測試，100 路穩態至少 30 分鐘，另測突發及故障；實際音訊節奏與來源時間戳。交付 API／音訊 worker／ASR／翻譯最低及建議 Pod 數、每 Pod requests／limits、GPU、HPA、預熱及餘裕；P50／95／99、錯誤／逾時、吞吐、queue、throttling、記憶體；正常／擴縮／fallback 分別結果及 storage 瓶頸；可重現指令、工作負載、映像及模型版本。
+負載節奏、同步指標與判定門檻依 [K8s 容量測試](../guide/CAPACITY_TEST.zh-TW.md)（逐階 1／10／25／50／100 路、100 路穩態至少 30 分鐘、另測突發及故障、實際音訊節奏與來源時間戳）。壓測完成後提出 API／音訊 worker／ASR／翻譯的最低及建議 Pod 數、每 Pod requests／limits、GPU、HPA、預熱與餘裕，以及正常／擴縮／fallback 的分別結果與 storage 瓶頸。
 
-## 前提與待取得依賴
+## 前提與依賴
 
-ASR／翻譯可 K8s 擴容，Redis Sentinel 可用。當前 Pod CPU 0.2～0.4、Memory 2 GB 可調整，requests／limits 待核實。CPU worker 起始一個密集工作，依實測調整。前處理預設關，停止先保存後背景分離。
-
-正式驗收需脫敏 Deployment／Service／Ingress／HPA、CPU／GPU／模型配置及授權測試環境；身份品質需授權標註音訊，NVIDIA 需 GPU。Docker 不替代正式容量，無環境不虛構 Pod 數及保證。
+- ASR／翻譯可於 K8s 擴容，Redis Sentinel 可用。
+- Pod CPU 0.2～0.4、Memory 2 GB 可調整，requests／limits 依壓測核實。CPU worker 起始一個密集工作，依實測調整。
+- 音訊前處理預設關閉；停止時先保存再背景分離。
+- 正式驗收需要脫敏 Deployment／Service／Ingress／HPA 與 CPU／GPU／模型配置的環境；身份品質需要授權標註音訊，NVIDIA 推論需要 GPU。

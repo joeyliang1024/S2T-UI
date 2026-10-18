@@ -11,7 +11,7 @@ const localModelName = (env = process.env) => {
 const nemotronPaths = (root = process.cwd()) => {
   const directory = join(modelsRoot(process.env, root), 'nemotron-3-diarization')
   return { model: join(directory, 'Nemotron-3-Diarization.q8_0.gguf'),
-    runtime: join(directory, 'runtime', `${process.platform}-${process.arch}`, 'bin', process.platform === 'win32' ? 'nemo-speech.exe' : 'nemo-speech') }
+    runtime: existsSync('/opt/nemo-speech/bin/nemo-speech') ? '/opt/nemo-speech/bin/nemo-speech' : join(directory, 'runtime', `${process.platform}-${process.arch}`, 'bin', process.platform === 'win32' ? 'nemo-speech.exe' : 'nemo-speech') }
 }
 const localDiarizationProfiles = () => {
   const { modelPaths } = require('./sherpa-diarization.cjs')

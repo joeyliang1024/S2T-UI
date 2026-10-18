@@ -8,7 +8,7 @@ let now = -1; global.performance = { now: () => now };
 global.window = {}; global.metricSamples = samples
 const source = fs.readFileSync('src/renderer/src/shared/services/caption-metrics.ts', 'utf8')
   .replace(/import .* from '\.\/caption-metric-transport'/, 'class CaptionMetricTransport { constructor(sender: unknown) {} enqueue(samples: unknown[]) { globalThis.metricSamples.push(...samples) } } type CaptionMetricSample = {stage: string; seconds: number}')
-  .replace(/import .* from .*auth-client'/, 'const authFetch = async () => ({ok: true})')
+  .replace(/import .* from .*(?:auth-client|authenticated-client)'/, 'const authFetch = async () => ({ok: true})')
 const code = buildSync({ stdin: { contents: source, loader: 'ts' }, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text
 const moduleLoaded = { exports: {} }; new Function('module', 'exports', code)(moduleLoaded, moduleLoaded.exports)
 const m = moduleLoaded.exports
@@ -53,7 +53,7 @@ try {
   assert.equal(count('t5_paint'), paints, 'cross-boundary fetch callbacks excluded as well as paints')
   assert.equal(count('t7_network'), 0, 'cross-boundary translation requests are excluded')
   assert.equal(count('t5_network'), arrivals, 'cross-boundary arrivals are excluded')
-  const fresh = {}; m.attachCaptionTiming(fresh, { chunkSpeechAt: 9100, chunkDetectedAt: 9200, queuedAt: 9500, dequeuedAt: 9550, requestAt: 9560, responseAt: 10000, speechAt: 9100 })
+  const fresh = {}; m.attachCaptionTiming(fresh, { chunkSpeechAt: 9100, chunkDetectedAt: 9200, queuedAt: 9500, dequeuedAt: 9550, requestAt: 9560, responseAt: 10000, speechAt: 9100, speechEndAt: 9400 })
   m.registerCaptionTiming('fresh', fresh); m.reportCaptionPaint(['fresh'], 10020)
   assert.equal(count('t5_paint'), paints + 1, 'in-window captions still paint')
   assert.equal(samples.filter(x => x.stage === 'e2e_asr').at(-1).seconds, .92)
@@ -67,5 +67,9 @@ try {
   assert.equal(samples.find(x => x.stage === 't7_network').seconds, .08, 't7_network = 往返 − server total')
   assert.equal(samples.find(x => x.stage === 't7_paint').seconds, .1)
   assert.equal(samples.find(x => x.stage === 'e2e_translation').seconds, 1.6, 'e2e = 語音起點 → 譯文繪出')
+  assert.equal(samples.find(x => x.stage === 'e2e_translation_tail').seconds, 1.3, 'tail latency starts at final voiced sample')
+  assert.equal(samples.filter(x => x.stage === 'phase_t5').at(-1).seconds, .46, 'phase t5 sums network and paint once')
+  assert.equal(samples.find(x => x.stage === 'phase_t6').seconds, .52, 'phase t6 sums all four slices into one observation')
+  assert.equal(samples.find(x => x.stage === 'phase_t7').seconds, .18, 'phase t7 sums network and paint')
   console.log('PASS navigation, hidden tabs, offscreen captions and translation remounts never replay stale paints; cross-boundary fetch callbacks excluded as well as paints')
 } finally { for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete global[key]; else global[key] = value } }

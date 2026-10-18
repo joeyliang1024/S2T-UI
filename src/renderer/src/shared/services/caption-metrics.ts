@@ -1,5 +1,5 @@
 import { CaptionMetricTransport, type CaptionMetricSample, type CaptionMetricEvent } from './caption-metric-transport'
-import { authFetch } from '../../features/auth/services/auth-client'
+import { authFetch } from '../http/authenticated-client'
 
 /** Gateway Server-Timing values (milliseconds) for one model request. */
 export type CaptionServerTiming = { upload?: number; queue?: number; pre?: number; model?: number; total: number }
@@ -7,6 +7,8 @@ export type CaptionServerTiming = { upload?: number; queue?: number; pre?: numbe
 export type CaptionTiming = {
   /** First onset of the utterance; only feeds the translation end-to-end sample. */
   speechAt?: number
+  /** Last VAD speech sample in this chunk, using the audio sample clock. */
+  speechEndAt?: number
   /** This chunk's first speech sample (sample clock) — the t2 / e2e 起點. */
   chunkSpeechAt: number
   /** When the local VAD confirmed speech inside this chunk. */
@@ -115,6 +117,7 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
     }
     // t7：回傳譯文並渲染到 UI。
     pushSpan(samples, 't7_paint', timing.response, paintedAt)
+    if (origin?.speechEndAt !== undefined && withinMeasurementWindow(origin.speechEndAt)) pushSpan(samples, 'e2e_translation_tail', origin.speechEndAt, paintedAt)
     if (origin && origin.speechAt !== undefined && withinMeasurementWindow(origin.speechAt)) pushSpan(samples, 'e2e_translation', origin.speechAt, paintedAt)
   }
   if (samples.length) enqueue(samples)
@@ -124,7 +127,15 @@ const transport = new CaptionMetricTransport(async payload => {
   return response.ok
 })
 const enqueue = (samples: Sample[] = [], event?: CaptionMetricEvent): void => {
-  if (!window.s2t) transport.enqueue(samples, event)
+  const phases = new Map<string, number>()
+  for (const sample of samples) {
+    if (/^t[1-467]_/.test(sample.stage)) {
+      const phase = 'phase_' + sample.stage.slice(0, 2)
+      phases.set(phase, (phases.get(phase) ?? 0) + sample.seconds)
+    }
+  }
+  const totals = [...phases].map(([stage, seconds]) => ({ stage, seconds }))
+  if (!window.s2t) transport.enqueue([...samples, ...totals], event)
 }
 export const recordCaptionEvent = (event: CaptionMetricEvent): void => enqueue([], event)
 export const attachCaptionTiming = (event: object, timing: CaptionTiming): void => { timings.set(event, timing) }
@@ -182,6 +193,8 @@ export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
     if (!timing) continue
     pending.delete(id)
     pushSpan(samples, 't5_paint', timing.postEndAt ?? timing.responseAt, paintedAt)
+    const networkMs = timing.responseAt - timing.requestAt - (timing.server?.total ?? 0)
+    if (networkMs >= 0) pushValue(samples, 'phase_t5', (networkMs + paintedAt - (timing.postEndAt ?? timing.responseAt)) / 1000)
     pushSpan(samples, 'e2e_asr', timing.chunkSpeechAt, paintedAt)
   }
   if (!samples.length || window.s2t) return // This deployment instruments the Web capture path.

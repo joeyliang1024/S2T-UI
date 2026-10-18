@@ -1,0 +1,3752 @@
+{
+  "scope": [
+    "src",
+    "server"
+  ],
+  "nodeCount": 127,
+  "edgeCount": 295,
+  "runtimeCycles": [],
+  "allCycles": [],
+  "topFanOut": [
+    {
+      "file": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "lines": 3415,
+      "calls": 2512,
+      "functions": 532,
+      "hooks": 241,
+      "platformBranches": 127,
+      "fanOut": 33,
+      "fanIn": 3
+    },
+    {
+      "file": "src/renderer/src/features/app/views/AppView.tsx",
+      "lines": 644,
+      "calls": 829,
+      "functions": 273,
+      "hooks": 30,
+      "platformBranches": 3,
+      "fanOut": 25,
+      "fanIn": 1
+    },
+    {
+      "file": "server/index.cjs",
+      "lines": 1553,
+      "calls": 1234,
+      "functions": 222,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 21,
+      "fanIn": 0
+    },
+    {
+      "file": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "lines": 162,
+      "calls": 99,
+      "functions": 15,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 14,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "lines": 498,
+      "calls": 198,
+      "functions": 42,
+      "hooks": 0,
+      "platformBranches": 6,
+      "fanOut": 9,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "lines": 292,
+      "calls": 211,
+      "functions": 66,
+      "hooks": 10,
+      "platformBranches": 3,
+      "fanOut": 7,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/model-adapter.ts",
+      "lines": 8,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 6,
+      "fanIn": 9
+    },
+    {
+      "file": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "lines": 80,
+      "calls": 76,
+      "functions": 20,
+      "hooks": 6,
+      "platformBranches": 1,
+      "fanOut": 6,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/translation/services/queue.ts",
+      "lines": 198,
+      "calls": 109,
+      "functions": 38,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 6,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/index.ts",
+      "lines": 469,
+      "calls": 22,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 1,
+      "fanOut": 6,
+      "fanIn": 22
+    },
+    {
+      "file": "src/renderer/src/features/models/adapters/websocket.ts",
+      "lines": 135,
+      "calls": 39,
+      "functions": 16,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 5,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "lines": 42,
+      "calls": 37,
+      "functions": 18,
+      "hooks": 6,
+      "platformBranches": 0,
+      "fanOut": 5,
+      "fanIn": 1
+    }
+  ],
+  "topFanIn": [
+    {
+      "file": "src/renderer/src/shared/i18n/index.ts",
+      "lines": 469,
+      "calls": 22,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 1,
+      "fanOut": 6,
+      "fanIn": 22
+    },
+    {
+      "file": "src/renderer/src/shared/types.ts",
+      "lines": 6,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 15
+    },
+    {
+      "file": "src/renderer/src/features/auth/services/auth-client.ts",
+      "lines": 36,
+      "calls": 24,
+      "functions": 8,
+      "hooks": 0,
+      "platformBranches": 4,
+      "fanOut": 1,
+      "fanIn": 10
+    },
+    {
+      "file": "src/renderer/src/features/models/model-adapter.ts",
+      "lines": 8,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 6,
+      "fanIn": 9
+    },
+    {
+      "file": "src/renderer/src/shared/services/transcript.ts",
+      "lines": 47,
+      "calls": 53,
+      "functions": 14,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 9
+    },
+    {
+      "file": "src/shared/contracts/transcript.ts",
+      "lines": 34,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 8
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/types.ts",
+      "lines": 3,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 6
+    },
+    {
+      "file": "server/logger.cjs",
+      "lines": 264,
+      "calls": 133,
+      "functions": 35,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 6
+    },
+    {
+      "file": "src/renderer/src/features/capture/vad.ts",
+      "lines": 95,
+      "calls": 9,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 5
+    },
+    {
+      "file": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "lines": 90,
+      "calls": 29,
+      "functions": 16,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 5
+    },
+    {
+      "file": "src/renderer/src/shared/services/settings.ts",
+      "lines": 121,
+      "calls": 51,
+      "functions": 18,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 5
+    },
+    {
+      "file": "src/renderer/src/features/models/contracts.ts",
+      "lines": 15,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 4
+    }
+  ],
+  "topLines": [
+    {
+      "file": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "lines": 3415,
+      "calls": 2512,
+      "functions": 532,
+      "hooks": 241,
+      "platformBranches": 127,
+      "fanOut": 33,
+      "fanIn": 3
+    },
+    {
+      "file": "server/index.cjs",
+      "lines": 1553,
+      "calls": 1234,
+      "functions": 222,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 21,
+      "fanIn": 0
+    },
+    {
+      "file": "src/main/index.ts",
+      "lines": 726,
+      "calls": 542,
+      "functions": 111,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 0
+    },
+    {
+      "file": "src/renderer/src/features/app/views/AppView.tsx",
+      "lines": 644,
+      "calls": 829,
+      "functions": 273,
+      "hooks": 30,
+      "platformBranches": 3,
+      "fanOut": 25,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "lines": 498,
+      "calls": 198,
+      "functions": 42,
+      "hooks": 0,
+      "platformBranches": 6,
+      "fanOut": 9,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/index.ts",
+      "lines": 469,
+      "calls": 22,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 1,
+      "fanOut": 6,
+      "fanIn": 22
+    },
+    {
+      "file": "server/storage/remote.cjs",
+      "lines": 469,
+      "calls": 294,
+      "functions": 66,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "server/sherpa-worker-pool.cjs",
+      "lines": 417,
+      "calls": 171,
+      "functions": 52,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 2
+    },
+    {
+      "file": "server/sherpa-diarization.cjs",
+      "lines": 401,
+      "calls": 167,
+      "functions": 35,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 4
+    },
+    {
+      "file": "server/storage/local.cjs",
+      "lines": 339,
+      "calls": 291,
+      "functions": 102,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "lines": 292,
+      "calls": 211,
+      "functions": 66,
+      "hooks": 10,
+      "platformBranches": 3,
+      "fanOut": 7,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/speakers/diarization.ts",
+      "lines": 272,
+      "calls": 85,
+      "functions": 23,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    }
+  ],
+  "violations": [],
+  "featureEdges": {
+    "app -> auth": 3,
+    "app -> sessions": 6,
+    "app -> transcript": 10,
+    "app -> summary": 7,
+    "app -> settings": 2,
+    "app -> captions": 4,
+    "app -> capture": 5,
+    "app -> models": 1,
+    "app -> speakers": 3,
+    "app -> translation": 2,
+    "captions -> transcript": 2,
+    "captions -> models": 1,
+    "capture -> auth": 1,
+    "models -> capture": 1,
+    "sessions -> translation": 2,
+    "sessions -> transcript": 1,
+    "sessions -> capture": 1,
+    "sessions -> speakers": 1,
+    "sessions -> auth": 1,
+    "settings -> auth": 4,
+    "settings -> capture": 1,
+    "settings -> app": 1,
+    "speakers -> models": 1,
+    "speakers -> auth": 1,
+    "summary -> translation": 1,
+    "transcript -> models": 4,
+    "translation -> models": 2,
+    "translation -> transcript": 1
+  },
+  "unresolved": [
+    {
+      "from": "src/renderer/src/main.tsx",
+      "spec": "./styles.css"
+    }
+  ],
+  "nodes": [
+    {
+      "file": "src/main/index.ts",
+      "lines": 726,
+      "calls": 542,
+      "functions": 111,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 0
+    },
+    {
+      "file": "src/preload/index.ts",
+      "lines": 48,
+      "calls": 37,
+      "functions": 35,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 0
+    },
+    {
+      "file": "src/renderer/src/App.tsx",
+      "lines": 15,
+      "calls": 5,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/app/AuthenticatedApp.tsx",
+      "lines": 10,
+      "calls": 1,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "lines": 3415,
+      "calls": 2512,
+      "functions": 532,
+      "hooks": 241,
+      "platformBranches": 127,
+      "fanOut": 33,
+      "fanIn": 3
+    },
+    {
+      "file": "src/renderer/src/features/app/views/AppView.tsx",
+      "lines": 644,
+      "calls": 829,
+      "functions": 273,
+      "hooks": 30,
+      "platformBranches": 3,
+      "fanOut": 25,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/app/views/DownloadPicker.tsx",
+      "lines": 83,
+      "calls": 20,
+      "functions": 8,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/app/views/NavigationGlyph.tsx",
+      "lines": 17,
+      "calls": 0,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/auth/hooks/useAuth.ts",
+      "lines": 14,
+      "calls": 17,
+      "functions": 9,
+      "hooks": 5,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/auth/services/auth-client.ts",
+      "lines": 36,
+      "calls": 24,
+      "functions": 8,
+      "hooks": 0,
+      "platformBranches": 4,
+      "fanOut": 1,
+      "fanIn": 10
+    },
+    {
+      "file": "src/renderer/src/features/auth/views/AuthGate.tsx",
+      "lines": 16,
+      "calls": 36,
+      "functions": 10,
+      "hooks": 6,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/captions/services/popout.ts",
+      "lines": 45,
+      "calls": 25,
+      "functions": 7,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/captions/views/CaptionMemberDetails.tsx",
+      "lines": 17,
+      "calls": 3,
+      "functions": 2,
+      "hooks": 1,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/captions/views/CaptionPaintMetric.tsx",
+      "lines": 24,
+      "calls": 15,
+      "functions": 7,
+      "hooks": 2,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/captions/views/CaptionPopout.tsx",
+      "lines": 38,
+      "calls": 22,
+      "functions": 10,
+      "hooks": 8,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/capture/audio-capture.worklet.js",
+      "lines": 14,
+      "calls": 4,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 0
+    },
+    {
+      "file": "src/renderer/src/features/capture/resample.ts",
+      "lines": 122,
+      "calls": 36,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/capture/services/audio-export.ts",
+      "lines": 29,
+      "calls": 6,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 2,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/capture/silero-vad.ts",
+      "lines": 104,
+      "calls": 10,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 0
+    },
+    {
+      "file": "src/renderer/src/features/capture/vad.ts",
+      "lines": 95,
+      "calls": 9,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 5
+    },
+    {
+      "file": "src/renderer/src/features/capture/views/ResponseSpeedControl.tsx",
+      "lines": 25,
+      "calls": 3,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/adapters/noop.ts",
+      "lines": 20,
+      "calls": 2,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "lines": 498,
+      "calls": 198,
+      "functions": 42,
+      "hooks": 0,
+      "platformBranches": 6,
+      "fanOut": 9,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/adapters/websocket.ts",
+      "lines": 135,
+      "calls": 39,
+      "functions": 16,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 5,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/models/contracts.ts",
+      "lines": 15,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 4
+    },
+    {
+      "file": "src/renderer/src/features/models/domain/asr-text.ts",
+      "lines": 19,
+      "calls": 9,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "src/renderer/src/features/models/model-adapter.ts",
+      "lines": 8,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 6,
+      "fanIn": 9
+    },
+    {
+      "file": "src/renderer/src/features/sessions/domain/recovery.ts",
+      "lines": 33,
+      "calls": 18,
+      "functions": 6,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/sessions/domain/session-merge.ts",
+      "lines": 90,
+      "calls": 40,
+      "functions": 13,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/sessions/domain/storage-state.ts",
+      "lines": 14,
+      "calls": 6,
+      "functions": 4,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "lines": 162,
+      "calls": 99,
+      "functions": 15,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 14,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/sessions/services/remote-session-storage.ts",
+      "lines": 48,
+      "calls": 49,
+      "functions": 14,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/domain/environment-settings.ts",
+      "lines": 30,
+      "calls": 29,
+      "functions": 13,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/domain/glossary-json.ts",
+      "lines": 50,
+      "calls": 18,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "lines": 42,
+      "calls": 37,
+      "functions": 18,
+      "hooks": 6,
+      "platformBranches": 0,
+      "fanOut": 5,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "lines": 292,
+      "calls": 211,
+      "functions": 66,
+      "hooks": 10,
+      "platformBranches": 3,
+      "fanOut": 7,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/SharingAuthorizationEditor.tsx",
+      "lines": 28,
+      "calls": 15,
+      "functions": 5,
+      "hooks": 3,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/settings/views/SummaryTemplateManager.tsx",
+      "lines": 16,
+      "calls": 29,
+      "functions": 9,
+      "hooks": 4,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/speakers/diarization.ts",
+      "lines": 272,
+      "calls": 85,
+      "functions": 23,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/speakers/services/voiceprint-storage.ts",
+      "lines": 29,
+      "calls": 12,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/speakers/views/SpeakerBatchRename.tsx",
+      "lines": 29,
+      "calls": 9,
+      "functions": 5,
+      "hooks": 2,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/summary/domain/plan.ts",
+      "lines": 37,
+      "calls": 15,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/summary/domain/templates.ts",
+      "lines": 23,
+      "calls": 6,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/summary/services/document.ts",
+      "lines": 77,
+      "calls": 37,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/summary/services/stream.ts",
+      "lines": 26,
+      "calls": 14,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/summary/views/MarkdownSummary.tsx",
+      "lines": 75,
+      "calls": 70,
+      "functions": 12,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "lines": 80,
+      "calls": 76,
+      "functions": 20,
+      "hooks": 6,
+      "platformBranches": 1,
+      "fanOut": 6,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "lines": 90,
+      "calls": 29,
+      "functions": 16,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 5
+    },
+    {
+      "file": "src/renderer/src/features/transcript/import-checkpoint.ts",
+      "lines": 8,
+      "calls": 2,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/features/transcript/import-formats.ts",
+      "lines": 3,
+      "calls": 2,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/transcript/services/documents.ts",
+      "lines": 88,
+      "calls": 42,
+      "functions": 13,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/transcript/services/quality-correction.ts",
+      "lines": 92,
+      "calls": 36,
+      "functions": 14,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/transcript/views/CorrectedText.tsx",
+      "lines": 17,
+      "calls": 7,
+      "functions": 6,
+      "hooks": 1,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/transcript/wav-batch.ts",
+      "lines": 131,
+      "calls": 75,
+      "functions": 13,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/features/translation/domain/policy.ts",
+      "lines": 40,
+      "calls": 8,
+      "functions": 4,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 4
+    },
+    {
+      "file": "src/renderer/src/features/translation/services/queue.ts",
+      "lines": 198,
+      "calls": 109,
+      "functions": 38,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 6,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/main.tsx",
+      "lines": 11,
+      "calls": 3,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 0
+    },
+    {
+      "file": "src/renderer/src/shared/events/event-channel.ts",
+      "lines": 11,
+      "calls": 4,
+      "functions": 4,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "src/renderer/src/shared/http/authenticated-client.ts",
+      "lines": 37,
+      "calls": 15,
+      "functions": 7,
+      "hooks": 0,
+      "platformBranches": 3,
+      "fanOut": 1,
+      "fanIn": 4
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/index.ts",
+      "lines": 469,
+      "calls": 22,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 1,
+      "fanOut": 6,
+      "fanIn": 22
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/service-messages.ts",
+      "lines": 54,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/status-messages-a.ts",
+      "lines": 123,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/status-messages-b.ts",
+      "lines": 103,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/status-messages-c.ts",
+      "lines": 99,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/types.ts",
+      "lines": 3,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 6
+    },
+    {
+      "file": "src/renderer/src/shared/i18n/view-messages.ts",
+      "lines": 45,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/services/audio.ts",
+      "lines": 146,
+      "calls": 53,
+      "functions": 19,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/renderer/src/shared/services/caption-metric-transport.ts",
+      "lines": 65,
+      "calls": 25,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/services/caption-metrics.ts",
+      "lines": 190,
+      "calls": 79,
+      "functions": 19,
+      "hooks": 0,
+      "platformBranches": 2,
+      "fanOut": 2,
+      "fanIn": 4
+    },
+    {
+      "file": "src/renderer/src/shared/services/download.ts",
+      "lines": 11,
+      "calls": 5,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "src/renderer/src/shared/services/http.ts",
+      "lines": 36,
+      "calls": 27,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 4
+    },
+    {
+      "file": "src/renderer/src/shared/services/opfs-pcm-recording.ts",
+      "lines": 79,
+      "calls": 45,
+      "functions": 11,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/services/remote-pcm-recording.ts",
+      "lines": 45,
+      "calls": 33,
+      "functions": 7,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 1
+    },
+    {
+      "file": "src/renderer/src/shared/services/settings.ts",
+      "lines": 121,
+      "calls": 51,
+      "functions": 18,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 5
+    },
+    {
+      "file": "src/renderer/src/shared/services/transcript.ts",
+      "lines": 47,
+      "calls": 53,
+      "functions": 14,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 9
+    },
+    {
+      "file": "src/renderer/src/shared/types.ts",
+      "lines": 6,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 15
+    },
+    {
+      "file": "src/renderer/src/shared/ui/TooltipButton.tsx",
+      "lines": 13,
+      "calls": 12,
+      "functions": 6,
+      "hooks": 1,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/shared/contracts/application.ts",
+      "lines": 4,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "src/shared/contracts/capture.ts",
+      "lines": 31,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "src/shared/contracts/desktop.ts",
+      "lines": 43,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 3
+    },
+    {
+      "file": "src/shared/contracts/models.ts",
+      "lines": 6,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 4
+    },
+    {
+      "file": "src/shared/contracts/response-speed.ts",
+      "lines": 7,
+      "calls": 1,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "src/shared/contracts/sessions.ts",
+      "lines": 93,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 2
+    },
+    {
+      "file": "src/shared/contracts/settings.ts",
+      "lines": 50,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 3
+    },
+    {
+      "file": "src/shared/contracts/transcript.ts",
+      "lines": 34,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 8
+    },
+    {
+      "file": "src/shared/response-speed.ts",
+      "lines": 2,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 2
+    },
+    {
+      "file": "src/shared/validation/admin-parameters.cjs",
+      "lines": 21,
+      "calls": 5,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 4
+    },
+    {
+      "file": "server/audio/client.cjs",
+      "lines": 11,
+      "calls": 5,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "server/audio/clients/local.cjs",
+      "lines": 8,
+      "calls": 5,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 2
+    },
+    {
+      "file": "server/audio/clients/remote.cjs",
+      "lines": 16,
+      "calls": 11,
+      "functions": 3,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "server/audio/codec.cjs",
+      "lines": 5,
+      "calls": 18,
+      "functions": 4,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/audio/operations.cjs",
+      "lines": 4,
+      "calls": 0,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "server/audio/wav.cjs",
+      "lines": 40,
+      "calls": 19,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/audio-preprocess.cjs",
+      "lines": 65,
+      "calls": 57,
+      "functions": 15,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/audio-service.cjs",
+      "lines": 5,
+      "calls": 2,
+      "functions": 0,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "server/auth/index.cjs",
+      "lines": 198,
+      "calls": 138,
+      "functions": 23,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 5,
+      "fanIn": 1
+    },
+    {
+      "file": "server/auth/sharing-authorization.cjs",
+      "lines": 19,
+      "calls": 14,
+      "functions": 4,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/auth/user-store.cjs",
+      "lines": 78,
+      "calls": 50,
+      "functions": 19,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/diarization-session.cjs",
+      "lines": 26,
+      "calls": 19,
+      "functions": 8,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/http/internal-audio.cjs",
+      "lines": 42,
+      "calls": 50,
+      "functions": 7,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 1
+    },
+    {
+      "file": "server/idempotency.cjs",
+      "lines": 54,
+      "calls": 29,
+      "functions": 11,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/import-audio.cjs",
+      "lines": 57,
+      "calls": 52,
+      "functions": 12,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/index.cjs",
+      "lines": 1553,
+      "calls": 1234,
+      "functions": 222,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 21,
+      "fanIn": 0
+    },
+    {
+      "file": "server/local-diarization.cjs",
+      "lines": 31,
+      "calls": 22,
+      "functions": 7,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 3
+    },
+    {
+      "file": "server/logger.cjs",
+      "lines": 264,
+      "calls": 133,
+      "functions": 35,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 6
+    },
+    {
+      "file": "server/metrics.cjs",
+      "lines": 82,
+      "calls": 62,
+      "functions": 14,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/model-paths.cjs",
+      "lines": 7,
+      "calls": 4,
+      "functions": 1,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "server/nemotron-diarization.cjs",
+      "lines": 71,
+      "calls": 77,
+      "functions": 9,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "server/recording-chunks.cjs",
+      "lines": 91,
+      "calls": 63,
+      "functions": 12,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/redis-connection.cjs",
+      "lines": 44,
+      "calls": 26,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/request-limits.cjs",
+      "lines": 47,
+      "calls": 23,
+      "functions": 6,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/session-payload.cjs",
+      "lines": 60,
+      "calls": 46,
+      "functions": 13,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/session-snapshot.cjs",
+      "lines": 23,
+      "calls": 18,
+      "functions": 5,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/shared-limits.cjs",
+      "lines": 186,
+      "calls": 123,
+      "functions": 36,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 2
+    },
+    {
+      "file": "server/sherpa-diarization.cjs",
+      "lines": 401,
+      "calls": 167,
+      "functions": 35,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 4
+    },
+    {
+      "file": "server/sherpa-worker-pool.cjs",
+      "lines": 417,
+      "calls": 171,
+      "functions": 52,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 2
+    },
+    {
+      "file": "server/sherpa-worker.cjs",
+      "lines": 110,
+      "calls": 62,
+      "functions": 19,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 4,
+      "fanIn": 0
+    },
+    {
+      "file": "server/silero-vad.cjs",
+      "lines": 132,
+      "calls": 61,
+      "functions": 10,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 3
+    },
+    {
+      "file": "server/storage/config.cjs",
+      "lines": 42,
+      "calls": 19,
+      "functions": 6,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/storage/index.cjs",
+      "lines": 21,
+      "calls": 8,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 3,
+      "fanIn": 1
+    },
+    {
+      "file": "server/storage/local.cjs",
+      "lines": 339,
+      "calls": 291,
+      "functions": 102,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 3
+    },
+    {
+      "file": "server/storage/remote.cjs",
+      "lines": 469,
+      "calls": 294,
+      "functions": 66,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 2,
+      "fanIn": 1
+    },
+    {
+      "file": "server/storage/voiceprint-backup.cjs",
+      "lines": 52,
+      "calls": 39,
+      "functions": 13,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 1,
+      "fanIn": 0
+    },
+    {
+      "file": "server/summary-stream.cjs",
+      "lines": 26,
+      "calls": 15,
+      "functions": 2,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/summary-template-files.cjs",
+      "lines": 41,
+      "calls": 40,
+      "functions": 6,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    },
+    {
+      "file": "server/usage-metrics.cjs",
+      "lines": 80,
+      "calls": 41,
+      "functions": 7,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 2
+    },
+    {
+      "file": "server/voiceprint-matching.cjs",
+      "lines": 92,
+      "calls": 32,
+      "functions": 14,
+      "hooks": 0,
+      "platformBranches": 0,
+      "fanOut": 0,
+      "fanIn": 1
+    }
+  ],
+  "edges": [
+    {
+      "from": "src/main/index.ts",
+      "to": "src/shared/contracts/desktop.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/main/index.ts",
+      "to": "src/shared/response-speed.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/main/index.ts",
+      "to": "src/shared/validation/admin-parameters.cjs",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/preload/index.ts",
+      "to": "src/shared/contracts/desktop.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/App.tsx",
+      "to": "src/renderer/src/features/auth/hooks/useAuth.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/App.tsx",
+      "to": "src/renderer/src/features/auth/views/AuthGate.tsx",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/App.tsx",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/App.tsx",
+      "to": "src/renderer/src/features/app/AuthenticatedApp.tsx",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/AuthenticatedApp.tsx",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/app/AuthenticatedApp.tsx",
+      "to": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/AuthenticatedApp.tsx",
+      "to": "src/renderer/src/features/app/views/AppView.tsx",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/transcript/services/quality-correction.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/sessions/domain/storage-state.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/summary/services/stream.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/caption-metrics.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/settings/domain/environment-settings.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/transcript/import-formats.ts",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/captions/services/popout.ts",
+      "line": 8,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 9,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/audio.ts",
+      "line": 10,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 11,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/settings.ts",
+      "line": 12,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/capture/vad.ts",
+      "line": 13,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/http.ts",
+      "line": 14,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/download.ts",
+      "line": 15,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 17,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/speakers/diarization.ts",
+      "line": 18,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/speakers/services/voiceprint-storage.ts",
+      "line": 19,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/transcript/wav-batch.ts",
+      "line": 20,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/transcript/import-checkpoint.ts",
+      "line": 21,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/capture/resample.ts",
+      "line": 22,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/sessions/services/remote-session-storage.ts",
+      "line": 23,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/transcript/services/documents.ts",
+      "line": 24,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/capture/services/audio-export.ts",
+      "line": 25,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/sessions/domain/session-merge.ts",
+      "line": 26,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/translation/domain/policy.ts",
+      "line": 27,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/translation/services/queue.ts",
+      "line": 28,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "line": 29,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/summary/domain/plan.ts",
+      "line": 30,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 31,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 32,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/remote-pcm-recording.ts",
+      "line": 33,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "to": "src/renderer/src/shared/services/opfs-pcm-recording.ts",
+      "line": 34,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/transcript/views/CorrectedText.tsx",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/sessions/domain/storage-state.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/sessions/domain/recovery.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/captions/views/CaptionPaintMetric.tsx",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/app/views/NavigationGlyph.tsx",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/transcript/import-formats.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/captions/views/CaptionPopout.tsx",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/captions/views/CaptionMemberDetails.tsx",
+      "line": 8,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/shared/ui/TooltipButton.tsx",
+      "line": 9,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 11,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/shared/services/audio.ts",
+      "line": 12,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "line": 13,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 14,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/shared/services/settings.ts",
+      "line": 15,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/capture/views/ResponseSpeedControl.tsx",
+      "line": 16,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 17,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/summary/domain/templates.ts",
+      "line": 18,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/summary/services/document.ts",
+      "line": 19,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/summary/views/MarkdownSummary.tsx",
+      "line": 21,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/app/views/DownloadPicker.tsx",
+      "line": 22,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/speakers/views/SpeakerBatchRename.tsx",
+      "line": 23,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "line": 24,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "line": 25,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "line": 27,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/app/views/AppView.tsx",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 28,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/app/views/DownloadPicker.tsx",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/DownloadPicker.tsx",
+      "to": "src/renderer/src/features/capture/services/audio-export.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/DownloadPicker.tsx",
+      "to": "src/renderer/src/features/summary/services/document.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/DownloadPicker.tsx",
+      "to": "src/renderer/src/features/transcript/services/documents.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/app/views/NavigationGlyph.tsx",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/auth/hooks/useAuth.ts",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/auth/services/auth-client.ts",
+      "to": "src/renderer/src/shared/http/authenticated-client.ts",
+      "line": 8,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/auth/services/auth-client.ts",
+      "to": "src/renderer/src/shared/http/authenticated-client.ts",
+      "line": 9,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/auth/views/AuthGate.tsx",
+      "to": "src/renderer/src/features/auth/hooks/useAuth.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/auth/views/AuthGate.tsx",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/captions/services/popout.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/captions/views/CaptionPaintMetric.tsx",
+      "to": "src/renderer/src/features/transcript/views/CorrectedText.tsx",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/captions/views/CaptionPaintMetric.tsx",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/captions/views/CaptionPaintMetric.tsx",
+      "to": "src/renderer/src/shared/services/caption-metrics.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/captions/views/CaptionPopout.tsx",
+      "to": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/captions/views/CaptionPopout.tsx",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/capture/services/audio-export.ts",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/capture/silero-vad.ts",
+      "to": "src/renderer/src/features/capture/vad.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/capture/vad.ts",
+      "to": "src/shared/response-speed.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/capture/vad.ts",
+      "to": "src/shared/response-speed.ts",
+      "line": 2,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/capture/vad.ts",
+      "to": "src/shared/response-speed.ts",
+      "line": 3,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/capture/vad.ts",
+      "to": "src/shared/contracts/capture.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/capture/vad.ts",
+      "to": "src/shared/contracts/capture.ts",
+      "line": 6,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/capture/views/ResponseSpeedControl.tsx",
+      "to": "src/renderer/src/features/capture/vad.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/noop.ts",
+      "to": "src/renderer/src/features/models/contracts.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/noop.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/noop.ts",
+      "to": "src/renderer/src/shared/events/event-channel.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/features/models/contracts.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/shared/events/event-channel.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/shared/services/caption-metrics.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/features/capture/vad.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/shared/http/authenticated-client.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/shared/services/http.ts",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 8,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "to": "src/renderer/src/features/models/domain/asr-text.ts",
+      "line": 9,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/websocket.ts",
+      "to": "src/renderer/src/features/models/contracts.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/websocket.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/websocket.ts",
+      "to": "src/renderer/src/shared/events/event-channel.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/websocket.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/adapters/websocket.ts",
+      "to": "src/renderer/src/features/models/domain/asr-text.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/contracts.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/contracts.ts",
+      "to": "src/shared/contracts/capture.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/model-adapter.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 2,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/model-adapter.ts",
+      "to": "src/renderer/src/features/models/contracts.ts",
+      "line": 3,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/models/model-adapter.ts",
+      "to": "src/renderer/src/features/models/domain/asr-text.ts",
+      "line": 4,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/model-adapter.ts",
+      "to": "src/renderer/src/features/models/adapters/noop.ts",
+      "line": 5,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/model-adapter.ts",
+      "to": "src/renderer/src/features/models/adapters/websocket.ts",
+      "line": 6,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/models/model-adapter.ts",
+      "to": "src/renderer/src/features/models/adapters/openai-chunked.ts",
+      "line": 7,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/domain/recovery.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/domain/session-merge.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/domain/session-merge.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/domain/storage-state.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/shared/contracts/sessions.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/shared/contracts/settings.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/shared/contracts/models.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/shared/contracts/desktop.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/features/translation/services/queue.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/features/sessions/domain/recovery.ts",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/features/transcript/wav-batch.ts",
+      "line": 8,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 9,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/features/capture/resample.ts",
+      "line": 10,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/features/speakers/diarization.ts",
+      "line": 11,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/shared/services/settings.ts",
+      "line": 12,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/features/translation/domain/policy.ts",
+      "line": 13,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/recovery-handlers.ts",
+      "to": "src/renderer/src/shared/services/http.ts",
+      "line": 14,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/remote-session-storage.ts",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/remote-session-storage.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/sessions/services/remote-session-storage.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/domain/environment-settings.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/domain/environment-settings.ts",
+      "to": "src/renderer/src/shared/services/settings.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/domain/environment-settings.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "to": "src/renderer/src/features/settings/views/SharingAuthorizationEditor.tsx",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "to": "src/renderer/src/features/capture/vad.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "to": "src/shared/validation/admin-parameters.cjs",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/features/settings/views/SummaryTemplateManager.tsx",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/features/settings/views/AdminSettingsPanel.tsx",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/features/settings/domain/glossary-json.ts",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SettingsView.tsx",
+      "to": "src/renderer/src/features/app/hooks/useAppController.ts",
+      "line": 8,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SharingAuthorizationEditor.tsx",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/settings/views/SummaryTemplateManager.tsx",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/speakers/diarization.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/speakers/services/voiceprint-storage.ts",
+      "to": "src/renderer/src/features/auth/services/auth-client.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/summary/domain/templates.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/summary/services/document.ts",
+      "to": "src/renderer/src/shared/services/download.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "to": "src/renderer/src/shared/services/settings.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "to": "src/renderer/src/features/translation/domain/policy.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/summary/views/SummaryWorkspace.tsx",
+      "to": "src/renderer/src/features/summary/views/MarkdownSummary.tsx",
+      "line": 7,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/import-checkpoint.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/documents.ts",
+      "to": "src/renderer/src/shared/services/download.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/documents.ts",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/documents.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/documents.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/quality-correction.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/quality-correction.ts",
+      "to": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/services/quality-correction.ts",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/views/CorrectedText.tsx",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/transcript/views/CorrectedText.tsx",
+      "to": "src/renderer/src/shared/services/transcript.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/views/CorrectedText.tsx",
+      "to": "src/renderer/src/features/transcript/services/quality-correction.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/transcript/wav-batch.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/translation/domain/policy.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/translation/services/queue.ts",
+      "to": "src/renderer/src/shared/services/caption-metrics.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/translation/services/queue.ts",
+      "to": "src/renderer/src/features/transcript/domain/live-caption.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/translation/services/queue.ts",
+      "to": "src/renderer/src/features/models/model-adapter.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/features/translation/services/queue.ts",
+      "to": "src/renderer/src/shared/services/http.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/translation/services/queue.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 5,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/features/translation/services/queue.ts",
+      "to": "src/renderer/src/features/translation/domain/policy.ts",
+      "line": 6,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/main.tsx",
+      "to": "src/renderer/src/App.tsx",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/http/authenticated-client.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 1,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 3,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/view-messages.ts",
+      "line": 65,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/status-messages-a.ts",
+      "line": 66,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/status-messages-b.ts",
+      "line": 67,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/status-messages-c.ts",
+      "line": 68,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/index.ts",
+      "to": "src/renderer/src/shared/i18n/service-messages.ts",
+      "line": 69,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/service-messages.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/status-messages-a.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/status-messages-b.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/status-messages-c.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/i18n/view-messages.ts",
+      "to": "src/renderer/src/shared/i18n/types.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/services/audio.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/caption-metrics.ts",
+      "to": "src/renderer/src/shared/services/caption-metric-transport.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/caption-metrics.ts",
+      "to": "src/renderer/src/shared/http/authenticated-client.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/http.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/opfs-pcm-recording.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/remote-pcm-recording.ts",
+      "to": "src/renderer/src/shared/http/authenticated-client.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/settings.ts",
+      "to": "src/shared/validation/admin-parameters.cjs",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/settings.ts",
+      "to": "src/renderer/src/shared/types.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/services/settings.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 3,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/settings.ts",
+      "to": "src/shared/contracts/response-speed.ts",
+      "line": 4,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/services/transcript.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/services/transcript.ts",
+      "to": "src/renderer/src/shared/i18n/index.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": false
+    },
+    {
+      "from": "src/renderer/src/shared/types.ts",
+      "to": "src/shared/contracts/application.ts",
+      "line": 2,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/types.ts",
+      "to": "src/shared/contracts/models.ts",
+      "line": 3,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/types.ts",
+      "to": "src/shared/contracts/settings.ts",
+      "line": 4,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/renderer/src/shared/types.ts",
+      "to": "src/shared/contracts/sessions.ts",
+      "line": 5,
+      "kind": "export",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/contracts/desktop.ts",
+      "to": "src/shared/contracts/settings.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/contracts/sessions.ts",
+      "to": "src/shared/contracts/transcript.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/contracts/sessions.ts",
+      "to": "src/shared/contracts/models.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/contracts/settings.ts",
+      "to": "src/shared/contracts/models.ts",
+      "line": 1,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/contracts/settings.ts",
+      "to": "src/shared/contracts/response-speed.ts",
+      "line": 2,
+      "kind": "import",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/response-speed.ts",
+      "to": "src/shared/contracts/response-speed.ts",
+      "line": 1,
+      "kind": "export",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/client.cjs",
+      "to": "server/audio/clients/local.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/client.cjs",
+      "to": "server/audio/clients/remote.cjs",
+      "line": 2,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/client.cjs",
+      "to": "server/sherpa-worker-pool.cjs",
+      "line": 7,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/clients/local.cjs",
+      "to": "server/audio/operations.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/clients/local.cjs",
+      "to": "server/sherpa-worker-pool.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/clients/local.cjs",
+      "to": "server/audio-preprocess.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/clients/remote.cjs",
+      "to": "server/audio/operations.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio/clients/remote.cjs",
+      "to": "server/audio/codec.cjs",
+      "line": 2,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio-service.cjs",
+      "to": "server/audio/client.cjs",
+      "line": 2,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/audio-service.cjs",
+      "to": "server/http/internal-audio.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/auth/index.cjs",
+      "to": "server/auth/sharing-authorization.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/auth/index.cjs",
+      "to": "server/usage-metrics.cjs",
+      "line": 2,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/auth/index.cjs",
+      "to": "server/auth/user-store.cjs",
+      "line": 8,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/auth/index.cjs",
+      "to": "server/logger.cjs",
+      "line": 9,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/auth/index.cjs",
+      "to": "server/shared-limits.cjs",
+      "line": 23,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/http/internal-audio.cjs",
+      "to": "server/import-audio.cjs",
+      "line": 5,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/http/internal-audio.cjs",
+      "to": "server/audio/operations.cjs",
+      "line": 6,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/http/internal-audio.cjs",
+      "to": "server/audio/codec.cjs",
+      "line": 7,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/http/internal-audio.cjs",
+      "to": "server/audio/clients/local.cjs",
+      "line": 8,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/summary-stream.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/summary-template-files.cjs",
+      "line": 2,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "src/shared/validation/admin-parameters.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/metrics.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/usage-metrics.cjs",
+      "line": 5,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/session-snapshot.cjs",
+      "line": 6,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/session-payload.cjs",
+      "line": 7,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/diarization-session.cjs",
+      "line": 9,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/import-audio.cjs",
+      "line": 20,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/audio-service.cjs",
+      "line": 24,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/local-diarization.cjs",
+      "line": 27,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/silero-vad.cjs",
+      "line": 29,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/voiceprint-matching.cjs",
+      "line": 30,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/storage/index.cjs",
+      "line": 31,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/auth/index.cjs",
+      "line": 32,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/auth/sharing-authorization.cjs",
+      "line": 33,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/logger.cjs",
+      "line": 34,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/request-limits.cjs",
+      "line": 35,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/recording-chunks.cjs",
+      "line": 38,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/idempotency.cjs",
+      "line": 39,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/shared-limits.cjs",
+      "line": 40,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/index.cjs",
+      "to": "server/recording-chunks.cjs",
+      "line": 130,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/local-diarization.cjs",
+      "to": "server/model-paths.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/local-diarization.cjs",
+      "to": "server/sherpa-diarization.cjs",
+      "line": 17,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/nemotron-diarization.cjs",
+      "to": "server/local-diarization.cjs",
+      "line": 8,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/nemotron-diarization.cjs",
+      "to": "server/sherpa-diarization.cjs",
+      "line": 9,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/nemotron-diarization.cjs",
+      "to": "server/logger.cjs",
+      "line": 10,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/shared-limits.cjs",
+      "to": "server/metrics.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/shared-limits.cjs",
+      "to": "server/redis-connection.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/shared-limits.cjs",
+      "to": "server/request-limits.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-diarization.cjs",
+      "to": "server/model-paths.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-diarization.cjs",
+      "to": "server/logger.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-diarization.cjs",
+      "to": "server/audio/wav.cjs",
+      "line": 6,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-diarization.cjs",
+      "to": "server/silero-vad.cjs",
+      "line": 308,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-diarization.cjs",
+      "to": "server/silero-vad.cjs",
+      "line": 350,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker-pool.cjs",
+      "to": "server/sherpa-diarization.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker-pool.cjs",
+      "to": "server/local-diarization.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker-pool.cjs",
+      "to": "server/logger.cjs",
+      "line": 5,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker.cjs",
+      "to": "server/sherpa-diarization.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker.cjs",
+      "to": "server/nemotron-diarization.cjs",
+      "line": 5,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker.cjs",
+      "to": "server/silero-vad.cjs",
+      "line": 6,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/sherpa-worker.cjs",
+      "to": "server/audio-preprocess.cjs",
+      "line": 7,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/silero-vad.cjs",
+      "to": "server/model-paths.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/silero-vad.cjs",
+      "to": "server/audio/wav.cjs",
+      "line": 5,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/index.cjs",
+      "to": "server/storage/config.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/index.cjs",
+      "to": "server/storage/local.cjs",
+      "line": 2,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/index.cjs",
+      "to": "server/storage/remote.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/index.cjs",
+      "to": "server/storage/config.cjs",
+      "line": 20,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/remote.cjs",
+      "to": "server/storage/local.cjs",
+      "line": 3,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/remote.cjs",
+      "to": "server/logger.cjs",
+      "line": 4,
+      "kind": "require",
+      "typeOnly": false
+    },
+    {
+      "from": "server/storage/voiceprint-backup.cjs",
+      "to": "server/storage/local.cjs",
+      "line": 1,
+      "kind": "require",
+      "typeOnly": false
+    }
+  ]
+}

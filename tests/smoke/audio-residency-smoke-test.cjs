@@ -1,9 +1,9 @@
 // Verify audio residency: the second heavy job of one request must not clone
 // the recording across the thread boundary again.
 const { readFileSync } = require('node:fs')
-const { diarizeWav, extractDiarizedSpeakerBlocks, sherpaWorkerPool } = require('/Users/liangzhiquan/Desktop/S2T-UI/server/sherpa-worker-pool.cjs')
+const { diarizeWav, extractDiarizedSpeakerBlocks, sherpaWorkerPool } = require('../../server/sherpa-worker-pool.cjs')
 
-const wav = readFileSync('/private/var/folders/lw/pnx1tff95cgc3tp0lx78rg9c0000gn/T/opencode/ab.wav')
+const wav = readFileSync(process.env.S2T_TEST_AUDIO_FILE || require('node:path').join(__dirname, '../fixtures/speech-sample.wav'))
 
 ;(async () => {
   const segments = await diarizeWav(wav)

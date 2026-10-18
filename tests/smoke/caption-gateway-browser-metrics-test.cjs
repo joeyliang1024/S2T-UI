@@ -5,7 +5,7 @@ const fs = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
 const { build } = require('esbuild')
-const { chromium } = require('/Users/liangzhiquan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright')
+const { chromium, browserOptions } = require('../helpers/browser.cjs')
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 ;(async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 's2t-browser-metrics-'))
@@ -17,11 +17,11 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
   })
   try {
     await new Promise((resolve, reject) => { mock.once('error', reject); mock.listen(0, '127.0.0.1', resolve) })
-    const renderer = path.join(directory, 'out/renderer'); await fs.mkdir(renderer, { recursive: true })
+    const renderer = path.join(directory, 'out/web'); await fs.mkdir(renderer, { recursive: true })
     await build({ stdin: { resolveDir: process.cwd(), loader: 'jsx', contents: `
       import React, {useState, useLayoutEffect} from 'react'; import {createRoot} from 'react-dom/client';
       import {attachCaptionTiming, parseServerTiming, registerCaptionTiming, setCaptionMeasurementActive} from './src/renderer/src/shared/services/caption-metrics';
-      import {CaptionPaintMetric} from './src/renderer/src/features/app/views/CaptionPaintMetric';
+      import {CaptionPaintMetric} from './src/renderer/src/features/captions/views/CaptionPaintMetric';
       let sequence=0;
       function App(){const [view,setView]=useState('live'),[entries,setEntries]=useState([]);
         useLayoutEffect(()=>{setCaptionMeasurementActive(view==='live');return ()=>setCaptionMeasurementActive(false)},[view]);
@@ -39,12 +39,12 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
     // Reserve a free loopback port, then use the exact gateway server/static/API path.
     const probe = createServer(); await new Promise((resolve,reject)=>{probe.once('error',reject);probe.listen(0,'127.0.0.1',resolve)})
     const port = probe.address().port; await new Promise(resolve => probe.close(resolve))
-    child = spawn(process.execPath, [path.resolve('server/index.cjs')], { cwd: directory, env: { PATH: process.env.PATH, S2T_PROCESS_ROLE: 'api', S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-browser-test-secret', S2T_ASR_ENDPOINT: `http://127.0.0.1:${mock.address().port}/v1`, S2T_ASR_MODEL: 'mock', S2T_ASR_API_KEY: 'local-only', S2T_LOG_LEVEL: 'error' }, stdio: ['ignore','pipe','pipe'] })
+    child = spawn(process.execPath, [path.resolve('server/index.cjs')], { cwd: directory, env: { PATH: process.env.PATH, S2T_PROCESS_ROLE: 'api', S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-browser-test-secret', S2T_ASR_ENDPOINT: `http://127.0.0.1:${mock.address().port}/v1`, S2T_ASR_MODEL: 'mock', S2T_ASR_API_KEY: 'local-only', S2T_LOG_LEVEL: 'error' }, stdio: ['ignore','pipe','pipe'] })
     child.stdout.on('data', data => output += data); child.stderr.on('data', data => output += data)
     const origin = `http://127.0.0.1:${port}`
     let ready = false
     for (let i=0;i<100;i++){try{if((await fetch(origin+'/readyz')).ok){ready=true;break}}catch{}await sleep(100)}assert.ok(ready,output)
-    browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
+    browser = await chromium.launch(browserOptions())
     const context = await browser.newContext(), page = await context.newPage(), samples = [], errors = []
     const registered = await context.request.post(origin+'/api/auth/register',{data:{username:'browser-metrics',password:'local-test-password',NT:'browser-metrics',Department:'test'}})
     assert.equal(registered.status(),201)

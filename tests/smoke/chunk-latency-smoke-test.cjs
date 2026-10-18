@@ -5,7 +5,7 @@ const m={exports:{}};new Function('module','exports','require',result.outputFile
  let clock=10000;const saved=global.performance;global.performance={now:()=>clock};global.observedTimings=[];
  global.window={s2t:{transcribeAudioChunk:async()=>{clock+=400;return{text:'visible chunk'}}}};
  try{
- const adapter=new m.exports.OpenAiChunkedModelAdapter({id:'test',model:'test',endpoint:'http://unused',requiresApiKey:false,vadConfig:{minSpeechMs:120,minSilenceMs:250,preRollMs:300,noiseFloorOffsetDb:12,chunkMinMs:700,chunkMaxMs:1500}});
+ const adapter=m.exports.createOpenAiChunkedModelAdapter({id:'test',model:'test',endpoint:'http://unused',requiresApiKey:false,vadConfig:{minSpeechMs:120,minSilenceMs:250,preRollMs:300,noiseFloorOffsetDb:12,chunkMinMs:700,chunkMaxMs:1500}});
  await adapter.start({sampleRate:16000,language:'en',targetLanguage:'en'});
  for(let offset=0;offset<96000;offset+=512){clock=10000+(offset+512)/16;adapter.pushAudio(Float32Array.from({length:512},(_,i)=>.1*Math.sin(2*Math.PI*180*(offset+i)/16000)),offset)}
  await adapter.stop();assert.ok(observedTimings.length>=4,'continuous speech must produce multiple measured chunks');

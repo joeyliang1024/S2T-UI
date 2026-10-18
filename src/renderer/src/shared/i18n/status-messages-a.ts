@@ -1,4 +1,4 @@
-import type { UiLanguage } from './index'
+import type { UiLanguage } from './types'
 
 /**
  * Status copy, batch A: transient toasts, inline errors, state labels, and

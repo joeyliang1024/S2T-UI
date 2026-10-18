@@ -17,7 +17,7 @@
 
 最長整組回應約 15 秒。4 Pod 波動情境確實執行 80 次 12 秒 ASR 與 80 次 3 秒翻譯；2 Pod 情境執行 27／40 次。日誌另確認 5 次長 ASR 在 SIGTERM 之後仍成功完成，沒有被關機截斷。100 個帳號的既有音訊 SHA256、工作完成狀態、翻譯與聲紋資料最終完整性檢查全部通過。
 
-2 Pod 測試的開始快照含縮容中的舊 Pod，因此原始 pods-before 共 4 筆；Deployment 已縮至 2 個副本並完成 rollout，後續兩次更新與最終快照均以 2 個副本驗證。Pod 時序保留供核對。
+2 Pod 測試的開始快照含縮容中的舊 Pod，共 4 筆；Deployment 已縮至 2 個副本並完成 rollout，後續兩次更新與最終快照均以 2 個副本驗證。
 
 ## 根因與修正
 
@@ -32,23 +32,13 @@
 - 4 個 Gateway 加 maxSurge=1 時 CPU requests 不足，更新卡在 Pending。調整 Redis request 至 100m、Sentinel 至 25m，保留 surge 排程空間，未新增 CPU limit。
 - Redis／Sentinel 重建後，持久化的舊 Pod IP 讓 replica 指向不存在的 primary。改用 StatefulSet 固定 DNS，Sentinel 啟用 resolve-hostnames 與 announce-hostnames，並維護自身固定 DNS 公告。修正準備期間曾發生隔離 Redis 中斷；復原後再重建全套 Redis／Sentinel，確認一主兩從、replication link up、探針資料保留，再開始上述有效壓測。依據：[Redis Sentinel hostname 設定](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/)。
 
-早期更新因 Pending 未完成的試跑另存 invalid-baseline-4pods-pending，未計入有效結果。
+早期更新因 Pending 未完成的試跑不計入有效結果。
 
 ## 證據與重現
 
-- [結果摘要](results/summary.json)、[長請求排空證據](results/long-request-drain-proof.json)、[100 帳號完整性](results/final-integrity.json)。
-- results/ 含每階段狀態碼、延遲、mock 計數前後差異、Pod 時序與 rollout 日誌；logs/ 含實際 Gateway 關機日誌。
-- [部署快照](manifests/stack-final.json)、程式修正 (intermediate artifact removed)、[延遲設定](profiles/jitter-tail.json)。
 - HTTP lifecycle smoke、scale smoke、TypeScript typecheck 與 Kustomize 產物驗證通過。
 
-既有測試叢集與 load-client 保留時，可在專案根目錄執行（每次更換 phase 名稱，避免覆寫證據）：
-
-```sh
-sh experiment/k8s/history/rollout-2026-10-05/run-phase.sh rerun-4pods 4 120 jitter-tail 2
-sh experiment/k8s/history/rollout-2026-10-05/run-phase.sh rerun-2pods 2 120 slow 2
-```
-
-完整建立流程與隔離 Secret 位於前次實驗目錄；stack-final.json 不含 Secret，也不包含 load-client 暫存帳號與腳本，不能單獨還原全部測試。延遲波動為隨機分布，重跑百分位會略有差異。
+完整建立流程與隔離 Secret 位於前次實驗目錄；部署快照不含 Secret，也不包含 load-client 暫存帳號與腳本，不能單獨還原全部測試。延遲波動為隨機分布，重跑百分位會略有差異。
 
 目前隔離叢集恢復為 4 個 Gateway、1 個 audio-worker，模型延遲恢復 ASR 400／翻譯 180 ms；測試網頁：http://localhost:8790。原本 localhost:8787 與原 Docker 儲存資料未修改。
 

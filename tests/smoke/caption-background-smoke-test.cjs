@@ -4,7 +4,7 @@ const { buildSync } = require('esbuild')
 const ts = require('typescript')
 const { finalizeDiarizationSession, matchesJob } = require('../../server/diarization-session.cjs')
 const { loadSessionSnapshot } = require('../../server/session-snapshot.cjs')
-const code = buildSync({ stdin: { contents: `export * from './src/renderer/src/features/app/services/live-caption'; export * from './src/renderer/src/features/app/services/translation-queue'; export * from './src/renderer/src/features/app/services/translation-policy'; export * from './src/renderer/src/features/app/services/session-merge'; export * from './src/renderer/src/shared/services/transcript'; export * from './src/renderer/src/features/speakers/diarization'; export * from './src/renderer/src/shared/services/http';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ stdin: { contents: `export * from './src/renderer/src/features/transcript/domain/live-caption'; export * from './src/renderer/src/features/translation/services/queue'; export * from './src/renderer/src/features/translation/domain/policy'; export * from './src/renderer/src/features/sessions/domain/session-merge'; export * from './src/renderer/src/shared/services/transcript'; export * from './src/renderer/src/features/speakers/diarization'; export * from './src/renderer/src/shared/services/http';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }; new Function('module', 'exports', 'require', code)(m, m.exports, require)
 const { freezeCaptionGroups, HttpServiceError, TranslationQueue, makeTranscriptText, mergeSessions, recoverStaleProcessing, assignSpeakersByOverlap, parseSpeakerTurns, readJsonResponse, shouldSkipTranslation, resolveTranslationTarget } = m.exports
 const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
@@ -36,7 +36,7 @@ async function capture({ continuation=false, diarization=false, translateFails=f
     resamplerRef:ref(null),sampleOffsetRef:ref(0),modelRef:ref({stop:()=>asr.promise}),translationReady:true,
     settings:{targetLanguage:'en',translationStrategy:'realtime',translationLoadStrategy:'auto',diarizationModel:diarization?'mock':'',diarizationPreviewEnabled:false,diarizationEndpoint:''},
     translationElapsedMsRef:ref(10000),OpenAiChunkedModelAdapter:class {},shouldSkipTranslation,resolveTranslationTarget,
-    remotePcmRecordingRef:ref(null),electronRecordingIdRef:ref(null),pcmWriterRef:ref(null),opfsRecordingRef:ref(null),opfsRecordingIdRef:ref(null),pcmChunksRef:ref([]),sampleRateRef:ref(16000),
+    pcmSinkRef:ref(null),remotePcmRecordingRef:ref(null),electronRecordingIdRef:ref(null),pcmWriterRef:ref(null),opfsRecordingRef:ref(null),opfsRecordingIdRef:ref(null),pcmChunksRef:ref([]),sampleRateRef:ref(16000),
     makeWav:()=>new Blob(['fake audio']),appendAudio:async()=>new Blob(['merged audio']),makeTranscriptText,
     remoteSessionStorage:{saveAudio:async()=>{await audio.promise;if(audioFails)throw new Error('audio failed')},deleteAudio:async()=>{}},browserDownload:()=>{},
     activeModelSnapshotRef:ref(null),activeAudioVersionFor:entry=>({audioKey:entry.audioKey}),audioVersionsFor:()=>[],liveSessionIdRef:ref(null),liveDraftRef:ref(null),
@@ -98,12 +98,11 @@ async function main(){
   assert.ok(done.segments.every(entry=>entry.translatedText));assert.equal(matchesJob({...running,processingToken:'new'},job),false)
   assert.equal(finalizeDiarizationSession({...running,processingToken:'new'},job,[]).processingState,'running','stale job is ignored')
   assert.equal(finalizeDiarizationSession({...running,processingError:'translation timeout'},job,[]).processingState,'failed')
-  const workerSource=readFileSync('server/index.cjs','utf8')
-  const workerCode=workerSource.slice(workerSource.indexOf('const runDurableDiarizationJob ='),workerSource.indexOf('const staticFile ='))
+  const { createDiarizationJobRunner } = require('../../server/jobs/diarization.cjs')
   const runWorker=async(target,latest=target,owns=true,environment={})=>{
     let inference=0,writes=0,finishedError,stored,reads=0,renewals=0,cleared=0,accountReads=0
     const context={resolveLocalDiarizationModel:model=>model||'sherpa-onnx-speaker-diarization',diarization:environment,setInterval:fn=>{fn();return {unref(){}}},clearInterval:()=>{cleared++},storage:{config:{renewDiarizationJob:async()=>{renewals++;return true},claimDiarizationJob:async()=>({...job,id:'job',attempts:1,userId:'test',leaseGeneration:1,payload:{...job.payload,user:{id:'test'}}}),get:async()=>({sessions:[reads++?latest:target],version:1}),commitDiarizationJob:async(_id,_owner,_generation,_user,_version,value)=>{if(!owns)return 'lost';writes++;stored=value;return 'committed'},stillOwnsDiarizationJob:async()=>owns,compareAndSwap:async(_user,_key,_version,value)=>{writes++;stored=value;return true},finishDiarizationJob:async(_id,_owner,_generation,error)=>{finishedError=error}},blob:{get:async()=>Buffer.from('fake')}},diarizationJobMaxAttempts:10,logger:{info:()=>{},warn:()=>{},error:()=>{}},matchesJob,finalizeDiarizationSession,loadSessionSnapshot,accountModelService:async()=>{accountReads++;return null},diarizeWav:async()=>{inference++;return [{start:0,end:6,speaker:'speaker1'}]},labelDiarizationTurns:async(_user,_audio,turns)=>turns}
-    await new Function(...Object.keys(context),workerCode+'; return runDurableDiarizationJob')(...Object.values(context))({},'owner')
+    await createDiarizationJobRunner(context)({},'owner')
     assert.equal(renewals,1);assert.equal(cleared,1);return {inference,writes,finishedError,stored,accountReads}
   }
   const workerDone=await runWorker(running);assert.equal(workerDone.inference,1);assert.equal(workerDone.writes,1);assert.equal(workerDone.stored.sessions[0].processingState,'completed')
