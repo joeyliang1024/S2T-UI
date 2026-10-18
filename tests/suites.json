@@ -76,7 +76,8 @@
     "quality-comparison-smoke-test.cjs",
     "failed-record-summary-smoke-test.cjs",
     "search-smoke-test.cjs",
-    "model-api-test-smoke-test.cjs"
+    "model-api-test-smoke-test.cjs",
+    "data-directory-prompts-smoke-test.cjs"
   ],
   "http": [
     "gateway-env-smoke-test.cjs",
