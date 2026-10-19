@@ -10,7 +10,7 @@ dotenv.config({ path: process.env.S2T_STORAGE_ENV_FILE || '.env.local-storage', 
 
 const apply = process.argv.includes('--apply')
 const adoptMatchingUsers = process.argv.includes('--adopt-matching-users')
-const sourceDirectory = process.env.S2T_MIGRATION_SOURCE_DIR || process.env.DATA_DIR || process.env.S2T_LOCAL_DATA_DIR || join(process.cwd(), '.s2t-data')
+const sourceDirectory = require('../../src/shared/validation/directory-path.cjs').resolveDirectory(process.env.S2T_MIGRATION_SOURCE_DIR, require('../../src/shared/validation/data-paths.cjs').dataPaths().root)
 const summary = { users: 0, adoptedUsers: 0, mappedUnownedScopes: 0, config: 0, glossaries: 0, blobs: 0, vectors: 0, voiceprintMetadata: 0, skipped: 0, unowned: [], conflicts: [] }
 const accountKey = /^account-([a-z0-9._-]{3,64})$/
 const migrationJournalFile = join(sourceDirectory, 'migration-last-run.json')

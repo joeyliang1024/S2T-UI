@@ -11,15 +11,14 @@ services:
       - .env
     environment:
       # Container paths override the host-relative values in .env.
-      S2T_MODELS_DIR: /models
-      DATA_DIR: /data
+      S2T_MODEL_DIR: /models
+      S2T_DATA_DIR: /data
       S2T_WEB_PORT: "8787"
     ports:
       - "127.0.0.1:8787:8787"
     volumes:
-      - ./models:/models:ro
-      - gateway-data:/data
-      - ./data/template:/data/template:ro
+      - ${S2T_MODEL_DIR:-./models}:/models:ro
+      - ${S2T_DATA_DIR:-gateway-data}:/data
     restart: unless-stopped
 volumes:
   gateway-data:

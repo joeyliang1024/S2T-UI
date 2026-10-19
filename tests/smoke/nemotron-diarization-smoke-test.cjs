@@ -18,7 +18,7 @@ async function main () {
   assert.throws(() => parseRttm('SPEAKER test 1 -1 2 <NA> <NA> speaker_1', 10), /格式/)
   assert.throws(() => parseRttm('SPEAKER test 1 1 NaN <NA> <NA> speaker_1', 10), /格式/)
   verifyRuntime()
-  const pool = require('../../server/sherpa-worker-pool.cjs')
+  const pool = require('../../server/audio-worker-pool.cjs')
   const original = process.env.S2T_DIARIZATION_MODEL
   try {
     process.env.S2T_DIARIZATION_MODEL = 'nemotron-3-diarization'
@@ -38,7 +38,7 @@ async function main () {
     console.log(JSON.stringify({ passed: true, model: 'nemotron-3-diarization', runtime: 'cpu', seconds: 60, elapsedMs: Date.now() - begin, turns: turns.length, speakers: [...new Set(turns.map(t => t.speaker))], embeddings: Object.keys(embeddings) }))
   } finally {
     if (original === undefined) delete process.env.S2T_DIARIZATION_MODEL; else process.env.S2T_DIARIZATION_MODEL = original
-    await pool.sherpaWorkerPool.close()
+    await pool.audioWorkerPool.close()
   }
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -12,7 +12,9 @@ const createStorage = (environment = process.env) => {
   // Advisory-lock clients are held for the full request. Keep them separate
   // from application queries so a deployment configured with pool max=1 does
   // not deadlock when a fenced operation reads or writes config records.
-  const fencePool = configStore.pool ? new Pool({ ...configStore.pool.options, max: Math.max(1, Number(configStore.pool.options.max) || 10) }) : null
+  // pg hides options.password as a non-enumerable property. Spreading options
+  // alone silently drops it and makes fenced writes fail SCRAM authentication.
+  const fencePool = configStore.pool ? new Pool({ ...configStore.pool.options, password: configStore.pool.options.password, max: Math.max(1, Number(configStore.pool.options.max) || 10) }) : null
   const fence = createAccountFence({ localDataDirectory: config.localDataDirectory, pool: fencePool, getUserState: async (userId, client) => {
     if (typeof configStore.getUserState !== 'function') throw new Error('Storage 不支援帳號刪除圍欄')
     return configStore.getUserState(userId, client)

@@ -22,7 +22,7 @@ WORKDIR /app
 ARG NPM_REGISTRY
 ENV NODE_ENV=production \
     S2T_WEB_PORT=8787 \
-    S2T_MODELS_DIR=/models DATA_DIR=/data
+    S2T_MODEL_DIR=/models S2T_DATA_DIR=/data
 COPY package.json package-lock.json ./
 COPY dependencies/npm ./dependencies/npm
 COPY dependencies/ffmpeg-static /opt/s2t-dependencies/ffmpeg-static

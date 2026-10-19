@@ -21,12 +21,11 @@ docker create --name s2t-sherpa-models joeyliang1024/s2t-sherpa-models:1.13.8 /b
 mkdir -p ./models
 docker cp s2t-sherpa-models:/models/sherpa-onnx ./models/sherpa-onnx
 docker rm s2t-sherpa-models
-export S2T_MODELS_DIR="$(pwd)/models"
+export S2T_MODEL_DIR="$(pwd)/models"
 ```
 
 此映像專為 Linux x64（`linux/amd64`）公司環境製作。若模型放在其他位置，設定
-`S2T_MODELS_DIR` 指向共用模型根目錄，sherpa 讀取其 `sherpa-onnx/` 子目錄，再啟動 gateway。
-舊 `S2T_SHERPA_MODELS_DIR` 可繼續指定 sherpa 子目錄，會優先於共用根目錄。
+`S2T_MODEL_DIR` 指向共用模型根目錄，sherpa 讀取其 `sherpa-onnx/` 子目錄，再啟動 gateway。
 
 在 Electron 的「完整設定」填入：
 
@@ -78,4 +77,4 @@ Web 版若透過 Vite 執行，未填 endpoint 時會直接呼叫同源 `/api/di
 
 請以安靜環境、單一講者且至少 1 秒的 WAV 註冊。可用 `S2T_VOICEPRINT_THRESHOLD`（0 到 1）調整門檻；提高門檻可減少誤配，降低門檻可減少漏配。
 
-新部署以 `S2T_MODELS_DIR` 指向所有模型的根目錄（預設 `./models`）；sherpa 自動讀取其 `sherpa-onnx/` 子目錄。舊 `S2T_SHERPA_MODELS_DIR` 仍可覆寫 sherpa 子目錄，既有 segmentation／embedding 單檔變數優先。
+新部署以 `S2T_MODEL_DIR` 指向所有模型的根目錄（預設 `./models`）；sherpa 自動讀取其 `sherpa-onnx/` 子目錄。不再提供 sherpa 子目錄或單檔路徑覆寫。

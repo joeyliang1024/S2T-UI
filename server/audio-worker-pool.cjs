@@ -35,22 +35,22 @@ const estimateAudioSec = (payload) => {
 }
 
 /**
- * Two pools instead of one. A 40 minute diarization job must not sit in front
+ * Three pools separate heavy, interactive and Silero workloads. A 40 minute diarization job must not sit in front
  * of the Silero call that answers a settings page, and a queued enrollment
  * must not wait for a meeting transcription to finish.
  *
  * The initial production default is deliberately one CPU-heavy job per pod.
  * Operators scale dedicated audio-worker pods before increasing this value.
  */
-class SherpaWorkerPool {
+class AudioWorkerPool {
   constructor ({
-    label = 'sherpa',
-    size = positiveInteger(process.env.S2T_SHERPA_WORKERS, 1),
-    maxQueue = positiveInteger(process.env.S2T_SHERPA_MAX_QUEUE, 8),
+    label = 'audio',
+    size = positiveInteger(process.env.S2T_AUDIO_HEAVY_WORKERS, 1),
+    maxQueue = positiveInteger(process.env.S2T_AUDIO_HEAVY_MAX_QUEUE, 8),
     // Cap for the length-scaled timeout below.
-    capTimeoutMs = positiveInteger(process.env.S2T_SHERPA_JOB_TIMEOUT_MS, 1_800_000),
-    baseTimeoutMs = positiveNumber(process.env.S2T_SHERPA_JOB_TIMEOUT_BASE_MS, 60_000),
-    timeoutPerAudioSec = positiveNumber(process.env.S2T_SHERPA_JOB_TIMEOUT_PER_AUDIO_SEC, 400)
+    capTimeoutMs = positiveInteger(process.env.S2T_AUDIO_HEAVY_JOB_TIMEOUT_MS, 1_800_000),
+    baseTimeoutMs = positiveNumber(process.env.S2T_AUDIO_JOB_TIMEOUT_BASE_MS, 60_000),
+    timeoutPerAudioSec = positiveNumber(process.env.S2T_AUDIO_JOB_TIMEOUT_PER_AUDIO_SEC, 400)
   } = {}) {
     this.label = label
     this.size = size
@@ -90,11 +90,11 @@ class SherpaWorkerPool {
   }
 
   spawn () {
-    const entry = { worker: new Worker(join(__dirname, 'sherpa-worker.cjs')), busy: false, unavailable: false, jobId: null, intentionalExit: false, audioIds: new Map() }
+    const entry = { worker: new Worker(join(__dirname, 'audio-worker.cjs')), busy: false, unavailable: false, jobId: null, intentionalExit: false, audioIds: new Map() }
     entry.worker.on('message', (message) => this.complete(entry, message))
     entry.worker.on('error', (error) => this.failWorker(entry, error))
     entry.worker.on('exit', (code) => {
-      if (!entry.intentionalExit && code !== 0) this.failWorker(entry, new Error(`sherpa worker 非正常結束（code ${code}）`))
+      if (!entry.intentionalExit && code !== 0) this.failWorker(entry, new Error(`audio worker 非正常結束（code ${code}）`))
       this.workers = this.workers.filter((item) => item !== entry)
       if (!this.closed) { this.start(); this.dispatch() }
     })
@@ -108,8 +108,8 @@ class SherpaWorkerPool {
    * second time.
    */
   execute (operation, payload, { priority = 'background', timeoutMs, signal, retainAudio = false } = {}) {
-    if (this.closed) return Promise.reject(new Error('sherpa worker pool 已關閉'))
-    if (signal?.aborted) return Promise.reject(new Error('sherpa 工作已取消'))
+    if (this.closed) return Promise.reject(new Error('audio worker pool 已關閉'))
+    if (signal?.aborted) return Promise.reject(new Error('音訊工作已取消'))
     if (this.workers.length && this.workers.every((entry) => entry.unavailable)) return Promise.reject(new Error('語者 worker 正在恢復逾時工作，暫時無法接受新工作'))
     if (this.queue.length + this.jobs.size >= this.maxQueue) {
       logger.warn('worker.queue.full', { pool: this.label, operation, queued: this.queue.length, inFlight: this.jobs.size, maxQueue: this.maxQueue })
@@ -144,10 +144,10 @@ class SherpaWorkerPool {
       }
       job.cancel = () => {
         const queuedAt = this.queue.indexOf(job)
-        if (queuedAt !== -1) { this.queue.splice(queuedAt, 1); reject(new Error('sherpa 工作已取消')); return }
+        if (queuedAt !== -1) { this.queue.splice(queuedAt, 1); reject(new Error('音訊工作已取消')); return }
         if (!this.jobs.has(job.id)) return
         const entry = this.workers.find((item) => item.jobId === job.id)
-        this.finishJob(job, new Error('sherpa 工作已取消'))
+        this.finishJob(job, new Error('音訊工作已取消'))
         if (entry) entry.unavailable = true
       }
       signal?.addEventListener('abort', job.cancel, { once: true })
@@ -200,7 +200,7 @@ class SherpaWorkerPool {
       job.startedAt = Date.now()
       job.timer = setTimeout(() => {
         if (!this.jobs.has(job.id)) return
-        this.finishJob(job, new Error(`sherpa ${job.operation} 逾時`))
+        this.finishJob(job, new Error(`audio ${job.operation} 逾時`))
         // sherpa native calls are synchronous. Terminating their thread can
         // abort the whole Node process, so quarantine it until it returns.
         entry.unavailable = true
@@ -277,10 +277,10 @@ class SherpaWorkerPool {
     })
   }
 
-  async close ({ graceMs = positiveInteger(process.env.S2T_SHERPA_CLOSE_GRACE_MS, 15_000) } = {}) {
+  async close ({ graceMs = positiveInteger(process.env.S2T_AUDIO_CLOSE_GRACE_MS, 15_000) } = {}) {
     this.closed = true
-    for (const job of this.queue.splice(0)) job.reject(new Error('sherpa worker pool 已關閉'))
-    for (const job of this.jobs.values()) this.finishJob(job, new Error('sherpa worker pool 已關閉'))
+    for (const job of this.queue.splice(0)) job.reject(new Error('audio worker pool 已關閉'))
+    for (const job of this.jobs.values()) this.finishJob(job, new Error('audio worker pool 已關閉'))
     if (!await this.awaitIdle(graceMs)) {
       // Grace expired: the native call is still running. Terminating it aborts
       // the process, so make that visible instead of failing silently.
@@ -317,14 +317,14 @@ class SherpaWorkerPool {
 
 // Interactive: settings, enrollment and VAD answers must never queue behind a
 // meeting-sized job.
-const interactivePool = new SherpaWorkerPool({
+const interactivePool = new AudioWorkerPool({
   label: 'interactive',
-  size: positiveInteger(process.env.S2T_SHERPA_FAST_WORKERS, 1),
-  maxQueue: positiveInteger(process.env.S2T_SHERPA_FAST_MAX_QUEUE, 8),
-  capTimeoutMs: positiveInteger(process.env.S2T_SHERPA_FAST_JOB_TIMEOUT_MS, 120_000)
+  size: positiveInteger(process.env.S2T_AUDIO_INTERACTIVE_WORKERS, 1),
+  maxQueue: positiveInteger(process.env.S2T_AUDIO_INTERACTIVE_MAX_QUEUE, 8),
+  capTimeoutMs: positiveInteger(process.env.S2T_AUDIO_INTERACTIVE_JOB_TIMEOUT_MS, 120_000)
 })
 // Heavy: diarization and per-speaker embeddings.
-const heavyPool = new SherpaWorkerPool({ label: 'heavy' })
+const heavyPool = new AudioWorkerPool({ label: 'heavy' })
 // Dedicated Silero pool. Per-chunk VAD gating is on the live-caption path, so
 // it must never queue behind a voiceprint enrolment, and its capacity is an
 // independent knob: each worker thread owns one ONNX session, so
@@ -333,7 +333,7 @@ const heavyPool = new SherpaWorkerPool({ label: 'heavy' })
 // quarantine on timeout, explicit rejection on queue overflow — never a
 // silent stall). Raise it only after scaling CPU: workers x infer threads
 // must stay within the pod limit.
-const sileroPool = new SherpaWorkerPool({
+const sileroPool = new AudioWorkerPool({
   label: 'silero',
   size: positiveInteger(process.env.S2T_SILERO_VAD_WORKERS, 1),
   maxQueue: positiveInteger(process.env.S2T_SILERO_VAD_MAX_QUEUE, 32),
@@ -347,7 +347,7 @@ const sileroPool = new SherpaWorkerPool({
 const interactive = (operation, payload) => interactivePool.execute(operation, payload, { priority: 'interactive' })
 
 // Aggregate view for metrics, health output and shutdown.
-const sherpaWorkerPool = {
+const audioWorkerPool = {
   execute: (operation, payload, options) => heavyPool.execute(operation, payload, options),
   stats () {
     const pools = { interactive: interactivePool.stats(), heavy: heavyPool.stats(), silero: sileroPool.stats() }
@@ -397,7 +397,7 @@ const sherpaWorkerPool = {
 
 module.exports = {
   modelPaths,
-  sherpaWorkerPool,
+  audioWorkerPool,
   assessVoiceprintSample: (audio) => interactive('assessVoiceprintSample', { audio }),
   extractSpeakerEmbedding: (audio) => interactive('extractSpeakerEmbedding', { audio }),
   // The calls below see the same recording inside one request: retain it once.

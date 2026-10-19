@@ -26,7 +26,7 @@ const main = async () => {
     cwd: directory,
     // Run outside the repository with a minimal environment so developer
     // dotenv/remote audio-service/Redis settings cannot leak into this test.
-    env: { PATH: process.env.PATH, S2T_MODELS_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: directory, S2T_WEB_ORIGINS: `http://127.0.0.1:${port},null`, S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
+    env: { PATH: process.env.PATH, S2T_MODEL_DIR: join(__dirname, '..', '..', 'models'), S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_DATA_DIR: directory, S2T_WEB_ORIGINS: `http://127.0.0.1:${port},null`, S2T_BOOTSTRAP_ADMIN_USERNAME: '', S2T_BOOTSTRAP_ADMIN_PASSWORD: '', S2T_ASR_ENDPOINT: 'http://127.0.0.1:9/v1', S2T_ASR_MODEL: 'smoke-asr', S2T_ASR_API_KEY: 'smoke-key', S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '', S2T_POSTGRES_HOST: '', S2T_POSTGRES_PORT: '', S2T_POSTGRES_DB_NAME: '', S2T_POSTGRES_USER: '', S2T_POSTGRES_PASSWORD: '', S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe']
   })
   let output = ''
@@ -163,7 +163,10 @@ const main = async () => {
     result = await request(base, '/api/data/summary-templates', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, templates, selectedTemplateId: 'meeting' }) })
     assert.deepEqual(result.body, { saved: true, version: 1 })
     result = await request(base, '/api/data/summary-templates', { headers: bearer(bob) })
-    assert.deepEqual(result.body, { templates: [], selectedTemplateId: null, version: 0 })
+    assert.equal(result.body.version, 0)
+    assert.ok(result.body.templates.every(template => template.sourceFile), 'Bob should only see shared file templates, never Alice\'s personal templates')
+    assert.equal(result.body.templates.some(template => template.id === 'meeting'), false)
+    assert.equal(result.body.selectedTemplateId, result.body.templates[0]?.id ?? null)
     result = await request(base, '/api/data/summary-templates', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, templates, selectedTemplateId: 'meeting' }) })
     assert.equal(result.response.status, 409)
     result = await request(base, '/api/data/audio/alice-session', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'audio/wav' }, body: Buffer.from('alice-audio') })
@@ -178,8 +181,8 @@ const main = async () => {
     assert.match(result.body.error, /明確同意/)
     const metrics = await fetch(`${base}/metrics`).then((response) => response.text())
     assert.match(metrics, /s2t_gateway_request_duration_seconds_bucket\{route="audio_processing_silero_vad"/)
-    assert.match(metrics, /s2t_sherpa_worker_jobs\{pool="interactive",state="queued"/)
-    assert.match(metrics, /s2t_sherpa_op_transferred_bytes_total\{op="sileroVad"\}/)
+    assert.match(metrics, /s2t_audio_worker_jobs\{pool="interactive",state="queued"/)
+    assert.match(metrics, /s2t_audio_op_transferred_bytes_total\{op="sileroVad"\}/)
     console.log('Gateway auth smoke test passed.')
   } finally {
     child.kill()

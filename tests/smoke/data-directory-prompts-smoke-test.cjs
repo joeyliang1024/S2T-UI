@@ -6,11 +6,13 @@ const { readStorageConfig } = require('../../server/storage/config.cjs')
 const { buildSync } = require('esbuild')
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 's2t-prompts-'))
 try {
- const env = { DATA_DIR: directory, S2T_LOCAL_DATA_DIR: '/legacy', S2T_SUMMARY_TEMPLATES_DIR: '/legacy-templates' }
+ const env = { S2T_DATA_DIR: directory, DATA_DIR: '/legacy', S2T_LOCAL_DATA_DIR: '/legacy', S2T_SUMMARY_TEMPLATES_DIR: '/legacy-templates' }
  assert.deepEqual(dataPaths(env), { root: directory, prompt: path.join(directory,'prompt'), template:path.join(directory,'template') })
  assert.equal(readStorageConfig(env).localDataDirectory, directory)
- assert.equal(dataPaths({S2T_LOCAL_DATA_DIR:directory}).root,directory)
- assert.equal(dataPaths({S2T_SUMMARY_TEMPLATES_DIR:directory}).template,directory)
+ assert.equal(dataPaths({S2T_DATA_DIR:' ~/data '}).root,path.join(os.homedir(),'data'))
+ assert.equal(dataPaths({S2T_DATA_DIR:'relative/data'}).root,path.resolve('relative/data'))
+ assert.equal(dataPaths({DATA_DIR:directory,S2T_LOCAL_DATA_DIR:directory}).root,path.resolve('.s2t-data'))
+ assert.equal(dataPaths({S2T_SUMMARY_TEMPLATES_DIR:directory}).template,path.resolve('.s2t-data/template'))
  const paths = initializeDataFiles(env)
  fs.writeFileSync(path.join(directory, 'auth-secret'), 'keep-existing-secret')
  assert.ok(fs.existsSync(path.join(paths.template,'會議摘要.md')))
@@ -31,5 +33,5 @@ try {
  assert.equal(m.exports.prompt('title',{language:'de',maximum:20}),'TITLE de 20','invalid catalog cannot partially replace live prompts')
  fs.writeFileSync(path.join(paths.prompt,'prompts.json'),JSON.stringify(broken))
  assert.throws(()=>loadPrompts(env),/Missing prompt variable/)
- console.log('PASS DATA_DIR precedence, legacy paths, first-run seeding, custom prompt persistence, auth secret preservation, runtime reload, safe interpolation and atomic renderer validation')
+ console.log('PASS S2T_DATA_DIR normalization, removed aliases ignored, first-run seeding, custom prompt persistence, auth secret preservation, runtime reload, safe interpolation and atomic renderer validation')
 } finally { fs.rmSync(directory,{recursive:true,force:true}) }

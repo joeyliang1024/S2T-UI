@@ -79,12 +79,13 @@ const main = async () => {
         ...process.env,
         ...credentials,
         S2T_POSTGRES_DB_NAME: database,
+        S2T_POSTGRES_MAX_CONNECTIONS: '1',
         S2T_AUTH_SECRET: `startup-smoke-${randomUUID()}`,
         S2T_BOOTSTRAP_ADMIN_USERNAME: 'startup-smoke-admin',
         S2T_BOOTSTRAP_ADMIN_PASSWORD: 'startup-smoke-password',
         S2T_WEB_PORT: String(port),
         S2T_WEB_ORIGINS: `http://127.0.0.1:${port}`,
-        S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: dataDirectory,
+        S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_DATA_DIR: dataDirectory,
         S2T_MINIO_ENDPOINT: '', S2T_MINIO_BUCKET: '', S2T_MINIO_ACCESS_KEY: '', S2T_MINIO_SECRET_KEY: '',
         S2T_MILVUS_ENDPOINT: '', S2T_MILVUS_DB_NAME: '', S2T_MILVUS_COLLECTION: '', S2T_MILVUS_TOKEN: ''
       },
@@ -125,7 +126,13 @@ const main = async () => {
       headers: { 'content-type': 'application/json', authorization: `Bearer ${registration.body.token}` },
       body: JSON.stringify({ settings: { theme: 'system' }, version: 0 })
     })
-    assert.equal(settings.status, 200, `storage 寫入失敗：${JSON.stringify(settings.body)}`)
+    assert.equal(settings.status, 200, `storage 寫入失敗：${JSON.stringify(settings.body)}\n${output}`)
+
+    const savedSettings = await probe('/api/data/settings', {
+      headers: { authorization: `Bearer ${registration.body.token}` }
+    })
+    assert.equal(savedSettings.status, 200)
+    assert.equal(savedSettings.body.settings.theme, 'system', 'Postgres 應保存受帳號鎖保護的設定寫入')
 
     assert.equal(exitState.value, null, `gateway 在 API 呼叫期間退出：${JSON.stringify(exitState.value)}\n${output}`)
     console.log('Gateway storage startup smoke test passed.')

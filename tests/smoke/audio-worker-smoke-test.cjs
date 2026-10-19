@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict')
-const { assessVoiceprintSample, sherpaWorkerPool, sileroVadStatus } = require('../../server/sherpa-worker-pool.cjs')
+const { assessVoiceprintSample, audioWorkerPool, sileroVadStatus } = require('../../server/audio-worker-pool.cjs')
 
 const makeWav = ({ seconds = 3.2, sampleRate = 16_000 } = {}) => {
   const frames = Math.floor(seconds * sampleRate)
@@ -19,14 +19,18 @@ const makeWav = ({ seconds = 3.2, sampleRate = 16_000 } = {}) => {
   // VAD must land on its own pool, not behind voiceprint work on interactive.
   const vad = await sileroVadStatus()
   assert.equal(typeof vad.available, 'boolean')
-  const stats = sherpaWorkerPool.stats()
+  const stats = audioWorkerPool.stats()
+  assert.equal(stats.pools.heavy.configured, Number(process.env.S2T_AUDIO_HEAVY_WORKERS || 1))
+  assert.equal(stats.pools.interactive.configured, Number(process.env.S2T_AUDIO_INTERACTIVE_WORKERS || 1))
+  assert.equal(stats.pools.heavy.maxQueue, Number(process.env.S2T_AUDIO_HEAVY_MAX_QUEUE || 8))
+  assert.equal(stats.pools.interactive.maxQueue, Number(process.env.S2T_AUDIO_INTERACTIVE_MAX_QUEUE || 8))
   assert.ok(stats.pools.silero, 'silero pool is reported')
   assert.equal(stats.pools.silero.configured, Number(process.env.S2T_SILERO_VAD_WORKERS || 1))
   assert.equal(stats.pools.silero.ops.sileroStatus?.count, 1, 'sileroVadStatus ran on the silero pool')
-  await sherpaWorkerPool.close()
-  console.log('sherpa worker smoke test passed')
+  await audioWorkerPool.close()
+  console.log('Shared audio worker smoke test passed')
 })().catch(async (error) => {
-  await sherpaWorkerPool.close().catch(() => undefined)
+  await audioWorkerPool.close().catch(() => undefined)
   console.error(error)
   process.exitCode = 1
 })

@@ -23,7 +23,7 @@ const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { createAudioClient, handleAudioService, proxyImport } = require('./audio-service.cjs')
 const audioClient = createAudioClient(process.env)
-const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, sherpaWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, warmSherpaRuntime, dynaudnormWav, transcodeM4a } = audioClient
+const { diarizeWav, extractSpeakerEmbedding, extractSpeakerLabelEmbeddings, extractDiarizedSpeakerBlocks, assessVoiceprintSample, modelPaths, audioWorkerPool, analyzeSileroVad, audioPreprocessStatus, warmSileroVad, warmSherpaRuntime, dynaudnormWav, transcodeM4a } = audioClient
 const { localModelName, NEMOTRON_MODEL, localDiarizationProfiles, resolveLocalDiarizationModel } = require('./local-diarization.cjs')
 const { nemotronStatus } = audioClient
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
@@ -167,32 +167,32 @@ const prometheusMetrics = () => {
     lines.push(`s2t_gateway_request_duration_seconds_count{route="${route}"} ${metric.count}`)
     lines.push(`s2t_gateway_request_errors_total{route="${route}"} ${metric.errors}`)
   }
-  const worker = sherpaWorkerPool.stats()
-  lines.push('# HELP s2t_sherpa_worker_jobs Current sherpa worker pool jobs.', '# TYPE s2t_sherpa_worker_jobs gauge')
+  const worker = audioWorkerPool.stats()
+  lines.push('# HELP s2t_audio_worker_jobs Current shared audio worker pool jobs.', '# TYPE s2t_audio_worker_jobs gauge')
   for (const [poolName, value] of Object.entries(worker.pools)) {
     for (const state of ['configured', 'workers', 'busy', 'queued', 'inFlight', 'maxQueue']) {
-      lines.push(`s2t_sherpa_worker_jobs{pool="${poolName}",state="${state}"} ${value[state]}`)
+      lines.push(`s2t_audio_worker_jobs{pool="${poolName}",state="${state}"} ${value[state]}`)
     }
   }
   lines.push(
-    '# HELP s2t_sherpa_op_duration_seconds_total CPU time per sherpa operation.',
-    '# TYPE s2t_sherpa_op_duration_seconds_total counter',
-    '# HELP s2t_sherpa_op_audio_seconds_total Audio seconds processed per operation.',
-    '# TYPE s2t_sherpa_op_audio_seconds_total counter',
-    '# HELP s2t_sherpa_op_audio_bytes_total Audio bytes owned per operation.',
-    '# TYPE s2t_sherpa_op_audio_bytes_total counter',
-    '# HELP s2t_sherpa_op_transferred_bytes_total Audio bytes copied across the worker boundary.',
-    '# TYPE s2t_sherpa_op_transferred_bytes_total counter',
-    '# HELP s2t_sherpa_op_rtf Real-time factor of executed work.',
-    '# TYPE s2t_sherpa_op_rtf gauge'
+    '# HELP s2t_audio_op_duration_seconds_total Execution time per audio operation.',
+    '# TYPE s2t_audio_op_duration_seconds_total counter',
+    '# HELP s2t_audio_op_audio_seconds_total Audio seconds processed per operation.',
+    '# TYPE s2t_audio_op_audio_seconds_total counter',
+    '# HELP s2t_audio_op_audio_bytes_total Audio bytes owned per operation.',
+    '# TYPE s2t_audio_op_audio_bytes_total counter',
+    '# HELP s2t_audio_op_transferred_bytes_total Audio bytes copied across the worker boundary.',
+    '# TYPE s2t_audio_op_transferred_bytes_total counter',
+    '# HELP s2t_audio_op_rtf Real-time factor of executed work.',
+    '# TYPE s2t_audio_op_rtf gauge'
   )
   for (const [operation, value] of Object.entries(worker.ops)) {
     const op = operation.replace(/[^A-Za-z0-9_]/g, '_')
-    lines.push(`s2t_sherpa_op_duration_seconds_total{op="${op}"} ${(value.totalMs / 1_000).toFixed(3)}`)
-    lines.push(`s2t_sherpa_op_audio_seconds_total{op="${op}"} ${value.audioSec}`)
-    lines.push(`s2t_sherpa_op_audio_bytes_total{op="${op}"} ${value.audioBytes}`)
-    lines.push(`s2t_sherpa_op_transferred_bytes_total{op="${op}"} ${value.transferredBytes}`)
-    lines.push(`s2t_sherpa_op_rtf{op="${op}"} ${value.rtf ?? 0}`)
+    lines.push(`s2t_audio_op_duration_seconds_total{op="${op}"} ${(value.totalMs / 1_000).toFixed(3)}`)
+    lines.push(`s2t_audio_op_audio_seconds_total{op="${op}"} ${value.audioSec}`)
+    lines.push(`s2t_audio_op_audio_bytes_total{op="${op}"} ${value.audioBytes}`)
+    lines.push(`s2t_audio_op_transferred_bytes_total{op="${op}"} ${value.transferredBytes}`)
+    lines.push(`s2t_audio_op_rtf{op="${op}"} ${value.rtf ?? 0}`)
   }
   lines.push('# TYPE s2t_gateway_inflight_requests gauge', `s2t_gateway_inflight_requests ${activeHttpRequests}`)
   return `${lines.join('\n')}\n` + metrics.render() + usageMetrics.render()
@@ -1329,7 +1329,7 @@ const stopServer = () => {
   let graceTimer
   const finish = Promise.race([Promise.all([httpDrainedPromise, activeDiarizationJob || Promise.resolve()]), new Promise(resolve => { graceTimer = setTimeout(resolve, graceMs) })])
   shutdownPromise = finish.finally(() => { clearTimeout(graceTimer); httpServer.closeAllConnections() })
-    .finally(() => sherpaWorkerPool.close())
+    .finally(() => audioWorkerPool.close())
     .finally(() => sharedLimits.close())
     .finally(() => storage.close?.())
   return shutdownPromise

@@ -1,9 +1,9 @@
 const path = require('node:path')
+const { resolveDirectory } = require('./directory-path.cjs')
 const fs = require('node:fs')
-// Keep installations without DATA_DIR on their existing persistent store.
 const dataPaths = (environment = process.env) => {
-  const root = path.resolve(environment.DATA_DIR?.trim() || environment.S2T_LOCAL_DATA_DIR?.trim() || path.join(process.cwd(), '.s2t-data'))
-  return { root, prompt: path.join(root, 'prompt'), template: environment.DATA_DIR?.trim() ? path.join(root, 'template') : path.resolve(environment.S2T_SUMMARY_TEMPLATES_DIR || path.join(root, 'template')) }
+  const root = resolveDirectory(environment.S2T_DATA_DIR, '.s2t-data')
+  return { root, prompt: path.join(root, 'prompt'), template: path.join(root, 'template') }
 }
 const initializeDataFiles = (environment = process.env, defaults = path.resolve(__dirname, '../../../data')) => {
   const paths = dataPaths(environment)

@@ -13,7 +13,7 @@ const execFileAsync = promisify(execFile)
 const main = async () => {
   const directory = await mkdtemp(join(tmpdir(), 's2t-storage-'))
   try {
-    const storage = createStorage({ S2T_LOCAL_DATA_DIR: directory })
+    const storage = createStorage({ S2T_DATA_DIR: directory })
     await storage.ready
     assert.deepEqual(storage.mode, { blob: 'local', config: 'local', vector: 'local' })
 
@@ -62,9 +62,9 @@ const main = async () => {
     ])
     assert.equal(registration.filter((result) => result.status === 'fulfilled').length, 1)
 
-    const initialAuth = await createAuth(storage, { S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'storage-smoke-auth-secret', S2T_BOOTSTRAP_ADMIN_USERNAME: 'bootstrap-user', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'original-password' })
+    const initialAuth = await createAuth(storage, { S2T_DATA_DIR: directory, S2T_AUTH_SECRET: 'storage-smoke-auth-secret', S2T_BOOTSTRAP_ADMIN_USERNAME: 'bootstrap-user', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'original-password' })
     await assert.doesNotReject(initialAuth.login({ username: 'bootstrap-user', password: 'original-password' }))
-    const restartedAuth = await createAuth(storage, { S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'storage-smoke-auth-secret', S2T_BOOTSTRAP_ADMIN_USERNAME: 'bootstrap-user', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'replacement-password' })
+    const restartedAuth = await createAuth(storage, { S2T_DATA_DIR: directory, S2T_AUTH_SECRET: 'storage-smoke-auth-secret', S2T_BOOTSTRAP_ADMIN_USERNAME: 'bootstrap-user', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'replacement-password' })
     await assert.doesNotReject(restartedAuth.login({ username: 'bootstrap-user', password: 'original-password' }), 'bootstrap settings must not overwrite an existing user')
     await assert.rejects(restartedAuth.login({ username: 'bootstrap-user', password: 'replacement-password' }))
 

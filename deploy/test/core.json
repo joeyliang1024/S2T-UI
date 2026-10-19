@@ -50,7 +50,7 @@
                     "value": "default"
                   },
                   {
-                    "name": "DATA_DIR",
+                    "name": "S2T_DATA_DIR",
                     "value": "/data"
                   }
                 ],

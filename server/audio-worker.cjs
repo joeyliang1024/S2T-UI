@@ -1,5 +1,6 @@
-// Native sherpa-onnx inference is synchronous and CPU-bound.  Keep it out of
-// the HTTP event loop: this worker owns its own lazy model instances.
+// Shared worker for Nemotron, sherpa, Silero and audio preprocessing.
+// Keep synchronous/native inference out of the HTTP event loop; each worker
+// owns its own lazy model instances.
 const { parentPort } = require('node:worker_threads')
 const sherpa = require('./sherpa-diarization.cjs')
 const nemotron = require('./nemotron-diarization.cjs')
@@ -40,9 +41,9 @@ const envPositive = (name, fallback) => {
 }
 const pruneAudioCache = () => {
   const now = Date.now()
-  const ttlMs = envPositive('S2T_SHERPA_AUDIO_TTL_MS', 300_000)
-  const maxEntries = envPositive('S2T_SHERPA_AUDIO_CACHE_ENTRIES', 4)
-  const maxBytes = envPositive('S2T_SHERPA_AUDIO_CACHE_MB', 1_024) * 1_048_576
+  const ttlMs = envPositive('S2T_AUDIO_CACHE_TTL_MS', 300_000)
+  const maxEntries = envPositive('S2T_AUDIO_CACHE_ENTRIES', 4)
+  const maxBytes = envPositive('S2T_AUDIO_CACHE_MB', 1_024) * 1_048_576
   let bytes = 0
   for (const [id, entry] of audioCache) {
     if (now - entry.usedAt > ttlMs) { audioCache.delete(id); continue }

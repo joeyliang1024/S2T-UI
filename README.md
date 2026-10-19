@@ -116,7 +116,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 | 開發與建置 | `npm run dev`（Electron preview，無 HMR）、`npm run build`、`npm run build:web`、`npm run typecheck`、`npm run web:serve` |
 | 核心 smoke | `gateway:auth-smoke`、`import-checkpoint:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`i18n:smoke`、`vad:smoke`、`storage:smoke` |
 | Storage smoke | `storage:remote:smoke`、`storage:gateway:smoke`、`storage:compensation:smoke`、`storage:grace:smoke`、`storage:outage:smoke`、`storage:voiceprint-backup:smoke`、`storage:migrate:remote` |
-| 講者與聲紋 | `diarization:smoke`、`sherpa:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
+| 講者與聲紋 | `diarization:smoke`、`audio:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
 | 量測與評估 | `caption:eval`（字幕延遲）、`caption:reference`（產生標準答案 TSV）、`diarization:eval:timeline`、`capacity:gateway` |
 
 完整清單在 `package.json` 的 `scripts`。
@@ -233,9 +233,9 @@ Electron 的本機設定使用 `s2t-local://diarization`，直接載入工作目
 
 ### 共用模型根目錄
 
-`S2T_MODELS_DIR` 統一控制所有本機模型與 runtime，未設定時為工作目錄下的 `models/`。子目錄固定為 `sherpa-onnx/`、`silero-vad/`、`nemotron-3-diarization/`。容器使用 `S2T_MODELS_DIR=/models`，原目錄掛載結構維持。相對路徑以工作目錄解析。
+`S2T_MODEL_DIR` 統一控制所有本機模型與 runtime，未設定時為工作目錄下的 `models/`。子目錄固定為 `sherpa-onnx/`、`silero-vad/`、`nemotron-3-diarization/`。容器使用 `S2T_MODEL_DIR=/models`，原目錄掛載結構維持。相對路徑以工作目錄解析。
 
-優先順序：各模型單檔覆寫 > 舊 `S2T_SHERPA_MODELS_DIR`（只限 sherpa）> `S2T_MODELS_DIR` > 預設 `./models`。舊變數保留相容；新部署建議清空舊 sherpa 目錄變數，僅設共用根目錄，避免舊覆寫繼續生效。Nemotron runtime 也從共用根目錄讀取。驗證：`node tests/smoke/model-paths-smoke-test.cjs`。
+所有模型與 runtime 只由 `S2T_MODEL_DIR` 衍生固定路徑；資料、prompt 與模板只由 `S2T_DATA_DIR` 衍生。相對路徑及 `~/` 自動解析，不再支援舊路徑覆寫。驗證：`node tests/smoke/model-paths-smoke-test.cjs`。
 
 環境變數的分組、模型選擇與覆寫優先序，見 [環境變數與模型設定](docs/guide/ENVIRONMENT.zh-TW.md)。
 

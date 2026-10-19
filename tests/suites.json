@@ -100,7 +100,7 @@
     "diarization-preview-embeddings-smoke-test.cjs",
     "audio-residency-smoke-test.cjs",
     "silero-vad-smoke-test.cjs",
-    "sherpa-worker-smoke-test.cjs",
+    "audio-worker-smoke-test.cjs",
     "import-audio-smoke-test.cjs",
     "voiceprint-blocks-smoke-test.cjs",
     "speaker-label-embeddings-smoke-test.cjs"

@@ -30,7 +30,7 @@ docker build --platform linux/amd64 -f Dockerfile.web.hardened -t s2t-ui:release
 
 ```bash
 docker run -d --name s2t-ui --platform linux/amd64 \
-  -p 8787:8787 --env-file .env -e DATA_DIR=/data \
+  -p 8787:8787 --env-file .env -e S2T_DATA_DIR=/data \
   -v s2t-data:/data joeyliang1024/s2t-ui:latest-amd64
 ```
 
