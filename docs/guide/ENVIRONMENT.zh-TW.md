@@ -1,6 +1,6 @@
 # 環境變數與模型設定
 
-`.env.example` 僅保留模型根目錄 `S2T_MODEL_DIR` 與資料根目錄 `S2T_DATA_DIR`。模型、遠端儲存、Docker 建置與調校參數請見[選填環境參數完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)。
+`.env.example` 提供 `S2T_MODEL_DIR`／`S2T_DATA_DIR`、模型連線、Gateway／登入／遠端儲存連線，以及 K8s／Redis／音訊服務部署設定。連線欄位留空，依實際部署填寫；單機不需填 K8s 區段。具有預設值的 worker 數量、佇列、逾時與其他調校參數請見[選填環境參數完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)。
 
 一般部署分成模型服務、共用模型目錄、音訊 worker、聲紋辨識與儲存／登入五組。所有設定需重新啟動讀取；既有程序的環境變數優先於 .env（dotenv override=false）。本次只整理設定與修正載入順序，未更換 ASR、翻譯、embedding 或權重。
 
