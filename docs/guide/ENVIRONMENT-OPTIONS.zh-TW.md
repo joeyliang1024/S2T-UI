@@ -208,8 +208,8 @@ S2T_VOICEPRINT_AUDIO_VAD_MIN_RATIO=0.05
 # GPU assignment is handled by Docker/K8s; restart workers after changes.
 S2T_INFERENCE_BACKEND=cpu
 
-# Shared audio worker pools (legacy S2T_SHERPA_* names). Heavy also runs
-# Nemotron; workers/queues/timeouts apply to both diarization backends.
+# Shared audio worker pools: AUDIO_HEAVY applies to both Nemotron and sherpa;
+# AUDIO_INTERACTIVE handles enrollment and interactive audio processing.
 # Three pools: heavy (diarization, voiceprint blocks), interactive (voiceprint
 # registration, dynaudnorm, status) and silero (VAD), so a long job cannot
 # stall an interactive request and per-chunk VAD never queues behind a
@@ -218,17 +218,17 @@ S2T_INFERENCE_BACKEND=cpu
 # (status-only jobs normally get 10 s; sherpa model warmup and Nemotron runtime
 # verification get 30 s).
 # Raise workers only after checking CPU and GPU memory/concurrency limits.
-S2T_SHERPA_WORKERS=1
-S2T_SHERPA_FAST_WORKERS=1
-S2T_SHERPA_MAX_QUEUE=8
-S2T_SHERPA_JOB_TIMEOUT_MS=1800000
-S2T_SHERPA_JOB_TIMEOUT_BASE_MS=60000
-S2T_SHERPA_JOB_TIMEOUT_PER_AUDIO_SEC=400
+S2T_AUDIO_HEAVY_WORKERS=1
+S2T_AUDIO_INTERACTIVE_WORKERS=1
+S2T_AUDIO_HEAVY_MAX_QUEUE=8
+S2T_AUDIO_HEAVY_JOB_TIMEOUT_MS=1800000
+S2T_AUDIO_JOB_TIMEOUT_BASE_MS=60000
+S2T_AUDIO_JOB_TIMEOUT_PER_AUDIO_SEC=400
 # Interactive-pool queue and timeout cap (settings, enrolment, dynaudnorm).
 # The pool runs the same 60 s + 400 ms-per-audio-second formula, capped here;
 # keep it above 60000 so short interactive jobs are never cut off.
-S2T_SHERPA_FAST_MAX_QUEUE=8
-S2T_SHERPA_FAST_JOB_TIMEOUT_MS=120000
+S2T_AUDIO_INTERACTIVE_MAX_QUEUE=8
+S2T_AUDIO_INTERACTIVE_JOB_TIMEOUT_MS=120000
 # Silero VAD pool: one dedicated worker thread and one ONNX session each.
 # Raise S2T_SILERO_VAD_WORKERS to add concurrent VAD throughput (HA: a wedged
 # or crashed worker is quarantined/respawned while the others keep answering;
@@ -239,9 +239,9 @@ S2T_SILERO_VAD_MAX_QUEUE=32
 S2T_SILERO_VAD_JOB_TIMEOUT_BASE_MS=10000
 S2T_SILERO_VAD_JOB_TIMEOUT_MS=30000
 # Recording reuse inside each worker (milliseconds / entries / MiB).
-S2T_SHERPA_AUDIO_TTL_MS=300000
-S2T_SHERPA_AUDIO_CACHE_ENTRIES=4
-S2T_SHERPA_AUDIO_CACHE_MB=1024
+S2T_AUDIO_CACHE_TTL_MS=300000
+S2T_AUDIO_CACHE_ENTRIES=4
+S2T_AUDIO_CACHE_MB=1024
 # Sherpa-only clustering; has no effect on Nemotron.
 # Anonymous speaker clustering cut-off: higher merges into fewer speakers.
 # Unset = adaptive by recording length (recommended): 0.7 when the input is
@@ -263,7 +263,7 @@ S2T_SHERPA_SHORT_AUDIO_SEC=60
 # Shutdown waits for a worker that is still inside sherpa's synchronous native
 # call; terminating it aborts the process with SIGABRT. Exceeding this grace
 # logs a warning and recovers anyway.
-S2T_SHERPA_CLOSE_GRACE_MS=15000
+S2T_AUDIO_CLOSE_GRACE_MS=15000
 # Threads affect sherpa only, not the native Nemotron CPU runtime.
 # Optional inference threads per sherpa model (embedding/diarization). Keep the
 # product of workers x threads within the Pod CPU limit to avoid oversubscription.

@@ -27,7 +27,7 @@
     "model-adapter:smoke": "node tests/smoke/model-adapter-smoke-test.cjs",
     "translation-policy:smoke": "node tests/smoke/translation-policy-smoke-test.cjs",
     "diarization:smoke": "node tests/smoke/diarization-smoke-test.cjs",
-    "sherpa:worker:smoke": "node tests/smoke/sherpa-worker-smoke-test.cjs",
+    "audio:worker:smoke": "node tests/smoke/audio-worker-smoke-test.cjs",
     "voiceprint:matching:smoke": "node tests/smoke/voiceprint-matching-smoke-test.cjs",
     "voiceprint:blocks:smoke": "node tests/smoke/voiceprint-blocks-smoke-test.cjs",
     "sherpa:residency:smoke": "node tests/smoke/audio-residency-smoke-test.cjs",

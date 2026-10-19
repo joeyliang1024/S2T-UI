@@ -116,7 +116,7 @@ Kubernetes 必須將 `S2T_KUBERNETES_MODE=true`，並以 Secret 對所有 gatewa
 | 開發與建置 | `npm run dev`（Electron preview，無 HMR）、`npm run build`、`npm run build:web`、`npm run typecheck`、`npm run web:serve` |
 | 核心 smoke | `gateway:auth-smoke`、`import-checkpoint:smoke`、`model-adapter:smoke`、`translation-policy:smoke`、`i18n:smoke`、`vad:smoke`、`storage:smoke` |
 | Storage smoke | `storage:remote:smoke`、`storage:gateway:smoke`、`storage:compensation:smoke`、`storage:grace:smoke`、`storage:outage:smoke`、`storage:voiceprint-backup:smoke`、`storage:migrate:remote` |
-| 講者與聲紋 | `diarization:smoke`、`sherpa:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
+| 講者與聲紋 | `diarization:smoke`、`audio:worker:smoke`、`voiceprint:matching:smoke`、`voiceprint:blocks:smoke`、`voiceprint:eval`、`silero:vad:smoke` |
 | 量測與評估 | `caption:eval`（字幕延遲）、`caption:reference`（產生標準答案 TSV）、`diarization:eval:timeline`、`capacity:gateway` |
 
 完整清單在 `package.json` 的 `scripts`。

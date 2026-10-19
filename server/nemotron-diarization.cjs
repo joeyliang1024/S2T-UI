@@ -63,8 +63,8 @@ const diarizeWav = audio => {
     const input = join(directory, 'recording.wav'); const output = join(directory, 'turns.rttm')
     writeFileSync(input, pcmWav(samples))
     // Same heavy-pool timeout knobs; expire the child before the pool kills its worker.
-    const budget = Math.min(positive(process.env.S2T_SHERPA_JOB_TIMEOUT_MS, 1800000),
-      positive(process.env.S2T_SHERPA_JOB_TIMEOUT_BASE_MS, 60000) + positive(process.env.S2T_SHERPA_JOB_TIMEOUT_PER_AUDIO_SEC, 400) * duration)
+    const budget = Math.min(positive(process.env.S2T_AUDIO_HEAVY_JOB_TIMEOUT_MS, 1800000),
+      positive(process.env.S2T_AUDIO_JOB_TIMEOUT_BASE_MS, 60000) + positive(process.env.S2T_AUDIO_JOB_TIMEOUT_PER_AUDIO_SEC, 400) * duration)
     // Full-file v3-offline is still the streaming state machine, not --offline.
     execFileSync(paths.runtime, ['diarize', input, '--model', paths.model, '--backend', paths.inference.backend === 'cuda' ? `cuda:${paths.inference.deviceId}` : 'cpu',
       // CLI presets replace overrides in v0.2.0. Specify ALL geometry explicitly.

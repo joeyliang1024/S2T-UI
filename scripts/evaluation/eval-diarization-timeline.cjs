@@ -21,7 +21,7 @@
 const { readFileSync, writeFileSync } = require('node:fs')
 const { resolve } = require('node:path')
 const { diarizeWav, clusteringThresholdFor, readWavSamples } = require('../../server/sherpa-diarization.cjs')
-const { sherpaWorkerPool } = require('../../server/sherpa-worker-pool.cjs')
+const { audioWorkerPool } = require('../../server/audio-worker-pool.cjs')
 
 const args = process.argv.slice(2)
 const option = (name, fallback) => {
@@ -219,9 +219,9 @@ const main = async () => {
     rawMs = Date.now() - rawStart
   }
   const poolStart = Date.now()
-  const poolTurns = await sherpaWorkerPool.execute('diarizeWav', { audio, segments: [] }, { retainAudio: true })
+  const poolTurns = await audioWorkerPool.execute('diarizeWav', { audio, segments: [] }, { retainAudio: true })
   const poolMs = Date.now() - poolStart
-  await sherpaWorkerPool.close()
+  await audioWorkerPool.close()
 
   const serialise = (turns) => turns.map((turn) => `${turn.start.toFixed(6)}|${turn.end.toFixed(6)}|${turn.speaker}`).join(';')
   const identicalToSherpa = runEquivalence ? serialise(rawTurns) === serialise(poolTurns) : null

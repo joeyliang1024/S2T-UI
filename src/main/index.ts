@@ -426,7 +426,7 @@ app.whenReady().then(() => {
 
       // Load the installed gateway worker module; audio never leaves this machine.
       const localRequire = createRequire(join(process.cwd(), 'package.json'))
-      const worker = localRequire(join(process.cwd(), 'server', 'sherpa-worker-pool.cjs'))
+      const worker = localRequire(join(process.cwd(), 'server', 'audio-worker-pool.cjs'))
       const audio = Buffer.from(input.audio)
       const localModels = localRequire(join(process.cwd(), 'server', 'local-diarization.cjs'))
       const model = localModels.resolveLocalDiarizationModel(input.model)

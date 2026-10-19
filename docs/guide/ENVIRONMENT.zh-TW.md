@@ -38,12 +38,22 @@ S2T_DIARIZATION_API_KEY=
 
 ## 運算與匹配
 
-- S2T_SHERPA_WORKERS、FAST_WORKERS、各 QUEUE／TIMEOUT／AUDIO_CACHE 參數是共用 worker 設定，也影響 Nemotron 排隊／快取／逾時；舊命名保留相容，不在本輪大量改名。
+- `S2T_AUDIO_HEAVY_*` 控制 Nemotron／sherpa 共用的重型工作池；`S2T_AUDIO_INTERACTIVE_*` 控制聲紋註冊等互動池，`S2T_SILERO_VAD_*` 控制獨立 VAD 池。`S2T_AUDIO_JOB_TIMEOUT_*`、`S2T_AUDIO_CACHE_*` 與 `S2T_AUDIO_CLOSE_GRACE_MS` 為共用逾時、快取與關閉設定。舊共用 `S2T_SHERPA_*` 參數已移除。
 - S2T_SHERPA_INFER_THREADS 與 CLUSTERING_THRESHOLD、SHORT_AUDIO_SEC、MIN_DURATION_ON/OFF 只調 sherpa；不改 Nemotron 的 native 設定。
 - Nemotron 的 CPU 幾何與 cache=528 目前固定在已驗證實作，沒有新增可誤設的環境旋鈕。
 - S2T_VOICEPRINT_* 調整姓名匹配、抽樣與拒識，不更換講者分離模型。調高門檻可能增加匿名標籤。
 - S2T_VOICEPRINT_EMBEDDING_MODEL_NAME／VERSION 是聲紋相容性標記，不是權重下載器。真正更換 embedding 權重需同步版本與重新建立相容聲紋；本輪未改。
 - S2T_SILERO_VAD_SHA256 是模型校驗值；不要為了讓陌生權重通過就隨意更改。
+
+### 共用音訊工作池命名
+
+|工作池|參數前綴|處理工作|
+|---|---|---|
+|heavy|`S2T_AUDIO_HEAVY_*`|Nemotron／sherpa 講者分離、說話者 embedding|
+|interactive|`S2T_AUDIO_INTERACTIVE_*`|聲紋註冊、音訊前處理、互動狀態檢查|
+|silero|`S2T_SILERO_VAD_*`|即時 VAD|
+
+預設值與工作分派維持原狀。程式入口為 `server/audio-worker-pool.cjs`，監控指標使用 `s2t_audio_worker_jobs` 與 `s2t_audio_op_*`。更新既有部署時，請將原本共用的 `S2T_SHERPA_WORKERS` 改為 `S2T_AUDIO_HEAVY_WORKERS`，`S2T_SHERPA_FAST_WORKERS` 改為 `S2T_AUDIO_INTERACTIVE_WORKERS`，其餘佇列、逾時、快取與關閉參數依[完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)更新；舊共用參數不再讀取。`S2T_SHERPA_INFER_THREADS` 等 sherpa 專屬模型參數保留原名。
 
 ## 載入與其他設定
 

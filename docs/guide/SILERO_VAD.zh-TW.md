@@ -7,15 +7,15 @@ S2T_SILERO_VAD_WORKERS=1        # 提高以增加並發 VAD 吞吐（先確認 C
 S2T_SILERO_VAD_MAX_QUEUE=32
 S2T_SILERO_VAD_JOB_TIMEOUT_BASE_MS=10000
 S2T_SILERO_VAD_JOB_TIMEOUT_MS=30000
-S2T_SHERPA_FAST_WORKERS=1       # 互動池（聲紋註冊等），與 VAD 數量無關
-S2T_SHERPA_WORKERS=1            # 重型池（diarization）
-S2T_SHERPA_MAX_QUEUE=8
+S2T_AUDIO_INTERACTIVE_WORKERS=1       # 互動池（聲紋註冊等），與 VAD 數量無關
+S2T_AUDIO_HEAVY_WORKERS=1            # 重型池（diarization）
+S2T_AUDIO_HEAVY_MAX_QUEUE=8
 S2T_MODEL_DIR=/models
 # Optional per-file override:
 S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3
 ```
 
-**HA 與任務分配**：pool 依序把 VAD 請求派給空閒 worker（任務分配）；worker 崩潰自動重生、逾時 worker 被隔離（其餘 worker 繼續服務）、佇列滿明確拒絕而不是靜默卡住。`S2T_SILERO_VAD_WORKERS=2` 即兩倍並發且單一 worker 掛掉不中斷服務；提高前先確認 Pod CPU 夠（workers × 每 worker 推論執行緒）。觀測：`sherpaWorkerPool.stats().pools.silero` 含每操作次數、平均耗時與 RTF。warmup（`S2T_AUDIO_WARMUP=silero`）逐一預熱每個 worker，部署後沒有冷啟動。
+**HA 與任務分配**：pool 依序把 VAD 請求派給空閒 worker（任務分配）；worker 崩潰自動重生、逾時 worker 被隔離（其餘 worker 繼續服務）、佇列滿明確拒絕而不是靜默卡住。`S2T_SILERO_VAD_WORKERS=2` 即兩倍並發且單一 worker 掛掉不中斷服務；提高前先確認 Pod CPU 夠（workers × 每 worker 推論執行緒）。觀測：`audioWorkerPool.stats().pools.silero` 含每操作次數、平均耗時與 RTF。warmup（`S2T_AUDIO_WARMUP=silero`）逐一預熱每個 worker，部署後沒有冷啟動。
 
 模型固定為 upstream `snakers4/silero-vad` `v6.2.1` 的 ONNX opset 16 artifact。應在映像建置或受控的 init job 完成下載與 checksum 驗證；服務請求不會下載模型。預設路徑是 `models/silero-vad/silero_vad.onnx`，環境變數可覆寫為 Pod 掛載的唯讀路徑。
 
@@ -27,8 +27,8 @@ Silero 相關的觀測面分三層，皆免额外設定：
 
 | 指標 | 內容 |
 | --- | --- |
-| `s2t_sherpa_worker_jobs{pool="silero",state=...}` | pool 量能：`configured`／`workers`／`busy`／`queued`／`inFlight`／`maxQueue`。佇列持續堆高＝ worker 不足或有 worker 掛掉 |
-| `s2t_sherpa_op_*{op="sileroVad"}`（另有 `sileroStatus`／`sileroWarmup`） | 操作次數、耗時分布、音訊秒數與 **RTF**。RTF 漂高＝ CPU 不足 |
+| `s2t_audio_worker_jobs{pool="silero",state=...}` | pool 量能：`configured`／`workers`／`busy`／`queued`／`inFlight`／`maxQueue`。佇列持續堆高＝ worker 不足或有 worker 掛掉 |
+| `s2t_audio_op_*{op="sileroVad"}`（另有 `sileroStatus`／`sileroWarmup`） | 操作次數、耗時分布、音訊秒數與 **RTF**。RTF 漂高＝ CPU 不足 |
 | `s2t_caption_events_total{event="silero_veto"\|"silero_failed"}` | 字幕閘門決策（Web 收音路徑）：`silero_veto`＝ chunk 被判定無語音、未送 ASR；`silero_failed`＝ 閘門請求失敗（此時**降級放行**——故障的輔助閘門不應讓字幕整段消失），失敗率持續 > 0 要查 pool 健康 |
 
 另可 `GET /api/audio-processing/status` 查模型檔／checksum／ONNX Runtime 健康（`sileroVad.available`）。注意 caption 遙測只在 Web 收音路徑發送（桌面端由 `window.s2t` 橋接，不走瀏覽器量測）；pool／op 指標則兩種部署都會匯出。

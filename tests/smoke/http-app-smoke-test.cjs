@@ -10,7 +10,7 @@ const importProbe = spawnSync(process.execPath, ['-e', `
   assert.equal(typeof api.startGateway, 'function');
   assert.deepEqual(['SIGTERM','SIGINT','SIGUSR2','unhandledRejection'].map(s => process.listenerCount(s)), before);
   assert.equal(Object.keys(require.cache).some(p => /server[\\/]storage[\\/]index.cjs$/.test(p)), false);
-  assert.equal(Object.keys(require.cache).some(p => p.endsWith('sherpa-worker-pool.cjs')), false);
+  assert.equal(Object.keys(require.cache).some(p => p.endsWith('audio-worker-pool.cjs')), false);
 `], { timeout: 3000, encoding: 'utf8' })
 assert.equal(importProbe.status, 0, importProbe.stderr || importProbe.error?.message)
 ;(async () => {
