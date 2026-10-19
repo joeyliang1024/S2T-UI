@@ -1,5 +1,7 @@
 # 環境變數與模型設定
 
+`.env.example` 僅保留正式部署必填的登入密鑰與首次管理員帳密。模型、遠端儲存、Docker 建置與調校參數請見[選填環境參數完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)。
+
 一般部署分成模型服務、共用模型目錄、音訊 worker、聲紋辨識與儲存／登入五組。所有設定需重新啟動讀取；既有程序的環境變數優先於 .env（dotenv override=false）。本次只整理設定與修正載入順序，未更換 ASR、翻譯、embedding 或權重。
 
 ## 模型選擇
@@ -65,9 +67,9 @@ node tests/smoke/nemotron-diarization-smoke-test.cjs
 
 ## 主機與容器範例
 
-`.env.example` 與 `.env.local-storage.example` 的摘要模板路徑為 `./data/template`，適用於專案根目錄執行 gateway。Gateway Compose 明確覆寫為 `/data/template`，對應唯讀掛載的 repo 模板目錄。
+摘要模板預設從 `${DATA_DIR}/template` 載入；未指定 `DATA_DIR` 時以程式的資料目錄預設值為準。Gateway Compose 使用 `/data/template`，對應唯讀掛載的 repo 模板目錄。
 
-`.env.local-storage.example` 預設只啟用 MinIO／PostgreSQL；需要 Milvus 時，依部署指南同時啟動 profile 與填齊四項變數。`.env.example` 的完整 Storage 範例則預設選用三個遠端 adapter；使用 fallback 時必須清空對應整組設定。
+`.env.local-storage.example` 預設只啟用 MinIO／PostgreSQL；需要 Milvus 時，依部署指南同時啟動 profile 與填齊四項變數。選填參數文件的完整 Storage 範例選用三個遠端 adapter；使用 fallback 時省略或清空對應整組設定。
 
 Docker image 使用 production 模式。啟動前必須填入 `S2T_AUTH_SECRET`；全新資料庫還需設定 bootstrap admin 帳號及至少 12 字元的密碼。`S2T_ALLOW_DEFAULT_ADMIN=true` 僅在開發模式有效，不會讓正式部署接受預設密碼。跨站 Cookie 值必須是小寫 `S2T_COOKIE_SAME_SITE=none`，並搭配 `S2T_COOKIE_SECURE=true`。
 
