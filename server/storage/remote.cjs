@@ -246,7 +246,7 @@ class PostgresConfigStore {
       SELECT job.id FROM s2t_diarization_jobs job
       JOIN s2t_users account ON account.id = job.user_id AND account.deletion_state = 'active'
       WHERE ($2::text IS NULL OR job.id = $2) AND ((job.state = 'queued' AND (job.lease_until IS NULL OR job.lease_until < NOW())) OR (job.state = 'running' AND job.lease_until < NOW()))
-      ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1
+      ORDER BY job.created_at FOR UPDATE SKIP LOCKED LIMIT 1
     ) UPDATE s2t_diarization_jobs AS job SET state = 'running', attempts = attempts + 1, lease_generation = lease_generation + 1, lease_owner = $1, lease_until = NOW() + INTERVAL '5 minutes', updated_at = NOW()
       FROM candidate WHERE job.id = candidate.id
       RETURNING job.id, job.user_id AS "userId", job.session_id AS "sessionId", job.audio_key AS "audioKey", job.payload, job.attempts, job.lease_generation AS "leaseGeneration"`, [safePart(owner, 'job owner'), id ? safePart(id, 'job id') : null])
