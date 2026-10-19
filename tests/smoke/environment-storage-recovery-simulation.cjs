@@ -15,7 +15,7 @@ async function main() {
   const directory = await mkdtemp(join(tmpdir(), 's2t-model-recovery-'))
   const reports = []
   try {
-    const storage = createStorage({ S2T_LOCAL_DATA_DIR: directory })
+    const storage = createStorage({ S2T_DATA_DIR: directory })
     await storage.ready
     const sessions = { version: 7, sessions: [{ id: 'existing-record', title: 'Existing recording', transcript: '這份紀錄必須保留', segments: [], audioKey: 'existing-audio' }] }
     await storage.config.put('simulation-user', 'sessions', sessions)

@@ -11,9 +11,9 @@ const { LocalUserStore } = require('../../server/auth/user-store.cjs')
   const directory = await mkdtemp(join(tmpdir(), 's2t-delete-http-'))
   const probe = createServer(); await new Promise(done => probe.listen(0, '127.0.0.1', done)); const port = probe.address().port; await new Promise(done => probe.close(done))
   const base = `http://127.0.0.1:${port}`
-  const child = spawn(process.execPath, [resolve('server/index.cjs')], { cwd: directory, env: { PATH: process.env.PATH, S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-account-deletion-http-secret', S2T_BOOTSTRAP_ADMIN_USERNAME: 'admin', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'isolated-admin-password', S2T_PROCESS_ROLE: 'api', S2T_LOG_LEVEL: 'silent' }, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(process.execPath, [resolve('server/index.cjs')], { cwd: directory, env: { PATH: process.env.PATH, S2T_WEB_PORT: String(port), S2T_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-account-deletion-http-secret', S2T_BOOTSTRAP_ADMIN_USERNAME: 'admin', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'isolated-admin-password', S2T_PROCESS_ROLE: 'api', S2T_LOG_LEVEL: 'silent' }, stdio: ['ignore', 'pipe', 'pipe'] })
   let logs = ''; child.stdout.on('data', bytes => { logs += bytes }); child.stderr.on('data', bytes => { logs += bytes })
-  const storage = createStorage({ S2T_LOCAL_DATA_DIR: directory }), users = new LocalUserStore(storage.config)
+  const storage = createStorage({ S2T_DATA_DIR: directory }), users = new LocalUserStore(storage.config)
   const request = async (path, token = '', method = 'GET', input) => {
     const response = await fetch(base + path, { method, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), 'content-type': 'application/json' }, ...(input ? { body: JSON.stringify(input) } : {}), signal: AbortSignal.timeout(15000) })
     return { status: response.status, body: await response.json() }

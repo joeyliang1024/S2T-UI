@@ -18,10 +18,10 @@ const assessVoiceprintSample = (audio) => {
 }
 
 const modelPaths = () => {
-  const root = process.env.S2T_SHERPA_MODELS_DIR || join(modelsRoot(), 'sherpa-onnx')
+  const root = join(modelsRoot(), 'sherpa-onnx')
   return {
-    segmentation: process.env.S2T_SHERPA_SEGMENTATION_MODEL || join(root, 'sherpa-onnx-pyannote-segmentation-3-0', 'model.int8.onnx'),
-    embedding: process.env.S2T_SHERPA_EMBEDDING_MODEL || join(root, '3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx')
+    segmentation: join(root, 'sherpa-onnx-pyannote-segmentation-3-0', 'model.int8.onnx'),
+    embedding: join(root, '3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx')
   }
 }
 

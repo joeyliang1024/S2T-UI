@@ -1,6 +1,6 @@
 # 環境變數與模型設定
 
-`.env.example` 僅保留正式部署必填的登入密鑰與首次管理員帳密。模型、遠端儲存、Docker 建置與調校參數請見[選填環境參數完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)。
+`.env.example` 僅保留模型根目錄 `S2T_MODEL_DIR` 與資料根目錄 `S2T_DATA_DIR`。模型、遠端儲存、Docker 建置與調校參數請見[選填環境參數完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)。
 
 一般部署分成模型服務、共用模型目錄、音訊 worker、聲紋辨識與儲存／登入五組。所有設定需重新啟動讀取；既有程序的環境變數優先於 .env（dotenv override=false）。本次只整理設定與修正載入順序，未更換 ASR、翻譯、embedding 或權重。
 
@@ -20,7 +20,7 @@
 ## 本機模型目錄
 
 ```dotenv
-S2T_MODELS_DIR=./models
+S2T_MODEL_DIR=./models
 S2T_DIARIZATION_MODEL=nemotron-3-diarization
 S2T_DIARIZATION_ENDPOINT=
 S2T_DIARIZATION_API_KEY=
@@ -32,9 +32,9 @@ S2T_DIARIZATION_API_KEY=
 |silero-vad/|silero_vad.onnx|
 |nemotron-3-diarization/|Q8_0 權重與 runtime/<platform>-<arch>/|
 
-優先序：單檔覆寫（S2T_SHERPA_SEGMENTATION_MODEL、S2T_SHERPA_EMBEDDING_MODEL、S2T_SILERO_VAD_MODEL）＞舊 S2T_SHERPA_MODELS_DIR（限 sherpa）＞S2T_MODELS_DIR＞工作目錄下 models/。一般使用者不需要填單檔路徑。改共用目錄只改位置，不選模型；新目錄須保留相同子目錄與對應平台 runtime。
+模型檔案皆從 `S2T_MODEL_DIR` 的固定子目錄載入，不提供個別模型檔案或舊目錄覆寫。相對路徑與 `~/` 會自動轉為絕對路徑。
 
-本機 .env 的舊 sherpa／Silero 覆寫已移除，因前後解析為同一批檔案。若搬到不同目錄，先檢查所有檔案存在，再重啟。Docker 預設 /models；macOS runtime 不能直接在 Linux 使用。
+舊 sherpa／Silero 路徑覆寫已移除。若搬到不同目錄，先檢查所有檔案存在，再重啟。Docker 預設 /models；macOS runtime 不能直接在 Linux 使用。
 
 ## 運算與匹配
 
@@ -67,7 +67,9 @@ node tests/smoke/nemotron-diarization-smoke-test.cjs
 
 ## 主機與容器範例
 
-摘要模板預設從 `${DATA_DIR}/template` 載入；未指定 `DATA_DIR` 時以程式的資料目錄預設值為準。Gateway Compose 使用 `/data/template`，對應唯讀掛載的 repo 模板目錄。
+Docker Compose 會將主機 `S2T_MODEL_DIR` 與 `S2T_DATA_DIR` 掛載至容器 `/models`、`/data`，並自動設定容器內路徑。未設定資料來源時沿用既有 `gateway-data` volume；指定主機目錄時，請先將原 volume 的完整資料搬入該目錄。
+
+摘要模板預設從 `${S2T_DATA_DIR}/template` 載入；未指定 `S2T_DATA_DIR` 時以程式的資料目錄預設值為準。Gateway Compose 將資料根目錄掛載至 `/data`，模板由 `/data/template` 載入。
 
 `.env.local-storage.example` 預設只啟用 MinIO／PostgreSQL；需要 Milvus 時，依部署指南同時啟動 profile 與填齊四項變數。選填參數文件的完整 Storage 範例選用三個遠端 adapter；使用 fallback 時省略或清空對應整組設定。
 

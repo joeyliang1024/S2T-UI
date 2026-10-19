@@ -10,9 +10,8 @@ S2T_SILERO_VAD_JOB_TIMEOUT_MS=30000
 S2T_SHERPA_FAST_WORKERS=1       # 互動池（聲紋註冊等），與 VAD 數量無關
 S2T_SHERPA_WORKERS=1            # 重型池（diarization）
 S2T_SHERPA_MAX_QUEUE=8
-S2T_MODELS_DIR=/models
+S2T_MODEL_DIR=/models
 # Optional per-file override:
-# S2T_SILERO_VAD_MODEL=/models/silero-vad/silero_vad.onnx
 S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3
 ```
 
@@ -58,7 +57,7 @@ S2T_VOICEPRINT_AUDIO_VAD_MIN_RATIO=0.05
 
 逐塊比例門檻 `S2T_VOICEPRINT_VAD=1` 仍為選配，兩者並存。
 
-先將通過 checksum 驗證的模型放在 `models/silero-vad/silero_vad.onnx`。`docker-compose.gateway.yml` 已將主機 `./models` 唯讀掛載至容器 `/models`；主 gateway image 不包含模型檔，也不會在請求時下載。其他部署須提供相同唯讀掛載或設定 `S2T_SILERO_VAD_MODEL`。
+先將通過 checksum 驗證的模型放在 `models/silero-vad/silero_vad.onnx`。`docker-compose.gateway.yml` 已將主機 `./models` 唯讀掛載至容器 `/models`；主 gateway image 不包含模型檔，也不會在請求時下載。其他部署須提供相同唯讀掛載並設定 `S2T_MODEL_DIR`。
 
 ## 研究回饋的修正（2026-10-12）
 

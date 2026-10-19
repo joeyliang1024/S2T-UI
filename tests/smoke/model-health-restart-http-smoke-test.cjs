@@ -24,7 +24,7 @@ const { join, resolve } = require('node:path')
     const port = reserve.address().port; await new Promise(done => reserve.close(done))
     base = `http://127.0.0.1:${port}`
     child = spawn(process.execPath, [resolve('server/index.cjs')], { cwd: directory, env: {
-      PATH: process.env.PATH, S2T_WEB_PORT: String(port), S2T_LOCAL_DATA_DIR: directory,
+      PATH: process.env.PATH, S2T_WEB_PORT: String(port), S2T_DATA_DIR: directory,
       S2T_AUTH_SECRET: secret, S2T_BOOTSTRAP_ADMIN_USERNAME: 'admin', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'fixture-password',
       S2T_PROCESS_ROLE: 'api', S2T_LOG_LEVEL: 'silent'
     }, stdio: ['ignore', 'pipe', 'pipe'] })

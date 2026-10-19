@@ -26,7 +26,7 @@ COPY . .
 RUN npm run build:web && npm prune --omit=dev --ignore-scripts
 
 FROM ${CUDA_RUNTIME_IMAGE}
-ENV NODE_ENV=production S2T_WEB_PORT=8787 S2T_MODELS_DIR=/models DATA_DIR=/data \
+ENV NODE_ENV=production S2T_WEB_PORT=8787 S2T_MODEL_DIR=/models S2T_DATA_DIR=/data \
     S2T_INFERENCE_BACKEND=cuda \
     LD_LIBRARY_PATH=/opt/nemo-speech/lib:/opt/nemo-speech/lib64:/usr/local/cuda/lib64:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 RUN apt-get update && apt-get install -y --no-install-recommends \

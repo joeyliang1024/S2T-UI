@@ -7,12 +7,11 @@
 //   const { createSileroScorer } = require('./silero-probabilities.cjs')
 //   const scorer = await createSileroScorer()               // 載入模型一次
 //   const probabilities = await scorer.probabilities16k(samples16k)
-const { join } = require('node:path')
 
 const WINDOW_SAMPLES = 512
 const CONTEXT_SAMPLES = 64
 
-const modelFile = () => process.env.S2T_SILERO_VAD_MODEL || join(__dirname, '..', '..', 'models', 'silero-vad', 'silero_vad.onnx')
+const modelFile = () => require('../../server/silero-vad.cjs').modelPath()
 
 const createSileroScorer = async () => {
   process.env.ORT_DISABLE_TELEMETRY_EVENTS = '1'

@@ -12,7 +12,7 @@ const { mkdtemp, rm } = require('node:fs/promises'), { tmpdir } = require('node:
   await new Promise(resolve => audio.listen(0, '127.0.0.1', resolve))
   const port = 21000 + Math.floor(Math.random() * 1000), base = `http://127.0.0.1:${port}`
   const child = spawn(process.execPath, [join(__dirname, '../../server/index.cjs')], { cwd: directory, env: {
-    PATH: process.env.PATH, S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-sharing-http-test-secret',
+    PATH: process.env.PATH, S2T_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-sharing-http-test-secret',
     S2T_BOOTSTRAP_ADMIN_USERNAME: 'admin', S2T_BOOTSTRAP_ADMIN_PASSWORD: 'admin-password', S2T_WEB_PORT: String(port),
     S2T_PROCESS_ROLE: 'api', S2T_AUDIO_SERVICE_URL: `http://127.0.0.1:${audio.address().port}`, S2T_AUDIO_SERVICE_TOKEN: 'audio-test-token'
   }, stdio: ['ignore', 'pipe', 'pipe'] })

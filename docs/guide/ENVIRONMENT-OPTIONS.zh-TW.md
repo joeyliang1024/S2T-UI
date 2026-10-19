@@ -1,6 +1,6 @@
 # 選填環境參數參考
 
-`.env.example` 只保留正式部署的必要登入設定。依使用情境，將以下需要的參數加入 `.env`；不需要整份複製。此處的值是範例或建議設定，未設定時以程式的預設值為準。不要將真實密碼或 API key 寫入版本控制。
+`.env.example` 只保留 `S2T_MODEL_DIR` 與 `S2T_DATA_DIR` 兩個根目錄。相對路徑以啟動工作目錄解析，`~/` 自動展開為使用者家目錄。依使用情境，將以下需要的參數加入 `.env`；不需要整份複製。此處的值是範例或建議設定，未設定時以程式的預設值為準。不要將真實密碼或 API key 寫入版本控制。
 
 ## 使用方式
 
@@ -13,6 +13,16 @@
 - 本機開發若要使用預設 admin/admin，可明確加入 `S2T_ALLOW_DEFAULT_ADMIN=true`；正式部署仍須明確設定必要登入參數。
 
 Gateway 自動讀取工作目錄的 `.env`；既有程序環境優先。改設定後重啟服務。可用 `/readyz` 與 `/api/storage` 確認服務就緒及實際儲存 adapter。
+
+## 正式部署登入設定
+
+正式部署仍須提供登入密鑰；首次建立管理員時提供帳密。這些可以由部署平台注入，不必放在最小路徑範例內。
+
+```dotenv
+S2T_AUTH_SECRET=
+S2T_BOOTSTRAP_ADMIN_USERNAME=
+S2T_BOOTSTRAP_ADMIN_PASSWORD=
+```
 
 ## 完整選填範例
 
@@ -41,7 +51,7 @@ S2T_SUMMARY_MODEL=
 # Local sherpa: MODEL=sherpa-onnx-speaker-diarization; ENDPOINT and API_KEY empty.
 # Remote: set MODEL, ENDPOINT and API_KEY to your service configuration.
 # Empty MODEL + ENDPOINT falls back to sherpa; it does not disable diarization.
-# S2T_MODELS_DIR selects the model root directory, not the backend.
+# S2T_MODEL_DIR selects the model root directory, not the backend.
 S2T_DIARIZATION_API_KEY=
 S2T_DIARIZATION_ENDPOINT=
 S2T_DIARIZATION_MODEL=nemotron-3-diarization
@@ -104,7 +114,7 @@ S2T_COOKIE_SECURE=false
 S2T_GATEWAY_URL=https://gateway.example
 
 # Set a long, random value for deployments. In local development a private
-# value is generated under DATA_DIR so sessions survive restarts.
+# value is generated under S2T_DATA_DIR so sessions survive restarts.
 # Development only. Production requires explicit credentials (password >= 12 characters).
 S2T_ALLOW_DEFAULT_ADMIN=true
 
@@ -138,9 +148,7 @@ S2T_MILVUS_DB_NAME=default
 S2T_MILVUS_COLLECTION=s2t_voiceprints
 S2T_MILVUS_TOKEN=local-milvus-token
 
-# Optional local storage location for development and tests.
-DATA_DIR=.s2t-data
-# prompt/ and template/ are created below DATA_DIR; set /data in containers.
+# Data, prompts and templates use S2T_DATA_DIR from .env.example.
 
 # Shared-storage safety valves (leave empty for the defaults).
 # Cleanup intents recorded before an upload or voiceprint enrolment is
@@ -193,14 +201,7 @@ S2T_VOICEPRINT_AUDIO_VAD=1
 S2T_VOICEPRINT_AUDIO_VAD_MIN_SEC=10
 S2T_VOICEPRINT_AUDIO_VAD_MIN_RATIO=0.05
 
-# Shared root for sherpa-onnx/, silero-vad/, nemotron-3-diarization/ + runtime.
-# Default: <working directory>/models. Container example: /models.
-S2T_MODELS_DIR=./models
-# Legacy sherpa-only override; kept for compatibility. Explicit per-file
-# overrides win over legacy directory, which wins over the shared root.
-S2T_SHERPA_MODELS_DIR=
-S2T_SHERPA_SEGMENTATION_MODEL=
-S2T_SHERPA_EMBEDDING_MODEL=
+# All models and runtimes use S2T_MODEL_DIR from .env.example.
 
 # Local compute profile: cpu (default) or cuda (H100/H200 CUDA image).
 # CUDA accelerates Nemotron; sherpa/voiceprint and Silero stay on CPU.
@@ -268,10 +269,9 @@ S2T_SHERPA_CLOSE_GRACE_MS=15000
 # product of workers x threads within the Pod CPU limit to avoid oversubscription.
 S2T_SHERPA_INFER_THREADS=2
 
-# Silero single-file override; empty = <S2T_MODELS_DIR>/silero-vad/silero_vad.onnx.
+# Silero is loaded from <S2T_MODEL_DIR>/silero-vad/silero_vad.onnx.
 # The checksum must match the file bytes
 # (the gateway refuses to load a model whose sha256 differs).
-S2T_SILERO_VAD_MODEL=
 S2T_SILERO_VAD_SHA256=1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3
 
 # Storage tooling env file (defaults to .env.local-storage in remote smoke tests
@@ -338,7 +338,6 @@ PROMETHEUS_URL=http://prometheus:9090
 # Optional real Web gateway metrics URL reachable by Prometheus (independent of Grafana PROMETHEUS_URL).
 S2T_GATEWAY_METRICS_URL=
 
-# Each Markdown file is one shared summary template. Host path below;
-# docker-compose.gateway.yml overrides this to the mounted /data/template.
-# Summary templates are loaded automatically from ${DATA_DIR}/template.
+# Each Markdown file is one shared summary template under the data root.
+# Summary templates are loaded automatically from ${S2T_DATA_DIR}/template.
 ```

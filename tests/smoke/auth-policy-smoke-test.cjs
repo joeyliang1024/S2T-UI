@@ -6,8 +6,8 @@ const { createAuth } = require('../../server/auth/index.cjs')
 const { validateSharingEnrollment, setSharingAuthorization } = require('../../server/auth/sharing-authorization.cjs')
 ;(async () => {
   const directory = await mkdtemp(join(tmpdir(), 's2t-auth-policy-'))
-  const storage = createStorage({ S2T_LOCAL_DATA_DIR: directory }); await storage.ready
-  const env = { S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'test-policy-secret-12345678901234567890' }
+  const storage = createStorage({ S2T_DATA_DIR: directory }); await storage.ready
+  const env = { S2T_DATA_DIR: directory, S2T_AUTH_SECRET: 'test-policy-secret-12345678901234567890' }
   try {
     await assert.rejects(createAuth(storage, env), /首次啟動/)
     await assert.rejects(createAuth(storage, { ...env, NODE_ENV: 'production', S2T_ALLOW_DEFAULT_ADMIN: 'true' }), /首次啟動/)

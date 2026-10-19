@@ -39,7 +39,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
     // Reserve a free loopback port, then use the exact gateway server/static/API path.
     const probe = createServer(); await new Promise((resolve,reject)=>{probe.once('error',reject);probe.listen(0,'127.0.0.1',resolve)})
     const port = probe.address().port; await new Promise(resolve => probe.close(resolve))
-    child = spawn(process.execPath, [path.resolve('server/index.cjs')], { cwd: directory, env: { PATH: process.env.PATH, S2T_PROCESS_ROLE: 'api', S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-browser-test-secret', S2T_ASR_ENDPOINT: `http://127.0.0.1:${mock.address().port}/v1`, S2T_ASR_MODEL: 'mock', S2T_ASR_API_KEY: 'local-only', S2T_LOG_LEVEL: 'error' }, stdio: ['ignore','pipe','pipe'] })
+    child = spawn(process.execPath, [path.resolve('server/index.cjs')], { cwd: directory, env: { PATH: process.env.PATH, S2T_PROCESS_ROLE: 'api', S2T_WEB_PORT: String(port), S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_DATA_DIR: directory, S2T_AUTH_SECRET: 'isolated-browser-test-secret', S2T_ASR_ENDPOINT: `http://127.0.0.1:${mock.address().port}/v1`, S2T_ASR_MODEL: 'mock', S2T_ASR_API_KEY: 'local-only', S2T_LOG_LEVEL: 'error' }, stdio: ['ignore','pipe','pipe'] })
     child.stdout.on('data', data => output += data); child.stderr.on('data', data => output += data)
     const origin = `http://127.0.0.1:${port}`
     let ready = false

@@ -14,7 +14,7 @@ const main = async () => {
  const port=20000+Math.floor(Math.random()*15000)
  // Run from a fresh directory with a minimal environment: no project .env,
  // real credentials, external endpoints or production storage can be loaded.
- const child=spawn(process.execPath,[resolve('server/index.cjs')],{cwd:dir,env:{PATH:process.env.PATH,S2T_PROCESS_ROLE:'api',S2T_WEB_PORT:String(port),S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_LOCAL_DATA_DIR:dir,S2T_AUTH_SECRET:'isolated-local-caption-test-secret',S2T_ASR_ENDPOINT:endpoint,S2T_ASR_MODEL:'mock',S2T_ASR_API_KEY:'local-test-key',S2T_TRANSLATION_ENDPOINT:endpoint,S2T_TRANSLATION_MODEL:'mock',S2T_TRANSLATION_API_KEY:'local-test-key',S2T_ASR_REQUESTS_PER_MINUTE:'4',S2T_TRANSLATION_REQUESTS_PER_MINUTE:'4',S2T_LOG_LEVEL:'error'},stdio:['ignore','pipe','pipe']})
+ const child=spawn(process.execPath,[resolve('server/index.cjs')],{cwd:dir,env:{PATH:process.env.PATH,S2T_PROCESS_ROLE:'api',S2T_WEB_PORT:String(port),S2T_ALLOW_DEFAULT_ADMIN: 'true', S2T_DATA_DIR:dir,S2T_AUTH_SECRET:'isolated-local-caption-test-secret',S2T_ASR_ENDPOINT:endpoint,S2T_ASR_MODEL:'mock',S2T_ASR_API_KEY:'local-test-key',S2T_TRANSLATION_ENDPOINT:endpoint,S2T_TRANSLATION_MODEL:'mock',S2T_TRANSLATION_API_KEY:'local-test-key',S2T_ASR_REQUESTS_PER_MINUTE:'4',S2T_TRANSLATION_REQUESTS_PER_MINUTE:'4',S2T_LOG_LEVEL:'error'},stdio:['ignore','pipe','pipe']})
  let output='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x)
  const base=`http://127.0.0.1:${port}`
  const request=async(path,init={})=>{const r=await fetch(base+path,init);return {r,body:await r.json().catch(()=>null)}}

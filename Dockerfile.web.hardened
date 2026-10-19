@@ -15,7 +15,7 @@ RUN apk update && apk upgrade --no-cache \
     && apk add --no-cache nodejs-26 ca-certificates curl wget jq bash ffmpeg libstdc++ libgcc libgomp libatomic \
     && mkdir -p /app /data && chown -R nonroot:nonroot /app /data
 WORKDIR /app
-ENV NODE_ENV=production S2T_WEB_PORT=8787 DATA_DIR=/data S2T_MODELS_DIR=/models
+ENV NODE_ENV=production S2T_WEB_PORT=8787 S2T_DATA_DIR=/data S2T_MODEL_DIR=/models
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY out/web ./out/web

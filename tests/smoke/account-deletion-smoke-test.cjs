@@ -9,7 +9,7 @@ const deferred = () => { let resolve; const promise = new Promise(done => { reso
 
 ;(async () => {
   const directory = await mkdtemp(join(tmpdir(), 's2t-account-delete-'))
-  const storage = createStorage({ S2T_LOCAL_DATA_DIR: directory })
+  const storage = createStorage({ S2T_DATA_DIR: directory })
   const users = new LocalUserStore(storage.config)
   const create = name => users.create({ username: name, passwordHash: 'not-a-login', NT: name, Department: 'fixture', role: name === 'admin' ? 'admin' : 'user' })
   const release = deferred()

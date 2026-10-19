@@ -3,6 +3,7 @@ import { discardRecoverableRecording, recoverRecordings, type RecoverableRecordi
 import type { DesktopBridge } from '../shared/contracts/desktop'
 import { normalizeResponseSpeed, type ResponseSpeed } from '../shared/response-speed'
 import { validateAdminParameters, type AdminParameters } from '../shared/validation/admin-parameters.cjs'
+import { dataPaths } from '../shared/validation/data-paths.cjs'
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
 import { basename, dirname, isAbsolute, join, relative } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -35,7 +36,7 @@ let captionWindow: BrowserWindow | null = null
 const desktopUsers = new Map<number, string>()
 const desktopRoles = new Map<number, string>()
 const validUserId = (value: unknown): value is string => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(value)
-const accountDirectory = (userId: string): string => join(app.getPath('userData'), 'accounts', userId)
+const accountDirectory = (userId: string): string => join(dataPaths().root, 'accounts', userId)
 const accountSessionsDirectory = (userId: string): string => join(accountDirectory(userId), 'sessions')
 const requireDesktopUser = (event: { sender: { id: number } }): string => {
   const userId = desktopUsers.get(event.sender.id)
