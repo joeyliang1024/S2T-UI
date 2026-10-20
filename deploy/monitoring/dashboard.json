@@ -1,6 +1,6 @@
 {
   "uid": "s2t-overview",
-  "title": "S2T · 一張總覽 / ASR·翻譯瓶頸與服務健康",
+  "title": "S2T · E2E：最後語音字 → 譯文最後字呈現 ≤ 3s",
   "schemaVersion": 41,
   "version": 1,
   "timezone": "Asia/Taipei",
@@ -16,7 +16,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "00 · KPI · 來源：$caption_gateway",
+      "title": "00 · E2E：最後語音字 → 譯文最後字（ASR → 原文最後字）· 目標 ≤ 3s",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -28,7 +28,7 @@
     },
     {
       "id": 2,
-      "title": "E2E P90 · 最後語音 → 譯文呈現（目標 < 3 秒）",
+      "title": "E2E P90 · 最後語音字 → 譯文最後字（目標 ≤ 3 秒）",
       "type": "stat",
       "gridPos": {
         "x": 0,
@@ -43,7 +43,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.90, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation_tail\"}[$__range])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation_tail\"}[$__range])) by (le)) and on() (sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"e2e_translation_tail\"}[$__range])) > 0)",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -96,8 +96,8 @@
     },
     {
       "id": 3,
-      "title": "瓶頸段延遲 · t1～t7 平均（所選區間）",
-      "type": "bargauge",
+      "title": "ASR P90 · 最後語音字 → 原文最後字",
+      "type": "stat",
       "gridPos": {
         "x": 8,
         "y": 1,
@@ -111,109 +111,48 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (phase) (rate(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) / sum by (phase) (rate(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range]))",
-          "legendFormat": "{{phase}}",
+          "expr": "histogram_quantile(0.90, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[$__range])) by (le)) and on() (sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"e2e_asr\"}[$__range])) > 0)",
+          "legendFormat": "",
           "instant": true,
           "range": false
         }
       ],
-      "description": "每階段平均；各階段的子切片先由瀏覽器合併成每段一個 phase 樣本。ASR 與翻譯樣本數可能不同，勿將平均相加當 E2E。",
+      "description": "所選時間區間 P90；使用者講完最後一字（最後 VAD 語音樣本）到原文最後一字於可見即時頁呈現，包含斷句等待；語音尾端為 VAD 估計，非逐字對齊。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "min": 0
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t1 音訊擷取與上傳"
-              }
-            ]
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
           },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2"
-            },
-            "properties": [
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
-                "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3"
-            },
-            "properties": [
+                "color": "green",
+                "value": null
+              },
               {
-                "id": "displayName",
-                "value": "t3 ASR 模型推論"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t4"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t4 文字後處理"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t5"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t5 回傳轉錄與呈現"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t6 翻譯模型"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t7"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t7 翻譯回傳與呈現"
+                "color": "red",
+                "value": 3
               }
             ]
           }
-        ]
+        },
+        "overrides": []
       },
       "options": {
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true,
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
         "reduceOptions": {
           "calcs": [
             "last"
@@ -277,7 +216,7 @@
     },
     {
       "id": 5,
-      "title": "01 · ASR 瓶頸分析 — 語音起點 → 原文呈現（t1~t5）· 來源：$caption_gateway",
+      "title": "01 · 完整字幕管線 t1～t7（包含原文與翻譯）",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -289,13 +228,13 @@
     },
     {
       "id": 6,
-      "title": "ASR 階段平均耗時（所選範圍）· 最長者即瓶頸",
+      "title": "t1～t7 各階段平均耗時（秒）",
       "type": "bargauge",
       "gridPos": {
         "x": 0,
         "y": 7,
-        "w": 8,
-        "h": 8
+        "w": 12,
+        "h": 16
       },
       "datasource": {
         "type": "prometheus",
@@ -304,13 +243,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sort_desc(sum by (phase) (increase(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__range])) / sum by (phase) (increase(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__range])))",
+          "expr": "sum by (phase) (rate(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) / (sum by (phase) (rate(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) > 0)",
           "legendFormat": "{{phase}}",
           "instant": true,
           "range": false
         }
       ],
-      "description": "t1 音訊擷取上傳／t2 VAD 與分段／t3 ASR 模型推論／t4 文字後處理／t5 回傳與呈現 的平均耗時，由長到短排列：最長的一根就是瓶頸。t3 最大＝模型推論吃緊；t1 大＝上傳或編碼；t5 大＝回傳網路與重試；t2 大＝分段累積或 VAD 確認慢。",
+      "description": "t1～t7 各階段平均耗時，t2 僅 VAD 邏輯處理；不同樣本的平均不可直接加總為 E2E。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -337,7 +276,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
+                "value": "t2 VAD 邏輯處理"
               }
             ]
           },
@@ -417,13 +356,57 @@
       }
     },
     {
+      "id": 52,
+      "title": "t1～t7 Detail 平均耗時（秒）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (stage) (increase(s2t_caption_stage_duration_seconds_sum{job=\"$caption_gateway\",stage=~\"t[1-7]_.*\",stage!=\"t2_segment\"}[$__range])) / (sum by (stage) (increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=~\"t[1-7]_.*\",stage!=\"t2_segment\"}[$__range])) > 0)",
+          "legendFormat": "{{stage}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "各階段的細項平均耗時，t2 僅 VAD 邏輯處理；排除講話與區段累積時間。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
       "id": 7,
-      "title": "ASR 階段耗時占比（所選範圍）",
+      "title": "t1～t7 階段耗時占比（所選範圍）",
       "type": "piechart",
       "gridPos": {
-        "x": 8,
-        "y": 7,
-        "w": 8,
+        "x": 0,
+        "y": 23,
+        "w": 24,
         "h": 8
       },
       "datasource": {
@@ -433,13 +416,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (phase) (increase(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__range])) / scalar(sum(increase(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__range])))",
+          "expr": "(sum by (phase) (increase(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) > 0) / scalar(sum(increase(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])))",
           "legendFormat": "{{phase}}",
           "instant": true,
           "range": false
         }
       ],
-      "description": "同一批樣本的耗時占比（不是分位數的拆分）；配合左側長條圖判讀瓶頸佔了多少比例。",
+      "description": "各階段累積處理耗時占比；含翻譯 t6～t7，t2 僅 VAD 邏輯處理，不含講話時間。",
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
@@ -466,7 +449,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
+                "value": "t2 VAD 邏輯處理"
               }
             ]
           },
@@ -555,588 +538,12 @@
       }
     },
     {
-      "id": 8,
-      "title": "ASR 明細平均耗時（每個細項，所選範圍）",
-      "type": "bargauge",
-      "gridPos": {
-        "x": 16,
-        "y": 7,
-        "w": 8,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sort_desc(sum by (stage) (increase(s2t_caption_stage_duration_seconds_sum{job=\"$caption_gateway\",stage=~\"t[1-5]_.*\"}[$__range])) / sum by (stage) (increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=~\"t[1-5]_.*\"}[$__range])))",
-          "legendFormat": "{{stage}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "description": "確認最長階段後，用這根定位到原子量測：佇列、編碼、上傳、VAD、排隊、模型推論、後處理、網路、呈現。0 秒的可選步驟（如未啟用的前處理）不會輸出樣本。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1_queue"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "瀏覽器請求佇列"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1_encode"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "WAV 編碼與前置"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1_upload"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "上傳（伺服器收音訊）"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2_vad"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "VAD 語音偵測"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2_segment"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "句段累積"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2_gate"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Silero 二次確認"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3_queue"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "伺服器容量排隊"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3_preprocess"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "音訊前處理"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3_model"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "ASR 模型推論"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3_gateway"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "伺服器驗證／快取／寫出"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t4_postprocess"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "文字清理（標點／不雅字）"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t5_network"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "回傳網路與重試"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t5_paint"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "UI 呈現"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6_wait"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "翻譯排隊等待"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6_queue"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "翻譯容量排隊"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6_model"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "翻譯模型推論"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6_gateway"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "翻譯伺服器固定處理"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t7_network"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "譯文回傳網路"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t7_paint"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "譯文 UI 呈現"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true,
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 9,
-      "title": "ASR t1～t5 每分鐘平均耗時",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 15,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (phase) (rate(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[1m])) / sum by (phase) (rate(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[1m]))",
-          "legendFormat": "{{phase}}",
-          "interval": "1m",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "description": "每個階段一條折線，顯示該分鐘完整 phase 樣本的平均耗時（sum/count）。橫軸跟隨上方所選時間區間；固定 1 分鐘取樣，沒有樣本的分鐘留白。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "showPoints": "always",
-            "pointSize": 3,
-            "spanNulls": false,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t1 音訊擷取與上傳"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t3 ASR 模型推論"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t4"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t4 文字後處理"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t5"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t5 回傳轉錄與呈現"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t6 翻譯模型"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t7"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t7 翻譯回傳與呈現"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "interval": "1m",
-      "maxDataPoints": 11000
-    },
-    {
-      "id": 10,
-      "title": "ASR 各階段平均耗時趨勢（堆疊）",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 15,
-        "w": 12,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (phase) (rate(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__rate_interval])) / sum by (phase) (rate(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-5]\"}[$__rate_interval]))",
-          "legendFormat": "{{phase}}",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "description": "所選區間內各取樣窗口的平均耗時，堆疊總高近似每段請求的平均時間；哪一層突然變厚，就是新出現的瓶頸。無語音樣本的時間保留空白；一週視窗內若只有短暫測試，資料會集中在右側，以圓點標示稀疏樣本。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 50,
-            "showPoints": "always",
-            "pointSize": 5,
-            "spanNulls": false,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t1 音訊擷取與上傳"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t3 ASR 模型推論"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t4"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t4 文字後處理"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t5"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t5 回傳轉錄與呈現"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t6 翻譯模型"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t7"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t7 翻譯回傳與呈現"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "maxDataPoints": 10000,
-      "interval": "15s"
-    },
-    {
       "id": 11,
       "title": "有效 ASR 端到端樣本（所選範圍）",
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 23,
+        "y": 31,
         "w": 8,
         "h": 5
       },
@@ -1192,7 +599,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 8,
-        "y": 23,
+        "y": 31,
         "w": 16,
         "h": 5
       },
@@ -1243,436 +650,13 @@
       "interval": "15s"
     },
     {
-      "id": 13,
-      "title": "02 · 翻譯管線 — 原文 → 譯文呈現（t6~t7）· 來源：$caption_gateway",
-      "type": "row",
-      "collapsed": false,
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 24,
-        "h": 1
-      }
-    },
-    {
-      "id": 14,
-      "title": "翻譯 語音→譯文 P50",
-      "type": "stat",
-      "gridPos": {
-        "x": 0,
-        "y": 29,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__range])) by (le))",
-          "legendFormat": "",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "description": "語音起點到譯文在 UI 呈現（含前段 ASR 等待）；所選時間區間。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ],
-          "height": 170
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 15,
-      "title": "翻譯 語音→譯文 P95",
-      "type": "stat",
-      "gridPos": {
-        "x": 6,
-        "y": 29,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__range])) by (le))",
-          "legendFormat": "",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "description": "語音起點到譯文在 UI 呈現（含前段 ASR 等待）；所選時間區間。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ],
-          "height": 170
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 16,
-      "title": "翻譯 語音→譯文 P99",
-      "type": "stat",
-      "gridPos": {
-        "x": 12,
-        "y": 29,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__range])) by (le))",
-          "legendFormat": "",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "description": "語音起點到譯文在 UI 呈現（含前段 ASR 等待）；所選時間區間。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ],
-          "height": 170
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 17,
-      "title": "有效翻譯樣本（所選區間）",
-      "type": "stat",
-      "gridPos": {
-        "x": 18,
-        "y": 29,
-        "w": 6,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__range]))",
-          "legendFormat": "",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "description": "無樣本時分位數不可信；翻譯未啟用時本列會無資料。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "text"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ],
-          "height": 170
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 18,
-      "title": "翻譯階段平均耗時（所選範圍）",
-      "type": "bargauge",
-      "gridPos": {
-        "x": 0,
-        "y": 33,
-        "w": 12,
-        "h": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sort_desc(sum by (phase) (increase(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[67]\"}[$__range])) / sum by (phase) (increase(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[67]\"}[$__range])))",
-          "legendFormat": "{{phase}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "description": "t6 排隊等待＋容量排隊＋翻譯模型推論＋伺服器固定處理；t7 回傳網路與譯文呈現。t6_wait 長代表前端排隊，t6_model 長代表模型吃緊。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t1"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t1 音訊擷取與上傳"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t2"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t3"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t3 ASR 模型推論"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t4"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t4 文字後處理"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t5"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t5 回傳轉錄與呈現"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t6"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t6 翻譯模型"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "t7"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "t7 翻譯回傳與呈現"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true,
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 19,
-      "title": "翻譯端到端延遲趨勢 P50／P95／P99",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 12,
-        "y": 33,
-        "w": 12,
-        "h": 6
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "targets": [
-        {
-          "refId": "0",
-          "expr": "histogram_quantile(0.5, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__rate_interval])) by (le))",
-          "legendFormat": "P50",
-          "range": true,
-          "instant": false
-        },
-        {
-          "refId": "1",
-          "expr": "histogram_quantile(0.95, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__rate_interval])) by (le))",
-          "legendFormat": "P95",
-          "range": true,
-          "instant": false
-        },
-        {
-          "refId": "2",
-          "expr": "histogram_quantile(0.99, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation\"}[$__rate_interval])) by (le))",
-          "legendFormat": "P99",
-          "range": true,
-          "instant": false
-        }
-      ],
-      "description": "語音起點到譯文呈現的分位數趨勢（依所選區間自動調整取樣窗口）。",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ],
-          "height": 170
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "interval": "15s"
-    },
-    {
       "id": 20,
       "title": "03 · Gateway / Audio worker · 交叉驗證（伺服器端與 t1_upload、t3、t6 對應） · 來源：$caption_gateway",
       "type": "row",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 39,
+        "y": 36,
         "w": 24,
         "h": 1
       }
@@ -1683,7 +667,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 40,
+        "y": 37,
         "w": 12,
         "h": 7
       },
@@ -1736,7 +720,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 40,
+        "y": 37,
         "w": 12,
         "h": 7
       },
@@ -1789,7 +773,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 47,
+        "y": 44,
         "w": 12,
         "h": 7
       },
@@ -1842,7 +826,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 47,
+        "y": 44,
         "w": 12,
         "h": 7
       },
@@ -1895,7 +879,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 51,
         "w": 24,
         "h": 7
       },
@@ -1948,7 +932,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 61,
+        "y": 58,
         "w": 12,
         "h": 7
       },
@@ -2001,7 +985,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 61,
+        "y": 58,
         "w": 12,
         "h": 7
       },
@@ -2054,7 +1038,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 68,
+        "y": 65,
         "w": 12,
         "h": 7
       },
@@ -2107,7 +1091,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 68,
+        "y": 65,
         "w": 12,
         "h": 7
       },
@@ -2161,7 +1145,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 75,
+        "y": 72,
         "w": 24,
         "h": 1
       }
@@ -2172,7 +1156,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 76,
+        "y": 73,
         "w": 4,
         "h": 4
       },
@@ -2239,7 +1223,7 @@
       "type": "stat",
       "gridPos": {
         "x": 4,
-        "y": 76,
+        "y": 73,
         "w": 4,
         "h": 4
       },
@@ -2306,7 +1290,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 76,
+        "y": 73,
         "w": 4,
         "h": 4
       },
@@ -2373,7 +1357,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 76,
+        "y": 73,
         "w": 4,
         "h": 4
       },
@@ -2440,7 +1424,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 76,
+        "y": 73,
         "w": 4,
         "h": 4
       },
@@ -2507,7 +1491,7 @@
       "type": "stat",
       "gridPos": {
         "x": 20,
-        "y": 76,
+        "y": 73,
         "w": 4,
         "h": 4
       },
@@ -2575,7 +1559,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 80,
+        "y": 77,
         "w": 24,
         "h": 1
       }
@@ -2586,7 +1570,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 81,
+        "y": 78,
         "w": 12,
         "h": 7
       },
@@ -2642,7 +1626,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 81,
+        "y": 78,
         "w": 12,
         "h": 7
       },
@@ -2698,7 +1682,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 88,
+        "y": 85,
         "w": 12,
         "h": 7
       },
@@ -2793,7 +1777,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 88,
+        "y": 85,
         "w": 12,
         "h": 7
       },
@@ -2860,7 +1844,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 95,
+        "y": 92,
         "w": 24,
         "h": 1
       }
@@ -2871,7 +1855,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 96,
+        "y": 93,
         "w": 24,
         "h": 8
       },
@@ -2934,7 +1918,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 104,
+        "y": 101,
         "w": 24,
         "h": 1
       }
@@ -2945,7 +1929,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 105,
+        "y": 102,
         "w": 12,
         "h": 8
       },
@@ -3007,7 +1991,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 105,
+        "y": 102,
         "w": 12,
         "h": 8
       },
@@ -3062,6 +2046,182 @@
         }
       },
       "interval": "15s"
+    },
+    {
+      "id": 51,
+      "title": "05 · 使用排行 · 部門與 User Top 10",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 110,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 47,
+      "title": "部門使用時數 · 前 10（ASR 音訊時數）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 111,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (department) (increase(s2t_user_audio_seconds_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",user_id!=\"__overflow__\",operation=\"transcriptions\"}[$__range])) / 3600)",
+          "legendFormat": "{{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間。時數為 ASR 實際提交音訊長度，重試可能重複計入；次數為 L2 開始／繼續錄音事件。"
+    },
+    {
+      "id": 48,
+      "title": "部門使用次數 · 前 10（開始／繼續錄音）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 111,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (department) (increase(s2t_user_journey_events_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",user_id!=\"__overflow__\",stage=\"L2\"}[$__range])))",
+          "legendFormat": "{{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間。時數為 ASR 實際提交音訊長度，重試可能重複計入；次數為 L2 開始／繼續錄音事件。"
+    },
+    {
+      "id": 50,
+      "title": "User 使用時數 · 前 10（ASR 音訊時數）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 119,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (user_id,nt,department) (increase(s2t_user_audio_seconds_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",nt=~\"${usage_user:regex}\",user_id!=\"__overflow__\",operation=\"transcriptions\"}[$__range])) / 3600)",
+          "legendFormat": "{{nt}} · {{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間各 User 送入 ASR 的音訊長度換算時數，依使用者 ID、NT 與部門彙總，取前 10。支援部門與 NT 篩選；排除監控溢位帳號，重試音訊可能重複計入。"
+    },
+    {
+      "id": 49,
+      "title": "User 使用次數 · 前 10（開始／繼續錄音）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 119,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (user_id,nt,department) (increase(s2t_user_journey_events_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",user_id!=\"__overflow__\",stage=\"L2\",nt=~\"${usage_user:regex}\"}[$__range])))",
+          "legendFormat": "{{nt}} · {{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間。時數為 ASR 實際提交音訊長度，重試可能重複計入；次數為 L2 開始／繼續錄音事件。"
     }
   ],
   "editable": false,
@@ -3137,5 +2297,6 @@
         }
       }
     ]
-  }
+  },
+  "description": "E2E 統一定義：User 講完最後一字 → 譯文最後一字繪出，目標 ≤ 3 秒。ASR 同樣從最後一字 → 原文繪出。語音尾端使用最後 VAD 語音樣本估計，非逐字強制對齊。t2 僅 VAD 邏輯處理時間，不包含講話或音訊累積。"
 }

@@ -4,7 +4,7 @@ const { mkdtemp, readdir, rm, utimes, writeFile } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 const { promisify } = require('node:util')
-const { createStorage } = require('../../server/storage/index.cjs')
+const { createStorage, kubernetesConfigError } = require('../../server/storage/index.cjs')
 const { LocalUserStore } = require('../../server/auth/user-store.cjs')
 const { createAuth } = require('../../server/auth/index.cjs')
 
@@ -16,6 +16,16 @@ const main = async () => {
     const storage = createStorage({ S2T_DATA_DIR: directory })
     await storage.ready
     assert.deepEqual(storage.mode, { blob: 'local', config: 'local', vector: 'local' })
+
+    // Kubernetes 模式強制共享 blob/config，但 vector（聲紋）尚未對使用者開放，
+    // 因此允許維持 Pod 本地、不強制安裝 Milvus。
+    const k8s = { S2T_KUBERNETES_MODE: 'true' }
+    assert.match(kubernetesConfigError(k8s, { blob: 'local', config: 'local', vector: 'local' }).message, /MinIO 與 PostgreSQL/)
+    assert.match(kubernetesConfigError(k8s, { blob: 'minio', config: 'local', vector: 'local' }).message, /MinIO 與 PostgreSQL/)
+    assert.match(kubernetesConfigError(k8s, { blob: 'local', config: 'postgres', vector: 'local' }).message, /MinIO 與 PostgreSQL/)
+    assert.equal(kubernetesConfigError(k8s, { blob: 'minio', config: 'postgres', vector: 'local' }), null, 'local vector must be allowed before voiceprint ships')
+    assert.equal(kubernetesConfigError(k8s, { blob: 'minio', config: 'postgres', vector: 'milvus' }), null)
+    assert.equal(kubernetesConfigError({ S2T_KUBERNETES_MODE: 'false' }, { blob: 'local', config: 'local', vector: 'local' }), null, 'non-K8s keeps the local fallback')
 
     await storage.config.put('alice', 'session-1', { text: 'Alice 的逐字稿' })
     await storage.config.put('bob', 'session-1', { text: 'Bob 的逐字稿' })

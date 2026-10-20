@@ -15,7 +15,11 @@ const operations = {
   diarizeWav: ({ audio, backend }) => backend === 'nemotron-3-diarization' ? nemotron.diarizeWav(audio) : sherpa.diarizeWav(audio),
   sherpaStatus: ({ purpose }) => sherpa.verifySherpaRuntime(purpose),
   nemotronStatus: () => nemotron.verifyRuntime(),
-  sileroVad: ({ audio, options }) => silero.analyzeWav(audio, options),
+  sileroVad: async ({ audio, options }) => {
+    const startedAt = performance.now()
+    const result = await silero.analyzeWav(audio, options)
+    return { ...result, processingMs: performance.now() - startedAt }
+  },
   sileroStatus: () => silero.modelStatus(),
   // A status check only verifies the model file and package. Run one tiny
   // inference as the health probe so a bad ONNX graph/provider is reported

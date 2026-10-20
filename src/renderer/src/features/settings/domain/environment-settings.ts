@@ -15,8 +15,8 @@ export const applyEnvironmentSettings = (value: Partial<Settings>, config: Envir
   profiles.unshift(...gatewayProfiles)
   const translations = current.translationProfiles.filter((profile) => !['environment-translation', 'web-environment-translation'].includes(profile.id))
   if (translation?.configured && translation.endpoint && translation.model) translations.push({ id: translationId, name: activeTranslate('stEnvironmentProfile').replace('{model}', String(translation.model)), endpoint: translation.sourceEndpoint || translation.endpoint, model: translation.model })
-  const selectedModelId = gatewayProfiles[0]?.id ?? (profiles.some(profile => profile.id === current.selectedModelId) ? current.selectedModelId : profiles[0]?.id ?? 'none')
-  const selectedTranslationModelId = translation?.configured && translation.endpoint && translation.model ? translationId : (translations.some(profile => profile.id === current.selectedTranslationModelId) ? current.selectedTranslationModelId : translations[0]?.id ?? 'none')
+  const selectedModelId = profiles.some(profile => profile.id === value.selectedModelId) ? value.selectedModelId! : gatewayProfiles[0]?.id ?? profiles[0]?.id ?? 'none'
+  const selectedTranslationModelId = translations.some(profile => profile.id === value.selectedTranslationModelId) ? value.selectedTranslationModelId! : translations[0]?.id ?? 'none'
   const activeTranslation = translations.find((profile) => profile.id === selectedTranslationModelId)
   const localDiarization = (config.diarizationProfiles ?? []).filter(profile => profile.configured).map(profile => ({ ...profile, endpoint: desktop ? 's2t-local://diarization' : profile.endpoint, requiresApiKey: false }))
   const userDiarization = (current.diarizationProfiles ?? []).filter(profile => !profile.id.startsWith('local-'))

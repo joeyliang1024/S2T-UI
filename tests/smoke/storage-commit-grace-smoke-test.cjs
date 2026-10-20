@@ -65,6 +65,10 @@ const main = async () => {
       body: JSON.stringify({ username: `grace-${randomUUID().replace(/-/g, '').slice(0, 12)}`, password: 'grace-smoke-password', NT: `Grace ${randomUUID().replace(/-/g, '').slice(0, 10)}`, Department: 'Storage smoke' })
     })
     assert.equal(registration.status, 201, JSON.stringify(registration.body))
+    const adminLogin = await probe('/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'admin' }) })
+    assert.equal(adminLogin.status, 200)
+    const promoted = await probe(`/api/admin/users/${registration.body.user.id}/role`, { method: 'PUT', headers: { authorization: `Bearer ${adminLogin.body.token}`, 'content-type': 'application/json' }, body: JSON.stringify({ role: 'developer' }) })
+    assert.equal(promoted.status, 200, 'storage maintenance is a developer feature')
     const auth = { authorization: `Bearer ${registration.body.token}` }
 
     const grace = Number((await probe('/api/storage')).body?.compensationGraceMs)

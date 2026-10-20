@@ -85,12 +85,13 @@
       }
     ]
   },
+  "description": "E2E P90、t1～t7 平均、API 成功率、部門使用趨勢與漏斗、Storage 健康狀態。",
   "uid": "s2t-oncall",
   "title": "S2T · 值班總覽｜延遲・部門・健康",
   "panels": [
     {
       "id": 1,
-      "title": "00 · KPI · 來源：$caption_gateway",
+      "title": "00 · E2E：最後語音字 → 譯文最後字（ASR → 原文最後字）· 目標 ≤ 3s",
       "type": "row",
       "collapsed": false,
       "gridPos": {
@@ -102,7 +103,7 @@
     },
     {
       "id": 2,
-      "title": "E2E P90 · 最後語音 → 譯文呈現（目標 < 3 秒）",
+      "title": "E2E P90 · 最後語音字 → 譯文最後字（目標 ≤ 3 秒）",
       "type": "stat",
       "gridPos": {
         "x": 0,
@@ -117,7 +118,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.90, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation_tail\"}[$__range])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_translation_tail\"}[$__range])) by (le)) and on() (sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"e2e_translation_tail\"}[$__range])) > 0)",
           "legendFormat": "",
           "instant": true,
           "range": false
@@ -170,8 +171,8 @@
     },
     {
       "id": 3,
-      "title": "瓶頸段延遲 · t1～t7 平均（所選區間）",
-      "type": "bargauge",
+      "title": "ASR P90 · 最後語音字 → 原文最後字",
+      "type": "stat",
       "gridPos": {
         "x": 8,
         "y": 1,
@@ -185,13 +186,133 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (phase) (rate(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) / sum by (phase) (rate(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range]))",
+          "expr": "histogram_quantile(0.90, sum(rate(s2t_caption_stage_duration_seconds_bucket{job=\"$caption_gateway\",stage=\"e2e_asr\"}[$__range])) by (le)) and on() (sum(increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=\"e2e_asr\"}[$__range])) > 0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "所選時間區間 P90；使用者講完最後一字（最後 VAD 語音樣本）到原文最後一字於可見即時頁呈現，包含斷句等待；語音尾端為 VAD 估計，非逐字對齊。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "API 成功率（所選區間）",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - sum(rate(s2t_gateway_request_errors_total{job=\"$caption_gateway\"}[$__range])) / sum(rate(s2t_gateway_request_duration_seconds_count{job=\"$caption_gateway\"}[$__range]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "description": "HTTP 狀態 < 400 / 全部完成請求；無請求時無資料。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "height": 170
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "t1～t7 各階段平均耗時（秒）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (rate(s2t_caption_phase_duration_seconds_sum{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) / (sum by (phase) (rate(s2t_caption_phase_duration_seconds_count{job=\"$caption_gateway\",phase=~\"t[1-7]\"}[$__range])) > 0)",
           "legendFormat": "{{phase}}",
           "instant": true,
           "range": false
         }
       ],
-      "description": "每階段平均；各階段的子切片先由瀏覽器合併成每段一個 phase 樣本。ASR 與翻譯樣本數可能不同，勿將平均相加當 E2E。",
+      "description": "t1～t7 各階段平均耗時，t2 僅 VAD 邏輯處理；不同樣本的平均不可直接加總為 E2E。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -218,7 +339,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "t2 VAD 偵測與分段"
+                "value": "t2 VAD 邏輯處理"
               }
             ]
           },
@@ -298,14 +419,14 @@
       }
     },
     {
-      "id": 4,
-      "title": "API 成功率（所選區間）",
-      "type": "stat",
+      "id": 52,
+      "title": "t1～t7 Detail 平均耗時（秒）",
+      "type": "bargauge",
       "gridPos": {
-        "x": 16,
-        "y": 1,
-        "w": 8,
-        "h": 5
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 16
       },
       "datasource": {
         "type": "prometheus",
@@ -314,32 +435,24 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "1 - sum(rate(s2t_gateway_request_errors_total{job=\"$caption_gateway\"}[$__range])) / sum(rate(s2t_gateway_request_duration_seconds_count{job=\"$caption_gateway\"}[$__range]))",
-          "legendFormat": "",
+          "expr": "sum by (stage) (increase(s2t_caption_stage_duration_seconds_sum{job=\"$caption_gateway\",stage=~\"t[1-7]_.*\",stage!=\"t2_segment\"}[$__range])) / (sum by (stage) (increase(s2t_caption_stage_duration_seconds_count{job=\"$caption_gateway\",stage=~\"t[1-7]_.*\",stage!=\"t2_segment\"}[$__range])) > 0)",
+          "legendFormat": "{{stage}}",
           "instant": true,
           "range": false
         }
       ],
-      "description": "HTTP 狀態 < 400 / 全部完成請求；無請求時無資料。",
+      "description": "各階段的細項平均耗時，t2 僅 VAD 邏輯處理；排除講話與區段累積時間。",
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
+          "unit": "s",
           "min": 0
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "lastNotNull"
-          ],
-          "height": 170
-        },
-        "tooltip": {
-          "mode": "multi"
-        },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
         "reduceOptions": {
           "calcs": [
             "last"
@@ -356,7 +469,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 22,
         "w": 24,
         "h": 1
       }
@@ -367,7 +480,7 @@
       "type": "stat",
       "gridPos": {
         "x": 0,
-        "y": 7,
+        "y": 23,
         "w": 4,
         "h": 4
       },
@@ -434,7 +547,7 @@
       "type": "stat",
       "gridPos": {
         "x": 4,
-        "y": 7,
+        "y": 23,
         "w": 4,
         "h": 4
       },
@@ -501,7 +614,7 @@
       "type": "stat",
       "gridPos": {
         "x": 8,
-        "y": 7,
+        "y": 23,
         "w": 4,
         "h": 4
       },
@@ -568,7 +681,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 7,
+        "y": 23,
         "w": 4,
         "h": 4
       },
@@ -635,7 +748,7 @@
       "type": "stat",
       "gridPos": {
         "x": 16,
-        "y": 7,
+        "y": 23,
         "w": 4,
         "h": 4
       },
@@ -702,7 +815,7 @@
       "type": "stat",
       "gridPos": {
         "x": 20,
-        "y": 7,
+        "y": 23,
         "w": 4,
         "h": 4
       },
@@ -770,7 +883,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 11,
+        "y": 27,
         "w": 24,
         "h": 1
       }
@@ -781,7 +894,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 28,
         "w": 12,
         "h": 7
       },
@@ -837,7 +950,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 28,
         "w": 12,
         "h": 7
       },
@@ -893,7 +1006,7 @@
       "type": "bargauge",
       "gridPos": {
         "x": 0,
-        "y": 19,
+        "y": 35,
         "w": 12,
         "h": 7
       },
@@ -988,7 +1101,7 @@
       "type": "stat",
       "gridPos": {
         "x": 12,
-        "y": 19,
+        "y": 35,
         "w": 12,
         "h": 7
       },
@@ -1054,7 +1167,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 42,
         "w": 24,
         "h": 8
       },
@@ -1117,7 +1230,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 50,
         "w": 24,
         "h": 1
       }
@@ -1128,7 +1241,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 51,
         "w": 12,
         "h": 8
       },
@@ -1190,7 +1303,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 35,
+        "y": 51,
         "w": 12,
         "h": 8
       },
@@ -1245,6 +1358,182 @@
         }
       },
       "interval": "15s"
+    },
+    {
+      "id": 51,
+      "title": "05 · 使用排行 · 部門與 User Top 10",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 47,
+      "title": "部門使用時數 · 前 10（ASR 音訊時數）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 60,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (department) (increase(s2t_user_audio_seconds_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",user_id!=\"__overflow__\",operation=\"transcriptions\"}[$__range])) / 3600)",
+          "legendFormat": "{{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間。時數為 ASR 實際提交音訊長度，重試可能重複計入；次數為 L2 開始／繼續錄音事件。"
+    },
+    {
+      "id": 48,
+      "title": "部門使用次數 · 前 10（開始／繼續錄音）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 60,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (department) (increase(s2t_user_journey_events_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",user_id!=\"__overflow__\",stage=\"L2\"}[$__range])))",
+          "legendFormat": "{{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間。時數為 ASR 實際提交音訊長度，重試可能重複計入；次數為 L2 開始／繼續錄音事件。"
+    },
+    {
+      "id": 50,
+      "title": "User 使用時數 · 前 10（ASR 音訊時數）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (user_id,nt,department) (increase(s2t_user_audio_seconds_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",nt=~\"${usage_user:regex}\",user_id!=\"__overflow__\",operation=\"transcriptions\"}[$__range])) / 3600)",
+          "legendFormat": "{{nt}} · {{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間各 User 送入 ASR 的音訊長度換算時數，依使用者 ID、NT 與部門彙總，取前 10。支援部門與 NT 篩選；排除監控溢位帳號，重試音訊可能重複計入。"
+    },
+    {
+      "id": 49,
+      "title": "User 使用次數 · 前 10（開始／繼續錄音）",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (user_id,nt,department) (increase(s2t_user_journey_events_total{job=\"$caption_gateway\",department=~\"${usage_department:regex}\",user_id!=\"__overflow__\",stage=\"L2\",nt=~\"${usage_user:regex}\"}[$__range])))",
+          "legendFormat": "{{nt}} · {{department}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "所選期間。時數為 ASR 實際提交音訊長度，重試可能重複計入；次數為 L2 開始／繼續錄音事件。"
     }
   ],
   "links": [
@@ -1256,6 +1545,5 @@
       "keepTime": true,
       "targetBlank": true
     }
-  ],
-  "description": "E2E P90、t1～t7 平均、API 成功率、部門使用趨勢與漏斗、Storage 健康狀態。"
+  ]
 }

@@ -10,5 +10,5 @@ export interface AsrTransport {
 
   ensureReady(): Promise<void>
   transcribe(request: AsrRequest): Promise<AsrResult>
-  hasSpeech(audio: ArrayBuffer): Promise<boolean>
+  hasSpeech(audio: ArrayBuffer): Promise<boolean | { speech: boolean; processingMs?: number }>
 }

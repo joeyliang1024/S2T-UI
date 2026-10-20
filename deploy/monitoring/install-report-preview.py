@@ -8,7 +8,7 @@ NS = 's2t-stress-20261005'
 K = ['kubectl', '--context', 'colima-s2t-stress', '-n', NS]
 def run(*args, data=None):
     return subprocess.check_output(K + list(args), input=data, text=True)
-image = json.loads(run('get', 'deployment', 'gateway', '-o', 'json'))['spec']['template']['spec']['containers'][0]['image']
+image = 'node:22-alpine'
 files = {'report-preview.cjs': ROOT/'deploy/monitoring/report-preview.cjs', 'metrics.cjs': ROOT/'server/metrics.cjs', 'usage-metrics.cjs': ROOT/'server/usage-metrics.cjs'}
 items = [{'apiVersion': 'v1', 'kind': 'ConfigMap', 'metadata': {'name': 'report-preview-code', 'namespace': NS}, 'data': {key: path.read_text() for key, path in files.items()}}]
 items.append({'apiVersion':'apps/v1','kind':'Deployment','metadata':{'name':'report-preview','namespace':NS},'spec':{'replicas':1,'selector':{'matchLabels':{'app':'report-preview'}},'template':{'metadata':{'labels':{'app':'report-preview','s2t-purpose':'report-preview'}},'spec':{'automountServiceAccountToken':False,'containers':[{'name':'preview','image':image,'command':['node','/preview/report-preview.cjs'],'volumeMounts':[{'name':'code','mountPath':'/preview','readOnly':True}],'ports':[{'containerPort':8787}],'resources':{'requests':{'cpu':'10m','memory':'32Mi'},'limits':{'cpu':'200m','memory':'96Mi'}},'readinessProbe':{'httpGet':{'path':'/healthz','port':8787},'periodSeconds':3}}],'volumes':[{'name':'code','configMap':{'name':'report-preview-code'}}]}}}})

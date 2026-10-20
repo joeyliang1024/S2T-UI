@@ -1,0 +1,35 @@
+const assert = require('node:assert/strict')
+const { mkdtemp, rm, writeFile, readFile } = require('node:fs/promises')
+const { join } = require('node:path')
+const { tmpdir } = require('node:os')
+const { buildSync } = require('esbuild')
+const code = buildSync({ entryPoints: ['src/main/settings/shared-model-config.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const mod = { exports: {} }; new Function('module', 'exports', 'require', code)(mod, mod.exports, require)
+const { loadSharedModelConfig: load, saveSharedModelConfig: save, readConfig, writeConfig, matchesModelDestination } = mod.exports
+;(async () => {
+  const root = await mkdtemp(join(tmpdir(), 's2t-shared-native-'))
+  try {
+    const admin = join(root, 'admin.json'), member = join(root, 'member.json'), shared = join(root, 'managed.json')
+    const model = { selectedModelId: 'admin-asr', modelProfiles: [{ id: 'admin-asr', endpoint: 'https://admin.example/v1', model: 'asr' }] }
+    assert.equal(matchesModelDestination(model, 'admin-asr', 'https://admin.example/v1/audio/transcriptions', 'asr'), true)
+    for (const endpoint of ['https://attacker.example/v1', 'https://admin.example/other', 'https://user:password@admin.example/v1', 'file:///tmp/v1']) assert.equal(matchesModelDestination(model, 'admin-asr', endpoint, 'asr'), false)
+    assert.equal(matchesModelDestination(model, 'admin-asr', 'https://admin.example/v1', 'different-model'), false)
+    await writeConfig(admin, { ...model, theme: 'light', glossary: 'private admin glossary' })
+    await writeConfig(member, { selectedModelId: 'stale-user-model', theme: 'dark', denoiseEnabled: false })
+    assert.equal((await load(member, shared, false)).selectedModelId, undefined, 'legacy user model is never authoritative')
+    await load(admin, shared, true)
+    assert.deepEqual(await readConfig(shared), model, 'legacy admin migration excludes personal settings')
+    const first = await load(member, shared, false)
+    assert.equal(first.selectedModelId, 'admin-asr'); assert.equal(first.theme, 'dark'); assert.equal(first.denoiseEnabled, false)
+    await save(member, shared, { ...first, selectedModelId: 'injected', summaryEndpoint: 'https://injected.example', theme: 'light' }, false)
+    assert.deepEqual(await readConfig(shared), model, 'non-admin save cannot mutate the shared config')
+    assert.equal((await readConfig(member)).selectedModelId, 'admin-asr')
+    await save(admin, shared, { ...model, selectedModelId: 'updated', modelProfiles: [{ id: 'updated' }], theme: 'dark' }, true)
+    assert.equal((await load(member, shared, false)).selectedModelId, 'updated', 'all accounts receive admin changes')
+    await writeFile(shared, '{broken')
+    await assert.rejects(load(member, shared, false), SyntaxError, 'corrupt shared settings fail closed')
+    await assert.rejects(save(admin, shared, model, true), SyntaxError, 'autosave must not overwrite corrupt shared settings')
+    assert.equal(await readFile(shared, 'utf8'), '{broken')
+    console.log('PASS desktop shared model migration, personal settings isolation, non-admin write protection, admin updates and corrupt-file rejection')
+  } finally { await rm(root, { recursive: true, force: true }) }
+})().catch(error => { console.error(error); process.exitCode = 1 })

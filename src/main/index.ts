@@ -3,6 +3,7 @@ import { discardRecoverableRecording, recoverRecordings, type RecoverableRecordi
 import type { DesktopBridge } from '../shared/contracts/desktop'
 import { normalizeResponseSpeed, type ResponseSpeed } from '../shared/response-speed'
 import { validateAdminParameters, type AdminParameters } from '../shared/validation/admin-parameters.cjs'
+import { loadSharedModelConfig, saveSharedModelConfig, matchesModelDestination, readConfig, writeConfig } from './settings/shared-model-config'
 import { dataPaths } from '../shared/validation/data-paths.cjs'
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, safeStorage, session } from 'electron'
 import { basename, dirname, isAbsolute, join, relative } from 'node:path'
@@ -103,7 +104,8 @@ const wavHeader = (sampleRate: number, dataBytes: number): Buffer => {
 
 
 
-const secretStorePath = (userId: string): string => join(accountDirectory(userId), 'model-secrets.json')
+const secretStorePath = (_userId: string): string => join(dataPaths().root, 'managed-model-secrets.json')
+const sharedModelConfigPath = (): string => join(dataPaths().root, 'managed-models.json')
 const modelConfigPath = (userId: string): string => join(accountDirectory(userId), 'models.json')
 const validSecretId = (id: unknown): id is string => typeof id === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(id)
 const readSecrets = async (userId: string): Promise<Record<string, string>> => {
@@ -120,7 +122,7 @@ const saveSecret = async (userId: string, id: string, value: string): Promise<vo
   current[id] = value
   const encrypted = Object.fromEntries(Object.entries(current).map(([key, secret]) => [key, safeStorage.encryptString(secret).toString('base64')]))
   await mkdir(accountDirectory(userId), { recursive: true })
-  await writeFile(secretStorePath(userId), JSON.stringify(encrypted), { mode: 0o600 })
+  await writeConfig(secretStorePath(userId), encrypted)
 }
 const openAiBaseUrl = (endpoint: string): string => {
   const url = new URL(endpoint)
@@ -148,6 +150,17 @@ const environmentKey = (profileId: string): string | undefined => {
   if (profileId === 'diarization' || profileId === 'environment-diarization') return process.env.S2T_DIARIZATION_API_KEY
   if (profileId === 'asr' || profileId === 'environment-asr') return process.env.S2T_ASR_API_KEY
   return undefined
+}
+
+const verifyModelCredentialDestination = async (profileId: string, endpoint: string, model: string): Promise<void> => {
+  const saved = await readConfig(sharedModelConfigPath())
+  const purpose = profileId.replace(/^environment-/, '')
+  const prefix = ['asr', 'translation', 'summary', 'diarization'].includes(purpose) ? `S2T_${purpose.toUpperCase()}` : ''
+  if (prefix && process.env[`${prefix}_ENDPOINT`] && process.env[`${prefix}_MODEL`]) {
+    const profiles = Array.isArray(saved.modelProfiles) ? saved.modelProfiles : []
+    saved.modelProfiles = [...profiles, { id: profileId, endpoint: process.env[`${prefix}_ENDPOINT`], model: process.env[`${prefix}_MODEL`] }]
+  }
+  if (!matchesModelDestination(saved, profileId, endpoint, model)) throw new Error('模型目的地與 admin 設定不符，拒絕傳送 API key')
 }
 
 type StoredModelProfile = { id: string; name: string; endpoint: string; model: string; kind: 'websocket' | 'openai-http'; requiresApiKey?: boolean; capabilities: { asrMode: 'streaming' | 'non-streaming'; vadSource: 'app' | 'server'; timestampPrecision: 'chunk' | 'segment' | 'word'; supportedLanguages: string[]; supportedSampleRates: number[] } }
@@ -307,13 +320,21 @@ app.whenReady().then(() => {
       await releaseSenderRecordings(event.sender.id)
     }
     desktopUsers.set(event.sender.id, payload.user.id)
-    desktopRoles.set(event.sender.id, payload.user.role === 'admin' ? 'admin' : 'user')
+    desktopRoles.set(event.sender.id, payload.user.role === 'admin' || payload.user.role === 'developer' ? payload.user.role : 'user')
+    if (payload.user.role === 'admin') {
+      const sharedSecrets = await readConfig(secretStorePath(payload.user.id))
+      if (!Object.keys(sharedSecrets).length) {
+        const legacySecrets = await readConfig(join(accountDirectory(payload.user.id), 'model-secrets.json'))
+        if (Object.keys(legacySecrets).length) await writeConfig(secretStorePath(payload.user.id), legacySecrets)
+      }
+    }
     event.sender.once('destroyed', () => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id); void releaseSenderRecordings(event.sender.id) })
     return { userId: payload.user.id }
   })
   ipcMain.handle('gateway:clear-session', async event => { desktopUsers.delete(event.sender.id); desktopRoles.delete(event.sender.id); await releaseSenderRecordings(event.sender.id) })
 
   ipcMain.handle('model:save-api-key', async (event, input: { profileId: Parameters<DesktopBridge['saveModelApiKey']>[0]; apiKey: Parameters<DesktopBridge['saveModelApiKey']>[1] }) => {
+    if (desktopRoles.get(event.sender.id) !== 'admin') throw new Error('只有 admin 可修改模型 API key')
     if (!validSecretId(input.profileId) || typeof input.apiKey !== 'string' || input.apiKey.trim().length < 8) throw new Error('無效的 API key 設定')
     await saveSecret(requireDesktopUser(event), input.profileId, input.apiKey.trim())
   })
@@ -345,19 +366,19 @@ app.whenReady().then(() => {
     return { prompts: localRequire(join(process.cwd(), 'server', 'prompts.cjs')).loadPrompts(), diarizationProfiles: localModels.localDiarizationProfiles(), branding: { titleImage }, asr: service('ASR'), translation: service('TRANSLATION'), summary: service('SUMMARY'), diarization: service('DIARIZATION') }
   })
   ipcMain.handle('models:load-config', async (event) => {
-    try { const config = JSON.parse(await readFile(modelConfigPath(requireDesktopUser(event)), 'utf8')); if (desktopRoles.get(event.sender.id) !== 'admin') delete config.adminParameters; return config } catch { return null }
+    try { const config = await loadSharedModelConfig(modelConfigPath(requireDesktopUser(event)), sharedModelConfigPath(), desktopRoles.get(event.sender.id) === 'admin'); if (!['admin', 'developer'].includes(desktopRoles.get(event.sender.id) || '')) delete config.adminParameters; return config } catch { return null }
   })
   ipcMain.handle('models:save-config', async (event, config: unknown) => {
-    if (config && typeof config === 'object' && 'adminParameters' in config && (config as { adminParameters?: unknown }).adminParameters !== undefined && desktopRoles.get(event.sender.id) !== 'admin') throw new Error('只有 admin 可保存進階參數')
-    const sanitized = sanitizeModelConfig(config)
+    if (config && typeof config === 'object' && 'adminParameters' in config && (config as { adminParameters?: unknown }).adminParameters !== undefined && !['admin', 'developer'].includes(desktopRoles.get(event.sender.id) || '')) throw new Error('只有 admin 或 developer 可保存進階參數')
     const userId = requireDesktopUser(event)
-    await mkdir(accountDirectory(userId), { recursive: true })
-    await writeFile(modelConfigPath(userId), JSON.stringify(sanitized, null, 2), { mode: 0o600 })
+    const sanitized = sanitizeModelConfig(config)
+    await saveSharedModelConfig(modelConfigPath(userId), sharedModelConfigPath(), sanitized as unknown as Record<string, unknown>, desktopRoles.get(event.sender.id) === 'admin')
     return { saved: true }
   })
   ipcMain.handle('model:transcribe', async (event, input: Parameters<DesktopBridge['transcribeAudioChunk']>[0]) => {
     if (!validSecretId(input.profileId) || !(input.audio instanceof ArrayBuffer) || input.audio.byteLength === 0 || input.audio.byteLength > 100 * 1024 * 1024) throw new Error('無效的音訊分段')
     const apiKey = environmentKey(input.profileId) || (await readSecrets(requireDesktopUser(event)))[input.profileId]
+    if (apiKey) await verifyModelCredentialDestination(input.profileId, input.endpoint, input.model)
     if (!apiKey && input.requiresApiKey !== false) throw new Error('請先在設定中儲存此模型的 API key')
     let baseURL: string
     try { baseURL = openAiBaseUrl(input.endpoint) } catch { throw new Error('無效的轉錄 API 位址') }
@@ -392,9 +413,10 @@ app.whenReady().then(() => {
     }
   })
   ipcMain.handle('model:complete', async (event, input: Parameters<DesktopBridge['completeText']>[0]) => {
-    if (input.temperature !== undefined && (desktopRoles.get(event.sender.id) !== 'admin' || !Number.isFinite(input.temperature) || input.temperature < 0 || input.temperature > 2)) throw new Error('只有 admin 可調整有效的翻譯參數')
+    if (input.temperature !== undefined && (!['admin', 'developer'].includes(desktopRoles.get(event.sender.id) || '') || !Number.isFinite(input.temperature) || input.temperature < 0 || input.temperature > 2)) throw new Error('只有 admin 或 developer 可調整有效的翻譯參數')
     if (!validSecretId(input.profileId) || !Array.isArray(input.messages) || !input.model.trim()) throw new Error('無效的文字模型請求')
     const apiKey = environmentKey(input.profileId) || (await readSecrets(requireDesktopUser(event)))[input.profileId]
+    if (apiKey) await verifyModelCredentialDestination(input.profileId, input.endpoint, input.model)
     if (!apiKey && input.requiresApiKey !== false) throw new Error('請先在設定中儲存此服務的 API key')
     let baseURL: string
     try { baseURL = openAiChatBaseUrl(input.endpoint) } catch { throw new Error('無效的文字 API 位址') }
@@ -438,6 +460,7 @@ app.whenReady().then(() => {
     try { endpoint = new URL(input.endpoint) } catch { throw new Error('無效的講者分離 API 位址') }
     const isLoopbackSherpa = ['127.0.0.1', 'localhost', '[::1]'].includes(endpoint.hostname) && endpoint.pathname === '/api/diarizations'
     const apiKey = environmentKey('diarization') || (await readSecrets(requireDesktopUser(event))).diarization
+    if (apiKey) await verifyModelCredentialDestination('diarization', input.endpoint, input.model)
     if (!apiKey && !isLoopbackSherpa) throw new Error('請先在設定中儲存講者分離 API key')
     try {
       const form = new FormData()

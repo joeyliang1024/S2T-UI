@@ -24,13 +24,15 @@ const produce = () => {
     metrics.observe('s2t_gateway_request_duration_seconds', { route: 'translations' }, .7, failed)
     if (failed) continue
     const wobble = (tick % 9) * .035
-    const asr = { t1_queue: .04 + d * .02, t1_encode: .025, t1_upload: .06, t2_vad: .08, t2_segment: .35 + d * .12, t2_gate: .045, t3_queue: .02, t3_model: .65 + d * .22 + wobble, t3_gateway: .025, t4_postprocess: .015, t5_network: .075, t5_paint: .02 }
+    const asr = { t1_queue: .04 + d * .02, t1_encode: .025, t1_upload: .06, t2_vad: .08, t2_gate: .045, t3_queue: .02, t3_model: .65 + d * .22 + wobble, t3_gateway: .025, t4_postprocess: .015, t5_network: .075, t5_paint: .02 }
     const translation = { t6_wait: .1, t6_queue: .025, t6_model: .55 + d * .16 + wobble, t6_gateway: .02, t7_network: .06, t7_paint: .025 }
     const total = object => Object.values(object).reduce((sum, n) => sum + n, 0)
     const slices = { ...asr, ...translation }
     const phases = Object.entries(slices).reduce((map, [stage, seconds]) => { const phase = 'phase_' + stage.slice(0, 2); map[phase] = (map[phase] || 0) + seconds; return map }, {})
-    metrics.acceptCaptionSamples({ samples: [...Object.entries({ ...slices, ...phases, e2e_asr: total(asr), e2e_translation: total(slices), e2e_translation_tail: total(slices) - .28 }).map(([stage, seconds]) => ({ stage, seconds }))], events: { speech_detected: 1 } })
+    metrics.acceptCaptionSamples({ samples: [...Object.entries({ ...slices, ...phases, e2e_asr: total(asr), e2e_translation: total(slices), e2e_translation_tail: total(slices) }).map(([stage, seconds]) => ({ stage, seconds }))], events: { speech_detected: 1 } })
     metrics.observe('s2t_server_stage_duration_seconds', { stage: 'translation_model' }, translation.t6_model)
+    const audio = Buffer.alloc(44 + 32000 * (20 + index * 3)); audio.write('RIFF'); audio.writeUInt32LE(audio.length - 8, 4); audio.write('WAVEfmt ', 8); audio.writeUInt32LE(16, 16); audio.writeUInt16LE(1, 20); audio.writeUInt16LE(1, 22); audio.writeUInt32LE(16000, 24); audio.writeUInt32LE(32000, 28); audio.writeUInt16LE(2, 32); audio.writeUInt16LE(16, 34); audio.write('data', 36); audio.writeUInt32LE(audio.length - 44, 40)
+    usage.observeExecution(user.id, 'transcriptions', { audio })
     usage.observeExecution(user.id, 'translations', { input: 'Preview only', output: '報表預覽', usage: { prompt_tokens: 48, completion_tokens: 16 } })
   }
 }

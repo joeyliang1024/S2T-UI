@@ -49,7 +49,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
     // intentionally left unchanged.
     const configuredUsername = environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim()
     const configuredPassword = environment.S2T_BOOTSTRAP_ADMIN_PASSWORD?.trim()
-    if (!configuredUsername && (await users.list()).some(user => user.role === 'admin')) return
+    if (await users.findAdmin()) return
     const username = configuredUsername || 'admin'
     const developmentDefaults = environment.NODE_ENV !== 'production' && environment.S2T_KUBERNETES_MODE !== 'true' && environment.S2T_ALLOW_DEFAULT_ADMIN === 'true'
     const password = configuredPassword || (developmentDefaults ? 'admin' : '')
@@ -67,6 +67,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
     } catch (error) { const winner = await users.findByUsername(username); if (!winner || winner.role !== 'admin') throw error }
   }
   await ensureBootstrapAdmin()
+  await users.ensureSingleAdmin()
   const deleteAccount = createAccountDeletionService({ storage, users, bootstrapUsername: environment.S2T_BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin' })
   const activeRevocations = async (userId) => {
     const now = Math.floor(Date.now() / 1000)
@@ -87,6 +88,11 @@ const createAuth = async (storage, environment = process.env, limits = require('
     // Kept server-side only.  The gateway derives per-account encrypted
     // credential storage from the same durable secret used for sessions.
     secret,
+    async modelOwner() {
+      const owner = await users.findAdmin()
+      if (!owner) throw Object.assign(new Error('共用模型管理帳號不可用'), { status: 503 })
+      return owner.id
+    },
     async register(input) {
       const password = typeof input?.password === 'string' ? input.password : ''
       if (!password) throw new Error('密碼為必填')
@@ -126,6 +132,19 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async handle(request, response, send) {
       const url = new URL(request.url, 'http://localhost').pathname
+      const roleMatch = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})\/role$/.exec(url)
+      if (roleMatch) {
+        const admin = await this.requireUser(request)
+        if (!admin) { send(response, 401, { error: '需要登入' }); return true }
+        if (admin.role !== 'admin') { send(response, 403, { error: '只有 admin 可管理帳號' }); return true }
+        if (request.method !== 'PUT') { send(response, 405, { error: 'Method not allowed' }); return true }
+        try {
+          const input = await readJson(request)
+          const user = await users.setRole(roleMatch[1], input.role, admin.id)
+          send(response, 200, { user })
+        } catch (error) { send(response, error.status || 400, { error: error.message }) }
+        return true
+      }
       const deleteMatch = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})$/.exec(url)
       if (deleteMatch && request.method === 'DELETE') {
         const admin = await this.requireUser(request)
@@ -157,6 +176,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
           if (request.method === 'GET') send(response, 200, { users: await Promise.all((await users.list()).map(async user => ({ ...user, sharingAuthorization: await readSharingAuthorization(storage.config, user.id) }))) })
           else if (request.method === 'POST') {
             const input = await readJson(request)
+            if (!['developer', 'user'].includes(input.role ?? 'user')) throw Object.assign(new Error('只能建立 developer 或 user；admin 帳號唯一'), { status: 400 })
             if (typeof input.password !== 'string' || input.password.length < 8 || Buffer.byteLength(input.password) > 72) throw new Error('密碼須為 8 至 72 bytes')
             const user = await users.create({ username: input.username, NT: input.NT, Department: input.Department, role: input.role, passwordHash: await bcrypt.hash(input.password, 12) })
             await storage.withAccountWrite(user.id, () => setSharingAuthorization(storage.config, user.id, { approved: true, department: user.Department }, admin.id))

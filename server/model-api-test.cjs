@@ -34,7 +34,7 @@ const availableModels = async (user, deps) => {
 
 const testModelApi = async (body, { auth, user, ...deps }) => {
   const draft = validateDraft(body)
-  const models = await availableModels(user, deps)
+  const models = await availableModels({ ...user, id: auth.modelOwner ? await auth.modelOwner() : user.id }, deps)
   const saved = models.find(item => item.id === body.id)
   const model = draft || saved
   if (!model) throw Object.assign(new Error('找不到此帳號的模型，請確認模型設定已保存'), { status: 404 })

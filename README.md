@@ -21,7 +21,7 @@ flowchart TB
   AP --> STORE["Storage adapters<br/>目前 local：config／blob／vector"]
   STORE --> VOL[("持久化 /data<br/>設定／加密 API key／音訊／聲紋／auth-secret")]
   AP -. "/metrics" .-> PROM["Prometheus → Grafana"]
-  SCALE["可選 K8s：API／Audio Service／Worker 分工<br/>PostgreSQL／MinIO／Milvus／Redis Sentinel"] -. "另行部署；非目前本機拓撲" .-> AP
+  SCALE["可選 K8s：API／Audio Service／Worker 分工<br/>PostgreSQL／MinIO／Redis Sentinel（Milvus 可選，僅聲紋）"] -. "另行部署；非目前本機拓撲" .-> AP
 ```
 
 完整架構、9 張詳細流程圖與重新部署的資料／密鑰邊界見 [系統架構](docs/reference/ARCHITECTURE.zh-TW.md)。
@@ -60,6 +60,8 @@ cp .env.example .env
 編輯 `.env`，至少填入 ASR 的 `S2T_ASR_API_KEY`、`S2T_ASR_ENDPOINT`、`S2T_ASR_MODEL`。`.env` 會被忽略，不應提交到 Git。
 
 開發環境明確設定 `S2T_ALLOW_DEFAULT_ADMIN=true` 後可用 `admin`／`admin`；正式環境禁止預設帳號，首次啟動前必須設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
+
+帳號角色為唯一 `admin`、`developer`、`user`。admin 可管理帳號與修改共用模型；developer 可使用進階功能與收音參數，但不顯示帳號管理、不可修改模型。user 隱藏品質比較、聲紋、模型管理、術語、字幕編輯、進階 VAD／翻譯負載與遠端 Storage 管理。Web 模型設定與加密金鑰以 admin 為共用擁有者；Electron 在同一安裝資料目錄共用 admin 模型與加密金鑰，個人偏好仍分開保存，跨電腦不複製本機金鑰。開始／繼續錄音會先開音源與音量確認視窗，確認後才開始。
 
 ### 2. Electron 桌面版
 

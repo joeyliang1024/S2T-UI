@@ -31,3 +31,21 @@ const browserContext = { module: { exports: {} }, navigator: { languages: ['ja-J
 browserContext.exports = browserContext.module.exports
 runInNewContext(result.outputFiles[0].text, browserContext)
 assert.equal(browserContext.module.exports.resolveUiLanguage('system'), 'ja', 'web keeps browser language detection')
+
+// Static view/service lookups must resolve: the runtime intentionally returns
+// the key for unknown messages, which otherwise hides omissions in the UI.
+const { readdirSync, readFileSync } = require('node:fs')
+const { join } = require('node:path')
+const knownInterfaceKeys = new Set(interfaceMessageKeys)
+function checkLookups(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) { checkLookups(path); continue }
+    if (!/\.tsx?$/.test(entry.name)) continue
+    const source = readFileSync(path, 'utf8')
+    for (const match of source.matchAll(/\b(?:ui|activeTranslate)\(['"]([^'"]+)['"]/g)) {
+      assert.ok(knownInterfaceKeys.has(match[1]), `${path}: unknown translation key ${match[1]}`)
+    }
+  }
+}
+checkLookups('src/renderer/src')

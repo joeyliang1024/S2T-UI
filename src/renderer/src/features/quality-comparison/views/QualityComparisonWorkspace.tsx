@@ -21,7 +21,10 @@ const QualityDiff = memo(function QualityDiff({ rows, label, beforeLabel, afterL
 type Progress = { stage: 'loading' | 'asr' | 'diarization' | 'translation' | 'completed' | 'failed'; completed: number; total: number; error?: string }
 type Props = { sessionId?: string | null; onSelectSession?: (id: string) => void; sessions: SavedSession[]; progress: Record<string, Progress>; correct: (session: SavedSession, items?: ComparisonKind[]) => Promise<void>; canCorrect: boolean; canDiarize?: boolean; canTranslate?: boolean; locale?: string; ui: (key: string) => string }
 export function QualityComparisonWorkspace({ sessionId, onSelectSession, sessions, progress, correct, canCorrect, canDiarize = true, canTranslate = true, locale, ui }: Props): ReactElement {
-  const [items, setItems] = useState<ComparisonKind[]>(canDiarize ? ['transcript', 'diarization'] : ['transcript'])
+  // A checkbox is disabled only by capability or while a run is busy, never by
+  // its own selection state, so unchecking an item can never strand it disabled.
+  const available = (kind: ComparisonKind): boolean => kind === 'transcript' ? canCorrect : kind === 'diarization' ? canDiarize : canTranslate
+  const [items, setItems] = useState<ComparisonKind[]>(() => (['transcript', 'diarization'] as const).filter(kind => available(kind)) as ComparisonKind[])
   const picker = useRef<HTMLDivElement>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   useEffect(() => {
@@ -56,16 +59,16 @@ export function QualityComparisonWorkspace({ sessionId, onSelectSession, session
   }
   const stageKey = state?.stage === 'asr' ? 'qualityCorrectionAsr' : state?.stage === 'diarization' ? 'recordProcessingDiarization' : state?.stage === 'translation' ? 'translation' : state?.stage === 'completed' ? 'recordProcessingCompleted' : state?.stage === 'failed' ? 'recordProcessingFailed' : 'qualityCorrectionLoading'
   return <section className="page-panel quality-comparison">
-    <div className="page-title"><div><p className="eyebrow">QUALITY COMPARISON</p><h2 title={ui('qualityCompareHint')}>{ui('qualityCompare')}</h2></div><StudioArtwork variant="quality" className="page-art" /></div>
+    <div className="page-title"><div><p className="eyebrow">{ui('eyebrowQualityComparison')}</p><h2 title={ui('qualityCompareHint')}>{ui('qualityCompare')}</h2></div><StudioArtwork variant="quality" className="page-art" /></div>
     <div className="quality-comparison-controls">
       <label>{ui('qualityCompareRecord')}<select value={session?.id ?? ''} onChange={event => { setSelectedId(event.target.value); onSelectSession?.(event.target.value) }}><option value="" disabled>{ui('notSelected')}</option>{sessions.map(entry => <option key={entry.id} value={entry.id}>{entry.title || ui('untitledRecord')} · {new Date(entry.createdAt).toLocaleString(locale)}</option>)}</select></label>
       <div className="quality-correction-picker" ref={picker} onKeyDown={event => { if (event.key === 'Escape') { setPickerOpen(false); picker.current?.querySelector('button')?.focus() } }}>
         <button type="button" className="quality-correction-trigger" aria-label={ui('qualityCorrectionItems')} aria-expanded={pickerOpen} aria-controls="quality-correction-options" onClick={() => setPickerOpen(current => !current)}>{ui('qualityCorrectionItems')} · {items.length}<span aria-hidden="true">▾</span></button>
-        {pickerOpen && <div id="quality-correction-options" className="quality-correction-options">{(['transcript', 'diarization', 'translation'] as const).map(kind => <label key={kind}><input type="checkbox" checked={items.includes(kind)} disabled={busy || (!items.includes(kind) && (kind === 'transcript' ? !canCorrect : kind === 'diarization' ? !canDiarize : !canTranslate))} onChange={event => { const checked = event.currentTarget.checked; setItems(current => checked ? current.includes(kind) ? current : [...current, kind] : current.filter(item => item !== kind)) }} />{ui(kind === 'transcript' ? 'qualityCompareTranscript' : kind === 'diarization' ? 'modelCategoryDiarization' : 'translation')}</label>)}</div>}
+        {pickerOpen && <div id="quality-correction-options" className="quality-correction-options">{(['transcript', 'diarization', 'translation'] as const).map(kind => <label key={kind}><input type="checkbox" checked={items.includes(kind)} disabled={busy || !available(kind)} onChange={event => { const checked = event.currentTarget.checked; setItems(current => checked ? current.includes(kind) ? current : [...current, kind] : current.filter(item => item !== kind)) }} />{ui(kind === 'transcript' ? 'qualityCompareTranscript' : kind === 'diarization' ? 'modelCategoryDiarization' : 'translation')}</label>)}</div>}
       </div>
       <button className="primary" disabled={Boolean(disabled)} onClick={() => void run()}>{busy ? ui('qualityCompareRunning') : ui('qualityCorrection')}</button>
     </div>
-    {items.includes('transcript') && !canCorrect && <p className="hint">{ui('qualityCompareModelRequired')}</p>}
+    {!canCorrect && <p className="hint">{ui('qualityCompareModelRequired')}</p>}
     {requiresAudio && session && (session.audioUnavailable || (!session.audioKey && !session.nativeAudioPath)) && <p className="hint">{ui('qualityCompareAudioRequired')}</p>}
     {(busy || state?.stage === 'failed') && <div className="quality-comparison-progress" role="status" aria-live="polite"><span>{ui(stageKey)}{state && state.total > 0 ? ` · ${state.completed}/${state.total}` : ''}</span>{busy && <progress aria-label={ui('qualityCorrection')} max={state?.total || 1} value={state?.total ? state.completed : undefined} />}{(state?.error || session?.qualityCorrectionError) && <p role="alert">{state?.error || session?.qualityCorrectionError}</p>}</div>}
     {!state && session?.qualityCorrectionError && <p role="alert">{session.qualityCorrectionError}</p>}

@@ -4,6 +4,14 @@ const { MinioBlobStore, PostgresConfigStore, MilvusVectorStore } = require('./re
 const { createAccountFence } = require('./account-fence.cjs')
 const { Pool } = require('pg')
 
+// Kubernetes 模式代表多副本分散部署，Pod 本地 storage 會讓帳號、歷史、字幕在副本間不一致，
+// 因此 blob（MinIO）與 config（PostgreSQL）必須是共享後端。
+// vector（聲紋 embedding）目前只服務尚未對使用者開放的聲紋系統，允許維持 Pod 本地，
+// 不強制安裝 Milvus；等聲紋正式開放時再決定是否收緊。
+const kubernetesConfigError = (environment = process.env, mode = {}) => environment.S2T_KUBERNETES_MODE === 'true' && [mode.blob, mode.config].some((value) => value === 'local')
+  ? new Error('Kubernetes 模式必須設定共享 MinIO 與 PostgreSQL，不能使用 Pod 本地 storage（vector 可維持本地）')
+  : null
+
 const createStorage = (environment = process.env) => {
   const config = readStorageConfig(environment)
   const blob = config.minio ? new MinioBlobStore(config.minio) : new LocalBlobStore(config.localDataDirectory)
@@ -34,4 +42,4 @@ const createStorage = (environment = process.env) => {
   }
 }
 
-module.exports = { createStorage, ...require('./config.cjs') }
+module.exports = { createStorage, kubernetesConfigError, ...require('./config.cjs') }

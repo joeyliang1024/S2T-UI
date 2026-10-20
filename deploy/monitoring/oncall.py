@@ -9,8 +9,8 @@ def build_oncall(detail):
     row_bottom = 0
     for source in detail['panels']:
         title = source['title']
-        if not (title.startswith(('00 ·', 'E2E P90', '瓶頸段延遲', 'API 成功率',
-                                  '部門 ·', '使用人數趨勢', '使用次數趨勢', 'HTTP 錯誤 ·', 'HTTP 4xx', 'HTTP 5xx', '使用漏斗', '漏斗轉換率', '04 ·'))
+        if not (title.startswith(('00 ·', 'E2E P90', 'ASR P90', 'API 成功率',
+                                  't1～t7 各階段', 't1～t7 Detail', '05 ·', '部門使用', 'User 使用', '部門 ·', '使用人數趨勢', '使用次數趨勢', 'HTTP 錯誤 ·', 'HTTP 4xx', 'HTTP 5xx', '使用漏斗', '漏斗轉換率', '04 ·'))
                 or title.endswith(' healthy')):
             continue
         item = deepcopy(source)

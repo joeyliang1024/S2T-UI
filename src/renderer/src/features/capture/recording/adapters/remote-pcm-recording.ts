@@ -1,3 +1,4 @@
+import { activeTranslate } from '../../../../shared/i18n'
 import { retryableAuthFetch, requestEpoch } from '../../../../shared/http/authenticated-client'
 
 const ownedRequest = (fetch: typeof retryableAuthFetch): typeof retryableAuthFetch => {
@@ -29,7 +30,7 @@ export class RemotePcmRecording {
         method: 'PUT', headers: { 'content-type': 'application/octet-stream', 'x-s2t-start-sample': String(this.samples), 'x-s2t-sample-rate': String(this.sampleRate) }, body: chunk
       }))
       const ack = await response.json() as { durable?: boolean; contiguousChunks?: number; persistedSamples?: number }
-      if (!ack.durable || ack.contiguousChunks !== this.index + 1 || ack.persistedSamples !== this.samples + chunk.byteLength / 2) throw new Error('錄音保存進度不一致')
+      if (!ack.durable || ack.contiguousChunks !== this.index + 1 || ack.persistedSamples !== this.samples + chunk.byteLength / 2) throw new Error(activeTranslate('recordingProgressMismatch'))
       this.index += 1; this.samples += chunk.byteLength / 2
     }
   }

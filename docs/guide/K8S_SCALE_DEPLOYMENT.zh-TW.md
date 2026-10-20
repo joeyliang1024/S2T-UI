@@ -4,7 +4,7 @@
 
 同一個 Dockerfile.web 映像。未設定 S2T_KUBERNETES_MODE=true 時，預設角色仍為 all，保留本地 Storage／本地密鑰、本容器 worker threads、FFmpeg；不連 Redis、不要求獨立 worker、不自動偵測 K8s 切換模式。現有 docker-compose.gateway.yml 啟動與資料 volume 不變。單一 Deployment 可同樣使用此模式，但只能一個副本。
 
-多副本必須明確設 S2T_KUBERNETES_MODE=true，所有角色使用同一組共享 MinIO／PostgreSQL／Milvus 及 S2T_AUTH_SECRET；共享限流使用 REDIS_URL 或 Sentinel 設定。Redis 中断時受限操作回覆 503，不回退本地。Redis 重啟／非同步 failover 可能重置短期限流及容量租約；可靠資料與任務擁有權始終以 PostgreSQL 為準，不宣稱 Redis 配額 exactly-once。
+多副本必須明確設 S2T_KUBERNETES_MODE=true，所有角色使用同一組共享 MinIO／PostgreSQL 及 S2T_AUTH_SECRET；共享限流使用 REDIS_URL 或 Sentinel 設定。Milvus 為可選：vector 只服務尚未對使用者開放的聲紋系統，未設定 S2T_MILVUS_* 時向量維持 Pod 本地，不影響帳號、歷史與字幕一致性；聲紋正式開放前再評估是否改用共享 Milvus。Redis 中断時受限操作回覆 503，不回退本地。Redis 重啟／非同步 failover 可能重置短期限流及容量租約；可靠資料與任務擁有權始終以 PostgreSQL 為準，不宣稱 Redis 配額 exactly-once。
 
 ## 角色與必要設定
 
