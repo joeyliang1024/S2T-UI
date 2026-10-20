@@ -21,7 +21,7 @@ flowchart TB
   AP --> STORE["Storage adapters<br/>目前 local：config／blob／vector"]
   STORE --> VOL[("持久化 /data<br/>設定／加密 API key／音訊／聲紋／auth-secret")]
   AP -. "/metrics" .-> PROM["Prometheus → Grafana"]
-  SCALE["可選 K8s：API／Audio Service／Worker 分工<br/>PostgreSQL／MinIO／Milvus／Redis Sentinel"] -. "另行部署；非目前本機拓撲" .-> AP
+  SCALE["可選 K8s：API／Audio Service／Worker 分工<br/>PostgreSQL／MinIO／Redis Sentinel（Milvus 可選，僅聲紋）"] -. "另行部署；非目前本機拓撲" .-> AP
 ```
 
 完整架構、9 張詳細流程圖與重新部署的資料／密鑰邊界見 [系統架構](docs/reference/ARCHITECTURE.zh-TW.md)。

@@ -28,7 +28,7 @@ const { localModelName, NEMOTRON_MODEL, localDiarizationProfiles, resolveLocalDi
 const { nemotronStatus } = audioClient
 const { modelStatus: sileroModelStatus } = require('./silero-vad.cjs')
 const { findIdentityCandidates, findMatches, identityCandidates, identityKey, decideIdentity, fastMatch } = require('./voiceprint-matching.cjs')
-const { createStorage } = require('./storage/index.cjs')
+const { createStorage, kubernetesConfigError: kubernetesStorageGate } = require('./storage/index.cjs')
 const { createAuth } = require('./auth/index.cjs')
 const { validateSharingEnrollment } = require('./auth/sharing-authorization.cjs')
 const { logger, newRequestId } = require('./logger.cjs')
@@ -100,9 +100,7 @@ try { storage = createStorage(process.env) } catch (error) {
   storage = { mode: { blob: 'unavailable', config: 'unavailable', vector: 'unavailable' }, config: {}, ready: Promise.reject(storageStartupError) }
 }
 metrics.instrumentStorage(storage)
-const kubernetesConfigError = process.env.S2T_KUBERNETES_MODE === 'true' && Object.values(storage.mode).some((mode) => mode === 'local')
-  ? new Error('Kubernetes 模式必須設定共享 MinIO、PostgreSQL 與 Milvus，不能使用 Pod 本地 storage')
-  : null
+const kubernetesConfigError = kubernetesStorageGate(process.env, storage.mode)
 const recordingChunks = new RecordingChunks(storage)
 const audioConfigurationError = ((processRole === 'audio-service' || (processRole === 'api' && process.env.S2T_AUDIO_SERVICE_URL)) && !process.env.S2T_AUDIO_SERVICE_TOKEN) || (process.env.S2T_KUBERNETES_MODE === 'true' && processRole === 'api' && !process.env.S2T_AUDIO_SERVICE_URL) ? new Error('音訊服務必須設定 S2T_AUDIO_SERVICE_TOKEN；K8s API 必須設定 S2T_AUDIO_SERVICE_URL') : null
 const startupError = storageStartupError || kubernetesConfigError || sharedLimits.configurationError || audioConfigurationError
