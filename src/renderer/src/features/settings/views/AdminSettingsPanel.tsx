@@ -59,11 +59,11 @@ export function AdminSettingsPanel({user,settings}: {user:AuthUser;settings:Sett
   return <>
     <section className="settings-card"><header className="settings-card-header"><h3>{ui('adminAccountManagement')}</h3></header><div className="settings-card-body">
       <p className="hint">{ui('adminRolePolicy')}</p>
-      <p>{ui('adminCurrentAccount')}{user.username} · {user.NT} · {user.Department} · admin</p>
+      <p>{ui('adminCurrentAccount')}{user.username} · {user.NT} · {user.Department} · {ui('adminRoleAdmin')}</p>
       <div className="admin-account-filters">
         <label>{ui('adminSearchAccounts')}<input type="search" value={accountSearch} onChange={event => setAccountSearch(event.target.value)} placeholder={ui('adminSearchAccountsHint')} /></label>
         <label>{ui('adminFieldDepartment')}<select aria-label={ui('adminFieldDepartment')} value={departmentFilter} onChange={event => setDepartmentFilter(event.target.value)}><option value="">{ui('all')}</option>{departments.map(department => <option key={department} value={department}>{department}</option>)}</select></label>
-        <label>{ui('adminRole')}<select aria-label={ui('adminRole')} value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">{ui('all')}</option><option value="admin">Admin</option><option value="developer">Developer</option><option value="user">{ui('adminRoleUser')}</option></select></label>
+        <label>{ui('adminRole')}<select aria-label={ui('adminRole')} value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">{ui('all')}</option><option value="admin">{ui('adminRoleAdmin')}</option><option value="developer">{ui('adminRoleDeveloper')}</option><option value="user">{ui('adminRoleUser')}</option></select></label>
         <span className="hint" role="status">{filteredUsers.length} / {users.length}</span>
       </div>
       <div className="admin-account-table-scroll" role="region" aria-label={ui('adminAccountManagement')} tabIndex={0}>
@@ -71,7 +71,7 @@ export function AdminSettingsPanel({user,settings}: {user:AuthUser;settings:Sett
           <colgroup><col /><col /><col /><col className="admin-role-column" /><col className="admin-sharing-column" /><col className="admin-actions-column" /></colgroup>
           <thead><tr><th>{ui('adminAccount')}</th><th>NT</th><th>{ui('adminFieldDepartment')}</th><th>{ui('adminRole')}</th><th>{ui('adminShareAuthColumn')}</th><th>{ui('adminAccountActions')}</th></tr></thead>
           <tbody>{!filteredUsers.length && <tr><td colSpan={6}>{ui('adminNoMatchingAccounts')}</td></tr>}{filteredUsers.map(account => <tr key={account.id}>
-            <td>{account.username}</td><td>{account.NT}</td><td>{account.Department}</td><td>{account.role === 'admin' ? <span>Admin</span> : <select aria-label={`${ui('adminRole')}: ${account.username}`} value={account.role} disabled={busy || account.deletionState === 'deleting'} onChange={event => void changeRole(account, event.target.value as 'developer' | 'user')}><option value="user">{ui('adminRoleUser')}</option><option value="developer">Developer</option></select>}</td>
+            <td>{account.username}</td><td>{account.NT}</td><td>{account.Department}</td><td>{account.role === 'admin' ? <span>{ui('adminRoleAdmin')}</span> : <select aria-label={`${ui('adminRole')}: ${account.username}`} value={account.role} disabled={busy || account.deletionState === 'deleting'} onChange={event => void changeRole(account, event.target.value as 'developer' | 'user')}><option value="user">{ui('adminRoleUser')}</option><option value="developer">{ui('adminRoleDeveloper')}</option></select>}</td>
             <td><SharingAuthorizationEditor account={account} onSaved={refresh} ui={ui} /></td>
             <td>{account.id === user.id ? <span className="hint">{ui('adminOwnAccount')}</span> : <button className="text-button danger" type="button" disabled={busy} aria-label={`${ui('adminDeleteAccount')}: ${account.username}`} onClick={() => { setDeletingAccount(account); setDeleteName(''); setDeleteError('') }}>{ui(account.deletionState === 'deleting' ? 'adminRetryDeletion' : 'adminDeleteAccount')}</button>}</td>
           </tr>)}</tbody>
@@ -79,7 +79,7 @@ export function AdminSettingsPanel({user,settings}: {user:AuthUser;settings:Sett
       </div>
       <form onSubmit={event=>{event.preventDefault();void create()}} className="admin-settings-grid">
         {(['username','NT','Department','password'] as const).map(key=><label key={key}>{key==='password'?ui('adminFieldPassword'):key==='username'?ui('adminAccount'):key==='Department'?ui('adminFieldDepartment'):key}<input required autoComplete={key==='password'?'new-password':'off'} type={key==='password'?'password':'text'} minLength={key==='password'?8:undefined} value={form[key]} onChange={event=>setForm(current=>({...current,[key]:event.target.value}))}/></label>)}
-        <label>{ui('adminRole')}<select value={form.role} onChange={event=>setForm(current=>({...current,role:event.target.value}))}><option value="user">{ui('adminRoleUser')}</option><option value="developer">Developer</option></select></label>
+        <label>{ui('adminRole')}<select value={form.role} onChange={event=>setForm(current=>({...current,role:event.target.value}))}><option value="user">{ui('adminRoleUser')}</option><option value="developer">{ui('adminRoleDeveloper')}</option></select></label>
         <button className="primary" disabled={busy} type="submit">{ui('adminCreateAccount')}</button>
       </form>{message&&<p role="status">{message}</p>}
     </div></section>

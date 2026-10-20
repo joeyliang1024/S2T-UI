@@ -76,7 +76,7 @@ export function SummaryWorkspace(props: Props): ReactElement {
   useEffect(() => { if (journeyContent) recordJourney('L3') }, [journeyContent])
   const activeText = summaryTab === 'translation' ? (hasCurrentTranslation && !translating && !translationError ? session?.summaryTranslation ?? '' : '') : session?.summary ?? ''
   return <section className="page-panel summary-workspace">
-    <div className="page-title"><div><p className="eyebrow">SUMMARY</p><h2>{ui('summaryTitle')}</h2></div><StudioArtwork variant="summary" className="page-art" /></div>
+    <div className="page-title"><div><p className="eyebrow">{ui('eyebrowSummary')}</p><h2>{ui('summaryTitle')}</h2></div><StudioArtwork variant="summary" className="page-art" /></div>
     <div className="summary-workspace-grid">
       <section className="summary-setup">
         <label>{ui('selectRecord')}<select value={sessionId ?? ''} onChange={(event) => setSessionId(event.target.value || null)}><option value="">{ui('chooseHistoryRecord')}</option>{sessions.map((entry) => <option key={entry.id} value={entry.id}>{entry.title} · {new Date(entry.createdAt).toLocaleDateString(resolveUiLanguage(settings.uiLanguage))}</option>)}</select></label>

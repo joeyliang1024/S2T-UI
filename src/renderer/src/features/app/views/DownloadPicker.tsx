@@ -38,7 +38,7 @@ export function DownloadPicker({ ui, title, scope, busy, error, onPick, onClose 
     <div className="transcript-modal-backdrop download-picker-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="transcript-modal download-picker" role="dialog" aria-modal="true" aria-label={ui('chooseDownloadFormat')} onMouseDown={(event) => event.stopPropagation()}>
         <header>
-          <div><p className="eyebrow">DOWNLOAD</p><h2>{ui('chooseDownloadFormat')}</h2><p className="hint">{title}</p></div>
+          <div><p className="eyebrow">{ui('download')}</p><h2>{ui('chooseDownloadFormat')}</h2><p className="hint">{title}</p></div>
           <button type="button" className="text-button" disabled={busy} onClick={onClose}>{ui('close')}</button>
         </header>
         {showAudio && <div className="download-picker-group">

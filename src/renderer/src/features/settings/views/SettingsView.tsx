@@ -50,11 +50,11 @@ function ToggleRow({ label, hint, checked, onChange }: ToggleRowProps): ReactEle
   )
 }
 
-function UnsavedLeaveDialog({ title, message, discardLabel, keepLabel, onDiscard, onKeepEditing }: { title: string; message: string; discardLabel: string; keepLabel: string; onDiscard: () => void; onKeepEditing: () => void }): ReactElement {
+function UnsavedLeaveDialog({ eyebrow, title, message, discardLabel, keepLabel, onDiscard, onKeepEditing }: { eyebrow: string; title: string; message: string; discardLabel: string; keepLabel: string; onDiscard: () => void; onKeepEditing: () => void }): ReactElement {
   return (
     <div className="transcript-modal-backdrop settings-leave-backdrop" role="presentation" onMouseDown={onKeepEditing}>
       <section className="settings-leave-dialog" role="alertdialog" aria-modal="true" aria-labelledby="settings-leave-title" onMouseDown={(event) => event.stopPropagation()}>
-        <p className="eyebrow">SETTINGS</p>
+        <p className="eyebrow">{eyebrow}</p>
         <h2 id="settings-leave-title">{title}</h2>
         <p className="hint">{message}</p>
         <div className="settings-leave-actions">
@@ -166,12 +166,12 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
   const appStorageDashboard = (): ReactElement => (
     <section className="settings-health-dashboard" aria-label={ui('remoteStorage')}>
       <article className="storage-health-card remote-storage-card">
-        <div className="storage-health-heading"><span className="eyebrow">REMOTE STORAGE</span><span className={`sync-state ${remoteSessionSyncState}`}>{remoteSessionSyncState === 'ready' ? ui('remoteSyncReady') : remoteSessionSyncState === 'syncing' ? ui('remoteSyncing') : ui('remoteSyncPaused')}</span></div>
-        {storageHealth ? <div className="storage-adapter-list"><span>Blob <strong>{storageHealth.mode.blob}</strong></span><span>Config <strong>{storageHealth.mode.config}</strong></span><span>Vector <strong>{storageHealth.mode.vector}</strong></span><span>Schema <strong>{storageHealth.schemaVersion}</strong></span></div> : <p>{ui('storageHealthUnavailable')}</p>}
+        <div className="storage-health-heading"><span className="eyebrow">{ui('remoteStorage')}</span><span className={`sync-state ${remoteSessionSyncState}`}>{remoteSessionSyncState === 'ready' ? ui('remoteSyncReady') : remoteSessionSyncState === 'syncing' ? ui('remoteSyncing') : ui('remoteSyncPaused')}</span></div>
+        {storageHealth ? <div className="storage-adapter-list"><span>{ui('storageBlob')} <strong>{storageHealth.mode.blob}</strong></span><span>{ui('storageConfig')} <strong>{storageHealth.mode.config}</strong></span><span>{ui('storageVector')} <strong>{storageHealth.mode.vector}</strong></span><span>{ui('storageSchema')} <strong>{storageHealth.schemaVersion}</strong></span></div> : <p>{ui('storageHealthUnavailable')}</p>}
         {remoteSessionSyncState === 'syncing' && <progress className="indeterminate-progress" />}
       </article>
       <article className="storage-health-card queue-health-card">
-        <div className="storage-health-heading"><span className="eyebrow">WORK QUEUE</span></div>
+        <div className="storage-health-heading"><span className="eyebrow">{ui('workQueue')}</span></div>
         <div className="queue-metrics">
           {([
             ['queueMigrated', '✓', audioMigrationStatus?.copied, 'complete'],
@@ -199,13 +199,13 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
 
   return (
     <section className="page-panel settings-panel">
-      <div className="page-title"><div><p className="eyebrow">SETTINGS</p><h2>{ui('settingsTitle')}</h2></div><StudioArtwork variant="settings" className="page-art" /></div>
+      <div className="page-title"><div><p className="eyebrow">{ui('eyebrowSettings')}</p><h2>{ui('settingsTitle')}</h2></div><StudioArtwork variant="settings" className="page-art" /></div>
       <nav className="settings-category-nav" aria-label={ui('settingsTitle')}>{categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'nav-active' : ''} aria-current={category === entry.id ? 'true' : undefined} onClick={() => setCategory(entry.id)}>{entry.label}</button>)}</nav>
 
       {category === 'account' && user.role === 'admin' && <AdminSettingsPanel user={user} settings={settings} update={update} />}
       {category === 'advanced' && user.role !== 'user' && <AdvancedSettingsPanel settings={settings} update={update} />}
       {category === 'asr' && <>
-        <SettingsCard eyebrow="AUDIO" title={ui('audioProcessing')}>
+        <SettingsCard eyebrow={ui('audioProcessing')} title={ui('audioProcessing')}>
           <div className="toggle-list">
             <ToggleRow label={ui('enableDenoise')} checked={settings.denoiseEnabled} onChange={setDenoiseEnabled} />
             {user.role !== 'user' && <><ToggleRow label={ui('kaiserResample')} hint={ui('nextRecordingApplies')} checked={settings.kaiserResampleEnabled} onChange={(enabled) => update((current) => ({ ...current, kaiserResampleEnabled: enabled }))} />
@@ -225,14 +225,14 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
       </>}
 
       {category === 'translation' && <>
-        <SettingsCard eyebrow="LANGUAGES" title={`${ui('sourceLanguage')} / ${ui('targetLanguage')}`}>
+        <SettingsCard eyebrow={ui('languageSettings')} title={`${ui('sourceLanguage')} / ${ui('targetLanguage')}`}>
           <div className="settings-form-grid">
             <label>{ui('sourceLanguage')}<select value={settings.sourceLanguage} onChange={(event) => update((current) => ({ ...current, sourceLanguage: event.target.value }))}><option value="auto">{ui('autoDetect')}</option><option value="zh-TW">繁體中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="de-DE">Deutsch</option></select></label>
             <label>{ui('targetLanguage')}<select value={settings.targetLanguage} onChange={(event) => update((current) => ({ ...current, targetLanguage: event.target.value }))}><option value="auto">{ui('autoBidirectional')}</option><option value="zh-TW">繁體中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
           </div>
         </SettingsCard>
 
-        <SettingsCard eyebrow="TRANSLATION" title={ui('translationApi')}>
+        <SettingsCard eyebrow={ui('translationApi')} title={ui('translationApi')}>
           <div className="toggle-list">
             <ToggleRow label={ui('enableTranslation')} checked={settings.translationEnabled} onChange={(enabled) => update((current) => ({ ...current, translationEnabled: enabled }))} />
           </div>
@@ -242,7 +242,7 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
           </div>
         </SettingsCard>
 
-        {user.role !== 'user' && <SettingsCard eyebrow="GLOSSARY" title={ui('glossary')}>
+        {user.role !== 'user' && <SettingsCard eyebrow={ui('glossary')} title={ui('glossary')}>
           <label className="settings-search-field">{ui('searchGlossary')}<input value={glossarySearch} placeholder={ui('glossarySearchPlaceholder')} onChange={(event) => setGlossarySearch(event.target.value)} /></label>
           <div className="glossary-editor">{filteredGlossaryEntries.map((entry) => <div key={entry.index}><input defaultValue={entry.value} aria-label={ui('glossaryTerm')} onBlur={(event) => replaceGlossaryEntry(entry.index, event.currentTarget.value)} /><button className="text-button danger" aria-label={ui('deleteGlossary')} onClick={() => replaceGlossaryEntry(entry.index, '')}>{ui('deleteGlossary')}</button></div>)}{glossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}{glossaryEntries.length > 0 && filteredGlossaryEntries.length === 0 && <p className="hint">{ui('noSearchMatches')}</p>}<div className="glossary-add-row"><input value={newGlossaryTerm} aria-label={ui('addGlossary')} placeholder={ui('glossaryExample')} onChange={(event) => setNewGlossaryTerm(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addGlossaryEntry() } }} /><button className="secondary" onClick={addGlossaryEntry}>{ui('addGlossary')}</button></div></div>
           <label className="glossary-json-import">{ui('loadGlossaryJson')}<input type="file" accept="application/json,.json" onChange={(event) => { const file = event.currentTarget.files?.[0] ?? null; event.currentTarget.value = ''; void importGlossaryJson(file) }} /></label>
@@ -251,27 +251,27 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
       </>}
 
       {category === 'summary' && (
-        <SettingsCard eyebrow="TEMPLATES" title={ui('savedTemplates')} className="summary-template-manager">
+        <SettingsCard eyebrow={ui('savedTemplates')} title={ui('savedTemplates')} className="summary-template-manager">
           <p className="settings-card-sub">{ui('templateManagementHint')}</p>
           <SummaryTemplateManager settings={settings} ui={ui} {...summaryTemplate} />
         </SettingsCard>
       )}
 
       {category === 'app' && <>
-        <SettingsCard eyebrow="APPEARANCE" title={ui('interfaceDisplay')}>
+        <SettingsCard eyebrow={ui('interfaceDisplay')} title={ui('interfaceDisplay')}>
           <div className="settings-form-grid">
             <label>{ui('displayLanguage')}<select value={settings.uiLanguage} onChange={(event) => update((current) => ({ ...current, uiLanguage: event.target.value as typeof current.uiLanguage }))}><option value="system">{ui(window.s2t ? 'followSystemLanguage' : 'followBrowserLanguage')}</option><option value="zh-TW">繁體中文</option><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></label>
             <label>{ui('theme')}<select value={settings.theme} onChange={(event) => update((current) => ({ ...current, theme: event.target.value as 'system' | 'light' | 'dark' }))}><option value="system">{ui('followSystem')}</option><option value="light">{ui('light')}</option><option value="dark">{ui('dark')}</option></select></label>
           </div>
         </SettingsCard>
 
-        <SettingsCard eyebrow="STORAGE" title={ui('application')}>
+        <SettingsCard eyebrow={ui('storageSettings')} title={ui('application')}>
           <p className="hint">{browserRecordingStorage === 'electron' ? ui('recordingStorageElectron') : browserRecordingStorage === 'opfs' ? ui('recordingStorageOpfs') : ui('recordingStorageMemory')}</p>
           {user.role !== 'user' && window.s2t && <div className="settings-form-grid"><label>{ui('defaultSaveTo')}<select value={settings.storageLocation} onChange={(event) => update((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">{ui('local')}</option><option value="remote">{ui('remoteStorage')}</option></select></label></div>}
           {user.role !== 'user' && window.s2t && <p className="hint">{ui('storageLocationHint')}</p>}
         </SettingsCard>
 
-        {user.role !== 'user' && <SettingsCard eyebrow="REMOTE" title={ui('remoteStorage')}>
+        {user.role !== 'user' && <SettingsCard eyebrow={ui('remoteStorage')} title={ui('remoteStorage')}>
           {appStorageDashboard()}
           <SessionSyncConflicts conflicts={remoteSessionConflicts} resolve={resolveSessionConflict} ui={ui} />
           <div className="settings-button-row">
@@ -292,7 +292,7 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
         </div>
       </footer>
 
-      {leaveRequest && <UnsavedLeaveDialog title={ui('unsavedChanges')} message={ui('unsavedLeaveConfirm')} discardLabel={ui('discardChanges')} keepLabel={ui('keepEditing')} onDiscard={() => { revertChanges(); onLeaveResolved(leaveRequest.target) }} onKeepEditing={onLeaveDismissed} />}
+      {leaveRequest && <UnsavedLeaveDialog eyebrow={ui('eyebrowSettings')} title={ui('unsavedChanges')} message={ui('unsavedLeaveConfirm')} discardLabel={ui('discardChanges')} keepLabel={ui('keepEditing')} onDiscard={() => { revertChanges(); onLeaveResolved(leaveRequest.target) }} onKeepEditing={onLeaveDismissed} />}
     </section>
   )
 }

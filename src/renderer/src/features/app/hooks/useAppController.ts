@@ -1583,10 +1583,10 @@ const startCapture = async (audioChoice?: CaptureAudioChoice): Promise<void> => 
         opfsRecordingRef.current = await OpfsPcmRecording.create(opfsId, context.sampleRate, { ownerId: userId, captureOffsetMs: continuationTargetRef.current?.baseDurationMs ?? 0, draft: { ...liveDraftRef.current!, updatedAt: new Date().toISOString(), captureState: 'recording', source: captureSystemAudio ? activeTranslate('stSourceMicAndSystem') : activeTranslate('microphone'), elapsedMs: 0, segments: [], opfsRecordingId: opfsId, sampleRate: context.sampleRate } }).catch(() => null)
         opfsRecordingIdRef.current = opfsRecordingRef.current ? opfsId : null
         const configResponse = await authFetch('/api/config')
-        if (!configResponse.ok) throw new Error('無法確認錄音服務設定')
+        if (!configResponse.ok) throw new Error(activeTranslate('recordingConfigUnavailable'))
         const config = await configResponse.json() as { capabilities?: { distributed?: boolean; durableRecordingChunks?: boolean } }
         if (config.capabilities?.distributed && config.capabilities.durableRecordingChunks) {
-          if (!opfsRecordingRef.current) throw new Error('分散式錄音需要瀏覽器持久化音訊支援')
+          if (!opfsRecordingRef.current) throw new Error(activeTranslate('distributedRecordingNeedsStorage'))
           remotePcmRecordingRef.current = new RemotePcmRecording(opfsId, context.sampleRate)
         }
 
@@ -2441,7 +2441,7 @@ liveCorrectionRunnerRef.current = async (): Promise<void> => {
     if (!group) return
     const signature = captionGroupSignature(group)
     const samples = buffer.slice(group.startMs - baseMs, group.endMs - baseMs)
-    if (!samples) { liveCorrectionDoneRef.current.add(signature); setStatus('品質校正：句子音訊已超出背景緩衝範圍，請於停止後執行品質校正'); return }
+    if (!samples) { liveCorrectionDoneRef.current.add(signature); setStatus(activeTranslate('liveCorrectionAudioExpired')); return }
     liveCorrectionBusyRef.current = true
     try {
       const wav = await makeWav([samples], buffer.sampleRate).arrayBuffer()
