@@ -6,23 +6,23 @@ Grafana：[單張總覽](http://127.0.0.1:13000/d/s2t-overview?orgId=1&from=now-
 
 ## 讀圖
 
-延遲量測拆成 ASR 與翻譯兩條管線，共七個階段（`phase` 標籤），每個階段再細分原子量測（`stage` 標籤）：
+延遲量測以完整字幕管線顯示，共七個階段（`phase` 標籤），每個階段再細分原子量測（`stage` 標籤）：
 
 | 階段 | 含義 | 細項（stage） |
 | --- | --- | --- |
 | t1 | UI 截取音訊並傳送到伺服器 | `t1_queue` 瀏覽器佇列、`t1_encode` WAV 編碼與前置、`t1_upload` 伺服器收音訊 |
-| t2 | VAD 偵測 + 分段處理 | `t2_vad` 語音偵測、`t2_segment` 句段累積、`t2_gate` Silero 二次確認（僅啟用時） |
+| t2 | VAD 邏輯處理時間 | `t2_vad` 本機 VAD process 執行時間、`t2_gate` worker 的 Silero 執行時間（僅啟用時）；不含講話、區段累積或 HTTP 往返 |
 | t3 | ASR 模型推論（伺服器端） | `t3_queue` 容量排隊、`t3_preprocess` 音訊前處理（僅啟用 dynaudnorm 時）、`t3_model` 模型推論、`t3_gateway` 伺服器驗證／快取／寫出 |
 | t4 | 標點符號等文字後處理 | `t4_postprocess` 文字清理（目前僅有清理步驟；不雅字過濾加入後同樣計在這裡） |
 | t5 | 回傳轉錄文字到 UI 呈現 | `t5_network` 回傳網路與重試、`t5_paint` UI 呈現（兩次 requestAnimationFrame） |
 | t6 | 翻譯模型（含不雅字過濾位置） | `t6_wait` 前端排隊等待、`t6_queue` 容量排隊、`t6_model` 模型推論、`t6_gateway` 伺服器固定處理 |
 | t7 | 譯文回傳並渲染到 UI | `t7_network` 回傳網路、`t7_paint` 譯文 UI 呈現 |
 
-另有兩個端到端樣本：`e2e_asr`（該 chunk 語音起點到原文首次呈現）與 `e2e_translation`（語音起點到譯文呈現，包含前段 ASR 等待）。起點仍是該 chunk 內開始說話的音訊樣本時間，不是從送出 API 才開始計時，也不從整段會議開頭計時；連續說話的後續 chunk 使用自身起始樣本回推。硬體麥克風、JS 前的延遲、螢幕 scanout、Electron／浮動字幕視窗尚未量測。
+端到端統一起點為使用者講完最後一字的時間：以最後 VAD 語音樣本的音訊時鐘估計，非逐字對齊。`e2e_asr` 量到原文最後一字實際呈現；`e2e_translation` 與 `e2e_translation_tail` 量到譯文最後一字呈現，包含斷句、排隊與模型等待。E2E 目標 ≤ 3 秒。硬體麥克風、JS 前的延遲、螢幕 scanout、Electron／浮動字幕視窗尚未量測。
 
-**t1_upload／t3_\*／t6\_\* 的伺服器端拆分來自標準 `Server-Timing` 回應標頭**：Gateway 在 `/api/transcriptions` 與 `/api/translations` 回報 upload／queue／pre／model／total，瀏覽器用「往返時間 − 伺服器耗時」精確得到回傳網路時間（`t5_network`／`t7_network`），因此 t1~t5 互不重疊、相加 ≈ e2e。沒有 `Server-Timing` 時（舊版 gateway）整段往返歸入 t5／t7_network，仍不重疊。未啟用的可選步驟（如 Silero 閘門、dynaudnorm）不輸出 0 秒樣本，避免把「沒跑」誤當「很快」。
+**t1_upload／t3_\*／t6\_\* 的伺服器端拆分來自標準 `Server-Timing` 回應標頭**：Gateway 在 `/api/transcriptions` 與 `/api/translations` 回報 upload／queue／pre／model／total，瀏覽器用「往返時間 − 伺服器耗時」精確得到回傳網路時間（`t5_network`／`t7_network`），各細項用於定位處理成本；因起點不同、樣本數不同且可能有併行處理，不可把階段平均加總當作 E2E。沒有 `Server-Timing` 時（舊版 gateway）整段往返歸入 t5／t7_network，仍不重疊。未啟用的可選步驟（如 Silero 閘門、dynaudnorm）不輸出 0 秒樣本，避免把「沒跑」誤當「很快」。
 
-儀表板依「總覽 KPI → ASR 瓶頸分析 → 翻譯管線 → 伺服器端交叉驗證 → 服務健康」排列。判讀 ASR 瓶頸最快路徑：先看頂部「目前瓶頸階段」（最近 5 分鐘 t1~t5 平均最慢的階段），再看「ASR 階段平均耗時」長條圖（最長者即瓶頸），需要定位到原子量測時看「ASR 明細平均耗時」；t3 最大＝模型推論吃緊，t1 大＝上傳／編碼，t5 大＝回傳網路與重試。儀表板頂部 P50／P95／P99 為固定最近 5 分鐘的即時查詢，不跟隨右上時間範圍；沒有有效樣本時顯示 No data，不沿用最後一次舊數值。圓環依所選時間範圍計算同一批樣本的階段耗時占比，不是百分位數拆分；不同階段 P95 不能相加。所有面板都使用 Grafana 原生功能，無自訂 plugin 或允許未簽名插件的設定；datasource 與量測來源都由模板變數（`datasource`、`caption_gateway`）指定，未寫死。
+儀表板頂部三個 KPI 為 E2E P90、ASR P90 與 API 成功率，均依右上所選時間範圍計算。t1～t7 顯示在兩個橫向長條圖：階段平均及 Detail 平均；翻譯 t6／t7 合併呈現。另保留 t1～t7 圓環耗時占比、Gateway、Storage、部門與 User 趨勢及 HTTP 錯誤面板。排行包含部門使用時數／次數、User 使用時數／次數前 10；時數採 ASR 提交音訊秒數除以 3600，重試可能重複計入，次數採 L2 開始／繼續錄音事件。沒有有效樣本時顯示 No data。圓環為各階段累積耗時占比，非百分位數拆分。所有面板使用 Grafana 原生功能；datasource 與來源由模板變數指定。
 
 新量測使用 `e2e_asr`、`e2e_translation` 與 `t1~t7` 系列 stage，舊的 `chunk_speech_to_paint`、`first_word_*`、`chunk_*` 階段已停用。舊樣本只留在 Prometheus 歷史；更新 renderer 與 gateway、重新載入字幕頁後才有新樣本。
 
@@ -68,7 +68,7 @@ Grafana 的 datasource provisioning 使用 `${PROMETHEUS_URL}`，Deployment 從 
 
 同一張 Dashboard 的「字幕量測來源」預設選 **8787 網頁入口**，可切換到 **K8s 測試站**。Web 字幕、Gateway 階段、HTTP 及應用儲存操作均依來源過濾，避免混合真實測試與模擬負載。其餘 Redis、PostgreSQL、MinIO、Milvus 與 K8s 資源圖仍代表隔離測試 cluster 的服務。
 
-API roundtrip 在瀏覽器完成讀取回應時結算。瀏覽器的 request、chunk 及翻譯延遲樣本，必須完整落在同一段即時字幕頁可見期間；跨越切換功能頁、隱藏分頁的請求，即使切回後才完成也排除，避免 fetch 回呼與 RAF 被背景節流拉長。Gateway 的 request／用量仍正常記錄。只有當即時字幕頁可見、字幕實際可見時，才納入 `t5_paint`、`e2e_asr` 與翻譯繪出樣本；t1~t4、t6 的前段樣本在文字抵達時即記錄。離開字幕頁、隱藏分頁或字幕位於可視區外，會丟棄待呈現樣本；切回頁面不補報歷史字幕。沒有有效呈現樣本時顯示 No data，不能以 0 或舊值冒充。頂部 P50/P95/P99 仍使用固定最近 5m。
+API roundtrip 在瀏覽器完成讀取回應時結算。瀏覽器的 request、chunk 及翻譯延遲樣本，必須完整落在同一段即時字幕頁可見期間；跨越切換功能頁、隱藏分頁的請求，即使切回後才完成也排除，避免 fetch 回呼與 RAF 被背景節流拉長。Gateway 的 request／用量仍正常記錄。只有當即時字幕頁可見、字幕實際可見時，才納入 `t5_paint`、`e2e_asr` 與翻譯繪出樣本；t1~t4、t6 的前段樣本在文字抵達時即記錄。離開字幕頁、隱藏分頁或字幕位於可視區外，會丟棄待呈現樣本；切回頁面不補報歷史字幕。沒有有效呈現樣本時顯示 No data，不能以 0 或舊值冒充。頂部 P90 依所選時間範圍計算。
 
 
 ## 每位帳號與總體使用量
@@ -108,4 +108,8 @@ node tests/smoke/gateway-usage-smoke-test.cjs
 
 ### 值班總覽
 
-新增 `/d/s2t-oncall`，順序固定為「延遲 → 使用者 → 請求」，使用者 row 緊接延遲 row。延遲看固定最近 5 分鐘的 P50／P95／P99、趨勢與有效樣本數；使用者看最近 5 分鐘有請求的 NT／部門（不是在線人數）、所選範圍的音訊／token 與 NT／部門請求比較；請求看 scrape 狀態、API 速率、4xx＋5xx 錯誤率、in-flight 與錯誤分類趨勢。來源可切換 8787、K8s 測試站和獨立驗收資料。詳細內容透過「詳細監控與用量」連結開啟原總覽，保留所選來源與時間。
+`/d/s2t-oncall` 共用詳細總覽的 KPI 定義與查詢，包含 E2E P90、ASR P90、API 成功率、t1～t7 階段與 Detail 長條圖、部門與 User 排行及健康狀態。詳細內容透過「詳細監控與用量」連結開啟原總覽，保留所選來源與時間。
+
+### 獨立模擬預覽
+
+`python3 deploy/monitoring/install-report-preview.py` 使用獨立 Node 映像與 `gateway-report-preview` scrape job，建立明確標示「測試資料預覽」的 dashboard。3 部門、12 使用者的資料最多產生 15 分鐘，含 ASR 音訊時數與錄音次數；不呼叫模型或寫入使用者資料。`dashboard.json` 為 provisioning 的唯一來源，修改後重新執行 generator 才能更新 stack／oncall。

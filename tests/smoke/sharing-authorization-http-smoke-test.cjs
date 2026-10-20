@@ -27,6 +27,7 @@ const { mkdtemp, rm } = require('node:fs/promises'), { tmpdir } = require('node:
     const admin = (await request('/api/auth/login', '', { username: 'admin', password: 'admin-password' })).body.token
     const owner = (await request('/api/auth/register', '', { username: 'owner', password: 'member-password', NT: 'owner', Department: 'Forged' })).body
     const viewer = (await request('/api/auth/register', '', { username: 'viewer', password: 'member-password', NT: 'viewer', Department: 'Trusted' })).body
+    assert.equal((await request(`/api/admin/users/${owner.user.id}/role`, admin, { role: 'developer' }, 'PUT')).status, 200, 'voiceprint enrollment is a developer feature')
     const sharing = { 'content-type': 'audio/wav', 'x-s2t-voiceprint-sharing': 'department', 'x-s2t-voiceprint-consent': 'true' }
     assert.equal((await request('/api/voiceprints', owner.token, Buffer.from('mock'), 'POST', sharing)).status, 403)
     const grant = (account, department, approved = true, token = admin) => request(`/api/admin/users/${account.user.id}/sharing-authorization`, token, { approved, department }, 'PUT')

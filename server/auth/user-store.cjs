@@ -26,10 +26,11 @@ const userInput = (input) => {
   const NT = normalizeNT(input?.NT)
   const Department = typeof input?.Department === 'string' ? input.Department.trim().slice(0, 256) : ''
   if (!NT || !Department) throw new Error('NT 與 Department 為必填')
-  const role = input?.role === 'admin' ? 'admin' : 'user'
+  const role = input?.role ?? 'user'
+  if (!['admin', 'developer', 'user'].includes(role)) throw accountError('角色無效', 400)
   return { id: randomUUID(), username, passwordHash: input.passwordHash, NT, Department, role, createdAt: new Date().toISOString() }
 }
-const publicUser = ({ id, username, NT, Department, role, createdAt, deletionState }) => ({ id, username, NT, Department, role: role === 'admin' ? 'admin' : 'user', createdAt, ...(deletionState === 'deleting' ? { deletionState: 'deleting' } : {}) })
+const publicUser = ({ id, username, NT, Department, role, createdAt, deletionState }) => ({ id, username, NT, Department, role: ['admin', 'developer'].includes(role) ? role : 'user', createdAt, ...(deletionState === 'deleting' ? { deletionState: 'deleting' } : {}) })
 const userId = (value) => {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) throw new Error('帳號識別碼無效')
   return value
@@ -47,7 +48,13 @@ class LocalUserStore {
     const reservation = ntReservationKey(user.NT)
     if (!await this.config.putIfAbsent('auth', reservation, user.id)) throw new Error('NT 已存在')
     try {
-      if (!await this.config.putIfAbsent('auth', key, user)) throw new Error('帳號已存在')
+      if (user.role === 'admin' && !await this.config.putIfAbsent('auth', 'singleton-admin', user.id)) throw accountError('admin 帳號只能有一個', 409)
+      try {
+        if (!await this.config.putIfAbsent('auth', key, user)) throw new Error('帳號已存在')
+      } catch (error) {
+        if (user.role === 'admin') await this.config.remove('auth', 'singleton-admin')
+        throw error
+      }
     } catch (error) {
       await this.config.remove('auth', reservation)
       throw error
@@ -55,10 +62,36 @@ class LocalUserStore {
     return publicUser(user)
   }
   async list() { return (await this.config.list('auth', 'account-')).map(item => item.value).filter(Boolean).map(publicUser).sort((a,b) => a.username.localeCompare(b.username)).slice(0, 1000) }
+  async findAdmin() {
+    const accounts = await this.config.list('auth', 'account-')
+    return accounts.map(entry => entry.value).filter(user => user?.role === 'admin' && user.deletionState !== 'deleting').sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt) || a.id.localeCompare(b.id))[0] || null
+  }
   async findByUsername(username) { const user = await this.config.get('auth', `account-${normalizeUsername(username)}`); return user && typeof user === 'object' ? user : null }
   async findById(id) {
     const users = await this.config.list('auth', 'account-')
     return users.map((item) => item.value).find((user) => user && user.id === id) || null
+  }
+  async ensureSingleAdmin() {
+    const owner = await this.config.updateAuthAccounts(accounts => {
+      const admins = accounts.filter(entry => entry.value.role === 'admin' && entry.value.deletionState !== 'deleting').sort((a, b) => new Date(a.value.createdAt) - new Date(b.value.createdAt) || a.value.id.localeCompare(b.value.id))
+      for (const entry of admins.slice(1)) entry.value.role = 'developer'
+      return admins[0]?.value.id || null
+    })
+    if (owner) await this.config.put('auth', 'singleton-admin', owner)
+  }
+  async setRole(id, role, actorId) {
+    if (!['developer', 'user'].includes(role)) throw accountError('只能設定 developer 或 user；admin 帳號唯一', 400)
+    const targetId = userId(id), actor = userId(actorId)
+    return this.config.updateAuthAccounts(accounts => {
+      const admin = accounts.find(entry => entry.value.id === actor)?.value
+      if (admin?.role !== 'admin' || admin.deletionState === 'deleting') throw accountError('只有 admin 可管理帳號', 403)
+      const target = accounts.find(entry => entry.value.id === targetId)?.value
+      if (!target) throw accountError('找不到帳號', 404)
+      if (target.role === 'admin' || targetId === actor) throw accountError('不能變更唯一 admin 的權限', 409)
+      if (target.deletionState === 'deleting') throw accountError('帳號刪除中，無法變更權限', 409)
+      target.role = role
+      return publicUser(target)
+    })
   }
   async markDeleting(id, actorId) {
     const targetId = userId(id); const actor = userId(actorId)
@@ -84,15 +117,55 @@ class PostgresUserStore {
   constructor(pool) { this.pool = pool }
   async create(input) {
     const user = userInput(input)
+    const client = await this.pool.connect()
     try {
-      const result = await this.pool.query('INSERT INTO s2t_users(id, username, password_hash, nt, department, role, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6, $7, $7) RETURNING id, username, nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState"', [user.id, user.username, user.passwordHash, user.NT, user.Department, user.role, user.createdAt])
+      await client.query('BEGIN')
+      if (user.role === 'admin') {
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('s2t_users_single_admin'))")
+        if ((await client.query("SELECT id FROM s2t_users WHERE role = 'admin' LIMIT 1")).rowCount) throw accountError('admin 帳號只能有一個', 409)
+      }
+      const result = await client.query('INSERT INTO s2t_users(id, username, password_hash, nt, department, role, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6, $7, $7) RETURNING id, username, nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState"', [user.id, user.username, user.passwordHash, user.NT, user.Department, user.role, user.createdAt])
+      await client.query('COMMIT')
       return result.rows[0]
     } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined)
       if (error && error.code === '23505') throw new Error(String(error.constraint || '').includes('nt_unique') ? 'NT 已存在' : '帳號已存在')
       throw error
-    }
+    } finally { client.release() }
   }
+  async ensureSingleAdmin() {
+    const client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('s2t_users_single_admin'))")
+      await client.query("UPDATE s2t_users SET role = 'developer', updated_at = NOW() WHERE role = 'admin' AND id <> (SELECT id FROM s2t_users WHERE role = 'admin' ORDER BY created_at, id LIMIT 1)")
+      await client.query("CREATE UNIQUE INDEX IF NOT EXISTS s2t_users_single_admin_index ON s2t_users (role) WHERE role = 'admin'")
+      await client.query('COMMIT')
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
+  }
+  async setRole(id, role, actorId) {
+    if (!['developer', 'user'].includes(role)) throw accountError('只能設定 developer 或 user；admin 帳號唯一', 400)
+    const targetId = userId(id), actor = userId(actorId), client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+      const accounts = await client.query('SELECT id, role, deletion_state FROM s2t_users WHERE id = $1 OR id = $2 ORDER BY id FOR UPDATE', [targetId, actor])
+      const admin = accounts.rows.find(row => row.id === actor)
+      if (admin?.role !== 'admin' || admin.deletion_state === 'deleting') throw accountError('只有 admin 可管理帳號', 403)
+      const target = accounts.rows.find(row => row.id === targetId)
+      if (!target) throw accountError('找不到帳號', 404)
+      if (target.role === 'admin' || targetId === actor) throw accountError('不能變更唯一 admin 的權限', 409)
+      if (target.deletion_state === 'deleting') throw accountError('帳號刪除中，無法變更權限', 409)
+      const changed = await client.query('UPDATE s2t_users SET role = $2, updated_at = NOW() WHERE id = $1 RETURNING id, username, nt AS "NT", department AS "Department", role, created_at AS "createdAt"', [targetId, role])
+      await client.query('COMMIT')
+      return publicUser(changed.rows[0])
+    } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
+  }
+
   async list() { const result = await this.pool.query('SELECT id, username, nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState" FROM s2t_users ORDER BY username LIMIT 1000'); return result.rows.map(publicUser) }
+  async findAdmin() {
+    const result = await this.pool.query("SELECT id FROM s2t_users WHERE role = 'admin' AND deletion_state <> 'deleting' ORDER BY created_at, id LIMIT 1")
+    return result.rows[0] || null
+  }
   async findByUsername(username) { const result = await this.pool.query('SELECT id, username, password_hash AS "passwordHash", nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState" FROM s2t_users WHERE username = $1', [normalizeUsername(username)]); return result.rows[0] || null }
   async findById(id) { const result = await this.pool.query('SELECT id, username, password_hash AS "passwordHash", nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState" FROM s2t_users WHERE id = $1', [userId(id)]); return result.rows[0] || null }
   async markDeleting(id, actorId) {

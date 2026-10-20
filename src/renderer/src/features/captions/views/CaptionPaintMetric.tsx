@@ -1,4 +1,3 @@
-import { CorrectedCaptionText } from '../../transcript/views/CorrectedText'
 import { useEffect, useRef } from 'react'
 import type { TranscriptEvent } from '../../models/model-adapter'
 import { discardCaptionPaint, reportCaptionPaint, reportTranslationPaint } from '../../../shared/services/caption-metrics'
@@ -19,5 +18,5 @@ export const CaptionPaintMetric = ({ members, text, translation = false }: { mem
     })
     return () => { cancelAnimationFrame(first); cancelAnimationFrame(second) }
   }, [members, text, translation])
-  return <p ref={ref} className={translation ? 'translation' : undefined}>{translation ? text : <CorrectedCaptionText text={text} members={members} />}</p>
+  return <p ref={ref} className={translation ? 'translation' : undefined}>{text}</p>
 }

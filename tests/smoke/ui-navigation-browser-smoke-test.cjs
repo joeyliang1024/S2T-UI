@@ -12,11 +12,12 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
   })
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
   const origin=`http://127.0.0.1:${server.address().port}`
-  const browser=await chromium.launch(browserOptions())
+  const browser=await chromium.launch(browserOptions({args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']}))
   let sessions=Array.from({length:26},(_,i)=>({id:`record-${i}`,title:`Record ${String(i).padStart(2,'0')}`,createdAt:new Date(Date.UTC(2026,9,1+i)).toISOString(),durationMs:(i+1)*1000,source:'fixture',audioKey:`audio-${i}`,transcript:`Original ${i}`,segments:[{id:`segment-${i}`,status:'final',revision:1,startMs:0,endMs:1000,sourceText:`Original ${i}`,speaker:`Speaker ${i}`,translatedText:`Translated ${i}`}]}))
   const wave=Buffer.alloc(44+32000)
   wave.write('RIFF',0);wave.writeUInt32LE(wave.length-8,4);wave.write('WAVEfmt ',8);wave.writeUInt32LE(16,16);wave.writeUInt16LE(1,20);wave.writeUInt16LE(1,22);wave.writeUInt32LE(16000,24);wave.writeUInt32LE(32000,28);wave.writeUInt16LE(2,32);wave.writeUInt16LE(16,34);wave.write('data',36);wave.writeUInt32LE(32000,40)
-  let sessionVersion=0, modelCalls=0
+  let sessionVersion=0, modelCalls=0, audioReadStarted=false, releaseAudio
+  let audioBlock=null
   const errors=[]
   try {
     const page=await browser.newPage({viewport:{width:1440,height:1000}})
@@ -26,9 +27,9 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     await page.route('**/api/**',async route=>{
       const request=route.request(),pathname=new URL(request.url()).pathname
       const body=request.postData()&&request.headers()['content-type']?.includes('application/json')?JSON.parse(request.postData()):{}
-      if(pathname.startsWith('/api/data/audio/')){await route.fulfill({status:200,contentType:'audio/wav',body:wave});return}
+      if(pathname.startsWith('/api/data/audio/')){audioReadStarted=true;if(audioBlock)await audioBlock;await route.fulfill({status:200,contentType:'audio/wav',body:wave});return}
       let result={}, status=200
-      if(pathname==='/api/auth/session')result={user:{id:'navigation',username:'navigation',NT:'Navigation',Department:'QA',role:'user',createdAt:'2026-10-18'}}
+      if(pathname==='/api/auth/session')result={user:{id:'navigation',username:'navigation',NT:'Navigation',Department:'QA',role:'developer',createdAt:'2026-10-18'}}
       else if(pathname==='/api/config')result={asr:{configured:true,endpoint:'/api/transcriptions',model:'fixture'},asrProfiles:[],summary:{configured:true,endpoint:'/api/summaries',model:'fixture'},translation:{configured:true,endpoint:'/api/translations',model:'fixture'},diarization:{configured:false}}
       else if(pathname==='/api/data/settings')result=request.method()==='POST'?{version:1}:{settings:{uiLanguage:'en'},version:0}
       else if(pathname==='/api/data/sessions'){if(request.method()==='POST'){sessions=body.sessions;sessionVersion++}result=request.method()==='POST'?{version:sessionVersion}:{sessions,version:sessionVersion}}
@@ -142,6 +143,32 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
         assert.ok(size.scroll<=size.width+2,`${route}/${theme}/${width}: document overflow ${size.scroll}`)
       }
     }
+    await page.goto(origin+'/history');await page.locator('.session-item').first().waitFor()
+    await search.fill('Record 07')
+    audioReadStarted=false;audioBlock=new Promise(resolve=>releaseAudio=resolve)
+    const historyAudioRequest = page.waitForRequest(request => new URL(request.url()).pathname.startsWith('/api/data/audio/'))
+    await page.locator('.session-item .session-more-button').click()
+    await page.getByRole('menuitem',{name:'Continue recording',exact:true}).click()
+    await page.waitForURL('**/live')
+    await page.getByText('Original 7',{exact:true}).first().waitFor()
+    assert.equal(await page.locator('#microphone-setup').count(),0,'history continuation loads before opening the chooser')
+    await historyAudioRequest
+    releaseAudio();audioBlock=null
+    await page.locator('#microphone-setup[open]').waitFor()
+    assert.equal(modelCalls,0,'opening sound check never starts inference')
+    await page.getByRole('button',{name:'Cancel',exact:true}).click()
+    assert.equal(await page.locator('#microphone-setup').count(),0)
+    assert.equal(await page.locator('.capture-controls .primary').innerText(),'Continue recording','cancel retains the loaded record')
+    await page.goto(origin+'/history');await page.locator('.session-item').first().waitFor()
+    await search.fill('Record 07')
+    audioReadStarted=false;audioBlock=new Promise(resolve=>releaseAudio=resolve)
+    await page.locator('.session-item .session-more-button').click()
+    await page.getByRole('menuitem',{name:'Continue recording',exact:true}).click()
+    await page.waitForURL('**/live')
+    await page.goBack();await page.waitForURL('**/history')
+    releaseAudio();audioBlock=null
+    await page.getByRole('menuitem',{name:'Continue recording',exact:true}).waitFor({state:'hidden'})
+    assert.equal(await page.locator('#microphone-setup').count(),0,'navigation cancels the pending Live-only chooser')
     await page.goto(origin+'/settings');await page.locator('.workspace-content').waitFor()
     assert.equal(await page.getByRole('button',{name:'Accounts / admin parameters',exact:true}).count(),0,'normal users cannot enter admin UI')
     assert.equal(modelCalls,0)

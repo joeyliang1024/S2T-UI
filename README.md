@@ -61,6 +61,8 @@ cp .env.example .env
 
 開發環境明確設定 `S2T_ALLOW_DEFAULT_ADMIN=true` 後可用 `admin`／`admin`；正式環境禁止預設帳號，首次啟動前必須設定 `S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD` 與長且隨機的 `S2T_AUTH_SECRET`。
 
+帳號角色為唯一 `admin`、`developer`、`user`。admin 可管理帳號與修改共用模型；developer 可使用進階功能與收音參數，但不顯示帳號管理、不可修改模型。user 隱藏品質比較、聲紋、模型管理、術語、字幕編輯、進階 VAD／翻譯負載與遠端 Storage 管理。Web 模型設定與加密金鑰以 admin 為共用擁有者；Electron 在同一安裝資料目錄共用 admin 模型與加密金鑰，個人偏好仍分開保存，跨電腦不複製本機金鑰。開始／繼續錄音會先開音源與音量確認視窗，確認後才開始。
+
 ### 2. Electron 桌面版
 
 先依下節啟動 gateway。桌面開發在 `.env` 設定 `S2T_GATEWAY_URL=http://127.0.0.1:8787`，並在 `S2T_WEB_ORIGINS` 加入 `null`，讓本機檔案 renderer 連線；打包版仍須設定外部 HTTPS gateway。

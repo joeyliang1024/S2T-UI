@@ -14,7 +14,7 @@ const createTranslationRoutes = ({ translation, accountModelService, acceptsRequ
   try {
     const raw = await readBody(request, 256 * 1024)
     const rawInput = JSON.parse(raw.toString('utf8'))
-    if (rawInput.temperature !== undefined && user.role !== 'admin') { send(response, 403, { error: '只有 admin 可調整翻譯參數' }); return true }
+    if (rawInput.temperature !== undefined && !['admin', 'developer'].includes(user.role)) { send(response, 403, { error: '只有 admin 或 developer 可調整翻譯參數' }); return true }
     let requestedTemperature
     try { requestedTemperature = rawInput.temperature === undefined ? undefined : validateAdminParameters({ translationTemperature: rawInput.temperature }).translationTemperature }
     catch (error) { send(response, 400, { error: error.message }); return true }
@@ -22,7 +22,7 @@ const createTranslationRoutes = ({ translation, accountModelService, acceptsRequ
     if (!input.text) { send(response, 400, { error: 'Text is required.' }); return true }
     translationService.logRequest({ profileId, input })
     const translationStartedAt = Date.now()
-    const accountSettings = user.role === 'admin' ? await storage.config.get(user.id, 'app-settings') : undefined
+    const accountSettings = ['admin', 'developer'].includes(user.role) ? await storage.config.get(user.id, 'app-settings') : undefined
     const temperature = requestedTemperature ?? validateAdminParameters(accountSettings?.settings?.adminParameters)?.translationTemperature ?? 0.2
     const text = await executeIdempotent(
       storage.config,

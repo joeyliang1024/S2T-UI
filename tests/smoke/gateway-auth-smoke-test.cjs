@@ -121,33 +121,36 @@ const main = async () => {
     assert.deepEqual(result.body, { settings: {}, version: 0 })
     result = await request(base, '/api/data/settings', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, settings: appSettings }) })
     assert.equal(result.response.status, 409)
+    const adminLogin = await request(base, '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'admin' }) })
+    const adminToken = adminLogin.body.token
+    assert.ok(adminToken)
     const models = [
       { id: 'asr-one', name: 'ASR One', endpoint: 'https://asr.example/v1', model: 'asr-model', purpose: 'asr', requiresApiKey: true },
       { id: 'translation-one', name: 'Translation One', endpoint: 'https://translation.example/v1', model: 'translation-model', purpose: 'translation', requiresApiKey: true },
       { id: 'summary-one', name: 'Summary One', endpoint: 'https://summary.example/v1', model: 'summary-model', purpose: 'summary', requiresApiKey: true },
       { id: 'diarization-one', name: 'Diarization One', endpoint: 'https://diarization.example/v1', model: 'diarization-model', purpose: 'diarization', requiresApiKey: true }
     ]
-    result = await request(base, '/api/data/model-registry', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, models }) })
+    result = await request(base, '/api/data/model-registry', { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, models }) })
     assert.deepEqual(result.body, { saved: true, version: 1 })
     result = await request(base, '/api/data/model-registry', { headers: bearer(bob) })
-    assert.deepEqual(result.body, { models: [], version: 0 })
-    result = await request(base, '/api/data/model-registry', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, models }) })
+    assert.deepEqual(result.body.models.map(model => model.id), models.map(model => model.id))
+    result = await request(base, '/api/data/model-registry', { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'application/json' }, body: JSON.stringify({ version: 0, models }) })
     assert.equal(result.response.status, 409)
-    result = await request(base, '/api/data/model-credentials/asr-one', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: 'account-scoped-test-key' }) })
+    result = await request(base, '/api/data/model-credentials/asr-one', { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: 'account-scoped-test-key' }) })
     assert.equal(result.response.status, 204)
-    result = await request(base, '/api/data/model-registry', { headers: bearer(activeAlice) })
+    result = await request(base, '/api/data/model-registry', { headers: bearer(adminToken) })
     assert.equal(JSON.stringify(result.body).includes('account-scoped-test-key'), false, 'model credentials must never be returned by the registry')
-    result = await request(base, '/api/transcriptions', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'text/plain', 'x-s2t-model-id': 'asr-one' }, body: Buffer.from('not audio') })
+    result = await request(base, '/api/transcriptions', { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'text/plain', 'x-s2t-model-id': 'asr-one' }, body: Buffer.from('not audio') })
     assert.equal(result.response.status, 415, 'the account ASR model and its encrypted credential must be resolved before upload validation')
     for (const id of ['translation-one', 'summary-one']) {
-      result = await request(base, `/api/data/model-credentials/${id}`, { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: 'account-scoped-test-key' }) })
+      result = await request(base, `/api/data/model-credentials/${id}`, { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'application/json' }, body: JSON.stringify({ apiKey: 'account-scoped-test-key' }) })
       assert.equal(result.response.status, 204)
     }
-    result = await request(base, '/api/translations', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json', 'x-s2t-model-id': 'translation-one' }, body: JSON.stringify({ text: '' }) })
+    result = await request(base, '/api/translations', { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'application/json', 'x-s2t-model-id': 'translation-one' }, body: JSON.stringify({ text: '' }) })
     assert.equal(result.response.status, 400, 'the selected translation model must resolve before input validation')
-    result = await request(base, '/api/summaries', { method: 'POST', headers: { ...bearer(activeAlice), 'content-type': 'application/json', 'x-s2t-model-id': 'summary-one' }, body: JSON.stringify({ messages: [] }) })
+    result = await request(base, '/api/summaries', { method: 'POST', headers: { ...bearer(adminToken), 'content-type': 'application/json', 'x-s2t-model-id': 'summary-one' }, body: JSON.stringify({ messages: [] }) })
     assert.equal(result.response.status, 400, 'the selected summary model must resolve before input validation')
-    result = await request(base, '/api/data/model-credentials/asr-one', { method: 'DELETE', headers: bearer(activeAlice) })
+    result = await request(base, '/api/data/model-credentials/asr-one', { method: 'DELETE', headers: bearer(adminToken) })
     assert.equal(result.response.status, 204)
     const draftHeaders = { ...bearer(activeAlice), 'content-type': 'application/json' }
     result = await request(base, '/api/data/live-draft', { method: 'POST', headers: draftHeaders, body: JSON.stringify({ value: { id: 'new-recording', segments: [] } }) })
@@ -174,11 +177,9 @@ const main = async () => {
     result = await request(base, '/api/data/audio/alice-session', { headers: bearer(bob) })
     assert.equal(result.response.status, 404)
     result = await request(base, '/api/voiceprints', { headers: bearer(activeAlice) })
-    assert.equal(result.response.status, 200)
-    assert.deepEqual(result.body.voiceprints, [])
+    assert.equal(result.response.status, 403)
     result = await request(base, '/api/voiceprints', { method: 'POST', headers: { ...bearer(activeAlice), 'x-s2t-voiceprint-sharing': 'department' }, body: Buffer.from('not-a-wav') })
-    assert.equal(result.response.status, 400)
-    assert.match(result.body.error, /明確同意/)
+    assert.equal(result.response.status, 403)
     const metrics = await fetch(`${base}/metrics`).then((response) => response.text())
     assert.match(metrics, /s2t_gateway_request_duration_seconds_bucket\{route="audio_processing_silero_vad"/)
     assert.match(metrics, /s2t_audio_worker_jobs\{pool="interactive",state="queued"/)

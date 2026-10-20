@@ -20,13 +20,13 @@ const config = {
 }
 for (const desktop of [false, true]) {
   const loaded = applyEnvironmentSettings(account, config, desktop)
-  assert.equal(loaded.selectedModelId, desktop ? 'environment-asr' : 'web-environment-asr')
-  assert.equal(loaded.selectedTranslationModelId, desktop ? 'environment-translation' : 'web-environment-translation')
+  assert.equal(loaded.selectedModelId, 'user-asr', 'saved admin selection survives environment hydration')
+  assert.equal(loaded.selectedTranslationModelId, 'user-translation')
   assert.equal(loaded.modelProfiles.find(p => p.id === 'user-asr').endpoint, 'https://user/asr')
   assert.deepEqual(loaded.translationProfiles.find(p => p.id === 'user-translation'), account.translationProfiles[0])
   assert.equal(loaded.summaryEndpoint, '/api/summaries')
   assert.equal(loaded.diarizationModel, 'env-diarization')
-  assert.equal(loaded.translationEndpoint, 'https://env/translation')
+  assert.equal(loaded.translationEndpoint, 'https://user/translation')
   const registryLoaded = applyEnvironmentSettings({ ...loaded, summaryEndpoint: 'https://user/summary', summaryModel: 'user-summary', selectedModelId: 'user-asr' }, config, desktop)
   assert.equal(registryLoaded.summaryModel, 'env-summary', 'account registry cannot overwrite environment settings')
   assert.equal(registryLoaded.selectedModelId, loaded.selectedModelId)
@@ -39,7 +39,7 @@ assert.equal(fallback.selectedTranslationModelId, 'user-translation')
 assert.equal(fallback.summaryEndpoint, account.summaryEndpoint)
 assert.equal(fallback.diarizationEndpoint, account.diarizationEndpoint)
 const catalog = applyEnvironmentSettings(account, { ...config, asrProfiles: [{ id: 'default', name: 'Default', endpoint: '/api/transcriptions', model: 'default', configured: true }, { id: 'secondary', name: 'Secondary', endpoint: '/api/transcriptions', model: 'second', configured: true }] }, false)
-assert.equal(catalog.selectedModelId, 'web-environment-asr')
+assert.equal(catalog.selectedModelId, 'user-asr')
 assert.equal(catalog.modelProfiles.length, 3)
 console.log('Environment settings: defaults, user model preservation, registry precedence and unavailable environment fallback passed.')
 
@@ -48,3 +48,7 @@ assert.equal(both.diarizationProfiles.filter(p=>p.id.startsWith('local-')).lengt
 assert.equal(both.diarizationModel,'nemotron-3-diarization')
 assert.ok(both.diarizationProfiles.some(p=>p.endpoint===account.diarizationEndpoint))
 console.log('Both local diarization models are listed; environment selects only the default; user model remains available.')
+
+const missingSelection = applyEnvironmentSettings({ ...account, modelProfiles: [], translationProfiles: [], selectedModelId: 'removed', selectedTranslationModelId: 'removed' }, config, false)
+assert.equal(missingSelection.selectedModelId, 'web-environment-asr')
+assert.equal(missingSelection.selectedTranslationModelId, 'web-environment-translation')

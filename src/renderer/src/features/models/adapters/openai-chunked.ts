@@ -73,6 +73,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     // An empty value deliberately omits OpenAI's optional `language` field and
     // lets the ASR model identify Chinese, English, Japanese, or German.
     this.language = input.language === 'auto' ? '' : input.language.split('-')[0]
+    this.vadProcessingMs = 0
     this.pendingChunks = []
     this.pendingSamples = 0
     this.pendingStart = 0
@@ -100,10 +101,14 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     return this.profile.vadFactory ? this.profile.vadFactory(this.sampleRate, this.vadConfig) : new EnergyVad(this.sampleRate, this.vadConfig)
   }
 
+  private vadProcessingMs = 0
+
   pushAudio(chunk: Float32Array, startSample: number): void {
     if (this.stopped) return
     this.audioClock = { sample: startSample + chunk.length, at: performance.now() }
+    const vadStartedAt = performance.now()
     const vadFrame = this.vad?.process(chunk)
+    this.vadProcessingMs += performance.now() - vadStartedAt
     if (vadFrame?.speechStarted) {
       recordCaptionEvent('speech_detected')
       const now = performance.now()
@@ -236,6 +241,8 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     this.diagnostics.maximumQueued = Math.max(this.diagnostics.maximumQueued, this.queuedChunks)
     const enqueuedAt = Date.now()
     const queuedAt = performance.now()
+    const vadProcessingMs = this.vadProcessingMs
+    this.vadProcessingMs = 0
     // First speech in this chunk, not the start of the whole continuous utterance.
     // Sample-clock backdating retains collection time even when the queue is full.
     const chunkStartAt = this.audioClock.at - (this.audioClock.sample - startSample) / this.sampleRate * 1000
@@ -253,11 +260,14 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       // BGM 全 ≥1200ms）。豁免同時省下一次閘門 HTTP。
       let sileroStartAt: number | undefined
       let sileroEndAt: number | undefined
+      let sileroProcessingMs: number | undefined
       if (this.profile.sileroVadEnabled && audio.length / this.sampleRate * 1_000 >= 300) {
         let hasSpeech = true
         sileroStartAt = performance.now()
         try {
-          hasSpeech = await this.hasSileroSpeech(wav)
+          const gate = await this.transport.hasSpeech(wav)
+          hasSpeech = typeof gate === 'boolean' ? gate : gate.speech
+          sileroProcessingMs = typeof gate === 'boolean' ? undefined : gate.processingMs
         } catch (error) {
           // An auxiliary gate failure degrades to the ungated path so a
           // Silero outage cannot silence captions; the distinct event keeps
@@ -295,7 +305,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const onsets = this.speechOnsets.filter(onset => onset.sample < endSample && onset.sample >= startSample - this.sampleRate * 30)
       this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
       const timing: CaptionTiming = {
-        chunkSpeechAt, chunkDetectedAt, queuedAt, dequeuedAt, requestAt, responseAt, postEndAt, speechEndAt,
+        chunkSpeechAt, chunkDetectedAt, vadProcessingMs, sileroProcessingMs, queuedAt, dequeuedAt, requestAt, responseAt, postEndAt, speechEndAt,
         ...(sileroStartAt !== undefined && sileroEndAt !== undefined ? { sileroStartAt, sileroEndAt } : {}),
         ...(response.server ? { server: response.server } : {}),
         ...(onsets[0] ? { speechAt: onsets[0].at } : {})
@@ -405,7 +415,6 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     return combined.trim() || undefined
   }
 
-  private hasSileroSpeech(audio: ArrayBuffer): Promise<boolean> { return this.transport.hasSpeech(audio) }
 
   private emitError(message: string): void {
     this.errorListeners.emit(message)

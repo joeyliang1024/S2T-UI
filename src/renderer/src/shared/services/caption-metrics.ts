@@ -5,17 +5,19 @@ import { authFetch } from '../http/authenticated-client'
 export type CaptionServerTiming = { upload?: number; queue?: number; pre?: number; model?: number; total: number }
 
 export type CaptionTiming = {
-  /** First onset of the utterance; only feeds the translation end-to-end sample. */
+  /** First onset of the utterance; retained for diagnostics. */
   speechAt?: number
   /** Last VAD speech sample in this chunk, using the audio sample clock. */
   speechEndAt?: number
-  /** This chunk's first speech sample (sample clock) — the t2 / e2e 起點. */
+  /** This chunk's first speech sample (sample clock), for visibility validation. */
+  vadProcessingMs?: number
   chunkSpeechAt: number
   /** When the local VAD confirmed speech inside this chunk. */
   chunkDetectedAt: number
   queuedAt: number
   dequeuedAt: number
   /** Silero second-gate HTTP roundtrip; absent when the gate is disabled. */
+  sileroProcessingMs?: number
   sileroStartAt?: number
   sileroEndAt?: number
   requestAt: number
@@ -118,7 +120,7 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
     // t7：回傳譯文並渲染到 UI。
     pushSpan(samples, 't7_paint', timing.response, paintedAt)
     if (origin?.speechEndAt !== undefined && withinMeasurementWindow(origin.speechEndAt)) pushSpan(samples, 'e2e_translation_tail', origin.speechEndAt, paintedAt)
-    if (origin && origin.speechAt !== undefined && withinMeasurementWindow(origin.speechAt)) pushSpan(samples, 'e2e_translation', origin.speechAt, paintedAt)
+    if (origin?.speechEndAt !== undefined && withinMeasurementWindow(origin.speechEndAt)) pushSpan(samples, 'e2e_translation', origin.speechEndAt, paintedAt)
   }
   if (samples.length) enqueue(samples)
 }
@@ -151,10 +153,9 @@ export const registerCaptionTiming = (id: string, event: object): void => {
   timings.delete(event)
   if (!withinMeasurementWindow(timing.chunkSpeechAt)) return
   const samples: Sample[] = []
-  // t2：VAD 偵測與分段 — 細分為偵測、句段累積與 Silero 二次確認。
-  pushSpan(samples, 't2_vad', timing.chunkSpeechAt, timing.chunkDetectedAt)
-  pushSpan(samples, 't2_segment', timing.chunkDetectedAt, timing.queuedAt)
-  pushSpan(samples, 't2_gate', timing.sileroStartAt, timing.sileroEndAt)
+  // t2：僅 VAD 邏輯執行與 Silero 二次確認；不包含講話或收集音訊時間。
+  pushMs(samples, 't2_vad', timing.vadProcessingMs)
+  pushMs(samples, 't2_gate', timing.sileroProcessingMs)
   // t1：瀏覽器佇列、WAV 編碼與伺服器收音訊（Server-Timing upload）。
   pushSpan(samples, 't1_queue', timing.queuedAt, timing.dequeuedAt)
   const gateMs = timing.sileroStartAt !== undefined && timing.sileroEndAt !== undefined ? timing.sileroEndAt - timing.sileroStartAt : 0
@@ -195,7 +196,7 @@ export const reportCaptionPaint = (ids: string[], paintedAt: number): void => {
     pushSpan(samples, 't5_paint', timing.postEndAt ?? timing.responseAt, paintedAt)
     const networkMs = timing.responseAt - timing.requestAt - (timing.server?.total ?? 0)
     if (networkMs >= 0) pushValue(samples, 'phase_t5', (networkMs + paintedAt - (timing.postEndAt ?? timing.responseAt)) / 1000)
-    pushSpan(samples, 'e2e_asr', timing.chunkSpeechAt, paintedAt)
+    pushSpan(samples, 'e2e_asr', timing.speechEndAt, paintedAt)
   }
   if (!samples.length || window.s2t) return // This deployment instruments the Web capture path.
   enqueue(samples)

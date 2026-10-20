@@ -73,7 +73,9 @@ const remoteSettingsPayload = (settings: Settings): Record<string, unknown> => {
   return persisted
 }
 
-export function useAppController(userId: string, userRole: 'admin' | 'user' = 'user') {
+type CaptureAudioChoice = { deviceId: string; systemEnabled: boolean }
+
+export function useAppController(userId: string, userRole: 'admin' | 'developer' | 'user' = 'user') {
 const isFloatingCaptionWindow = window.location.hash === '#floating'
 const viewFromLocation = (): View => {
   const candidate = window.location.protocol === 'file:' ? window.location.hash.replace(/^#\/?/, '') : window.location.pathname.replace(/^\//, '')
@@ -87,6 +89,8 @@ const [selectedDeviceId, setSelectedDeviceId] = useState('default')
 const [includeSystemAudio, setIncludeSystemAudio] = useState(false)
 
 const [captureState, setCaptureState] = useState<CaptureState>('idle')
+const [preparingContinuation, setPreparingContinuation] = useState(false)
+const preparingContinuationRef = useRef(false)
 
 const [microphoneLevel, setMicrophoneLevel] = useState(-60)
 
@@ -253,7 +257,7 @@ const modelRegistrySignatureRef = useRef<string | null>(null)
 const [settings, setSettings] = useState<Settings>(() => initialSettings())
 const [remoteSettingsHydrated, setRemoteSettingsHydrated] = useState(false)
 const [productTitleImage, setProductTitleImage] = useState('')
-const [environmentModelsHydrated, setEnvironmentModelsHydrated] = useState(Boolean(window.s2t))
+const [environmentModelsHydrated, setEnvironmentModelsHydrated] = useState(false)
 
 const [importedFile, setImportedFile] = useState<File | null>(null)
 
@@ -592,7 +596,7 @@ const receiveTranscript = useCallback((event: TranscriptEvent): void => {
     })
   }, [settings.sourceLanguage])
 
-const adminParameters = userRole === 'admin' ? settings.adminParameters : undefined
+const adminParameters = userRole !== 'user' ? settings.adminParameters : undefined
 const effectiveVadConfig = { ...speedToVadConfig(settings.responseSpeed), ...Object.fromEntries(Object.entries(adminParameters || {}).filter(([key]) => ['minSpeechMs','minSilenceMs','preRollMs','noiseFloorOffsetDb','chunkMinMs','chunkMaxMs'].includes(key))) }
 // A partial admin override takes precedence over the response-speed preset.
 if (effectiveVadConfig.chunkMinMs > effectiveVadConfig.chunkMaxMs) {
@@ -957,8 +961,9 @@ const cleanOrphanAudio = async (): Promise<void> => {
 }
 
 useEffect(() => {
+    if (userRole === 'user') return
     void voiceprintStorage.load().then(setVoiceprints).catch(() => setStatus(activeTranslate('stVoiceprintsLoadFailed')))
-  }, [userId])
+  }, [userId, userRole])
 
 useEffect(() => {
     if (window.s2t || !environmentModelsHydrated || !remoteSettingsHydrated) return
@@ -1012,7 +1017,7 @@ useEffect(() => {
   }, [sileroVadAvailable, settings.sileroVadEnabled, setSettings])
 
 useEffect(() => {
-    if (window.s2t || modelRegistryVersionRef.current === null) return
+    if (userRole !== 'admin' || window.s2t || modelRegistryVersionRef.current === null) return
     const models = [
       ...settings.modelProfiles.filter((item) => item.id !== 'none' && !item.id.startsWith('web-')).map((item) => ({ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, purpose: 'asr', requiresApiKey: item.requiresApiKey !== false, capabilities: item.capabilities })),
       ...settings.translationProfiles.filter((item) => !item.id.startsWith('web-')).map((item) => ({ id: item.id, name: item.name, endpoint: item.endpoint, model: item.model, purpose: 'translation', requiresApiKey: item.requiresApiKey !== false, capabilities: {} })),
@@ -1035,7 +1040,7 @@ useEffect(() => {
       }).catch((error: unknown) => setStatus(error instanceof Error ? activeTranslate('stModelListSaveFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stModelListSaveFailed')))
     }, 350)
     return () => window.clearTimeout(timer)
-  }, [settings.modelProfiles, settings.translationProfiles, settings.summaryEndpoint, settings.summaryModel, settings.summaryRequiresApiKey, settings.diarizationEndpoint, settings.diarizationModel, settings.diarizationRequiresApiKey, settings.embeddingEndpoint, settings.embeddingModel, settings.embeddingRequiresApiKey, refreshModelHealth])
+  }, [settings.modelProfiles, settings.translationProfiles, settings.summaryEndpoint, settings.summaryModel, settings.summaryRequiresApiKey, settings.diarizationEndpoint, settings.diarizationModel, settings.diarizationRequiresApiKey, settings.embeddingEndpoint, settings.embeddingModel, settings.embeddingRequiresApiKey, refreshModelHealth, userRole])
 
 useEffect(() => {
     let canceled = false
@@ -1135,15 +1140,15 @@ useEffect(() => {
     return () => window.clearTimeout(timer)
   }, [settings.selectedSummaryTemplateId, settings.summaryTemplates, summaryTemplatesHydrated])
 
-// Electron persists settings in its account-scoped config. Web persists them
+// Electron persists personal settings plus admin-owned shared models. Web persists them
 // via the gateway effect above; neither path uses Browser Storage.
 useEffect(() => {
-    if (!window.s2t) return
+    if (!window.s2t || !environmentModelsHydrated) return
     const timer = window.setTimeout(() => {
       void window.s2t?.saveModelConfig(settings).catch(() => setStatus(activeTranslate('stModelConfigSaveFailed')))
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [settings])
+  }, [settings, environmentModelsHydrated])
 
 useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)')
@@ -1284,6 +1289,7 @@ const attachSystemAudio = useCallback((stream: MediaStream, context: AudioContex
     systemSourceRef.current = source
     systemStreamRef.current = stream
     stream.getAudioTracks().forEach((track) => track.addEventListener('ended', () => {
+      if (systemStreamRef.current !== stream) return
       systemSourceRef.current?.disconnect()
       stream.getTracks().forEach((item) => item.stop())
       systemStreamRef.current = null
@@ -1322,12 +1328,13 @@ const switchInput = useCallback(async (nextDeviceId: string): Promise<void> => {
     } catch (error) {
       setSelectedDeviceId(activeDeviceIdRef.current)
       setStatus(error instanceof Error ? activeTranslate('stSwitchSourceFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stSwitchSourceFailed'))
+      throw error
     }
-  }, [attachInput, captureState])
+  }, [attachInput, captureState, settings.denoiseEnabled])
 
-const selectDevice = (nextDeviceId: string): void => {
+const selectDevice = async (nextDeviceId: string): Promise<void> => {
     if (captureState === 'recording' || captureState === 'paused') {
-      void switchInput(nextDeviceId)
+      await switchInput(nextDeviceId)
       return
     }
     setSelectedDeviceId(nextDeviceId)
@@ -1368,8 +1375,30 @@ const selectSystemAudio = async (enabled: boolean): Promise<void> => {
     }
   }
 
-const startCapture = async (): Promise<void> => {
-    if (captureState !== 'idle' || (selectedDeviceId === 'none' && !includeSystemAudio)) return
+const applyAudioSources = async (deviceId: string, systemEnabled: boolean, preparedSystem?: MediaStream): Promise<void> => {
+    const active = captureState === 'recording' || captureState === 'paused'
+    if (deviceId === 'none' && !systemEnabled) throw new Error(activeTranslate('stAtLeastOneSourceRequired'))
+    const nextSystem = systemEnabled ? preparedSystem ?? systemStreamRef.current : null
+    if (systemEnabled && !nextSystem?.getAudioTracks().some(track => track.readyState === 'live')) throw new Error(activeTranslate('stShareSourceNoAudio'))
+    if (active && !contextRef.current) throw new Error(activeTranslate('stAudioPipelineNotReady'))
+    if (deviceId !== 'none') await selectDevice(deviceId)
+    const oldStream = systemStreamRef.current, oldSource = systemSourceRef.current
+    if (nextSystem !== oldStream) {
+      // Attach the chosen stream before retiring the current source.
+      if (active && nextSystem) attachSystemAudio(nextSystem, contextRef.current!)
+      else { systemStreamRef.current = nextSystem; systemSourceRef.current = null }
+      oldSource?.disconnect()
+      oldStream?.getTracks().forEach(track => track.stop())
+    }
+    setIncludeSystemAudio(systemEnabled)
+    if (!systemEnabled) setSystemLevel(-60)
+    if (deviceId === 'none') await selectDevice(deviceId)
+  }
+
+const startCapture = async (audioChoice?: CaptureAudioChoice): Promise<void> => {
+    const captureDeviceId = audioChoice?.deviceId ?? selectedDeviceId
+    const captureSystemAudio = audioChoice?.systemEnabled ?? includeSystemAudio
+    if (captureState !== 'idle' || (captureDeviceId === 'none' && !captureSystemAudio)) return
     const continuationSnapshot = continuationTargetRef.current?.entry.modelSnapshot
     const captureModel: ModelProfile = continuationSnapshot ? {
       id: continuationSnapshot.id, name: continuationSnapshot.name, endpoint: continuationSnapshot.endpoint,
@@ -1419,15 +1448,15 @@ const startCapture = async (): Promise<void> => {
     translationQueueRef.current!.paused = false
     setCaptureState('starting')
     try {
-      setStatus(includeSystemAudio ? activeTranslate('stChooseSystemAudioSource') : activeTranslate('stRequestingMicPermission'))
+      setStatus(captureSystemAudio ? activeTranslate('stChooseSystemAudioSource') : activeTranslate('stRequestingMicPermission'))
       // Request the system picker directly from the user's click.
-      if (includeSystemAudio) {
-        const systemStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
+      if (captureSystemAudio) {
+        const systemStream = systemStreamRef.current?.getAudioTracks().some(track => track.readyState === 'live') ? systemStreamRef.current : await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
         systemStreamRef.current = systemStream
         if (!systemStream.getAudioTracks().length) throw new Error(activeTranslate('stShareSourceNoAudio'))
       }
-      const deviceId = selectedDeviceId === 'default' ? undefined : { exact: selectedDeviceId }
-      const stream = selectedDeviceId === 'none' ? null : await navigator.mediaDevices.getUserMedia({
+      const deviceId = captureDeviceId === 'default' ? undefined : { exact: captureDeviceId }
+      const stream = captureDeviceId === 'none' ? null : await navigator.mediaDevices.getUserMedia({
         audio: { deviceId, echoCancellation: true, noiseSuppression: settings.denoiseEnabled, autoGainControl: true },
         video: false
       })
@@ -1551,7 +1580,7 @@ const startCapture = async (): Promise<void> => {
       pcmWriterFailedRef.current = false
       if (!window.s2t) {
         const opfsId = `capture-${crypto.randomUUID()}`
-        opfsRecordingRef.current = await OpfsPcmRecording.create(opfsId, context.sampleRate, { ownerId: userId, captureOffsetMs: continuationTargetRef.current?.baseDurationMs ?? 0, draft: { ...liveDraftRef.current!, updatedAt: new Date().toISOString(), captureState: 'recording', source: includeSystemAudio ? activeTranslate('stSourceMicAndSystem') : activeTranslate('microphone'), elapsedMs: 0, segments: [], opfsRecordingId: opfsId, sampleRate: context.sampleRate } }).catch(() => null)
+        opfsRecordingRef.current = await OpfsPcmRecording.create(opfsId, context.sampleRate, { ownerId: userId, captureOffsetMs: continuationTargetRef.current?.baseDurationMs ?? 0, draft: { ...liveDraftRef.current!, updatedAt: new Date().toISOString(), captureState: 'recording', source: captureSystemAudio ? activeTranslate('stSourceMicAndSystem') : activeTranslate('microphone'), elapsedMs: 0, segments: [], opfsRecordingId: opfsId, sampleRate: context.sampleRate } }).catch(() => null)
         opfsRecordingIdRef.current = opfsRecordingRef.current ? opfsId : null
         const configResponse = await authFetch('/api/config')
         if (!configResponse.ok) throw new Error('無法確認錄音服務設定')
@@ -1656,14 +1685,14 @@ const startCapture = async (): Promise<void> => {
       recorder.start(1000)
 
       startAtRef.current = Date.now()
-      activeDeviceIdRef.current = selectedDeviceId
+      activeDeviceIdRef.current = captureDeviceId
       pausedDurationRef.current = 0
       const elapsedBeforeContinuation = continuationTargetRef.current?.baseDurationMs ?? 0
       if (!continuingCurrent) setCaptionTimerOffsetMs(0)
       setElapsedMs(elapsedBeforeContinuation)
       timerRef.current = window.setInterval(() => setElapsedMs(elapsedBeforeContinuation + Date.now() - startAtRef.current - pausedDurationRef.current), 250)
       setCaptureState('recording')
-      const sourceDescription = includeSystemAudio ? (stream ? activeTranslate('stMicAndSystemAudioMixing') : activeTranslate('stSystemAudioRecording')) : activeTranslate('stMicrophoneRecording')
+      const sourceDescription = captureSystemAudio ? (stream ? activeTranslate('stMicAndSystemAudioMixing') : activeTranslate('stSystemAudioRecording')) : activeTranslate('stMicrophoneRecording')
       setStatus(preprocessingFallback || (captureModel.endpoint.trim() ? activeTranslate('stReceivingCaptionsFrom').replace('{source}', String(sourceDescription)).replace('{name}', String(captureModel.name)) : activeTranslate('stModelNotConnectedCaptionsPending').replace('{source}', String(sourceDescription))))
     } catch (error) {
       pcmWriterRef.current?.discard()
@@ -2050,6 +2079,7 @@ const saveSettings = (): void => {
       void window.s2t.saveModelConfig(settings).then(markSaved).catch(() => setStatus(activeTranslate('stLocalSettingsSaveFailed')))
       return
     }
+    if (userRole === 'user') { markSaved(); return }
     void (async () => {
       const response = await retryableAuthFetch('/api/data/glossary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ glossary: settings.glossary, version: glossaryVersionRef.current ?? 0 }) })
       if (!response.ok) { const body = await response.json().catch(() => ({})) as { error?: string }; throw new Error(body.error || `HTTP ${response.status}`) }
@@ -2555,23 +2585,25 @@ const audioDurationMs = async (audio: Blob, fallback: number): Promise<number> =
       return Math.max(0, Math.round(decoded.duration * 1000))
     } catch { return fallback } finally { await context.close().catch(() => undefined) }
   }
-const continueSession = async (entry: SavedSession): Promise<void> => {
+const continueSession = async (entry: SavedSession, audioChoice?: CaptureAudioChoice): Promise<void> => {
     if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessing')); return }
     if (captureState !== 'idle') { setStatus(activeTranslate('stStopCurrentRecordingFirst')); return }
     try {
-      const audio = await loadSessionAudio(entry)
+      const prepared = continuationTargetRef.current
+      const reusable = prepared?.entry.id === entry.id && prepared.entry.audioKey === entry.audioKey && prepared.entry.activeAudioVersionId === entry.activeAudioVersionId
+      const audio = reusable ? prepared.audio : await loadSessionAudio(entry)
       if (!audio) throw new Error(activeTranslate('stSelectedAudioVersionNotFound'))
-      continuationTargetRef.current = { entry, audio, baseDurationMs: await audioDurationMs(audio, entry.durationMs) }
+      continuationTargetRef.current = { entry, audio, baseDurationMs: reusable ? prepared.baseDurationMs : await audioDurationMs(audio, entry.durationMs) }
       // Continuation uses the live capture workspace. Move there before asking
       // for audio permission so the recording state and any prompt are visible.
       setView('live')
-      await startCapture()
+      await startCapture(audioChoice)
     } catch (error) { continuationTargetRef.current = null; setStatus(error instanceof Error ? activeTranslate('stContinueRecordingFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stContinueRecordingFailed')) }
   }
-const startOrContinueRecording = async (): Promise<void> => {
+const startOrContinueRecording = async (audioChoice?: CaptureAudioChoice): Promise<void> => {
     const existing = sessions.find((entry) => entry.id === liveSessionIdRef.current)
-    if (existing) await continueSession(existing)
-    else await startCapture()
+    if (existing) await continueSession(existing, audioChoice)
+    else await startCapture(audioChoice)
   }
 const selectAudioVersion = (sessionId: string, versionId: string): void => {
     setSessions((current) => current.map((entry) => {
@@ -3165,11 +3197,11 @@ const saveLiveCaptionsBeforeSwitch = async (): Promise<void> => {
     liveSessionIdRef.current = nextEntry.id
   }
 
-const loadSessionIntoLive = async (entry: SavedSession): Promise<void> => {
-    if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessingInBackground')); return }
-    if (captureState !== 'idle') { setStatus(activeTranslate('stStopCaptureBeforeHistoryLoad')); return }
+const loadSessionIntoLive = async (entry: SavedSession): Promise<boolean> => {
+    if (entry.processingState === 'running' || qualityCorrectionActiveRef.current.has(entry.id)) { setStatus(activeTranslate('stRecordStillProcessingInBackground')); return false }
+    if (captureState !== 'idle') { setStatus(activeTranslate('stStopCaptureBeforeHistoryLoad')); return false }
     try { await saveLiveCaptionsBeforeSwitch() }
-    catch (error) { setStatus(error instanceof Error ? activeTranslate('stLiveCaptionsSaveFailed').replace('{error}', String(error.message)) : activeTranslate('stLiveCaptionsSaveFailedShort')); return }
+    catch (error) { setStatus(error instanceof Error ? activeTranslate('stLiveCaptionsSaveFailed').replace('{error}', String(error.message)) : activeTranslate('stLiveCaptionsSaveFailedShort')); return false }
     translationQueueRef.current!.reset()
     translationQueueRef.current!.paused = false
     setTranscripts(entry.segments)
@@ -3178,6 +3210,27 @@ const loadSessionIntoLive = async (entry: SavedSession): Promise<void> => {
     setClearedThroughMs(0); clearBoundaryRef.current = 0
     setEditingTranscriptId(null); setTranscriptSearch(''); setFollowingCaptions(true)
     setViewingSessionId(null); setStatus(activeTranslate('stLoadedIntoLiveCaptions').replace('{title}', String(entry.title)))
+    return true
+  }
+
+const prepareSessionContinuation = async (entry: SavedSession): Promise<boolean> => {
+    if (captureState !== 'idle' || preparingContinuationRef.current) return false
+    preparingContinuationRef.current = true
+    setPreparingContinuation(true)
+    setView('live')
+    try {
+      if (!await loadSessionIntoLive(entry)) return false
+      const audio = await loadSessionAudio(entry)
+      if (!audio) throw new Error(activeTranslate('stSelectedAudioVersionNotFound'))
+      const baseDurationMs = await audioDurationMs(audio, entry.durationMs)
+      continuationTargetRef.current = { entry, audio, baseDurationMs }
+      setElapsedMs(baseDurationMs)
+      return true
+    } catch (error) {
+      continuationTargetRef.current = null
+      setStatus(error instanceof Error ? activeTranslate('stContinueRecordingFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stContinueRecordingFailed'))
+      return false
+    } finally { preparingContinuationRef.current = false; setPreparingContinuation(false) }
   }
 
 const renameSession = (id: string): void => {
@@ -3312,6 +3365,7 @@ requestTranslation,
 cancelPendingTranslations,
 selectDevice,
 selectSystemAudio,
+applyAudioSources,
 startCapture,
 togglePause,
 stopCapture,
@@ -3375,6 +3429,8 @@ visibleTranscripts,
 searchedLiveCaptionGroups,
 clearCaptions,
 loadSessionIntoLive,
+prepareSessionContinuation,
+preparingContinuation,
 renameSession,
 regenerateSessionTitle,
 titleGeneratingIds,

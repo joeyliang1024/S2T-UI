@@ -15,7 +15,9 @@ try {
  assert.equal(dataPaths({S2T_SUMMARY_TEMPLATES_DIR:directory}).template,path.resolve('.s2t-data/template'))
  const paths = initializeDataFiles(env)
  fs.writeFileSync(path.join(directory, 'auth-secret'), 'keep-existing-secret')
- assert.ok(fs.existsSync(path.join(paths.template,'會議摘要.md')))
+ const seededTemplates = fs.readdirSync(path.resolve(__dirname, '../../data/template')).filter(name => /\.(md|markdown)$/i.test(name))
+ assert.ok(seededTemplates.length > 0, 'shipped default templates must exist')
+ for (const name of seededTemplates) assert.ok(fs.existsSync(path.join(paths.template, name)), `default template ${name} must be seeded`)
  const catalog = loadPrompts(env)
  catalog.title = 'TITLE {{language}} {{maximum}}'
  fs.writeFileSync(path.join(paths.prompt,'prompts.json'),JSON.stringify(catalog))

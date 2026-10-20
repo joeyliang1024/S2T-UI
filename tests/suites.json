@@ -78,7 +78,11 @@
     "search-smoke-test.cjs",
     "model-api-test-smoke-test.cjs",
     "data-directory-prompts-smoke-test.cjs",
-    "s3-client-smoke-test.cjs"
+    "s3-client-smoke-test.cjs",
+    "account-role-store-smoke-test.cjs",
+    "audio-source-selection-smoke-test.cjs",
+    "monitoring-dashboard-smoke-test.cjs",
+    "desktop-shared-models-smoke-test.cjs"
   ],
   "http": [
     "gateway-env-smoke-test.cjs",
@@ -93,7 +97,8 @@
     "gateway-lifecycle-smoke-test.cjs",
     "gateway-single-origin-smoke-test.cjs",
     "account-deletion-http-smoke-test.cjs",
-    "model-health-restart-http-smoke-test.cjs"
+    "model-health-restart-http-smoke-test.cjs",
+    "admin-feature-policy-smoke-test.cjs"
   ],
   "models": [
     "gateway-auth-smoke-test.cjs",
@@ -115,7 +120,8 @@
     "summary-cancellation-browser-smoke-test.cjs",
     "model-health-browser-smoke-test.cjs",
     "quality-comparison-browser-smoke-test.cjs",
-    "ui-navigation-browser-smoke-test.cjs"
+    "ui-navigation-browser-smoke-test.cjs",
+    "microphone-setup-browser-smoke-test.cjs"
   ],
   "external": [
     "remote-storage-smoke-test.cjs",

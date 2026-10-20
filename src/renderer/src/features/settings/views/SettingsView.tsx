@@ -2,7 +2,7 @@ import { StudioArtwork } from '../../../shared/ui/StudioArtwork'
 import { createTextSearch } from '../../../shared/services/search'
 import { SessionSyncConflicts } from '../../sessions/views/SessionSyncConflicts'
 import { SummaryTemplateManager } from './SummaryTemplateManager'
-import { AdminSettingsPanel } from './AdminSettingsPanel'
+import { AdminSettingsPanel, AdvancedSettingsPanel } from './AdminSettingsPanel'
 import type { AuthUser } from '../../auth/services/auth-client'
 import { type ReactElement, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { interfaceTranslate } from '../../../shared/i18n/index'
@@ -10,7 +10,7 @@ import type { Settings, View } from '../../../shared/types'
 import { parseGlossaryJson } from '../domain/glossary-json'
 import type { SettingsViewModel } from './view-model'
 
-type SettingsCategory = 'asr' | 'translation' | 'summary' | 'app' | 'account'
+type SettingsCategory = 'asr' | 'translation' | 'summary' | 'app' | 'account' | 'advanced'
 
 const serializeSettings = (value: Settings): string => JSON.stringify(value)
 
@@ -190,6 +190,7 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
     { id: 'translation', label: ui('translationGlossary') },
     { id: 'summary', label: ui('summaryTemplates') },
     { id: 'app', label: ui('application') },
+    ...(user.role !== 'user' ? [{ id: 'advanced' as const, label: ui('adminAdvancedParams') }] : []),
     ...(user.role === 'admin' ? [{ id: 'account' as const, label: ui('adminAccountTab') }] : [])
   ]
 
@@ -202,23 +203,24 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
       <nav className="settings-category-nav" aria-label={ui('settingsTitle')}>{categories.map((entry) => <button key={entry.id} className={category === entry.id ? 'nav-active' : ''} aria-current={category === entry.id ? 'true' : undefined} onClick={() => setCategory(entry.id)}>{entry.label}</button>)}</nav>
 
       {category === 'account' && user.role === 'admin' && <AdminSettingsPanel user={user} settings={settings} update={update} />}
+      {category === 'advanced' && user.role !== 'user' && <AdvancedSettingsPanel settings={settings} update={update} />}
       {category === 'asr' && <>
         <SettingsCard eyebrow="AUDIO" title={ui('audioProcessing')}>
           <div className="toggle-list">
             <ToggleRow label={ui('enableDenoise')} checked={settings.denoiseEnabled} onChange={setDenoiseEnabled} />
-            <ToggleRow label={ui('kaiserResample')} hint={ui('nextRecordingApplies')} checked={settings.kaiserResampleEnabled} onChange={(enabled) => update((current) => ({ ...current, kaiserResampleEnabled: enabled }))} />
+            {user.role !== 'user' && <><ToggleRow label={ui('kaiserResample')} hint={ui('nextRecordingApplies')} checked={settings.kaiserResampleEnabled} onChange={(enabled) => update((current) => ({ ...current, kaiserResampleEnabled: enabled }))} />
             <p className="hint">{ui('sileroVadHealth')}{ui('labelColon')}<span className={`model-health ${sileroHealth?.state ?? 'unknown'}`} title={sileroHealth?.reason ?? ui('modelHealthNotChecked')}><i aria-hidden="true" />{sileroHealth?.state === 'healthy' ? ui('modelHealthHealthy') : sileroHealth?.state === 'degraded' ? ui('modelHealthDegraded') : sileroHealth?.state === 'unhealthy' ? ui('modelHealthFailed') : ui('modelHealthUnknown')}</span>{sileroHealth?.reason ? `${ui('labelDash')}${sileroHealth.reason}` : ''}</p>
             {sileroVadAvailable === true && <ToggleRow label={ui('useSileroVad')} hint={ui('webGatewayCpuWorkerHint')} checked={settings.sileroVadEnabled} onChange={(enabled) => update((current) => ({ ...current, sileroVadEnabled: enabled }))} />}
             {sileroVadAvailable === false && <p className="hint">{ui('sileroVadNotLoaded')}</p>}
-            <ToggleRow label={ui('useDynaudnorm')} hint={ui('webGatewayCpuWorkerHint')} checked={settings.dynaudnormEnabled} onChange={(enabled) => update((current) => ({ ...current, dynaudnormEnabled: enabled }))} />
+            <ToggleRow label={ui('useDynaudnorm')} hint={ui('webGatewayCpuWorkerHint')} checked={settings.dynaudnormEnabled} onChange={(enabled) => update((current) => ({ ...current, dynaudnormEnabled: enabled }))} /></>}
           </div>
-          <details className="help-disclosure">
+          {user.role !== 'user' && <details className="help-disclosure">
             <summary>{ui('advancedHelp')}</summary>
             <p className="hint">{ui('noiseSuppressionAdvancedHint')}</p>
             <p className="hint">{denoiseApplied === true ? ui('denoiseApplied') : denoiseApplied === false ? ui('denoiseNotApplied') : ui('denoiseUnknown')}</p>
             <p className="hint">{ui('kaiserResampleAdvancedHint')}</p>
             <p className="hint">{ui('silenceStartAdvancedHint')}</p>
-          </details>
+          </details>}
         </SettingsCard>
       </>}
 
@@ -236,16 +238,16 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
           </div>
           <div className="settings-form-grid">
             <label>{ui('translationStrategy')}<select value={settings.translationStrategy} onChange={(event) => update((current) => ({ ...current, translationStrategy: event.target.value as 'realtime' | 'sentence' }))}><option value="realtime">{ui('realtimeSegment')}</option><option value="sentence">{ui('completeSentence')}</option></select></label>
-            <label>{ui('loadStrategy')}<select value={settings.translationLoadStrategy} onChange={(event) => update((current) => ({ ...current, translationLoadStrategy: event.target.value as 'automatic' | 'throttled' | 'manual' }))}><option value="automatic">{ui('automaticQueue')}</option><option value="throttled">{ui('throttledTranslation')}</option><option value="manual">{ui('manualTranslation')}</option></select></label>
+            {user.role !== 'user' && <label>{ui('loadStrategy')}<select value={settings.translationLoadStrategy} onChange={(event) => update((current) => ({ ...current, translationLoadStrategy: event.target.value as 'automatic' | 'throttled' | 'manual' }))}><option value="automatic">{ui('automaticQueue')}</option><option value="throttled">{ui('throttledTranslation')}</option><option value="manual">{ui('manualTranslation')}</option></select></label>}
           </div>
         </SettingsCard>
 
-        <SettingsCard eyebrow="GLOSSARY" title={ui('glossary')}>
+        {user.role !== 'user' && <SettingsCard eyebrow="GLOSSARY" title={ui('glossary')}>
           <label className="settings-search-field">{ui('searchGlossary')}<input value={glossarySearch} placeholder={ui('glossarySearchPlaceholder')} onChange={(event) => setGlossarySearch(event.target.value)} /></label>
           <div className="glossary-editor">{filteredGlossaryEntries.map((entry) => <div key={entry.index}><input defaultValue={entry.value} aria-label={ui('glossaryTerm')} onBlur={(event) => replaceGlossaryEntry(entry.index, event.currentTarget.value)} /><button className="text-button danger" aria-label={ui('deleteGlossary')} onClick={() => replaceGlossaryEntry(entry.index, '')}>{ui('deleteGlossary')}</button></div>)}{glossaryEntries.length === 0 && <p className="hint">{ui('noGlossary')}</p>}{glossaryEntries.length > 0 && filteredGlossaryEntries.length === 0 && <p className="hint">{ui('noSearchMatches')}</p>}<div className="glossary-add-row"><input value={newGlossaryTerm} aria-label={ui('addGlossary')} placeholder={ui('glossaryExample')} onChange={(event) => setNewGlossaryTerm(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addGlossaryEntry() } }} /><button className="secondary" onClick={addGlossaryEntry}>{ui('addGlossary')}</button></div></div>
           <label className="glossary-json-import">{ui('loadGlossaryJson')}<input type="file" accept="application/json,.json" onChange={(event) => { const file = event.currentTarget.files?.[0] ?? null; event.currentTarget.value = ''; void importGlossaryJson(file) }} /></label>
           <details className="help-disclosure"><summary>{ui('advancedHelp')}</summary><p className="hint">{ui('glossaryHelp')}</p></details>
-        </SettingsCard>
+        </SettingsCard>}
       </>}
 
       {category === 'summary' && (
@@ -265,11 +267,11 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
 
         <SettingsCard eyebrow="STORAGE" title={ui('application')}>
           <p className="hint">{browserRecordingStorage === 'electron' ? ui('recordingStorageElectron') : browserRecordingStorage === 'opfs' ? ui('recordingStorageOpfs') : ui('recordingStorageMemory')}</p>
-          {window.s2t && <div className="settings-form-grid"><label>{ui('defaultSaveTo')}<select value={settings.storageLocation} onChange={(event) => update((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">{ui('local')}</option><option value="remote">{ui('remoteStorage')}</option></select></label></div>}
-          {window.s2t && <p className="hint">{ui('storageLocationHint')}</p>}
+          {user.role !== 'user' && window.s2t && <div className="settings-form-grid"><label>{ui('defaultSaveTo')}<select value={settings.storageLocation} onChange={(event) => update((current) => ({ ...current, storageLocation: event.target.value as 'local' | 'remote' }))}><option value="local">{ui('local')}</option><option value="remote">{ui('remoteStorage')}</option></select></label></div>}
+          {user.role !== 'user' && window.s2t && <p className="hint">{ui('storageLocationHint')}</p>}
         </SettingsCard>
 
-        <SettingsCard eyebrow="REMOTE" title={ui('remoteStorage')}>
+        {user.role !== 'user' && <SettingsCard eyebrow="REMOTE" title={ui('remoteStorage')}>
           {appStorageDashboard()}
           <SessionSyncConflicts conflicts={remoteSessionConflicts} resolve={resolveSessionConflict} ui={ui} />
           <div className="settings-button-row">
@@ -277,7 +279,7 @@ export function SettingsView({ model, user, settingsReturnView, onNavigate, leav
             <button className="text-button" onClick={() => void retryStorageCompensations()}>{ui('retryStorageCompensations')}</button>
             <button className="text-button" onClick={() => void cleanOrphanAudio()}>{ui('cleanOrphanAudio')}</button>
           </div>
-        </SettingsCard>
+        </SettingsCard>}
       </>}
 
       <footer className="settings-footer">

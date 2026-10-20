@@ -29,7 +29,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
           const bytes=new Uint8Array(44+3200);const d=new DataView(bytes.buffer);for(const [offset,text] of [[0,'RIFF'],[8,'WAVEfmt '],[36,'data']])for(let i=0;i<text.length;i++)bytes[offset+i]=text.charCodeAt(i);
           d.setUint32(4,bytes.length-8,true);d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);d.setUint32(24,16000,true);d.setUint32(28,32000,true);d.setUint16(32,2,true);d.setUint16(34,16,true);d.setUint32(40,3200,true);
           fetch('/api/transcriptions',{method:'POST',headers:{'content-type':'audio/wav'},body:bytes}).then(async response=>{if(!response.ok)throw Error('ASR '+response.status);const server=parseServerTiming(response.headers.get('server-timing')),data=await response.json(),at=performance.now();
-            const event={id,revision:1,status:'final',startMs:0,endMs:100,sourceText:data.text};attachCaptionTiming(event,{chunkSpeechAt:start,chunkDetectedAt:start,queuedAt:start,dequeuedAt:start,requestAt:start,responseAt:at,postEndAt:at,server});registerCaptionTiming(id,event);setEntries([event]);window.completed=id;
+            const event={id,revision:1,status:'final',startMs:0,endMs:100,sourceText:data.text};attachCaptionTiming(event,{chunkSpeechAt:start,speechEndAt:start,chunkDetectedAt:start,queuedAt:start,dequeuedAt:start,requestAt:start,responseAt:at,postEndAt:at,server});registerCaptionTiming(id,event);setEntries([event]);window.completed=id;
           }).catch(error=>window.testError=String(error));return id;
         }};
         return view==='live'?<div className="transcript">{entries.map(event=><CaptionPaintMetric key={event.id} members={[event]} text={event.sourceText}/>)}</div>:<div>settings</div>;

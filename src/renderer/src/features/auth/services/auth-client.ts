@@ -1,5 +1,5 @@
 
-export type AuthUser = { id: string; username: string; NT: string; Department: string; role: 'admin' | 'user'; createdAt: string }
+export type AuthUser = { id: string; username: string; NT: string; Department: string; role: 'admin' | 'developer' | 'user'; createdAt: string }
 type AuthResult = { user: AuthUser; token?: string }
 
 // The Web gateway issues an HttpOnly cookie. Keep a token only in renderer

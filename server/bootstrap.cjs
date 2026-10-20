@@ -242,13 +242,17 @@ const decryptCredential = (secret, value) => {
   return Buffer.concat([decipher.update(Buffer.from(value.ciphertext, 'base64url')), decipher.final()]).toString('utf8')
 }
 const validCredentialId = (value) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value)
+const { modelSettingsKeys, preserveModelSettings } = require('../src/shared/validation/model-settings.cjs')
+const managedSettingsKeys = ['selectedModelId', 'selectedTranslationModelId', 'modelProfiles', 'translationProfiles', 'diarizationProfiles', 'summaryEndpoint', 'summaryModel', 'summaryRequiresApiKey', 'diarizationEndpoint', 'diarizationModel', 'diarizationRequiresApiKey', 'embeddingEndpoint', 'embeddingModel', 'embeddingRequiresApiKey', 'translationEndpoint', 'translationModel', 'translationRequiresApiKey', 'translationLoadStrategy', 'kaiserResampleEnabled', 'sileroVadEnabled', 'dynaudnormEnabled']
+const managedSettings = settings => Object.fromEntries(managedSettingsKeys.filter(key => settings?.[key] !== undefined).map(key => [key, settings[key]]))
 const accountModelService = async (auth, user, id, purpose) => {
-  const registry = await storage.config.get(user.id, 'model-registry')
+  const ownerId = await auth.modelOwner()
+  const registry = await storage.config.get(ownerId, 'model-registry')
   const model = Array.isArray(registry?.models) ? registry.models.find((item) => item?.id === id && item?.purpose === purpose) : undefined
   if (!model || !model.endpoint || !model.model) return null
   let apiKey = ''
   if (model.requiresApiKey !== false) {
-    const encrypted = await storage.config.get(user.id, `model-credential-${id}`)
+    const encrypted = await storage.config.get(ownerId, `model-credential-${id}`)
     try { apiKey = decryptCredential(auth.secret, encrypted) }
     catch { throw new Error('已保存的模型 API key 無法解密；請確認重新部署及所有 Pod 使用相同的 S2T_AUTH_SECRET。若已更換密鑰，請重新保存此模型 API key。') }
     if (!apiKey) return null
@@ -769,6 +773,16 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     catch (error) { return send(response, 503, { error: error instanceof Error ? error.message : 'Storage is unavailable', mode: storage.mode, schemaVersion: storage.schemaVersion, ready: false, compensationGraceMs }) }
   }
   const storagePath = new URL(request.url, 'http://localhost').pathname
+  if ((storagePath === '/api/data/model-registry' && request.method !== 'GET') || storagePath.startsWith('/api/data/model-credentials/')) {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    if (user.role !== 'admin') return send(response, 403, { error: '只有 admin 可修改模型設定' })
+  }
+  if ((storagePath === '/api/data/model-registry' && request.method !== 'GET') || storagePath.startsWith('/api/data/model-credentials/') || storagePath === '/api/data/model-test' || (storagePath.startsWith('/api/voiceprints') && !storagePath.endsWith('/identify')) || (storagePath === '/api/data/glossary' && request.method !== 'GET') || (['/api/data/storage-retry', '/api/data/storage-audit'].includes(storagePath) && request.method !== 'GET')) {
+    const user = await auth.requireUser(request)
+    if (!user) return send(response, 401, { error: '需要登入' })
+    if (!['admin', 'developer'].includes(user.role)) return send(response, 403, { error: '只有 admin 或 developer 可管理此功能' })
+  }
   if (await handleRecordingRoutes(request, response, auth)) return
   if (storagePath === '/api/data/storage-status' && request.method === 'GET') {
     const user = await auth.requireUser(request)
@@ -825,13 +839,26 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     try {
       if (request.method === 'GET') {
         const stored = await storage.config.get(user.id, 'app-settings')
-        if (user.role !== 'admin' && stored?.settings) delete stored.settings.adminParameters
-        return send(response, 200, stored && !Array.isArray(stored.settings) && stored.settings && typeof stored.settings === 'object' && Number.isSafeInteger(stored.version) ? stored : { settings: {}, version: 0 })
+        const shared = await storage.config.get(await auth.modelOwner(), 'app-settings')
+        const personal = { ...(stored?.settings || {}) }
+        for (const key of managedSettingsKeys) delete personal[key]
+        const sharedSettings = managedSettings(shared?.settings)
+        if (user.role === 'developer') {
+          for (const key of managedSettingsKeys) if (!modelSettingsKeys.includes(key) && stored?.settings?.[key] !== undefined) sharedSettings[key] = stored.settings[key]
+        }
+        const value = { settings: { ...personal, ...sharedSettings }, version: stored?.version || 0 }
+        if (!['admin', 'developer'].includes(user.role)) delete value.settings.adminParameters
+        return send(response, 200, value)
       }
       const body = JSON.parse((await readBody(request, 512 * 1024)).toString('utf8'))
       if (!body.settings || typeof body.settings !== 'object' || Array.isArray(body.settings) || !Number.isSafeInteger(body.version) || body.version < 0) return send(response, 400, { error: 'settings 與 version 必須有效' })
-      const settings = JSON.parse(JSON.stringify(body.settings))
-      if (user.role !== 'admin' && settings.adminParameters !== undefined) return send(response, 403, { error: '只有 admin 可客製化進階參數' })
+      let settings = JSON.parse(JSON.stringify(body.settings))
+      if (!['admin', 'developer'].includes(user.role) && settings.adminParameters !== undefined) return send(response, 403, { error: '只有 admin 或 developer 可客製化進階參數' })
+      if (!['admin', 'developer'].includes(user.role)) {
+        for (const key of managedSettingsKeys) delete settings[key]
+        Object.assign(settings, managedSettings((await storage.config.get(await auth.modelOwner(), 'app-settings'))?.settings))
+      }
+      if (user.role === 'developer') settings = preserveModelSettings(settings, (await storage.config.get(await auth.modelOwner(), 'app-settings'))?.settings)
       if (settings.adminParameters !== undefined) {
         try { settings.adminParameters = validateAdminParameters(settings.adminParameters) }
         catch (error) { return send(response, 400, { error: error.message }) }
@@ -863,7 +890,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
       if (request.method === 'GET') {
-        const stored = await storage.config.get(user.id, 'model-registry')
+        const stored = await storage.config.get(await auth.modelOwner(), 'model-registry')
         return send(response, 200, stored && Array.isArray(stored.models) && Number.isSafeInteger(stored.version) ? stored : { models: [], version: 0 })
       }
       const body = JSON.parse((await readBody(request, 256 * 1024)).toString('utf8'))
@@ -873,7 +900,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
         : [])
       if (models.length !== body.models.length || new Set(models.map((item) => item.id)).size !== models.length) return send(response, 400, { error: '模型資料無效或 ID 重複' })
       const value = { models, version: body.version + 1 }
-      if (!await storage.config.compareAndSwap(user.id, 'model-registry', body.version, value)) return send(response, 409, { error: '模型清單已被其他視窗更新；請重新載入。' })
+      if (!await storage.config.compareAndSwap(await auth.modelOwner(), 'model-registry', body.version, value)) return send(response, 409, { error: '模型清單已被其他視窗更新；請重新載入。' })
       for (const model of models) modelHealthChecks.delete(`${user.id}:${model.id}`)
       return send(response, 200, { saved: true, version: value.version })
     } catch (error) { return storageFailure(response, error, '無法保存模型清單') }
@@ -885,7 +912,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     const user = await auth.requireUser(request)
     if (!user) return send(response, 401, { error: '需要登入' })
     try {
-      const registry = await storage.config.get(user.id, 'model-registry')
+      const registry = await storage.config.get(await auth.modelOwner(), 'model-registry')
       const checks = Array.isArray(registry?.models) ? [...registry.models] : []
       // Environment-provided services share the card ids the Web client renders,
       // so their badges refresh on the same automatic schedule.
@@ -993,13 +1020,13 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
       // from racing on a shared credentials object.
       const key = `model-credential-${id}`
       if (request.method === 'DELETE') {
-        await storage.config.remove(user.id, key)
+        await storage.config.remove(await auth.modelOwner(), key)
         modelHealthChecks.delete(`${user.id}:${id}`)
         return send(response, 204, '')
       }
       const body = JSON.parse((await readBody(request, 16 * 1024)).toString('utf8'))
       if (typeof body.apiKey !== 'string' || !body.apiKey.trim() || body.apiKey.length > 8_000) return send(response, 400, { error: 'API key 無效' })
-      await storage.config.put(user.id, key, encryptCredential(auth.secret, body.apiKey.trim()))
+      await storage.config.put(await auth.modelOwner(), key, encryptCredential(auth.secret, body.apiKey.trim()))
       modelHealthChecks.delete(`${user.id}:${id}`)
       return send(response, 204, '')
     } catch (error) { return storageFailure(response, error, '無法保存 API key') }
@@ -1293,7 +1320,7 @@ const httpServer = createHttpApp({
   isQuiescing: () => quiescing, isDraining: () => draining,
   onRequestOpened: response => { activeHttpRequests += 1; activeHttpResponses.add(response) },
   onRequestClosed: response => { activeHttpResponses.delete(response); activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() }
-}).on('error', (error) => logger.error('http.server.error', { port, role: processRole, error })).listen(port, () => {
+}).on('error', (error) => logger.error('http.server.error', { port, role: processRole, error })).listen(port, process.env.S2T_WEB_HOST || '0.0.0.0', () => {
   logger.info('gateway.started', { port, role: processRole, storage: storage.mode, logLevel: process.env.S2T_LOG_LEVEL || 'info', logFormat: process.env.S2T_LOG_FORMAT || 'text' })
   if (processRole === 'audio-worker') logger.info('audio-worker.started', { port, durableDiarizationJobs: true })
 })
