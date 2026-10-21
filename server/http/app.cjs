@@ -1,4 +1,5 @@
 const { createServer } = require('node:http')
+const { runWithWorkload, workloadForRequest } = require('../workload-context.cjs')
 const { observeHttp } = require('../metrics.cjs')
 
 const createHttpApp = ({ handleHttpRequest, send, logger, newRequestId, isQuiescing = () => false, isDraining = () => false, onRequestOpened = () => {}, onRequestClosed = () => {} }) => {
@@ -49,7 +50,7 @@ return createServer((request, response) => {
   })
   logger.run({ requestId }, () => {
     if (isDraining() && request.url !== '/livez' && request.url !== '/readyz') { response.setHeader('connection', 'close'); return send(response, 503, { error: '服務正在排空，請重試' }) }
-    void Promise.resolve().then(() => handleHttpRequest(request, response)).catch((error) => {
+    void runWithWorkload(workloadForRequest(request), () => Promise.resolve().then(() => handleHttpRequest(request, response))).catch((error) => {
       logger.error('http.request.failed', {
         method: request.method,
         path,

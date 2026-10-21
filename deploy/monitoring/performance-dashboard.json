@@ -604,6 +604,47 @@
           "placement": "bottom"
         }
       }
+    },
+    {
+      "id": 105,
+      "type": "timeseries",
+      "title": "即時優先 · 背景在途／等待",
+      "description": "背景模型工作全叢集預設最多 8；模型 HTTP 等待先派即時，背景不得占滿容量。",
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(state) (s2t_redis_capacity_state{job=\"s2t\",state=~\"backgroundActive|backgroundWaiting\"})",
+          "legendFormat": "global {{state}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by(role,state) (s2t_model_http_capacity{job=\"s2t\",state=~\"realtimeWaiting|backgroundWaiting|backgroundActive|backgroundLimit\"})",
+          "legendFormat": "{{role}} {{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     }
   ],
   "tags": [

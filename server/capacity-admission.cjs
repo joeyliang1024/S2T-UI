@@ -5,7 +5,7 @@ const createBatchAdmission = ({ acquire, abandon, batchSize = 128, pollMs = 25, 
   const failure = message => Object.assign(new Error(message), { status: 503 })
   const settle = (entry, error) => {
     if (entry.settled) return
-    entry.settled = true; clearTimeout(entry.timer)
+    entry.settled = true; clearTimeout(entry.timer); entry.signal?.removeEventListener('abort', entry.abort)
     if (error) entry.reject(error); else entry.resolve()
   }
   const schedule = delay => {
@@ -41,16 +41,20 @@ const createBatchAdmission = ({ acquire, abandon, batchSize = 128, pollMs = 25, 
     }
   }
   return {
-    request(token) {
+    request(token, { signal } = {}) {
+      if (signal?.aborted) return Promise.reject(new DOMException('Admission canceled', 'AbortError'))
       if (closed) return Promise.reject(failure('模型容量服務正在關閉'))
       if (queue.length >= maxWaiting) return Promise.reject(failure('模型容量等待佇列已滿'))
       return new Promise((resolve, reject) => {
-        const entry = { token, resolve, reject, settled: false, deadline: Date.now() + waitMs, timer: null }
+        const entry = { token, resolve, reject, settled: false, deadline: Date.now() + waitMs, timer: null, signal, abort: null }
         entry.timer = setTimeout(() => {
           settle(entry, failure('模型容量等待逾時'))
           queue = queue.filter(item => item !== entry)
         }, waitMs)
-        queue.push(entry); schedule(0)
+        entry.abort = () => { settle(entry, new DOMException('Admission canceled', 'AbortError')); queue = queue.filter(item => item !== entry) }
+        queue.push(entry)
+        signal?.addEventListener('abort', entry.abort, { once: true })
+        if (signal?.aborted) entry.abort(); else schedule(0)
       })
     },
     notify() { if (timer) { clearTimeout(timer); timer = null }; schedule(0) },

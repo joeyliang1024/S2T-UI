@@ -1,4 +1,5 @@
 const { Agent, fetch: pooledFetch } = require('undici')
+const { currentWorkload } = require('./workload-context.cjs')
 const { cachedLookup } = require('./dns-lookup.cjs')
 const { createAdaptiveCapacity } = require('./adaptive-capacity.cjs')
 const pools = new Map()
@@ -19,19 +20,24 @@ const createModelFetch = role => {
   if (pools.has(role)) return pools.get(role).fetch
   const maximum = Number(process.env.S2T_MODEL_HTTP_MAX_CONNECTIONS || 512)
   if (!Number.isSafeInteger(maximum) || maximum < 1 || maximum > 2048) throw new Error('S2T_MODEL_HTTP_MAX_CONNECTIONS must be in 1..2048')
-  const capacity = createAdaptiveCapacity({ minimum: Math.min(8, maximum), maximum, initial: Math.min(256, maximum), idleFloor: Math.min(256, maximum), growthMs: 250, healthyMs: 2000 })
+  const backgroundMaximum = Number(process.env.S2T_BACKGROUND_MAX_INFLIGHT || 8)
+  if (!Number.isSafeInteger(backgroundMaximum) || backgroundMaximum < 1 || backgroundMaximum > 64) throw new Error('S2T_BACKGROUND_MAX_INFLIGHT must be in 1..64')
+  const capacity = createAdaptiveCapacity({ minimum: Math.min(8, maximum), maximum, initial: Math.min(256, maximum), idleFloor: Math.min(256, maximum), growthMs: 250, healthyMs: 2000, backgroundMaximum, backgroundWaitMs: 60000 })
   // Sockets grow lazily under the adaptive admission window. Idle sockets are
   // retired quickly; in-flight requests/streams are never forcibly retired.
   const agent = new Agent({ connections: maximum, pipelining: 1, connect: { lookup: cachedLookup }, connectTimeout: 3000, keepAliveTimeout: 5000, keepAliveMaxTimeout: 10000, headersTimeout: 30000, bodyTimeout: 30000 })
   const modelFetch = async (input, init) => {
-    const returned = await capacity.acquire()
     const signal = init?.signal || (input instanceof Request ? input.signal : undefined)
+    const workload = role === 'summaries' ? 'background' : currentWorkload()
+    const returned = await capacity.acquire({ priority: workload, signal })
     const onAbort = () => release()
     const release = error => { signal?.removeEventListener('abort', onAbort); returned(signal?.aborted ? undefined : error) }
     signal?.addEventListener('abort', onAbort, { once: true })
     try {
       if (signal?.aborted) throw new DOMException('Model request aborted', 'AbortError')
-      const response = await pooledFetch(input, { ...init, dispatcher: agent })
+      const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined))
+      headers.set('x-s2t-workload', workload)
+      const response = await pooledFetch(input, { ...init, headers, dispatcher: agent })
       const failure = response.status === 429 || response.status >= 500 ? new Error(`Model HTTP ${response.status}`) : undefined
       if (!response.body) { release(failure); return response }
       const reader = response.body.getReader()

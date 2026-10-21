@@ -13,9 +13,9 @@ export const createWebTextPort = (profile: TextModelBinding, { fetch = authFetch
     const controller = new AbortController(), cancel = (): void => controller.abort()
     input.signal?.addEventListener('abort', cancel, { once: true })
     let timedOut = false
-    const timeout = clock.setTimeout(() => { timedOut = true; controller.abort() }, input.timeoutMs ?? (input.format === 'markdown' ? 90_000 : 15_000))
+    const timeout = clock.setTimeout(() => { timedOut = true; controller.abort() }, input.timeoutMs ?? (input.workload !== 'realtime' || input.format === 'markdown' ? 90_000 : 15_000))
     try {
-      const response = await fetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json', 'x-s2t-idempotency-key': crypto.randomUUID(), ...(!['none','web-environment-translation'].includes(profile.id) ? { 'x-s2t-model-id': profile.id } : {}) }, body: JSON.stringify({ text: input.text, sourceLanguage: input.sourceLanguage, targetLanguage: input.targetLanguage, glossary: input.glossary, temperature: input.temperature, ...(input.format === 'markdown' ? { format: 'markdown' } : {}) }), signal: controller.signal })
+      const response = await fetch('/api/translations', { method: 'POST', headers: { 'content-type': 'application/json', 'x-s2t-workload': input.workload || 'background', 'x-s2t-idempotency-key': crypto.randomUUID(), ...(!['none','web-environment-translation'].includes(profile.id) ? { 'x-s2t-model-id': profile.id } : {}) }, body: JSON.stringify({ text: input.text, sourceLanguage: input.sourceLanguage, targetLanguage: input.targetLanguage, glossary: input.glossary, temperature: input.temperature, ...(input.format === 'markdown' ? { format: 'markdown' } : {}) }), signal: controller.signal })
       const result = await readJsonResponse<{ text: string }>(response, activeTranslate(input.format === 'markdown' ? 'stSummaryTranslationService' : 'stWebTranslationGateway'))
       checkOwner()
       if (controller.signal.aborted) throw new DOMException('Translation canceled', 'AbortError')

@@ -15,6 +15,8 @@ queries={
  'max_shard_p90':'max by(kind)(s2t_perf_duration_milliseconds{instance=~"performance-load-10m.*",quantile="0.9"})',
  'gateway_cpu':'rate(s2t_process_cpu_seconds_total{job="s2t"}[30s])',
  'event_loop':'s2t_event_loop_p99_seconds{job="s2t"}',
+ 'background_active':'sum(s2t_redis_capacity_state{job="s2t",state="backgroundActive"})',
+ 'background_waiting':'sum(s2t_redis_capacity_state{job="s2t",state="backgroundWaiting"})',
  'host_pressure':'s2t_host_pressure_ratio{job="s2t"}',
  'host_load':'s2t_host_load_average{job="s2t"}',
  'postgres_pools':'s2t_postgres_connections{job="s2t"}',

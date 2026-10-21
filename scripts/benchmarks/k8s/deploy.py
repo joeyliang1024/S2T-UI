@@ -78,8 +78,9 @@ if '--gateway' in sys.argv:
         'S2T_POSTGRES_HOST': 'postgres', 'S2T_POSTGRES_PORT': '5432', 'S2T_POSTGRES_DB_NAME': 's2t', 'S2T_POSTGRES_USER': 's2t', 'S2T_POSTGRES_MAX_CONNECTIONS': '12',
         'S2T_MINIO_ENDPOINT': 'http://minio:9000', 'S2T_MINIO_BUCKET': 'performance', 'S2T_MINIO_ACCESS_KEY': 'performance',
         'REDIS_SENTINEL_NODES': 'sentinel:26379', 'REDIS_SERVICE_NAME': 's2tmaster', 'REDIS_MASTER_POOL_SIZE': '4',
-        'S2T_ASR_MAX_INFLIGHT': '512', 'S2T_TRANSLATION_MAX_INFLIGHT': '512', 'S2T_MODEL_HTTP_MAX_CONNECTIONS': '512',
+        'S2T_BACKGROUND_MAX_INFLIGHT': '8', 'S2T_ASR_MAX_INFLIGHT': '512', 'S2T_TRANSLATION_MAX_INFLIGHT': '512', 'S2T_MODEL_HTTP_MAX_CONNECTIONS': '512',
         'S2T_ASR_ENDPOINT': 'http://mock-models:9090/v1', 'S2T_ASR_MODEL': 'performance', 'S2T_ASR_API_KEY': 'test-only',
+        'S2T_SUMMARY_ENDPOINT': 'http://mock-models:9090/v1', 'S2T_SUMMARY_MODEL': 'performance', 'S2T_SUMMARY_API_KEY': 'test-only',
         'S2T_TRANSLATION_ENDPOINT': 'http://mock-models:9090/v1', 'S2T_TRANSLATION_MODEL': 'performance', 'S2T_TRANSLATION_API_KEY': 'test-only',
         'S2T_AUDIO_SERVICE_URL': 'http://mock-models:9090', 'S2T_AUDIO_SERVICE_TOKEN': 'performance-internal-only',
         'S2T_BOOTSTRAP_ADMIN_USERNAME': 'performance-admin', 'S2T_BOOTSTRAP_ADMIN_PASSWORD': 'performance-only-admin',
@@ -115,3 +116,13 @@ if '--load' in sys.argv or '--smoke' in sys.argv:
         runner['spec']['template']['spec']['containers'][0]['imagePullPolicy'] = 'Never'
         runner['spec']['template']['spec']['containers'][0]['resources']['requests']['cpu'] = '250m'
     subprocess.run(K + ['apply', '-f', '-'], input=json.dumps({'apiVersion': 'v1', 'kind': 'List', 'items': items}), text=True, check=True)
+
+    background_workers=int(os.environ.get('S2T_PERF_BACKGROUND_WORKERS','0'))
+    if not 0 <= background_workers <= 64:raise ValueError('Background workers must be 0..64')
+    if background_workers:
+        items.clear()
+        service('performance-background',9096)
+        bg=deployment('performance-background','s2t-ui:performance-final-20261021',9096,command=['node','/perf/background-load.cjs'],environment=[env('NODE_PATH','/app/node_modules'),env('S2T_PERF_START_AT',start_at),env('S2T_PERF_SECONDS',duration),env('S2T_PERF_BACKGROUND_WORKERS',background_workers),secret_env('PG_TEST_PASSWORD','postgres'),secret_env('PERF_AUTH_SECRET','auth')],volumes=[cm_volume('performance-code')],mounts=[mount('performance-code','/perf')],memory='512Mi')
+        bg['spec']['strategy']={'type':'Recreate'}
+        bg['spec']['template']['spec']['containers'][0]['imagePullPolicy']='Never'
+        subprocess.run(K+['apply','-f','-'],input=json.dumps({'apiVersion':'v1','kind':'List','items':items}),text=True,check=True)

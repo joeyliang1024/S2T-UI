@@ -85,7 +85,8 @@
     "desktop-shared-models-smoke-test.cjs",
     "adaptive-capacity-smoke-test.cjs",
     "performance-capacity-smoke-test.cjs",
-    "dns-lookup-smoke-test.cjs"
+    "dns-lookup-smoke-test.cjs",
+    "priority-workload-smoke-test.cjs"
   ],
   "http": [
     "gateway-env-smoke-test.cjs",

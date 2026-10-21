@@ -1,4 +1,5 @@
 const metrics = require('./metrics.cjs')
+const { createAdaptiveCapacity } = require('./adaptive-capacity.cjs')
 const { writer } = require('./storage/request-batches.cjs')
 const { createBatchAdmission } = require('./capacity-admission.cjs')
 const { createHash, randomUUID } = require('node:crypto')
@@ -63,6 +64,9 @@ if #granted > 0 then redis.call('PEXPIRE', KEYS[1], 120000) end
 return granted`
 
 const createSharedLimits = (env, limits, suppliedClient) => {
+  const backgroundMaximum = Number(env.S2T_BACKGROUND_MAX_INFLIGHT || 8)
+  if (!Number.isSafeInteger(backgroundMaximum) || backgroundMaximum < 1 || backgroundMaximum > 64) throw new Error('S2T_BACKGROUND_MAX_INFLIGHT must be in 1..64')
+  const backgroundLocal = createAdaptiveCapacity({ minimum: backgroundMaximum, maximum: backgroundMaximum, initial: backgroundMaximum, waitMs: 60000, maxWaiting: 128 })
   const distributed = env.S2T_KUBERNETES_MODE === 'true'
   const local = createRequestLimiter(limits)
   const failures = new Map()
@@ -116,7 +120,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     const leases = await commandLeases
     return leases[leaseCursor++ % leases.length]
   }
-  let waitingCapacity = 0
+  let waitingCapacity = 0, backgroundActive = 0, backgroundWaiting = 0
   const admissions = new Map()
   const releases = new Map()
   const releasing = new Set()
@@ -212,22 +216,32 @@ const createSharedLimits = (env, limits, suppliedClient) => {
   }
   return {
     ready, configurationError,
-    stats: () => ({ pendingCommands: pending, waitingCapacity, releasingCapacity: releasing.size, admissionProbes: [...admissions.values()].reduce((sum, admission) => sum + admission.stats().probing, 0) }),
+    stats: () => ({ pendingCommands: pending, waitingCapacity, backgroundActive, backgroundWaiting, releasingCapacity: releasing.size, admissionProbes: [...admissions.values()].reduce((sum, admission) => sum + admission.stats().probing, 0) }),
     async health() { if (distributed) { if (configurationError) throw configurationError; if (!client?.isReady) throw new Error('共享限流服務暫時不可用'); await commandWithTimeout(1000, 'ping') } },
     async accept(identity, bucket) { return distributed ? window(identity, bucket, limits[bucket] ?? 30, 60000, 'take') : local(identity, bucket) },
-    async withCapacity(bucket, operation) {
+    async withCapacity(bucket, operation, { signal } = {}) {
+      if (signal?.aborted) throw new DOMException('Admission canceled', 'AbortError')
+      if (!distributed && bucket === 'background') {
+        backgroundWaiting++
+        let release
+        try { release = await backgroundLocal.acquire({ signal }) } finally { backgroundWaiting-- }
+        backgroundActive++
+        try { return await operation() } finally { backgroundActive--; release() }
+      }
       const admissionStart = performance.now()
       const setting = bucket === 'asr' ? 'S2T_ASR_MAX_INFLIGHT' : 'S2T_TRANSLATION_MAX_INFLIGHT'
-      const configured = Number(env[setting] || (distributed ? 512 : 0))
+      const configured = bucket === 'background' ? backgroundMaximum : Number(env[setting] || (distributed ? 512 : 0))
       if (!Number.isSafeInteger(configured) || configured < 0 || (distributed && configured === 0)) throw new Error(`${setting} 必須為有效的正整數`)
       if (!configured) return operation() // Preserve standalone default behavior.
       const token = randomUUID(), key = `s2t:capacity:${bucket}`
       if (distributed) {
         if (waitingCapacity >= 1000) throw Object.assign(new Error('模型容量等待佇列已滿'), { status: 503 })
-        waitingCapacity++
+        waitingCapacity++; if (bucket === 'background') backgroundWaiting++
         try {
-          if (sentinelMode) {
+          if (sentinelMode || bucket === 'background') {
             if (!admissions.has(key)) admissions.set(key, createBatchAdmission({
+              maxWaiting: bucket === 'background' ? 128 : 1000,
+              waitMs: bucket === 'background' ? 60000 : 10000,
               acquire: async (tokens, deadline) => {
                 if (closing || !client?.isReady) throw Object.assign(new Error('協調服務不可用'), { status: 503 })
                 return commandWithTimeout(Math.max(1, deadline - Date.now()), 'eval', ACQUIRE_BATCH, { keys: [key], arguments: [String(configured), ...tokens] })
@@ -237,17 +251,18 @@ const createSharedLimits = (env, limits, suppliedClient) => {
                 if (client?.isReady) await command('zRem', key, tokens).catch(() => { needsReconciliation = true })
               }
             }))
-            await admissions.get(key).request(token)
+            await admissions.get(key).request(token, { signal })
           } else {
             const acquired = await command('eval', ACQUIRE, { keys: [key], arguments: [String(configured), token] })
             if (!acquired) throw Object.assign(new Error('模型併發容量已滿或協調服務不可用'), { status: 503 })
           }
-        } finally { waitingCapacity-- }
+        } finally { waitingCapacity--; if (bucket === 'background') backgroundWaiting-- }
       } else {
         if ((active.get(bucket) || 0) >= configured) throw Object.assign(new Error('模型併發容量已滿'), { status: 503 })
         active.set(bucket, (active.get(bucket) || 0) + 1)
       }
       metrics.observe('s2t_server_stage_duration_seconds', { stage: `${bucket}_capacity_wait` }, (performance.now() - admissionStart) / 1000)
+      if (bucket === 'background') backgroundActive++
       // Model calls have a <= 30s timeout; the lease also covers preprocessing.
       let lost = false
       const timer = distributed ? setInterval(() => {
@@ -257,6 +272,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
       timer?.unref()
       try { const result = await operation(); if (lost) throw Object.assign(new Error('模型容量租約失效'), { status: 503 }); return result }
       finally {
+        if (bucket === 'background') backgroundActive--
         if (timer) clearInterval(timer)
         if (distributed) {
           if (sentinelMode) {
@@ -274,7 +290,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     async loginAllowed(key) { return distributed ? window(key, 'login', 8, 900000, 'peek') : { accepted: localFailures(key).length < 8, retryAfterSeconds: 900 } },
     async loginFailed(key) { if (distributed) return window(key, 'login', 8, 900000, 'take'); const times = localFailures(key); times.push(Date.now()); return { count: times.length } },
     async loginSucceeded(key) { if (distributed) return window(key, 'login', 8, 900000, 'clear'); failures.delete(key) },
-    async close() { await windowBatch?.close(); await Promise.all([...releases.keys()].map(flushRelease)); await Promise.all([...releasing]); closing = true; for (const admission of admissions.values()) admission.close(); if (releaseCleanup) clearInterval(releaseCleanup); released.clear(); clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (commandLeases) { const leases = await commandLeases.catch(() => []); await Promise.allSettled(leases.map(lease => Promise.resolve().then(() => lease.release()))) } if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
+    async close() { backgroundLocal.close(); await windowBatch?.close(); await Promise.all([...releases.keys()].map(flushRelease)); await Promise.all([...releasing]); closing = true; for (const admission of admissions.values()) admission.close(); if (releaseCleanup) clearInterval(releaseCleanup); released.clear(); clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (commandLeases) { const leases = await commandLeases.catch(() => []); await Promise.allSettled(leases.map(lease => Promise.resolve().then(() => lease.release()))) } if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
   }
 }
 module.exports = { createSharedLimits, WINDOW, WINDOW_BATCH, ACQUIRE, ACQUIRE_BATCH }

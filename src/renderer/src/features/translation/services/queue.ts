@@ -5,7 +5,7 @@ import { HttpServiceError } from '../../../shared/services/http'
 import { activeTranslate } from '../../../shared/i18n/index'
 import { maximumAutomaticTranslationQueue, maximumSentenceWaitMs, resolveTranslationTarget, shouldAutoTranslate, shouldSkipTranslation } from '../domain/policy'
 
-export type TranslateCaption = (entry: TranscriptEvent, signal: AbortSignal, timeoutMs?: number) => Promise<{ text: string; server?: CaptionServerTiming }>
+export type TranslateCaption = (entry: TranscriptEvent, signal: AbortSignal, timeoutMs?: number, workload?: 'realtime' | 'background') => Promise<{ text: string; server?: CaptionServerTiming }>
 type ActiveRequest = { promise: Promise<void>; controller: AbortController; generation: number }
 type QueueOptions = { targetLanguage: string; strategy: 'realtime' | 'sentence'; elapsedMs: number }
 

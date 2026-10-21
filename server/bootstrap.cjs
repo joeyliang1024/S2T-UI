@@ -1,6 +1,7 @@
 // Composition root. Requiring this module does not load runtime services or bind sockets.
 const startGateway = () => {
 const { streamSummary } = require('./summary-stream.cjs')
+const { currentWorkload, modelRoutes } = require('./workload-context.cjs')
 const { createModelClient, modelHttpStats, closeModelHttp } = require('./model-http.cjs')
 const { FILE_PREFIX, loadFileTemplates, mergeTemplateSources } = require('./summary-template-files.cjs')
 const { validateAdminParameters } = require('../src/shared/validation/admin-parameters.cjs')
@@ -739,7 +740,7 @@ const handleHttpRequest = async (request, response) => {
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
   if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after,server-timing') }
   response.setHeader('vary', 'Origin')
-  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, content-encoding, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate', 'access-control-allow-credentials': 'true' }); return response.end() }
+  if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, content-encoding, x-s2t-workload, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
   // failed schema migration). Answer 503 instead of letting that rejection
   // escape the request listener: an unhandled rejection would crash the whole
@@ -759,8 +760,18 @@ const handleHttpRequest = async (request, response) => {
   response.once('finish', () => recordRequest())
   response.once('close', () => recordRequest(!response.writableFinished))
   const user = requestPath.startsWith('/api/') ? await auth.requireUser(request) : null
-  const handle = () => handleAuthenticatedRequest(request, response, auth)
-  if (!user) return handle()
+  const route = () => handleAuthenticatedRequest(request, response, auth)
+  if (!user) return route()
+  const backgroundAdmission = async operation => {
+    if (request.method !== 'POST' || !modelRoutes.has(requestPath) || currentWorkload() !== 'background') return operation()
+    const controller = new AbortController()
+    const cancel = () => { if (!response.writableFinished) controller.abort() }
+    response.once('close', cancel)
+    if (response.destroyed) controller.abort()
+    try { return await sharedLimits.withCapacity('background', operation, { signal: controller.signal }) }
+    finally { response.off('close', cancel) }
+  }
+  const handle = () => backgroundAdmission(route)
   // Admin mutations target another account; deletion acquires its own exclusive
   // fence, while sharing changes must hold the target's admission, not the actor's.
   const sharingTarget = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})\/sharing-authorization$/.exec(requestPath)
@@ -770,7 +781,8 @@ const handleHttpRequest = async (request, response) => {
   // already checked deletion/revocation; do not hold a DB lock during vLLM I/O.
   if (request.method === 'POST' && statelessPost.has(requestPath)) return handle()
   // Hold admission until all work in the route settles, including uploads.
-  try { return await storage.withAccountWrite(ownerId, handle) }
+  const handleWithFence = () => backgroundAdmission(() => storage.withAccountWrite(ownerId, route))
+  try { return await handleWithFence() }
   catch (error) {
     if (!['ACCOUNT_DELETING', 'ACCOUNT_UNAVAILABLE'].includes(error.code)) throw error
     if (!response.headersSent) return send(response, error.status || 409, { error: error.message, code: error.code })

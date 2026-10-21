@@ -27,7 +27,7 @@ export const createWebAsrTransport = (profile: AsrProfile, fetch: typeof authFet
     try {
       const response = await fetch('/api/transcriptions', {
         method: 'POST', headers: {
-          'content-type': 'audio/wav', 'x-s2t-idempotency-key': request.key, 'x-s2t-language': request.language,
+          'content-type': 'audio/wav', 'x-s2t-workload': 'realtime', 'x-s2t-idempotency-key': request.key, 'x-s2t-language': request.language,
           ...(profile.gatewayProfileId ? { 'x-s2t-model-id': profile.gatewayProfileId } : {}),
           ...(profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
           ...(prompt ? { 'x-s2t-prompt': encodeURIComponent(prompt) } : {})

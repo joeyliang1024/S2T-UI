@@ -35,7 +35,7 @@ for shard in shards:
 result['failures']=failures
 deployment=json.loads(subprocess.check_output(K+['get','deployment','gateway','-o','json'],text=True))
 container=deployment['spec']['template']['spec']['containers'][0]
-safe_settings={'NODE_OPTIONS','S2T_POSTGRES_MAX_CONNECTIONS','S2T_POSTGRES_FENCE_SESSIONS','S2T_ASR_MAX_INFLIGHT','S2T_TRANSLATION_MAX_INFLIGHT'}
+safe_settings={'S2T_BACKGROUND_MAX_INFLIGHT','S2T_MODEL_HTTP_MAX_CONNECTIONS','NODE_OPTIONS','S2T_POSTGRES_MAX_CONNECTIONS','S2T_POSTGRES_FENCE_SESSIONS','S2T_ASR_MAX_INFLIGHT','S2T_TRANSLATION_MAX_INFLIGHT'}
 result['gatewayAtCollection']={'replicas':deployment['spec']['replicas'],'image':container['image'],'resources':container.get('resources',{}),'settings':{x['name']:x.get('value') for x in container.get('env',[]) if x['name'] in safe_settings}}
 target_users=shards[0].get('targetUsers',500)
 result['targetUsers']=target_users

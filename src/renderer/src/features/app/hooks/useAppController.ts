@@ -61,7 +61,7 @@ const maximumGeneratedSessionTitleLength = 's2t-YYYY-MM-DDTHH-MM-SS-sssZ'.length
 
 const requestBrowserAsr = async (init: RequestInit, controller = new AbortController()): Promise<Response> => {
   const timeout = window.setTimeout(() => controller.abort(), browserAsrTimeoutMs)
-  try { return await authFetch('/api/transcriptions', { ...init, signal: controller.signal }) }
+  try { return await authFetch('/api/transcriptions', { ...init, headers: { ...init.headers, 'x-s2t-workload': 'background' }, signal: controller.signal }) }
   finally { window.clearTimeout(timeout) }
 }
 
@@ -610,7 +610,8 @@ useEffect(() => {
 }, [adminParameters?.translationConcurrency, adminParameters?.translationSentenceWaitMs])
 const translationReady = settings.translationEnabled && Boolean(settings.translationModel.trim()) && (!window.s2t || Boolean(settings.translationEndpoint.trim()))
 const textCompletionPort = useMemo(() => createTextPort({ id: settings.selectedTranslationModelId, endpoint: settings.translationEndpoint, model: settings.translationModel, requiresApiKey: settings.translationProfiles.find(profile => profile.id === settings.selectedTranslationModelId)?.requiresApiKey }), [settings.selectedTranslationModelId, settings.translationEndpoint, settings.translationModel, settings.translationProfiles, userId])
-const translateCaption = useCallback<TranslateCaption>((entry, signal, timeoutMs = 15_000) => textCompletionPort.complete({
+const translateCaption = useCallback<TranslateCaption>((entry, signal, timeoutMs = 15_000, workload = 'realtime') => textCompletionPort.complete({
+  workload,
   text: entry.sourceText, sourceLanguage: entry.detectedLanguage || settings.sourceLanguage,
   targetLanguage: resolveTranslationTarget(entry.detectedLanguage, settings.targetLanguage), glossary: settings.glossary,
   temperature: adminParameters?.translationTemperature, signal, timeoutMs
@@ -2430,7 +2431,7 @@ const retryFailedSession = async (entry: SavedSession, backup?: File, legacyStag
     activeRecoveries: recoveryActiveRef.current, qualityCorrectionActive: qualityCorrectionActiveRef.current,
     loadSessionAudio, audioVersionsFor, activeAudioVersionFor, resampleAudioForAsr, requestBrowserAsr, authFetch,
     saveAudio: remoteSessionStorage.saveAudio,
-    translate: (segment, signal, timeout) => translationTransportRef.current!(segment, signal, timeout),
+    translate: (segment, signal, timeout) => translationTransportRef.current!(segment, signal, timeout ?? 90_000, 'background'),
     publish: (updated, previousToken, token) => setSessions(current => current.map(item =>
       item.id === updated.id && (item.processingToken === token || item.processingToken === previousToken) ? updated : item)),
     setStatus, activeTranslate
@@ -2541,7 +2542,7 @@ const finalizeSession = async (entry: SavedSession, items: ComparisonKind[] = ['
           if (segment.status !== 'final' || !segment.sourceText.trim()) continue
           // A single shared signal: it outlives no request, and any future
           // cancellation of this run reaches every segment at once.
-          const result = await translate(segment, abort.signal)
+          const result = await translate(segment, abort.signal, 90_000, 'background')
           if (!result.text.trim()) throw new Error(activeTranslate('stTranslationServiceEmpty'))
           segments[index] = { ...segment, translatedText: result.text, translationStatus: 'completed' }
         }
