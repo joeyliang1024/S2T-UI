@@ -50,7 +50,7 @@ export const createWebAsrTransport = (profile: AsrProfile, fetch: typeof authFet
     transcribe,
     hasSpeech: async audio => {
       checkOwner()
-      const response = await fetch('/api/audio-processing/silero-vad', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio })
+      const response = await fetch('/api/audio-processing/silero-vad', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio, signal: AbortSignal.timeout(1500) })
       const payload = await readGatewayPayload(response) as { error?: string; speech?: unknown[]; processingMs?: number }
       checkOwner()
       if (!response.ok) throw new Error(payload.error || activeTranslate('svcSileroGatewayFailed').replace('{status}', String(response.status)))

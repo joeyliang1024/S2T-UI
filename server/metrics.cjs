@@ -11,6 +11,15 @@ const stages = new Set(captionStages)
 const buckets = [.025, .05, .1, .15, .25, .4, .6, .8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 8, 12, 20, 30, 60, 120, 300]
 const histograms = new Map()
 const events = new Map()
+const httpResponses = new Map()
+const observeHttp = (method, path, status, aborted = false) => {
+  if (!path.startsWith('/api/')) return
+  const route = /^\/api\/(transcriptions|translations|summaries|diarizations)$/.test(path) ? path.slice(5)
+    : /^\/api\/data\/recordings\/[^/]+\/chunks\/[^/]+$/.test(path) ? 'recording_chunk'
+    : path === '/api/data/live-draft' ? 'live_draft' : 'other'
+  const labels = `route=${JSON.stringify(route)},method=${JSON.stringify(['GET','POST','PUT','DELETE','PATCH','OPTIONS','HEAD'].includes(method) ? method : 'OTHER')},status=${JSON.stringify(aborted ? 'aborted' : String(status))}`
+  httpResponses.set(labels, (httpResponses.get(labels) || 0) + 1)
+}
 const allowedEvents = new Set(['speech_detected', 'asr_empty', 'asr_failed', 'audio_gap', 'telemetry_dropped', 'silero_veto', 'silero_failed'])
 // Expose zero baselines before the first browser sample, so a first scrape
 // does not silently lose the initial observation when Prometheus calculates rate.
@@ -55,7 +64,8 @@ const instrumentStorage = storage => {
 }
 const loop = monitorEventLoopDelay({ resolution: 20 }); loop.enable()
 const render = () => {
-  const lines = []
+  const lines = ['# TYPE s2t_http_responses_total counter']
+  for (const [labels, count] of httpResponses) lines.push(`s2t_http_responses_total{${labels}} ${count}`)
   const types = new Set()
   for (const metric of histograms.values()) {
     if (!types.has(metric.name)) { lines.push(`# TYPE ${metric.name} histogram`); types.add(metric.name) }
@@ -67,7 +77,7 @@ const render = () => {
   const memory = process.memoryUsage(), cpu = process.cpuUsage()
   lines.push('# TYPE s2t_process_resident_memory_bytes gauge', `s2t_process_resident_memory_bytes ${memory.rss}`, '# TYPE s2t_process_cpu_seconds_total counter', `s2t_process_cpu_seconds_total ${(cpu.user + cpu.system) / 1e6}`, '# TYPE s2t_process_heap_used_bytes gauge', `s2t_process_heap_used_bytes ${memory.heapUsed}`, '# TYPE s2t_process_uptime_seconds gauge', `s2t_process_uptime_seconds ${process.uptime()}`, '# TYPE s2t_event_loop_p99_seconds gauge', `s2t_event_loop_p99_seconds ${loop.percentile(99) / 1e9}`)
   loop.reset()
-  return lines.join('\n') + '\n'
+  return lines.join('\n') + '\n' + require('./host-metrics.cjs').render()
 }
 const acceptCaptionSamples = body => {
   if (!Array.isArray(body?.samples) || body.samples.length > 128) return false
@@ -79,4 +89,4 @@ const acceptCaptionSamples = body => {
   for (const sample of body.samples) observe(sample.stage.startsWith('phase_') ? 's2t_caption_phase_duration_seconds' : captionStageMetric, { stage: sample.stage, phase: phaseOf(sample.stage) }, sample.seconds)
   return true
 }
-module.exports = { observe, measure, render, instrumentStorage, acceptCaptionSamples }
+module.exports = { observeHttp, observe, measure, render, instrumentStorage, acceptCaptionSamples }

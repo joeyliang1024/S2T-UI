@@ -126,6 +126,9 @@ export const reportTranslationPaint = (ids: string[], paintedAt: number): void =
 }
 const transport = new CaptionMetricTransport(async payload => {
   const response = await authFetch('/api/telemetry/captions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(3000) })
+  // Finish the tiny acknowledgement before the deadline can abort an unread
+  // response and leave telemetry connections occupied.
+  await response.arrayBuffer()
   return response.ok
 })
 const enqueue = (samples: Sample[] = [], event?: CaptionMetricEvent): void => {

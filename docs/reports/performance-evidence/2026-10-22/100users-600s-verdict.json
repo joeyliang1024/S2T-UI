@@ -1,0 +1,32 @@
+{
+  "gatewayPods": [
+    {
+      "name": "gateway-5f6bbb44d9-h762j",
+      "containers": [
+        {
+          "name": "gateway",
+          "imageID": "docker-pullable://s2t-ui@sha256:827a3f7eb8f94bc2bc2d0447f83d28a334f5c617e82957885e10489e17734ebb",
+          "restartCount": 0,
+          "ready": true
+        }
+      ]
+    },
+    {
+      "name": "gateway-5f6bbb44d9-zpbxp",
+      "containers": [
+        {
+          "name": "gateway",
+          "imageID": "docker-pullable://s2t-ui@sha256:827a3f7eb8f94bc2bc2d0447f83d28a334f5c617e82957885e10489e17734ebb",
+          "restartCount": 0,
+          "ready": true
+        }
+      ]
+    }
+  ],
+  "apiReport": "2-pod-100users-600s.json",
+  "browserReport": "2-pod-browser-100users-600s.json",
+  "users": 100,
+  "durationSeconds": 600,
+  "p90Passed": true,
+  "browserProbeAdditionalToLoad": true
+}

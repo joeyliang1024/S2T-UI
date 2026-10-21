@@ -21,9 +21,17 @@ const createRecordingRoutes = ({ recordingChunks, readBody, send, storage, withP
         if (typeof body.audioKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/.test(body.audioKey) || body.audioKey === id) return send(response, 400, { error: '無效的正式音訊 ID' })
         const value = await recordingChunks.status(user.id, id)
         if (value?.state !== 'completed') return send(response, 409, { error: '錄音尚未完成' })
-        const audio = await storage.blob.readStream(user.id, `audio/${id}`)
-        if (!audio) return send(response, 503, { error: '錄音備份暫時不可用' })
-        await withProtectedAudioUpload(user, body.audioKey, () => storage.blob.putStream(user.id, `audio/${body.audioKey}`, audio, value.persistedSamples * 2 + 44))
+        await withProtectedAudioUpload(user, body.audioKey, async () => {
+          if (typeof storage.blob.copy === 'function') {
+            // Server-side S3 copy avoids holding hundreds of download sockets
+            // while waiting for the upload pool and retransmitting whole WAVs.
+            await storage.blob.copy(user.id, `audio/${id}`, `audio/${body.audioKey}`)
+          } else {
+            const audio = await storage.blob.readStream(user.id, `audio/${id}`)
+            if (!audio) throw Object.assign(new Error('錄音備份暫時不可用'), { status: 503 })
+            await storage.blob.putStream(user.id, `audio/${body.audioKey}`, audio, value.persistedSamples * 2 + 44)
+          }
+        })
         return send(response, 201, { saved: true, pendingSessionCommit: true })
       }
       if (request.method === 'POST' && recordingMatch[4]) {

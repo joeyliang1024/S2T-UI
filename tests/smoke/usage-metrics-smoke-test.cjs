@@ -19,6 +19,7 @@ assert.match(raw, /s2t_user_audio_duration_unknown_total\{user_id="a",nt="測試
 assert.match(raw, /s2t_user_requests_total\{user_id="b",nt="測試乙",department="營運部",operation="audio\/object",outcome="client_error"\} 1/)
 assert.match(raw, /s2t_user_requests_total\{user_id="b",nt="測試乙",department="營運部",operation="other",outcome="server_error"\} 1/)
 assert.ok(!raw.includes('private/transcript') && !raw.includes('arbitrary-secret-key'))
+assert.doesNotMatch(raw, /s2t_user_model_executions_total\{[^\n]*operation="audio\/object"/, 'storage requests must not create empty model metric series')
 assert.equal(usage.wavSeconds(Buffer.alloc(44)), null)
 const truncated = Buffer.alloc(20); truncated.write('RIFF');truncated.write('WAVE',8);truncated.write('data',12);truncated.writeUInt32LE(1000,16)
 assert.equal(usage.wavSeconds(truncated), null)

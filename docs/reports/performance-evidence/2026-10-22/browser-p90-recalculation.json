@@ -1,0 +1,69 @@
+{
+  "source": "Exact nearest-rank P90 recomputed from preserved browser samples; original reports unchanged. One browser probe under 500-user load.",
+  "reports": {
+    "2-pod-browser-600s-second.json": {
+      "startedAt": "2026-10-21T15:10:06.987Z",
+      "seconds": 600,
+      "synchronizationValid": true,
+      "stages": {
+        "e2e_asr": {
+          "count": 250,
+          "p90Ms": 2446.5999999046326
+        },
+        "e2e_translation": {
+          "count": 250,
+          "p90Ms": 4150.299999713898
+        },
+        "t5_network": {
+          "count": 250,
+          "p90Ms": 145.3000002861022
+        },
+        "t7_network": {
+          "count": 250,
+          "p90Ms": 99.30000038146954
+        },
+        "t5_paint": {
+          "count": 250,
+          "p90Ms": 32.59999990463257
+        },
+        "t7_paint": {
+          "count": 250,
+          "p90Ms": 32.40000009536743
+        }
+      },
+      "p90LatencyPassed": false
+    },
+    "2-pod-browser-60s.json": {
+      "startedAt": "2026-10-21T15:37:58.148Z",
+      "seconds": 60,
+      "synchronizationValid": true,
+      "stages": {
+        "e2e_asr": {
+          "count": 25,
+          "p90Ms": 2190.300000190735
+        },
+        "e2e_translation": {
+          "count": 25,
+          "p90Ms": 5127.699999809265
+        },
+        "t5_network": {
+          "count": 25,
+          "p90Ms": 69.2600001907349
+        },
+        "t7_network": {
+          "count": 25,
+          "p90Ms": 54.669999809265164
+        },
+        "t5_paint": {
+          "count": 25,
+          "p90Ms": 32.39999961853027
+        },
+        "t7_paint": {
+          "count": 25,
+          "p90Ms": 32.80000019073486
+        }
+      },
+      "p90LatencyPassed": false
+    }
+  }
+}

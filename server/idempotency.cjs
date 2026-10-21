@@ -12,7 +12,14 @@ const executeIdempotent = async (store, userId, route, key, fingerprint, operati
   let cached
   let busy = false
   let conflict = false
-  await store.update(userId, recordKey, value => {
+  const optimized = typeof store.claimRequest === 'function'
+  if (optimized) {
+    const now = Date.now()
+    const value = await store.claimRequest(userId, recordKey, { fingerprint, owner, state: 'running', leaseUntil: now + 120000, expiresAt: now + 600000 })
+    if (value.fingerprint !== fingerprint) conflict = true
+    else if (value.state === 'completed') cached = value.result
+    else if (value.owner !== owner) busy = true
+  } else await store.update(userId, recordKey, value => {
     const now = Date.now()
     if (value && value.expiresAt > now) {
       if (value.fingerprint !== fingerprint) { conflict = true; return undefined }
@@ -29,16 +36,18 @@ const executeIdempotent = async (store, userId, route, key, fingerprint, operati
   const timer = setInterval(() => {
     if (renewing || lost) return
     renewing = true
-    store.update(userId, recordKey, value => {
+    const renewal = optimized ? store.renewRequest(userId, recordKey, owner).then(owned => { if (!owned) lost = true }) : store.update(userId, recordKey, value => {
       if (value?.owner !== owner || value.state !== 'running' || value.leaseUntil <= Date.now()) { lost = true; return undefined }
       return { ...value, leaseUntil: Date.now() + 120000 }
-    }).catch(() => { lost = true }).finally(() => { renewing = false })
+    })
+    renewal.catch(() => { lost = true }).finally(() => { renewing = false })
   }, 30000)
   timer.unref()
   try {
     const result = await operation()
     let committed = false
-    if (!lost) await store.update(userId, recordKey, value => {
+    if (!lost && optimized) committed = await store.completeRequest(userId, recordKey, owner, { fingerprint, state: 'completed', result, expiresAt: Date.now() + 600000 })
+    else if (!lost) await store.update(userId, recordKey, value => {
       if (value?.owner !== owner || value.state !== 'running' || value.leaseUntil <= Date.now()) return undefined
       committed = true
       return { fingerprint, state: 'completed', result, expiresAt: Date.now() + 600000 }
@@ -46,7 +55,8 @@ const executeIdempotent = async (store, userId, route, key, fingerprint, operati
     if (!committed) throw error('處理租約失效，請重試', 503)
     return result
   } catch (failure) {
-    await store.update(userId, recordKey, value => value?.owner === owner ? { ...value, leaseUntil: 0, expiresAt: 0 } : undefined).catch(() => undefined)
+    if (optimized) await store.failRequest(userId, recordKey, owner).catch(() => undefined)
+    else await store.update(userId, recordKey, value => value?.owner === owner ? { ...value, leaseUntil: 0, expiresAt: 0 } : undefined).catch(() => undefined)
     throw failure
   } finally { clearInterval(timer) }
 }

@@ -251,7 +251,10 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
     const speechEndAt = speechEndSample > startSample ? this.audioClock.at - (this.audioClock.sample - speechEndSample) / this.sampleRate * 1000 : undefined
     const chunkSpeechAt = chunkOnset?.at ?? chunkStartAt
     const chunkDetectedAt = chunkOnset ? Math.max(chunkSpeechAt, Math.min(queuedAt, chunkOnset.detected)) : chunkSpeechAt
-    this.queued = this.queued.catch(() => undefined).then(async () => {
+    // Start bounded requests concurrently; publish in audio order so a slow
+    // response cannot reorder captions, sentence boundaries or rolling context.
+    const previous = this.queued
+    const ready = (async () => {
       this.diagnostics.totalQueueWaitMs += Date.now() - enqueuedAt
       const dequeuedAt = performance.now()
       const wav = wavFromFloat32(audio, this.sampleRate)
@@ -276,7 +279,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
           this.emitError(error instanceof Error ? error.message : activeTranslate('svcSileroGatewayFailed').replace('{status}', '?'))
         }
         sileroEndAt = performance.now()
-        if (!hasSpeech) {
+        if (!hasSpeech) return () => {
           recordCaptionEvent('silero_veto')
           this.rollingContext = ''
           this.speechOnsets = this.speechOnsets.filter(onset => onset.sample >= endSample)
@@ -287,6 +290,7 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       const requestAt = performance.now()
       const response = await this.transcribeWithRetry(wav)
       const responseAt = performance.now()
+      return () => {
       const sourceText = sanitizeAsrText(response.text)
       // t4：標點符號／不雅字等文字後處理的量測窗口（目前僅有清理步驟）。
       const repetitive = isRepetitiveAsrText(sourceText)
@@ -313,6 +317,12 @@ export class OpenAiChunkedModelAdapter implements ModelAdapter {
       attachCaptionTiming(event, timing)
       this.lastTranscript = event
       this.listeners.emit(event)
+      }
+    })().then(commit => ({ commit, error: undefined }), (error: unknown) => ({ commit: undefined, error }))
+    this.queued = previous.catch(() => undefined).then(async () => {
+      const result = await ready
+      if (!result.commit) throw result.error
+      result.commit()
     }).catch((error: unknown) => {
       recordCaptionEvent('asr_failed')
       this.rollingContext = ''

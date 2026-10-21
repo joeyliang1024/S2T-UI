@@ -1,6 +1,7 @@
 // Composition root. Requiring this module does not load runtime services or bind sockets.
 const startGateway = () => {
 const { streamSummary } = require('./summary-stream.cjs')
+const { createModelClient, modelHttpStats, closeModelHttp } = require('./model-http.cjs')
 const { FILE_PREFIX, loadFileTemplates, mergeTemplateSources } = require('./summary-template-files.cjs')
 const { validateAdminParameters } = require('../src/shared/validation/admin-parameters.cjs')
 const metrics = require('./metrics.cjs')
@@ -19,7 +20,6 @@ const { pipeline } = require('node:stream/promises')
 const { Transform } = require('node:stream')
 const { convertImportAudio, MAX_IMPORT_BYTES } = require('./import-audio.cjs')
 const { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } = require('node:crypto')
-const OpenAI = require('openai').default
 const { toFile } = require('openai')
 const { createAudioClient, handleAudioService, proxyImport } = require('./audio-service.cjs')
 const audioClient = createAudioClient(process.env)
@@ -36,7 +36,7 @@ const { requestLimits, upstreamRateLimit } = require('./request-limits.cjs')
 
 
 const { RecordingChunks } = require('./recording-chunks.cjs')
-const { executeIdempotent, hash: requestHash } = require('./idempotency.cjs')
+const { executeIdempotent: runIdempotent, hash: requestHash } = require('./idempotency.cjs')
 const { createSharedLimits } = require('./shared-limits.cjs')
 const sharedLimits = createSharedLimits(process.env, requestLimits())
 
@@ -144,18 +144,18 @@ const serverTimingHeader = (timing) => Object.entries(timing)
   .filter(([, value]) => Number.isFinite(value))
   .map(([name, value]) => `${name};dur=${Math.max(0, value).toFixed(2)}`)
   .join(', ')
-const observeRequest = (path, status, startedAt) => {
+const observeRequest = (path, status, startedAt, aborted = false) => {
   if (!path.startsWith('/api/')) return
   // IDs and object keys must never become metric labels.
   path = path.replace(/\/api\/data\/model-credentials\/[^/]+/, '/api/data/model-credentials/id').replace(/\/api\/audio\/.*/, '/api/audio/object')
   if (!new Set(['/api/transcriptions', '/api/translations', '/api/diarizations', '/api/summaries', '/api/config', '/api/storage', '/api/telemetry/captions', '/api/audio/object', '/api/data/sessions', '/api/data/settings', '/api/data/glossary', '/api/data/voiceprints', '/api/data/diarization-jobs', '/api/data/storage-status', '/api/data/storage-audit', '/api/data/storage-retry', '/api/data/model-registry', '/api/data/model-health', '/api/data/model-test', '/api/data/model-credentials/id', '/api/data/summary-templates', '/api/auth/login', '/api/auth/register', '/api/auth/session', '/api/auth/logout', '/api/audio-processing/silero-vad', '/api/audio-processing/status', '/api/audio-processing/import-wav']).has(path)) path = '/api/other'
   const metric = requestLatency.get(path) || { count: 0, errors: 0, sum: 0, buckets: latencyBuckets.map(() => 0) }
   const seconds = Math.max(0, (performance.now() - startedAt) / 1000)
-  metric.count += 1; metric.sum += seconds; if (status >= 400) metric.errors += 1
+  metric.count += 1; metric.sum += seconds; if (aborted || status >= 400) metric.errors += 1
   latencyBuckets.forEach((upper, index) => { if (seconds <= upper) metric.buckets[index] += 1 })
   requestLatency.set(path, metric)
 }
-const prometheusMetrics = () => {
+const prometheusMetrics = (includeUsers = true) => {
   const lines = ['# HELP s2t_gateway_request_duration_seconds Gateway request duration.', '# TYPE s2t_gateway_request_duration_seconds histogram']
   for (const [path, metric] of requestLatency) {
     const route = path.replace(/^\/api\//, '').replace(/[^A-Za-z0-9_]/g, '_')
@@ -192,8 +192,18 @@ const prometheusMetrics = () => {
     lines.push(`s2t_audio_op_transferred_bytes_total{op="${op}"} ${value.transferredBytes}`)
     lines.push(`s2t_audio_op_rtf{op="${op}"} ${value.rtf ?? 0}`)
   }
+  lines.push('# TYPE s2t_model_http_capacity gauge')
+  for (const [role, states] of Object.entries(modelHttpStats())) for (const [state, count] of Object.entries(states)) lines.push(`s2t_model_http_capacity{role="${role}",state="${state}"} ${count}`)
+  lines.push('# TYPE s2t_redis_capacity_state gauge')
+  for (const [state, count] of Object.entries(sharedLimits.stats?.() || {})) lines.push(`s2t_redis_capacity_state{state="${state}"} ${count}`)
+  lines.push('# TYPE s2t_minio_http_capacity gauge')
+  for (const [state, count] of Object.entries(storage.minioStats?.() || {})) lines.push(`s2t_minio_http_capacity{state="${state}"} ${count}`)
+  lines.push('# TYPE s2t_postgres_connections gauge')
+  for (const [role, states] of Object.entries(storage.postgresStats?.() || {})) {
+    for (const [state, count] of Object.entries(states)) lines.push(`s2t_postgres_connections{pool="${role}",state="${state}"} ${count}`)
+  }
   lines.push('# TYPE s2t_gateway_inflight_requests gauge', `s2t_gateway_inflight_requests ${activeHttpRequests}`)
-  return `${lines.join('\n')}\n` + metrics.render() + usageMetrics.render()
+  return `${lines.join('\n')}\n` + metrics.render() + (includeUsers ? usageMetrics.render() : '')
 }
 const baseUrl = (value) => {
   const url = new URL(value)
@@ -221,7 +231,7 @@ const normalizeDetectedLanguage = (value) => {
   return undefined
 }
 const completeText = async (value, messages, maxRetries = 1, temperature = 0.2, usageContext) => {
-  const client = new OpenAI({ apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries })
+  const client = createModelClient(usageContext?.operation || 'text', { apiKey: value.apiKey, baseURL: baseUrl(value.endpoint), timeout: 30_000, maxRetries })
   const result = await client.chat.completions.create({ model: value.model, temperature, messages })
   const text = result.choices[0]?.message.content?.trim() || ''
   if (usageContext) usageMetrics.observeExecution(usageContext.userId, usageContext.operation, { input: messages.map(message => message.content).join(''), output: text, usage: result.usage })
@@ -633,7 +643,7 @@ const requestCleanup = setInterval(() => {
   if (pruningRequests || draining || typeof storage.config.pruneExpiredRequests !== 'function') return
   pruningRequests = true
   storage.config.pruneExpiredRequests().catch(error => logger.warn('requests.cleanup.failed', { error })).finally(() => { pruningRequests = false })
-}, 60000)
+}, storage.mode.config === 'postgres' ? 1000 : 60000)
 requestCleanup.unref()
 if (['all', 'audio-worker'].includes(processRole) && typeof storage.config.claimDiarizationJob === 'function') {
   const owner = `gateway-${randomUUID()}`
@@ -656,25 +666,64 @@ const handleSessionRoutes = createSessionRoutes({ storage, readSessionPayload, w
 const { createRecordingRoutes } = require('./http/routes/recordings.cjs')
 const handleRecordingRoutes = createRecordingRoutes({ recordingChunks, readBody, send, storage, withProtectedAudioUpload })
 const { createTranslationService } = require('./services/translation.cjs')
+// Idempotency persists account-owned metadata, but inference itself does not
+// need a DB session. Fence each short metadata transaction independently so a
+// model response after deletion can never recreate records for that account.
+const executeIdempotent = (store, userId, ...args) => {
+  const scoped = Object.create(store)
+  scoped.update = (scope, key, transform) => typeof store.updateForActiveAccount === 'function'
+    ? store.updateForActiveAccount(userId, key, transform)
+    : storage.withAccountWrite(userId, () => store.update(scope, key, transform))
+  return runIdempotent(scoped, userId, ...args)
+}
 const translationService = createTranslationService({ completeText, measure: metrics.measure, withCapacity: sharedLimits.withCapacity, logger })
 const { createTranslationRoutes } = require('./http/routes/translations.cjs')
 const handleTranslationRoutes = createTranslationRoutes({ translation, accountModelService, acceptsRequest, rateLimitResponse, readBody, send, storage, validateAdminParameters, executeIdempotent, requestHash, translationService, upstreamRateLimit, serverTimingHeader, logger })
 
+const statelessPost = new Set(['/api/transcriptions', '/api/translations', '/api/summaries', '/api/telemetry/journey', '/api/telemetry/captions', '/api/audio-processing/silero-vad', '/api/audio-processing/import-wav', '/api/audio-processing/transcode'])
+let backlogSnapshot = '', backlogSnapshotAt = 0, backlogRefreshing = false, backlogNextCheck = 0, backlogHealthy = false
 const handleHttpRequest = async (request, response) => {
   // Liveness is intentionally independent of every downstream service. It
   // lets Kubernetes restart a stuck Node process without amplifying a storage
   // outage. Readiness below verifies the shared durable state instead.
   if (request.method === 'GET' && request.url === '/livez') return send(response, 200, { live: true, role: processRole })
-  if (request.method === 'GET' && request.url === '/metrics') {
-    let backlog = ''
-    if (typeof storage.config.diarizationBacklog === 'function') {
-      try { const value = await storage.config.diarizationBacklog(); backlog = `# TYPE s2t_diarization_pending_jobs gauge\ns2t_diarization_pending_jobs ${value.pending}\n# TYPE s2t_diarization_pending_audio_seconds gauge\ns2t_diarization_pending_audio_seconds ${value.audioSeconds}\n# TYPE s2t_diarization_oldest_seconds gauge\ns2t_diarization_oldest_seconds ${value.oldest}\n` } catch { /* Keep independent gateway metrics available during DB outages. */ }
+  if (request.method === 'GET' && request.url === '/metrics/users') return send(response, 200, usageMetrics.render(), 'text/plain; version=0.0.4; charset=utf-8')
+  if (request.method === 'GET' && ['/metrics', '/metrics/runtime'].includes(request.url)) {
+    if (typeof storage.config.diarizationBacklog === 'function' && !backlogRefreshing && Date.now() >= backlogNextCheck) {
+      backlogRefreshing = true
+      void storage.config.diarizationBacklog().then(value => {
+        backlogSnapshot = `# TYPE s2t_diarization_pending_jobs gauge\ns2t_diarization_pending_jobs ${value.pending}\n# TYPE s2t_diarization_pending_audio_seconds gauge\ns2t_diarization_pending_audio_seconds ${value.audioSeconds}\n# TYPE s2t_diarization_oldest_seconds gauge\ns2t_diarization_oldest_seconds ${value.oldest}\n`
+        backlogSnapshotAt = Date.now(); backlogHealthy = true
+      }, () => { backlogHealthy = false }).finally(() => { backlogRefreshing = false; backlogNextCheck = Date.now() + 5000 })
     }
-    return send(response, 200, prometheusMetrics() + backlog, 'text/plain; version=0.0.4; charset=utf-8')
+    // A stuck business query must not make the entire Grafana scrape disappear.
+    const freshness = `s2t_diarization_backlog_snapshot_healthy ${backlogHealthy ? 1 : 0}\ns2t_diarization_backlog_snapshot_age_seconds ${backlogSnapshotAt ? (Date.now() - backlogSnapshotAt) / 1000 : -1}\n`
+    return send(response, 200, prometheusMetrics(request.url === '/metrics') + backlogSnapshot + freshness, 'text/plain; version=0.0.4; charset=utf-8')
   }
   if (request.method === 'GET' && request.url === '/readyz') {
-    try { if (startupError) throw startupError; if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError; if (quiescing || draining) throw new Error('服務正在排空'); await storage.ready; if (typeof storage.config.verifySchema === 'function') await storage.config.verifySchema(); await authReady; await audioWarmupReady; await sharedLimits.health(); return send(response, 200, { ready: true, role: processRole, storage: storage.mode }) }
-    catch (error) { return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' }) }
+    const began = performance.now(), timing = {}
+    const check = async (stage, operation) => {
+      const started = performance.now()
+      try { return await metrics.measure(`readiness_${stage}`, operation) }
+      finally { timing[stage] = performance.now() - started }
+    }
+    try {
+      if (startupError) throw startupError
+      if (['all', 'api'].includes(processRole) && asrConfigurationError) throw asrConfigurationError
+      if (quiescing || draining) throw new Error('服務正在排空')
+      await Promise.all([storage.ready, authReady, audioWarmupReady])
+      // Independent dependency probes run together. Serial 1s deadlines used
+      // to exceed Kubernetes' 2s probe timeout before the failure could return.
+      await Promise.all([
+        check('postgres', () => typeof storage.config.health === 'function' ? storage.config.health() : storage.config.verifySchema?.()),
+        check('redis', () => sharedLimits.health())
+      ])
+      response.setHeader('server-timing', serverTimingHeader({ ...timing, total: performance.now() - began }))
+      return send(response, 200, { ready: true, role: processRole, storage: storage.mode })
+    } catch (error) {
+      response.setHeader('server-timing', serverTimingHeader({ ...timing, total: performance.now() - began }))
+      return send(response, 503, { ready: false, role: processRole, error: error instanceof Error ? error.message : 'storage 尚未就緒' })
+    }
   }
   // The worker has a probe-only HTTP surface. It deliberately cannot serve
   // authenticated API traffic, but Kubernetes can still restart it when its
@@ -688,7 +737,7 @@ const handleHttpRequest = async (request, response) => {
   const host = request.headers.host || ''
   const sameOrigin = origin === `http://${host}` || origin === `https://${host}`
   if (origin && !sameOrigin && !allowedOrigins.has(origin)) return send(response, 403, { error: 'Origin is not allowed.' })
-  if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after') }
+  if (origin) { response.setHeader('access-control-allow-origin', origin); response.setHeader('access-control-allow-credentials', 'true'); response.setHeader('access-control-expose-headers', 'x-request-id,retry-after,server-timing') }
   response.setHeader('vary', 'Origin')
   if (request.method === 'OPTIONS') { response.writeHead(204, { 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'authorization, content-type, content-encoding, x-request-id, x-s2t-language, x-s2t-model-id, x-s2t-diarization-model, x-s2t-prompt, x-s2t-filename, x-s2t-dynaudnorm, x-s2t-voiceprint-sharing, x-s2t-voiceprint-consent, x-s2t-idempotency-key, x-s2t-start-sample, x-s2t-sample-rate', 'access-control-allow-credentials': 'true' }); return response.end() }
   // authReady rejects when storage/auth cannot initialise (for example a
@@ -704,7 +753,7 @@ const handleHttpRequest = async (request, response) => {
   const recordRequest = (aborted = false) => {
     if (requestObserved) return
     requestObserved = true
-    observeRequest(requestPath, response.statusCode, startedAt)
+    observeRequest(requestPath, response.statusCode, startedAt, aborted)
     usageMetrics.observeRequest(request.s2tUserId, requestPath.slice(5), response.statusCode, (performance.now() - startedAt) / 1000, aborted)
   }
   response.once('finish', () => recordRequest())
@@ -717,6 +766,9 @@ const handleHttpRequest = async (request, response) => {
   const sharingTarget = /^\/api\/admin\/users\/([A-Za-z0-9_-]{1,128})\/sharing-authorization$/.exec(requestPath)
   if (requestPath.startsWith('/api/admin/') && !sharingTarget) return handle()
   const ownerId = sharingTarget?.[1] || user.id
+  // Stateless inference/telemetry never persists account-owned data. Auth has
+  // already checked deletion/revocation; do not hold a DB lock during vLLM I/O.
+  if (request.method === 'POST' && statelessPost.has(requestPath)) return handle()
   // Hold admission until all work in the route settles, including uploads.
   try { return await storage.withAccountWrite(ownerId, handle) }
   catch (error) {
@@ -879,7 +931,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
       }
       const body = JSON.parse((await readBody(request, 2 * 1024 * 1024)).toString('utf8'))
       if (!body.value || typeof body.value !== 'object' || Array.isArray(body.value)) return send(response, 400, { error: '暫存資料無效' })
-      await storage.config.put(user.id, key, JSON.parse(JSON.stringify(body.value)))
+      await (storage.config.putCheckpoint || storage.config.put).call(storage.config, user.id, key, JSON.parse(JSON.stringify(body.value)))
       return send(response, 204, '')
     } catch (error) { return storageFailure(response, error, '暫存資料保存失敗') }
   }
@@ -1155,7 +1207,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
     } catch (error) { return send(response, 400, { error: error instanceof Error ? error.message : '聲紋比對失敗' }) }
   }
   if (request.method === 'POST' && request.url === '/api/transcriptions') {
-    const handlerStart = performance.now()
+    const handlerStart = request.s2tStartedAt ?? performance.now()
     // Mirrored to the browser through Server-Timing so the t1/t3/t5 split of
     // this request's roundtrip stays exact (upload / queue / model / gateway).
     // queue/pre/model are added only when the stage actually ran: an
@@ -1198,7 +1250,7 @@ const handleAuthenticatedRequest = async (request, response, auth) => {
               }
               // Never the prompt itself, the audio or the transcript — only sizes.
               logger.debug('asr.started', { profileId, model: selectedAsr.model, language: requestedLanguage || 'auto', contentType, audioBytes: asrAudioBytes })
-              const client = new OpenAI({ apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
+              const client = createModelClient('asr', { apiKey: selectedAsr.apiKey, baseURL: baseUrl(selectedAsr.endpoint), timeout: 20_000, maxRetries: 0 })
               const modelStart = performance.now()
               const result = await metrics.measure('asr_model', async () => client.audio.transcriptions.create({
                 file: await toFile(audio, safeUploadFilename(decodedHeaderValue(request.headers['x-s2t-filename'])), { type: contentType }), model: selectedAsr.model,
@@ -1318,7 +1370,7 @@ const httpServer = createHttpApp({
   isQuiescing: () => quiescing, isDraining: () => draining,
   onRequestOpened: response => { activeHttpRequests += 1; activeHttpResponses.add(response) },
   onRequestClosed: response => { activeHttpResponses.delete(response); activeHttpRequests -= 1; if (draining && activeHttpRequests === 0) httpDrained() }
-}).on('error', (error) => logger.error('http.server.error', { port, role: processRole, error })).listen(port, process.env.S2T_WEB_HOST || '0.0.0.0', () => {
+}).on('error', (error) => logger.error('http.server.error', { port, role: processRole, error })).listen(port, process.env.S2T_WEB_HOST || '0.0.0.0', 4096, () => {
   logger.info('gateway.started', { port, role: processRole, storage: storage.mode, logLevel: process.env.S2T_LOG_LEVEL || 'info', logFormat: process.env.S2T_LOG_FORMAT || 'text' })
   if (processRole === 'audio-worker') logger.info('audio-worker.started', { port, durableDiarizationJobs: true })
 })
@@ -1356,6 +1408,7 @@ const stopServer = () => {
   shutdownPromise = finish.finally(() => { clearTimeout(graceTimer); httpServer.closeAllConnections() })
     .finally(() => audioWorkerPool.close())
     .finally(() => sharedLimits.close())
+    .finally(() => closeModelHttp())
     .finally(() => storage.close?.())
   return shutdownPromise
 }

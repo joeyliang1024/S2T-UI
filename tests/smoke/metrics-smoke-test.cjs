@@ -11,7 +11,16 @@ assert.equal(metrics.acceptCaptionSamples({samples:[{stage:'t1_queue',seconds:.0
 class Store{key(){return 'sync-key'}async get(){return 123}async remove(){throw new Error('expected')}}
 const store=new Store();metrics.instrumentStorage({config:store,mode:{config:'postgres'}})
 ;(async()=>{assert.equal(store.key(),'sync-key');assert.equal(await store.get(),123);await assert.rejects(store.remove(),/expected/)
+ metrics.observeHttp('PUT','/api/data/recordings/private-user/chunks/999',200)
+ metrics.observeHttp('POST','/api/transcriptions',503)
+ metrics.observeHttp('POST','/api/translations',200,true)
+ metrics.observeHttp('GET','/readyz',200)
  const output=metrics.render()
+ assert.match(output,/s2t_http_responses_total\{route="recording_chunk",method="PUT",status="200"\} 1/)
+ assert.match(output,/s2t_http_responses_total\{route="transcriptions",method="POST",status="503"\} 1/)
+ assert.match(output,/s2t_http_responses_total\{route="translations",method="POST",status="aborted"\} 1/)
+ assert.ok(!output.includes('private-user'))
+ assert.ok(!output.includes('readyz'))
  // Every t1~t7 stage and the e2e stage ship zero baselines carrying both
  // stage and phase labels, so rate() works before the first browser sample.
  assert.match(output,/s2t_caption_stage_duration_seconds_count\{stage="e2e_asr",phase="e2e"\} 1/)

@@ -3,6 +3,7 @@ const { LocalBlobStore, LocalConfigStore, LocalVectorStore } = require('./local.
 const { MinioBlobStore, PostgresConfigStore, MilvusVectorStore } = require('./remote.cjs')
 const { createAccountFence } = require('./account-fence.cjs')
 const { Pool } = require('pg')
+const { observePoolErrors } = require('./postgres-options.cjs')
 
 // Kubernetes 模式代表多副本分散部署，Pod 本地 storage 會讓帳號、歷史、字幕在副本間不一致，
 // 因此 blob（MinIO）與 config（PostgreSQL）必須是共享後端。
@@ -17,19 +18,21 @@ const createStorage = (environment = process.env) => {
   const blob = config.minio ? new MinioBlobStore(config.minio) : new LocalBlobStore(config.localDataDirectory)
   const configStore = config.postgres ? new PostgresConfigStore(config.postgres) : new LocalConfigStore(config.localDataDirectory)
   const vector = config.milvus ? new MilvusVectorStore(config.milvus) : new LocalVectorStore(config.localDataDirectory)
-  // Advisory-lock clients are held for the full request. Keep them separate
-  // from application queries so a deployment configured with pool max=1 does
-  // not deadlock when a fenced operation reads or writes config records.
-  // pg hides options.password as a non-enumerable property. Spreading options
-  // alone silently drops it and makes fenced writes fail SCRAM authentication.
-  const fencePool = configStore.pool ? new Pool({ ...configStore.pool.options, password: configStore.pool.options.password, max: Math.max(1, Number(configStore.pool.options.max) || 10) }) : null
-  const fence = createAccountFence({ localDataDirectory: config.localDataDirectory, pool: fencePool, getUserState: async (userId, client) => {
+  const fenceSessions = Number(config.postgres?.S2T_POSTGRES_FENCE_SESSIONS || 4)
+  if (!Number.isSafeInteger(fenceSessions) || fenceSessions < 1 || fenceSessions > 16) throw new Error('S2T_POSTGRES_FENCE_SESSIONS must be in 1..16')
+  // Bounded multiplexed shared-lock sessions plus one exclusive deletion session.
+  // This budget is fixed per process, independent of users or in-flight HTTP.
+  // Keep it separate from query/transaction capacity (including pool max=1).
+  const fencePool = configStore.pool ? observePoolErrors(new Pool({ ...configStore.pool.options, password: configStore.pool.options.password, max: fenceSessions + 1 }), 'account-fence') : null
+  const fence = createAccountFence({ localDataDirectory: config.localDataDirectory, pool: fencePool, sharedSessions: fenceSessions, getUserState: async (userId, client) => {
     if (typeof configStore.getUserState !== 'function') throw new Error('Storage 不支援帳號刪除圍欄')
     return configStore.getUserState(userId, client)
   } })
   let closing
   return {
-    close: () => closing ??= Promise.all([blob, configStore, vector, fencePool].map(store => Promise.resolve().then(() => store?.close?.() ?? store?.end?.()))).then(() => undefined),
+    close: () => closing ??= Promise.resolve().then(() => fence.close?.()).then(() => Promise.all([blob, configStore, vector, fencePool].map(store => Promise.resolve().then(() => store?.close?.() ?? store?.end?.())))).then(() => undefined),
+    minioStats: () => blob.client?.stats?.() || {},
+    postgresStats: () => Object.fromEntries([['queries', configStore.pool], ['fence', fencePool], ['health', configStore.healthPool]].filter(([, pool]) => pool).map(([role, pool]) => [role, { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount, maximum: pool.options.max, ...(pool.adaptiveStats?.() || {}) }])),
     blob,
     config: configStore,
     vector,

@@ -1,3 +1,4 @@
+import { orderedWindow } from '../../../shared/services/ordered-window'
 import { prompt, setPromptCatalog } from '../../../shared/services/prompts'
 import type { ComparisonKind } from '../../quality-comparison/domain/comparison'
 import { createTextSearch } from '../../../shared/services/search'
@@ -511,6 +512,7 @@ useEffect(() => () => {
 const cancelImportRef = useRef(false)
 
 const importAbortRef = useRef<AbortController | null>(null)
+const importRequestsRef = useRef(new Set<AbortController>())
 
 const liveDiarizationRunningRef = useRef(false)
 const liveDiarizationGroupsRef = useRef(new Map<string, string>())
@@ -2340,15 +2342,20 @@ const transcribeImportedFile = async (): Promise<void> => {
       const firstChunkIndex = checkpointMatches ? checkpoint!.nextChunkIndex : 0
       if (checkpointMatches) setImportError(activeTranslate('stImportResumedFromCheckpoint').replace('{index}', String(firstChunkIndex + 1)).replace('{total}', String(totalChunks)))
       setImportProgress({ current: firstChunkIndex, total: totalChunks })
-      for (let index = firstChunkIndex; index < totalChunks; index += 1) {
+      // Four bounded requests keep vLLM supplied without loading the whole
+      // file. Only ordered, contiguous results advance the durable checkpoint.
+      await orderedWindow({ start: firstChunkIndex, end: totalChunks, concurrency: 4,
+        cancelled: () => cancelImportRef.current,
+        produce: async index => {
         if (cancelImportRef.current) throw new Error(activeTranslate('stBatchCancelledCompletedKept'))
-        const chunk = await readPcmWavFileChunk(wavFile, wavLayout, wavStartByte)
-        if (wavLayout) wavStartByte = nextPcmWavChunkStart(wavLayout, wavStartByte)
+        const startByte = wavStartByte
+        const nextByteOffset = nextPcmWavChunkStart(wavLayout, startByte)
+        wavStartByte = nextByteOffset
+        const chunk = await readPcmWavFileChunk(wavFile, wavLayout, startByte)
         const targetSampleRate = wavLayout ? chooseModelSampleRate(wavLayout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? []) : undefined
         const asrAudio = wavLayout && targetSampleRate !== undefined && targetSampleRate !== wavLayout.sampleRate
           ? await resampleAudioForAsr(chunk.audio, targetSampleRate)
           : chunk.audio
-        setImportProgress({ current: index + 1, total: totalChunks })
         let response: { text: string } | undefined
         let lastError: unknown
         for (const delay of [0, 400, 1_200]) {
@@ -2361,14 +2368,14 @@ const transcribeImportedFile = async (): Promise<void> => {
               filename: `batch-${index + 1}.wav`, contentType: 'audio/wav', audio: asrAudio
             }) : await (() => {
               const controller = new AbortController()
-              importAbortRef.current = controller
+              importRequestsRef.current.add(controller)
               return requestBrowserAsr({ method: 'POST', headers: {
               'content-type': 'audio/wav',
               'x-s2t-filename': headerValue(`batch-${index + 1}.wav`),
               ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}),
               ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}),
               ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {})
-            }, body: asrAudio }, controller).finally(() => { if (importAbortRef.current === controller) importAbortRef.current = null })
+            }, body: asrAudio }, controller).finally(() => { importRequestsRef.current.delete(controller) })
             })().then(async (result) => {
               const payload = await readJsonResponse<{ text?: string; error?: string }>(result, activeTranslate('stBatchAsrGatewayLabel'))
               if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
@@ -2381,12 +2388,17 @@ const transcribeImportedFile = async (): Promise<void> => {
           }
         }
         if (!response) throw lastError instanceof Error ? lastError : new Error(activeTranslate('stChunkTranscriptionFailed').replace('{index}', String(index + 1)))
+        return { chunk, response, nextByteOffset }
+        },
+        commit: async ({ chunk, response, nextByteOffset }, index) => {
         const mergedNext = joinOverlappedText(merged, response.text)
         const appended = mergedNext.slice(merged.length).trim()
         if (appended) segments.push({ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: appended })
         merged = mergedNext
-        if (wavLayout && !window.s2t) await remoteSessionStorage.saveImportCheckpoint({ fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, nextChunkIndex: index + 1, nextByteOffset: wavStartByte, totalChunks, segments, mergedText: merged, updatedAt: new Date().toISOString() })
-      }
+        if (wavLayout && !window.s2t) await remoteSessionStorage.saveImportCheckpoint({ fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, nextChunkIndex: index + 1, nextByteOffset, totalChunks, segments, mergedText: merged, updatedAt: new Date().toISOString() })
+        setImportProgress({ current: index + 1, total: totalChunks })
+        }
+      })
       if (!segments.length) { if (wavLayout && !window.s2t) await remoteSessionStorage.deleteImportCheckpoint(); throw new Error(activeTranslate('stModelReturnedNoTranscript')) }
       if (wavLayout && !window.s2t) await remoteSessionStorage.deleteImportCheckpoint()
       setTranscripts(segments)
@@ -2399,6 +2411,7 @@ const transcribeImportedFile = async (): Promise<void> => {
 const cancelImport = (): void => {
     cancelImportRef.current = true
     importAbortRef.current?.abort()
+    for (const controller of importRequestsRef.current) controller.abort()
     setImportError(activeTranslate('stCancellingCurrentUpload'))
   }
 

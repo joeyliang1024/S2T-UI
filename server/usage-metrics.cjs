@@ -81,7 +81,12 @@ const render = () => {
   for (const [userId, account] of users) for (const [operation, value] of account) {
     const labels = `user_id=${JSON.stringify(userId)},nt=${JSON.stringify(userId === '__overflow__' ? '其他帳號（超過監控上限）' : account.nt || '未提供 NT')},department=${JSON.stringify(userId === '__overflow__' ? '其他部門（超過監控上限）' : account.department || '未提供部門')},operation=${JSON.stringify(operation)}`
     for (const outcome of ['success', 'client_error', 'server_error', 'aborted']) lines.push(`s2t_user_requests_total{${labels},outcome="${outcome}"} ${value.requests[outcome] || 0}`)
-    for (const [field, suffix] of Object.entries(fields)) lines.push(`s2t_user_${suffix}_total{${labels}} ${value[field]}`)
+    for (const [field, suffix] of Object.entries(fields)) {
+      // Configuration/storage endpoints never execute models: exporting all
+      // their token/audio counters creates permanently empty series per user.
+      if (field !== 'duration' && !operations.has(operation)) continue
+      lines.push(`s2t_user_${suffix}_total{${labels}} ${value[field]}`)
+    }
   }
   lines.push('# TYPE s2t_user_journey_events_total counter')
   for (const [userId, counts] of journeys) {

@@ -1,7 +1,7 @@
 const { createAccountDeletionService, bootstrapRetirementKey } = require('./delete-account.cjs')
 const { readSharingAuthorization, setSharingAuthorization } = require('./sharing-authorization.cjs')
 const usageMetrics = require('../usage-metrics.cjs')
-const { randomBytes } = require('node:crypto')
+const { randomBytes, createSecretKey } = require('node:crypto')
 const { mkdir, readFile, rename, writeFile } = require('node:fs/promises')
 const { join } = require('node:path')
 const bcrypt = require('bcryptjs')
@@ -31,6 +31,9 @@ const createAuth = async (storage, environment = process.env, limits = require('
   const configuredSecret = environment.S2T_AUTH_SECRET?.trim()
   if ((environment.NODE_ENV === 'production' || environment.S2T_KUBERNETES_MODE === 'true') && !configuredSecret) throw new Error('Kubernetes 模式必須設定所有 Pod 共用的 S2T_AUTH_SECRET')
   const secret = configuredSecret || await localSecret(require('../../src/shared/validation/data-paths.cjs').dataPaths(environment).root)
+  // Reuse the parsed HMAC key; JWT verification otherwise attempts PEM parsing
+  // on every request. Durable session/revocation checks still run each time.
+  const sessionKey = createSecretKey(Buffer.from(secret))
   const revokedTokensKey = 'revoked-auth-tokens'
   const requestToken = (request) => {
     const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '')
@@ -41,7 +44,7 @@ const createAuth = async (storage, environment = process.env, limits = require('
   const cookieSameSite = environment.S2T_COOKIE_SAME_SITE === 'none' ? 'None' : 'Strict'
   if (cookieSameSite === 'None' && environment.S2T_COOKIE_SECURE !== 'true') throw new Error('S2T_COOKIE_SAME_SITE=none 必須同時設定 S2T_COOKIE_SECURE=true')
   const setSessionCookie = (response, token) => response.setHeader('set-cookie', `s2t_auth=${token}; Path=/; HttpOnly; SameSite=${cookieSameSite}; Max-Age=604800${environment.S2T_COOKIE_SECURE === 'true' ? '; Secure' : ''}`)
-  const issue = (user) => jwt.sign({ sub: user.id }, secret, { algorithm: 'HS256', expiresIn: '7d', jwtid: randomBytes(18).toString('base64url') })
+  const issue = (user) => jwt.sign({ sub: user.id }, sessionKey, { algorithm: 'HS256', expiresIn: '7d', jwtid: randomBytes(18).toString('base64url') })
   const loginKey = (request, input) => `${environment.S2T_KUBERNETES_MODE === 'true' ? 'account' : request.socket.remoteAddress || 'unknown'}:${typeof input?.username === 'string' ? input.username.trim().toLowerCase().slice(0, 64) : ''}`
   const ensureBootstrapAdmin = async () => {
     // Environment values define the initial user. Later users can always
@@ -106,15 +109,24 @@ const createAuth = async (storage, environment = process.env, limits = require('
     },
     async session(token) {
       let payload
-      try { payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) } catch { return null }
+      try { payload = jwt.verify(token, sessionKey, { algorithms: ['HS256'] }) } catch { return null }
       if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string') return null
+      if (typeof users.findSessionUser === 'function') {
+        // One fresh indexed read, preserving immediate deletion/role/revocation
+        // checks without a per-user cache or a second DB roundtrip.
+        const user = await users.findSessionUser(payload.sub, revokedTokensKey)
+        if (!user || user.deletionState === 'deleting') return null
+        const now = Math.floor(Date.now() / 1000)
+        if (Array.isArray(user.revocations) && user.revocations.some(entry => entry && entry.jti === payload.jti && Number.isSafeInteger(entry.expiresAt) && entry.expiresAt > now)) return null
+        return publicUser(user)
+      }
       const user = await users.findById(payload.sub)
       if (!user || user.deletionState === 'deleting' || (await activeRevocations(user.id)).some(entry => entry.jti === payload.jti)) return null
       return publicUser(user)
     },
     async revoke(token) {
       let payload
-      try { payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) } catch { return }
+      try { payload = jwt.verify(token, sessionKey, { algorithms: ['HS256'] }) } catch { return }
       if (!payload || typeof payload === 'string' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string' || !Number.isSafeInteger(payload.exp)) return
       await activeRevocations(payload.sub)
       // Storage failures must propagate: an uncommitted revocation is not logout success.

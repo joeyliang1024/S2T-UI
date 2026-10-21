@@ -1,4 +1,5 @@
 const { createServer } = require('node:http')
+const { observeHttp } = require('../metrics.cjs')
 
 const createHttpApp = ({ handleHttpRequest, send, logger, newRequestId, isQuiescing = () => false, isDraining = () => false, onRequestOpened = () => {}, onRequestClosed = () => {} }) => {
 const incomingRequestId = (request) => {
@@ -9,17 +10,19 @@ const incomingRequestId = (request) => {
 const requestPathOf = (request) => {
   try { return new URL(request.url, 'http://localhost').pathname } catch { return 'unknown' }
 }
-// Health probes and static assets are noise at info level: they would drown
-// the business events on every Pod. Everything an operator acts on stays at
-// warn/error so it is visible with the default S2T_LOG_LEVEL.
+// Per-request success logs are opt-in debug output. At hundreds of requests
+// per second stdout serialization/backpressure competes with inference I/O.
+// Status/latency metrics still cover every request; errors retain their levels.
 const probePaths = new Set(['/livez', '/metrics'])
 const httpLogLevel = (status, probe) => {
   if (status === 503 || status === 429 || status === 409) return 'warn'
   if (status >= 500) return 'error'
   if (status >= 400) return probe || status === 401 || status === 403 ? 'info' : 'warn'
-  return probe ? 'debug' : 'info'
+  return 'debug'
 }
 return createServer((request, response) => {
+  // Same monotonic clock as route timings; includes auth/admission/DB waits.
+  request.s2tStartedAt = performance.now()
   onRequestOpened(response)
   if (isQuiescing()) response.setHeader('connection', 'close')
   response.once('close', () => onRequestClosed(response))
@@ -28,7 +31,15 @@ return createServer((request, response) => {
   const startedAt = performance.now()
   const probe = probePaths.has(path) || !path.startsWith('/api/')
   response.setHeader('x-request-id', requestId)
+  let observed = false
+  const record = aborted => {
+    if (observed) return
+    observed = true
+    observeHttp(request.method, path, response.statusCode, aborted)
+  }
+  response.once('close', () => record(!response.writableFinished))
   response.once('finish', () => {
+    record(false)
     logger.log(httpLogLevel(response.statusCode, probe), 'http.request', {
       method: request.method,
       path,

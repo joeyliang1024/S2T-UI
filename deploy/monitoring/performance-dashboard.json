@@ -1,0 +1,614 @@
+{
+  "uid": "s2t-performance-500",
+  "title": "S2T · 併發效能診斷",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "分片 P90（主 KPI）／P95／P99：合併值見報告",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_perf_duration_milliseconds{quantile=~\"0.9|0.95|0.99\"}",
+          "legendFormat": "{{kind}} P{{quantile}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "壓測 · 錯誤與丟棄",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_perf_errors_total",
+          "legendFormat": "{{kind}} errors"
+        },
+        {
+          "refId": "B",
+          "expr": "s2t_perf_dropped_total",
+          "legendFormat": "dropped"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "PG · 實際連線與動態上限",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_postgres_connections{job=\"s2t\"}",
+          "legendFormat": "{{pool}} {{state}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Redis · 命令率與准入等待",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(command) (rate(s2t_redis_command_duration_seconds_count{job=\"s2t\"}[1m]))",
+          "legendFormat": "{{command}} cmd/s"
+        },
+        {
+          "refId": "B",
+          "expr": "s2t_redis_capacity_state{job=\"s2t\"}",
+          "legendFormat": "{{state}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "模型 API · 動態上限與在途／等待",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_model_http_capacity{job=\"s2t\"}",
+          "legendFormat": "{{role}} {{state}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "t5／t7 HTTP 餘額 · 含傳輸、socket 排隊",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_perf_http_residual_milliseconds{kind=~\"asr|translation\"}",
+          "legendFormat": "{{kind}} P95"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Gateway · CPU／記憶體",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_process_resident_memory_bytes{job=\"s2t\"}",
+          "legendFormat": "RSS bytes"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(s2t_process_cpu_seconds_total{job=\"s2t\"}[1m])",
+          "legendFormat": "CPU cores"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Gateway · Event loop P99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_event_loop_p99_seconds{job=\"s2t\"}",
+          "legendFormat": "event loop"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Redis · 真實 CPU 與記憶體",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "redis_memory_used_bytes{job=~\"redis|perf-redis\"}",
+          "legendFormat": "memory bytes"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(redis_cpu_sys_seconds_total{job=~\"redis|perf-redis\"}[1m])",
+          "legendFormat": "CPU sys"
+        },
+        {
+          "refId": "C",
+          "expr": "rate(redis_cpu_user_seconds_total{job=~\"redis|perf-redis\"}[1m])",
+          "legendFormat": "CPU user"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "持續上傳／草稿／字幕鏈路等待數",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "s2t_perf_pending",
+          "legendFormat": "pending"
+        },
+        {
+          "refId": "B",
+          "expr": "s2t_perf_offered_total",
+          "legendFormat": "offered"
+        },
+        {
+          "refId": "C",
+          "expr": "s2t_perf_elapsed_seconds",
+          "legendFormat": "elapsed seconds"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Redis · 命令 P95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by(le, command) (rate(s2t_redis_command_duration_seconds_bucket{job=\"s2t\"}[1m])))",
+          "legendFormat": "{{command}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "PG／MinIO · 操作 P95",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by(le,service,operation) (rate(s2t_storage_operation_duration_seconds_bucket{job=\"s2t\"}[1m])))",
+          "legendFormat": "{{service}} {{operation}}"
+        }
+      ]
+    },
+    {
+      "id": 100,
+      "type": "timeseries",
+      "title": "HTTP 成功率（含斷線；不含健康檢查）",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(s2t_http_responses_total{status=~\"2..\"}[1m])) / sum by (route) (rate(s2t_http_responses_total[1m]))",
+          "legendFormat": "{{route}} {{status}} {{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "timeseries",
+      "title": "HTTP 錯誤／斷線速率",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (route,status) (rate(s2t_http_responses_total{status!~\"2..\"}[1m]))",
+          "legendFormat": "{{route}} {{status}} {{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "timeseries",
+      "title": "壓測成功率（含回應內容驗證）",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "1 - sum by (kind) (rate(s2t_perf_errors_total[1m])) / sum by (kind) (rate(s2t_perf_requests_total[1m]))",
+          "legendFormat": "{{route}} {{status}} {{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "timeseries",
+      "title": "壓測超過 3 秒比例",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (kind) (rate(s2t_perf_over_3s_total[1m])) / sum by (kind) (rate(s2t_perf_requests_total[1m]))",
+          "legendFormat": "{{route}} {{status}} {{kind}}"
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "type": "timeseries",
+      "title": "VM CPU／I/O 壓力（共享主機）",
+      "description": "PSI some 表示至少一項工作因資源不足而等待；以 VM 指標核對模型以外的搶用。",
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "s2t_host_pressure_ratio{job=\"s2t\",kind=\"some\",window=\"10s\"}",
+          "legendFormat": "{{pod}} {{resource}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 91,
+      "type": "timeseries",
+      "title": "MinIO 小物件：有界等待與記憶體",
+      "description": "每 Pod 合併連線上限 128；背景 PUT 待處理 payload 上限 64MiB。",
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "s2t_minio_http_capacity{job=\"s2t\",state=~\"waiting|bufferedPending|bufferedBytes\"}",
+          "legendFormat": "{{pod}} {{state}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*bufferedBytes.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 104,
+      "type": "timeseries",
+      "title": "字幕 E2E P90 · ASR／含 ASR 的翻譯",
+      "description": "跨 Pod 合併 histogram 後的 1 分鐘 P90 估計；正式驗收使用整輪原始樣本精確分位數。翻譯包含 ASR，門檻 3 秒。",
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "s2t-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.90, sum by(stage,le) (rate(s2t_caption_stage_duration_seconds_bucket{job=\"s2t\",stage=~\"e2e_asr|e2e_translation\"}[1m])))",
+          "legendFormat": "{{stage}} P90"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ],
+  "tags": [
+    "s2t",
+    "performance",
+    "500-users"
+  ]
+}

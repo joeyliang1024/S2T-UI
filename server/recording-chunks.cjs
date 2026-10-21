@@ -13,6 +13,7 @@ const wavHeader = (bytes, rate) => {
 class RecordingChunks {
   constructor(storage) { this.storage = storage }
   key(id) { if (!/^[A-Za-z0-9._-]{1,120}$/.test(id)) throw fault('無效的錄音 ID'); return `recording-${id}` }
+  update(userId, key, transform) { const store = this.storage.config; return (store.updateRecording || store.update).call(store, userId, key, transform) }
   async status(userId, id) { return this.storage.config.get(userId, this.key(id)) }
   async append(userId, id, index, startSample, sampleRate, audio) {
     const key = this.key(id)
@@ -22,7 +23,7 @@ class RecordingChunks {
     // Write immutable bytes before acknowledging metadata. Failed writes cannot advance ACK.
     await this.storage.blob.put(userId, blobKey, audio)
     let result
-    await this.storage.config.update(userId, key, value => {
+    await this.update(userId, key, value => {
       const manifest = value || { sampleRate, chunks: {}, contiguousChunks: 0, persistedSamples: 0, state: 'recording' }
       if (manifest.sampleRate !== sampleRate) throw fault('錄音取樣率不同', 409)
       const existing = manifest.chunks[index]
@@ -32,8 +33,19 @@ class RecordingChunks {
       }
       if (manifest.state !== 'recording') throw fault('錄音已停止', 409)
       const samples = audio.length / 2
-      for (const chunk of Object.values(manifest.chunks)) if (startSample < chunk.startSample + chunk.samples && startSample + samples > chunk.startSample) throw fault('音訊 sample 範圍重疊', 409)
+      const endSample = startSample + samples
+      // Sequential capture appends beyond every known chunk. Keep a durable
+      // high-water mark so that path does not allocate/scan the entire history
+      // for every 2-second append. Legacy manifests derive it once; out-of-order
+      // writes still check every potentially overlapping range.
+      let maximumEnd = manifest.maximumEndSample
+      if (!Number.isSafeInteger(maximumEnd) || maximumEnd < manifest.persistedSamples) {
+        maximumEnd = 0
+        for (const chunk of Object.values(manifest.chunks)) maximumEnd = Math.max(maximumEnd, chunk.startSample + chunk.samples)
+      }
+      if (startSample < maximumEnd) for (const chunk of Object.values(manifest.chunks)) if (startSample < chunk.startSample + chunk.samples && endSample > chunk.startSample) throw fault('音訊 sample 範圍重疊', 409)
       manifest.chunks[index] = { digest, blobKey, startSample, samples }
+      manifest.maximumEndSample = Math.max(maximumEnd, endSample)
       while (manifest.chunks[manifest.contiguousChunks]?.startSample === manifest.persistedSamples) {
         manifest.persistedSamples += manifest.chunks[manifest.contiguousChunks].samples
         manifest.contiguousChunks += 1
@@ -46,7 +58,7 @@ class RecordingChunks {
   async removeCompleted(userId, id) {
     const key = this.key(id)
     let manifest
-    await this.storage.config.update(userId, key, value => {
+    await this.update(userId, key, value => {
       if (!value) return undefined
       if (!['completed', 'deleting'].includes(value.state)) throw fault('只能清理已完成的錄音備份', 409)
       manifest = value
@@ -62,7 +74,7 @@ class RecordingChunks {
     const key = this.key(id)
     if (!Number.isSafeInteger(totalChunks) || totalChunks < 1 || !Number.isSafeInteger(totalSamples) || totalSamples < 1) throw fault('無效的停止進度')
     let manifest
-    await this.storage.config.update(userId, key, value => {
+    await this.update(userId, key, value => {
       if (value?.state === 'deleting') throw fault('錄音正在清理', 409)
       if (!value || value.contiguousChunks !== totalChunks || value.persistedSamples !== totalSamples || Object.keys(value.chunks).length !== totalChunks) throw fault('音訊尚未完整保存', 409)
       manifest = { ...value, state: 'finishing' }
@@ -82,7 +94,7 @@ class RecordingChunks {
         }
       })())
       await store.putStream(userId, `audio/${id}`, stream, bytes + 44)
-      await this.storage.config.update(userId, key, value => ({ ...value, state: 'completed', audioKey: id, updatedAt: new Date().toISOString() }))
+      await this.update(userId, key, value => ({ ...value, state: 'completed', audioKey: id, updatedAt: new Date().toISOString() }))
     }
     return { durable: true, audioKey: id, persistedSamples: totalSamples, contiguousChunks: totalChunks }
   }
