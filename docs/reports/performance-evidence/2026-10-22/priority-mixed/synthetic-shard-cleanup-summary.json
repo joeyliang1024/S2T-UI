@@ -1,0 +1,12 @@
+{
+  "done": true,
+  "deletedObjects": 25543,
+  "deletedSyntheticAccounts": 125,
+  "deletedSyntheticMetadata": 250,
+  "archivedPayloadBytes": 1634752000,
+  "localRecoverableArchive": "synthetic-shard-72db6f44.json.gz",
+  "userApproved": true,
+  "archiveSha256": "dd06c509cda5e230f2bd955916796516dbb6935767d99f7f7b3deedc41efafde",
+  "archiveBytes": 366493,
+  "scope": "Only prior generated failed test shard 72db6f44; recoverable canonical PCM, keys and metadata archived locally"
+}

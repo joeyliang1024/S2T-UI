@@ -33,15 +33,17 @@ console.log('PASS new Sentinel names, separate auth/TLS, invalid groups, old nam
  assert.equal(signal.aborted, true)
  await limiter.close()
  console.log('PASS whole-command timeout and abort during topology waits')
+ const lifecycle = new Map()
  let acquireCalls = 0, models = 0, removals = 0
- const recovering = { isOpen: true, isReady: true, on() {}, destroy() {}, withCommandOptions() { return {
-   eval: async () => ++acquireCalls === 1 ? 0 : 1,
+ const recovering = { isOpen: true, isReady: true, on(event,listener) { lifecycle.set(event,listener) }, destroy() {}, withCommandOptions() { return {
+   eval: async (_script, args) => ++acquireCalls === 1 ? [] : args.arguments.slice(1),
    zRem: async () => { removals++; return 1 }
  } } }
  const sentinelLimits = createSharedLimits({ ...env, S2T_KUBERNETES_MODE: 'true', S2T_ASR_MAX_INFLIGHT: '1' }, {}, recovering)
  assert.equal(await sentinelLimits.withCapacity('asr', async () => { models++; return 'completed' }), 'completed')
  assert.equal(acquireCalls, 2)
  assert.equal(models, 1, 'capacity admission can wait, but must not retry model inference')
+ lifecycle.get('topology-change')()
  await new Promise(resolve => setTimeout(resolve, 1100))
  assert.ok(removals >= 2, 'completed leases must be reconciled after a primary change')
  await sentinelLimits.close()
@@ -52,13 +54,39 @@ console.log('PASS new Sentinel names, separate auth/TLS, invalid groups, old nam
  assert.ok(Date.now() - outageStart >= 9500 && Date.now() - outageStart < 11500, 'Sentinel outage budget remains bounded')
  assert.equal(signal.aborted, true)
  await failedSentinel.close()
+ let explicit = 0, bulkCommands = 0
+ const scopedClient = { isOpen: true, isReady: true, on() {}, destroy() {},
+   withCommandOptions() { assert.fail('Sentinel commands must use explicit scoped leases') },
+   async use(operation) { explicit++; return operation({ withCommandOptions() { return { eval: async (script,args) => { bulkCommands++; assert.ok(script.includes('local function check')); return args.keys.map(() => [1,0,1]) }, ping: async () => 'PONG' } } }) }
+ }
+ const batched = createSharedLimits({ ...env, S2T_KUBERNETES_MODE: 'true' }, {}, scopedClient)
+ const accepted = await Promise.all(Array.from({length:500},(_,i)=>batched.accept('bulk-'+i,'asr')))
+ assert.ok(accepted.every(x=>x.accepted)); assert.equal(bulkCommands,4)
+ await batched.health(); assert.equal(explicit,5)
+ await batched.close()
+ console.log('PASS 500 rate checks use four bounded atomic batches and explicit Sentinel leases')
+ let acquiredObjects=0,releasedObjects=0,pooledCalls=0
+ const reusableClient={isOpen:true,isReady:true,on(){},destroy(){},
+   withCommandOptions(){assert.fail('proxy command path must not be used')},use(){assert.fail('per-command use() rebuilds the command interface')},
+   async acquire(){acquiredObjects++;return{release(){releasedObjects++},withCommandOptions(){return{eval:async(_script,args)=>{pooledCalls++;return args.keys.map(()=>[1,0,1])},ping:async()=> 'PONG'}}}}
+ }
+ const reusable=createSharedLimits({...env,S2T_KUBERNETES_MODE:'true'},{},reusableClient)
+ await Promise.all(Array.from({length:500},(_,i)=>reusable.accept('reused-'+i,'asr')))
+ await Promise.all(Array.from({length:500},()=>reusable.health()))
+ assert.equal(acquiredObjects,4,'all commands reuse exactly the configured lease budget')
+ assert.equal(pooledCalls,4,'500 rate checks remain atomic bounded batches')
+ await reusable.close();assert.equal(releasedObjects,4,'close returns every reserved lease once')
+ console.log('PASS 1000 commands reuse four Sentinel interfaces without proxy races or per-command factory allocation')
  const leases = new Set(), order = []
  const fifoClient = { isOpen: true, isReady: true, on() {}, destroy() {}, withCommandOptions() { return {
    eval: async (_script, args) => {
-     const token = args.arguments[1]
-     if (leases.has(token)) return 1
-     if (leases.size) return 0
-     leases.add(token); return 1
+     const granted = []
+     for (const token of args.arguments.slice(1)) {
+       if (leases.has(token)) { granted.push(token); continue }
+       if (leases.size >= Number(args.arguments[0])) break
+       leases.add(token); granted.push(token)
+     }
+     return granted
    },
    zRem: async (_key, tokens) => { for (const token of [tokens].flat()) leases.delete(token); return 1 }
  } } }
@@ -67,8 +95,21 @@ console.log('PASS new Sentinel names, separate auth/TLS, invalid groups, old nam
    order.push(i); await new Promise(resolve => setTimeout(resolve, 30))
  })))
  assert.deepEqual(order, Array.from({ length: 10 }, (_, i) => i), 'capacity admission follows arrival order without serializing inference')
- assert.equal(leases.size, 0)
  await fifoLimits.close()
+ assert.equal(leases.size, 0,'shutdown drains asynchronous completed-token releases')
+ let finishRelease, releaseStarted
+ const releaseBegan=new Promise(resolve=>{releaseStarted=resolve})
+ const slowRelease={isOpen:true,isReady:true,on(){},destroy(){},withCommandOptions(){return{
+   eval:async(_script,args)=>args.arguments.slice(1),
+   zRem:async()=>{releaseStarted();await new Promise(resolve=>{finishRelease=resolve});return 1}
+ }}}
+ const background=createSharedLimits({...env,S2T_KUBERNETES_MODE:'true'}, {}, slowRelease)
+ assert.equal(await background.withCapacity('asr',async()=> 'durable result'),'durable result','completed inference must not await a stalled throttle cleanup')
+ await releaseBegan
+ let closed=false
+ const shutdown=background.close().then(()=>{closed=true})
+ await new Promise(resolve=>setTimeout(resolve,10));assert.equal(closed,false,'shutdown must await in-flight cleanup even after its batch left the queue')
+ finishRelease();await shutdown
  const disconnected = { ...fifoClient, withCommandOptions() { return { eval: async () => { throw new Error('Socket closed unexpectedly') } } } }
  const failedCapacity = createSharedLimits({ ...env, S2T_KUBERNETES_MODE: 'true' }, {}, disconnected)
  await assert.rejects(failedCapacity.withCapacity('asr', async () => assert.fail('must not bypass failed coordination')), error => error.status === 503)

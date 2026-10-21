@@ -42,6 +42,7 @@ assert.equal(importProbe.status, 0, importProbe.stderr || importProbe.error?.mes
     assert.equal(opened, 6); assert.equal(closed, opened)
     assert.equal(contexts[0].requestId, 'valid-request-123')
     assert.ok(logs.some(([level, , value]) => level === 'warn' && value.status === 503))
+    assert.ok(logs.some(([level, , value]) => level === 'debug' && value.status === 200 && value.path === '/api/ok'), 'high-volume successes must not flood info stdout')
     console.log('PASS side-effect-free import/factory, request IDs, sync error handling, quiescing, drain admission and request accounting')
   } finally { await new Promise(resolve => app.close(resolve)) }
 })().catch(error => { console.error(error); process.exitCode = 1 })

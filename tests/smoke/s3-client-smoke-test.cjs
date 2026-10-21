@@ -3,7 +3,7 @@ const http = require('node:http')
 const { Readable } = require('node:stream')
 const { MinioBlobStore } = require('../../server/storage/remote.cjs')
 ;(async () => {
-  let exists = false
+  let exists = false, activePuts = 0, peakPuts = 0
   const objects = new Map(), clients = []
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, 'http://fixture'), parts = url.pathname.split('/').filter(Boolean)
@@ -18,7 +18,7 @@ const { MinioBlobStore } = require('../../server/storage/remote.cjs')
       const truncated = !token && all.length > 1
       return xml(200, `<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>${truncated}</IsTruncated>${truncated ? '<NextContinuationToken>page-two</NextContinuationToken>' : ''}${page.map(value => `<Contents><Key>${value}</Key></Contents>`).join('')}</ListBucketResult>`)
     }
-    if (request.method === 'PUT') { const chunks = []; for await (const chunk of request) chunks.push(chunk); objects.set(key, Buffer.concat(chunks)); response.writeHead(200, { etag: '"fixture"' }); return response.end() }
+    if (request.method === 'PUT') { activePuts++; peakPuts = Math.max(peakPuts,activePuts);try {const chunks = []; for await (const chunk of request) chunks.push(chunk); await new Promise(resolve=>setTimeout(resolve,5));objects.set(key, Buffer.concat(chunks)); response.writeHead(200, { etag: '"fixture"' }); return response.end()}finally{activePuts--} }
     if (request.method === 'DELETE') { objects.delete(key); response.writeHead(204); return response.end() }
     if (!objects.has(key)) return xml(404, '<Error><Code>NoSuchKey</Code><Message>Missing</Message></Error>')
     response.writeHead(200, { 'content-length': objects.get(key).length }); response.end(objects.get(key))
@@ -26,6 +26,11 @@ const { MinioBlobStore } = require('../../server/storage/remote.cjs')
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const config = { S2T_MINIO_ENDPOINT: `http://127.0.0.1:${server.address().port}`, S2T_MINIO_BUCKET: 'fixture', S2T_MINIO_ACCESS_KEY: 'fixture-only', S2T_MINIO_SECRET_KEY: 'fixture-secret-only' }
   try {
+    let startupAttempts = 0
+    await MinioBlobStore.prototype.initializeBucket.call({ ensureBucket: async () => {
+      if (++startupAttempts === 1) throw Object.assign(new Error('starting'), { code: 'ECONNREFUSED' })
+    } })
+    assert.equal(startupAttempts, 2, 'transient MinIO startup failure must recover without a permanently rejected ready promise')
     const store = new MinioBlobStore(config); clients.push(store.client); await store.ready
     assert.equal(exists, true, 'missing bucket is initialized')
     await store.put('owner-a', 'one', Buffer.from('original'))
@@ -40,6 +45,12 @@ const { MinioBlobStore } = require('../../server/storage/remote.cjs')
     assert.equal(await store.readStream('owner-a', 'missing'), null)
     await assert.rejects(() => store.put('owner-a', '../outside', Buffer.from('bad')), /blob key/)
     await store.remove('owner-a', 'one'); assert.equal(await store.get('owner-a', 'one'), null)
+    const original = Buffer.from('retained for retries')
+    await Promise.all(Array.from({length:64},(_,index)=>store.put('parallel-owner','chunk-'+index,original)))
+    assert.equal(original.toString(),'retained for retries','worker transfer must not detach or mutate caller audio')
+    assert.ok(peakPuts>1,'small recording writes must run concurrently')
+    assert.equal(store.client.stats().maximum,128,'control and writer socket ceilings share one total budget')
+    assert.equal(store.client.stats().bufferedBytes,0,'completed writes release their byte budget')
     const denied = new MinioBlobStore({ ...config, S2T_MINIO_BUCKET: 'denied' }); clients.push(denied.client)
     await assert.rejects(() => denied.ready, error => error.$metadata?.httpStatusCode === 403)
     console.log('PASS real AWS S3 HTTP contract: bucket initialization, bytes/stream upload, download, pagination, missing objects, deletion, account isolation, path rejection and denied-bucket failure')

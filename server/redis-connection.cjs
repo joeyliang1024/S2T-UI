@@ -1,3 +1,4 @@
+const { cachedLookup } = require('./dns-lookup.cjs')
 // Keep Sentinel authentication separate from Redis data-node authentication.
 const clientOptions = (env, prefix) => {
   const tls = env[`${prefix}_TLS`]
@@ -6,7 +7,7 @@ const clientOptions = (env, prefix) => {
     ...(env[`${prefix}_USERNAME`] ? { username: env[`${prefix}_USERNAME`] } : { username: 'default' }),
     ...(env[`${prefix}_PASSWARD`] ? { password: env[`${prefix}_PASSWARD`] } : {}),
     disableOfflineQueue: true, commandsQueueMaxLength: 1000,
-    socket: { ...(tls === 'true' ? { tls: true } : {}), connectTimeout: 3000, reconnectStrategy: retries => Math.min(2000, 100 * (retries + 1)) }
+    socket: { lookup: cachedLookup, ...(tls === 'true' ? { tls: true } : {}), connectTimeout: 3000, reconnectStrategy: retries => Math.min(2000, 100 * (retries + 1)) }
   }
 }
 const redisConnection = env => {
@@ -28,11 +29,13 @@ const redisConnection = env => {
     } catch { throw new Error('REDIS_SENTINEL_NODES 必須為逗號分隔的 host 或 host:port 清單（預設 26379）') }
     const database = env.REDIS_DATABASE || '0'
     if (!/^\d+$/.test(database) || !Number.isSafeInteger(Number(database))) throw new Error('REDIS_DATABASE 必須為非負整數')
+    const masterPoolSize = Number(env.REDIS_MASTER_POOL_SIZE || 4)
+    if (!Number.isSafeInteger(masterPoolSize) || masterPoolSize < 1 || masterPoolSize > 16) throw new Error('REDIS_MASTER_POOL_SIZE 必須為 1 至 16 的整數')
     return { mode: 'sentinel', options: {
       name, sentinelRootNodes: roots,
       sentinelClientOptions: { ...clientOptions(env, 'REDIS_SENTINEL'), socket: { ...clientOptions(env, 'REDIS_SENTINEL').socket, reconnectStrategy: false } },
       nodeClientOptions: { ...clientOptions(env, 'REDIS'), socket: { ...clientOptions(env, 'REDIS').socket, reconnectStrategy: false }, database: Number(database) },
-      masterPoolSize: 1, replicaPoolSize: 0, scanInterval: 1000, maxCommandRediscovers: 16
+      masterPoolSize, replicaPoolSize: 0, scanInterval: 1000, maxCommandRediscovers: 16
     } }
   }
   if (!env.REDIS_URL?.trim()) throw new Error('Kubernetes 模式必須設定 REDIS_URL 或 Sentinel 節點與 master name')

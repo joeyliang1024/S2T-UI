@@ -740,6 +740,12 @@ footer { background: linear-gradient(transparent, #10141d 30%); bottom: 0; displ
 .transcript-modal .record-transcript > article > .speaker-row input { box-sizing: border-box; max-width: 112px; min-height: 23px; padding: 0 5px; width: 112px; }
 .transcript-modal .record-transcript > article > p { grid-column: 2; line-height: 1.4; }
 .transcript-modal .record-transcript > article > .translation { grid-column: 2; padding: 4px 9px; border-left: 2px solid #739cff; border-radius: 0 6px 6px 0; background: rgba(115,156,255,.06); }
+/* 即時翻譯僅供檢視，不寫回紀錄：用不同色的左框與既有譯文區隔。 */
+.transcript-modal .record-transcript > article > .view-translation { border-left-color: #b48cff; background: rgba(180,140,255,.07); }
+.transcript-modal .record-transcript > .view-translation { color: #cbb4ff; margin-top: 6px; padding: 4px 9px; border-left: 2px solid #b48cff; border-radius: 0 6px 6px 0; background: rgba(180,140,255,.07); }
+.transcript-view-language { align-items: center; display: inline-flex; flex-shrink: 0; gap: 6px; white-space: nowrap; }
+.transcript-view-language select { background: #101723; border: 1px solid #3a4963; border-radius: 8px; color: #eef2fa; font: inherit; min-height: 38px; padding: 0 8px; }
+.transcript-view-status { color: #9daac0; flex-shrink: 1; font-size: .84rem; min-width: 0; overflow-wrap: anywhere; }
 .transcript-modal .record-transcript > article > .edit-button { align-self: center; grid-column: 3; grid-row: 1 / span 2; padding: 4px 6px; }
 /* 重講相關的按鈕也固定在右欄，避免自動排版插進中欄的內文。 */
 .transcript-modal .record-transcript > article > .segment-actions { display: flex; gap: 8px; grid-column: 2; min-width: 0; }
@@ -877,6 +883,9 @@ button.session-processing-state:focus-visible { outline: 2px solid currentColor;
 .transcript-modal .record-transcript > article > p:not(.translation) { grid-row: 1; }
 .live-workspace .transcript > article > .translation,
 .transcript-modal .record-transcript > article > .translation { grid-row: 2; }
+/* 檢視用譯文固定排在既有譯文的下一行，避免 grid 自動配置把它們重疊。 */
+.live-workspace .transcript > article > .view-translation,
+.transcript-modal .record-transcript > article > .view-translation { grid-row: 3; }
 .transcript > article > .transcript-edit,
 .record-transcript > article > .transcript-edit { grid-column: 2 / -1; grid-row: 1 / span 2; min-width: 0; }
 .transcript-edit textarea, .timing-inputs input { box-sizing: border-box; }

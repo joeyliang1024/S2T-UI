@@ -34,8 +34,13 @@ export const retryableAuthFetch = async (path: string, init: RequestInit = {}, a
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       if (credential !== token() || ownerEpoch !== requestEpoch()) throw new DOMException('Account changed', 'AbortError')
-      const response = await authFetch(path, init)
+      // A blackholed upload must not pin the recording writer indefinitely.
+      const bodyBytes = init.body instanceof Blob ? init.body.size : init.body instanceof ArrayBuffer ? init.body.byteLength : ArrayBuffer.isView(init.body) ? init.body.byteLength : 0
+      const deadline = AbortSignal.timeout(bodyBytes > 1024 ** 2 ? 120000 : 15000)
+      const signal = init.signal ? AbortSignal.any([init.signal, deadline]) : deadline
+      const response = await authFetch(path, { ...init, signal })
       if (![502, 503, 504].includes(response.status) || attempt === attempts - 1) return response
+      await response.body?.cancel()
       lastError = new Error(activeTranslate('svcGatewayUnavailable').replace('{status}', String(response.status)))
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') throw error

@@ -38,5 +38,12 @@ const dependencies = (completeSummary) => ({ completeSummary, summaryInstruction
   await assert.rejects(pending, error => error?.name === 'AbortError')
   assert.deepEqual(published, [], 'late partials and results cannot publish after cancellation')
 
+  let active=0,peak=0,calls=0
+  await summarizeTranscript('A'.repeat(140000),dependencies(async()=>{
+    calls++;active++;peak=Math.max(peak,active)
+    await new Promise(resolve=>setTimeout(resolve,5));active--;return {text:'partial'}
+  }))
+  assert.equal(peak,2,'long summaries bound parallel chunk/merge requests to two')
+  assert.ok(calls>6,'all chunks and subsequent merge stages still finish')
   console.log('PASS summary cancellation stops subsequent chunks and fences late stream/final results')
 })().catch(error => { console.error(error); process.exitCode = 1 })

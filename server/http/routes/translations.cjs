@@ -1,6 +1,6 @@
 const createTranslationRoutes = ({ translation, accountModelService, acceptsRequest, rateLimitResponse, readBody, send, storage, validateAdminParameters, executeIdempotent, requestHash, translationService, upstreamRateLimit, serverTimingHeader, logger, now = () => performance.now() }) => async (request, response, auth) => {
   if (request.method !== 'POST' || request.url !== '/api/translations') return false
-  const handlerStartedAt = now()
+  const handlerStartedAt = request.s2tStartedAt ?? now()
   // t6/t7 split source: queue + model travel to the browser via Server-Timing.
   // Only stages that ran are reported (an idempotent cache hit runs neither).
   const serverTiming = { total: 0 }

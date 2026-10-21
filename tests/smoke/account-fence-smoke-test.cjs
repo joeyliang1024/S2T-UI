@@ -25,10 +25,10 @@ const { LocalAccountFence, PostgresAccountFence } = require('../../server/storag
     await writeFile(join(fenceRoot, 'owner_alive.writer-long'), `${process.pid}\n${Date.now() - 61_000}\n`)
     await assert.rejects(fence.withDeletion('owner_alive', async () => 'unsafe'), error => error.code === 'ACCOUNT_WRITES_DRAINING', 'a live long-running writer is never reclaimed')
     await rm(join(fenceRoot, 'owner_alive.writer-long'))
-    const calls = []; const client = { query: async (sql, values) => calls.push([sql, values]), release: () => calls.push(['release']) }
+    const calls = []; const client = { query: async (sql, values) => { calls.push([sql, values]); return { rows: [{ acquired: true }] } }, release: () => calls.push(['release']) }
     const pg = new PostgresAccountFence({ connect: async () => client }, async () => 'active')
     assert.equal(await pg.withWrite('owner_c', async () => 'pg-write'), 'pg-write')
-    assert.match(calls[0][0], /pg_advisory_lock_shared/); assert.match(calls.at(-2)[0], /pg_advisory_unlock_shared/)
+    assert.match(calls[0][0], /pg_try_advisory_lock_shared/); assert.match(calls.at(-1)[0], /pg_advisory_unlock_shared/); await pg.close()
     console.log('PASS account fence drains local writers, rejects new writers, releases failures, and uses PostgreSQL advisory locks')
   } finally { await rm(directory, { recursive: true, force: true }) }
 })().catch(error => { console.error(error); process.exitCode = 1 })

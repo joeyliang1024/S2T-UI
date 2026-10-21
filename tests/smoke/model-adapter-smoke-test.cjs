@@ -35,9 +35,14 @@ const main = async () => {
   assert.ok(requests.length > 0, 'ordinary microphone audio must reach ASR before recording stops')
   assert.ok(transcripts.some((entry) => entry.sourceText === '測試即時字幕'), 'ASR results must be emitted during capture')
   assert.equal(requests[0].prompt, undefined, 'the first chunk has no rolling context yet')
+  // Requests already in flight use the last committed context, not a future
+  // response. Feed another chunk after the first parallel window has committed.
+  for (let offset = 48_000 * 7; offset < 48_000 * 10; offset += 128) {
+    live.pushAudio(new Float32Array(128).fill(.1), offset)
+  }
   await live.stop()
   assert.ok(requests.length >= 2, 'the final flush must send the remaining pending audio')
-  assert.ok(String(requests[1].prompt || '').includes('測試即時字幕'), 'later chunks must carry the previous caption as rolling prompt')
+  assert.ok(requests.some(request => String(request.prompt || '').includes('測試即時字幕')), 'later chunks must carry the previous caption as rolling prompt')
   const shortEvents = []
   const short = createOpenAiChunkedModelAdapter({ id: 'short-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false, vadConfig: { minSpeechMs:120, minSilenceMs:250, preRollMs:300, noiseFloorOffsetDb:12, chunkMinMs:700, chunkMaxMs:1500 } })
   short.onTranscript(e=>shortEvents.push(e))
@@ -127,10 +132,11 @@ const main = async () => {
   assert.equal(new Headers(webRequests[0].headers).get('x-s2t-model-id'), 'default')
   assert.equal(new Headers(webRequests[0].headers).get('x-s2t-language'), 'zh')
   assert.ok(webTranscripts.some((entry) => entry.sourceText === '網頁即時字幕'), 'authenticated web ASR must emit live captions')
+  for (let offset = 48_000 * 7; offset < 48_000 * 10; offset += 128) web.pushAudio(new Float32Array(128).fill(.1), offset)
   await web.stop()
   assert.ok(webRequests.length >= 2, 'the web flush must send the remaining pending audio')
   assert.equal(new Headers(webRequests[0].headers).get('x-s2t-prompt'), null, 'the first web chunk has no rolling context yet')
-  assert.ok(decodeURIComponent(String(new Headers(webRequests[1].headers).get('x-s2t-prompt') || '')).includes('網頁即時字幕'), 'web chunks must carry the rolling prompt header')
+  assert.ok(webRequests.some(request => decodeURIComponent(String(new Headers(request.headers).get('x-s2t-prompt') || '')).includes('網頁即時字幕')), 'web chunks must carry the rolling prompt header')
   assert.deepEqual(webErrors, [])
   // Silero gate observability: vetoes report silero_veto and drop the chunk;
   // a failing gate fails open (chunk still transcribed) with silero_failed.

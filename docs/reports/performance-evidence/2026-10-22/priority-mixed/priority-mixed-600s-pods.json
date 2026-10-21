@@ -1,0 +1,68 @@
+[
+  {
+    "name": "gateway-7df85bcdbc-k7b8k",
+    "containers": [
+      {
+        "name": "gateway",
+        "imageID": "docker-pullable://s2t-ui@sha256:180536b7eb8d5e26eec237e695351bcdeef5c32bbf587a9aba1ce0ed1d701a8f",
+        "restartCount": 0,
+        "ready": true
+      }
+    ]
+  },
+  {
+    "name": "gateway-7df85bcdbc-twrmc",
+    "containers": [
+      {
+        "name": "gateway",
+        "imageID": "docker-pullable://s2t-ui@sha256:180536b7eb8d5e26eec237e695351bcdeef5c32bbf587a9aba1ce0ed1d701a8f",
+        "restartCount": 0,
+        "ready": true
+      }
+    ]
+  },
+  {
+    "name": "minio-6457869c57-ftpxj",
+    "containers": [
+      {
+        "name": "minio",
+        "imageID": "docker-pullable://cgr.dev/chainguard/minio@sha256:32c504bea4574d8f29d719b37bc0dad920ecf3e22b81dc5cea0bb105af2ce10f",
+        "restartCount": 0,
+        "ready": true
+      }
+    ]
+  },
+  {
+    "name": "postgres-56b57dbc4d-nlt29",
+    "containers": [
+      {
+        "name": "postgres",
+        "imageID": "docker-pullable://postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+        "restartCount": 0,
+        "ready": true
+      }
+    ]
+  },
+  {
+    "name": "prometheus-84977c75d9-nrg2k",
+    "containers": [
+      {
+        "name": "prometheus",
+        "imageID": "docker-pullable://prom/prometheus@sha256:63805ebb8d2b3920190daf1cb14a60871b16fd38bed42b857a3182bc621f4996",
+        "restartCount": 0,
+        "ready": true
+      }
+    ]
+  },
+  {
+    "name": "redis-7fb68d8fbd-v622c",
+    "containers": [
+      {
+        "name": "redis",
+        "imageID": "docker-pullable://redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+        "restartCount": 0,
+        "ready": true
+      }
+    ]
+  }
+]

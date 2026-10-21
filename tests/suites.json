@@ -82,7 +82,11 @@
     "account-role-store-smoke-test.cjs",
     "audio-source-selection-smoke-test.cjs",
     "monitoring-dashboard-smoke-test.cjs",
-    "desktop-shared-models-smoke-test.cjs"
+    "desktop-shared-models-smoke-test.cjs",
+    "adaptive-capacity-smoke-test.cjs",
+    "performance-capacity-smoke-test.cjs",
+    "dns-lookup-smoke-test.cjs",
+    "priority-workload-smoke-test.cjs"
   ],
   "http": [
     "gateway-env-smoke-test.cjs",
@@ -98,7 +102,10 @@
     "gateway-single-origin-smoke-test.cjs",
     "account-deletion-http-smoke-test.cjs",
     "model-health-restart-http-smoke-test.cjs",
-    "admin-feature-policy-smoke-test.cjs"
+    "admin-feature-policy-smoke-test.cjs",
+    "postgres-timeout-smoke-test.cjs",
+    "gateway-500-latency-smoke-test.cjs",
+    "model-http-capacity-smoke-test.cjs"
   ],
   "models": [
     "gateway-auth-smoke-test.cjs",

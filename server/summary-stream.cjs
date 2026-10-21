@@ -1,6 +1,6 @@
-const OpenAI = require('openai').default
+const { createModelClient } = require('./model-http.cjs')
 async function streamSummary(request, response, value, messages, baseURL, observe) {
-  const client = new OpenAI({ apiKey: value.apiKey, baseURL, timeout: 30_000, maxRetries: 0 })
+  const client = createModelClient('summaries', { apiKey: value.apiKey, baseURL, timeout: 30_000, maxRetries: 0 })
   const abort = new AbortController()
   const close = () => { if (!response.writableEnded) abort.abort() }
   response.on('close', close)

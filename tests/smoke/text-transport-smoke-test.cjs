@@ -8,12 +8,12 @@ const clock = () => { let callback, duration; return { count: 0, setTimeout(fn, 
 ;(async () => {
   const timer = clock(); let wire
   const web = createWebTextPort(binding, { clock: timer, fetch: async (url, options) => { wire = { url, options }; return new Response(JSON.stringify({ text: 'こんにちは' }), { headers: { 'server-timing': 'translation_model;dur=20' } }) } })
-  assert.equal((await web.complete(input)).text, 'こんにちは')
-  assert.equal(timer.duration, 15000); assert.equal(timer.count, 0)
+  assert.equal((await web.complete({ ...input, workload: 'realtime' })).text, 'こんにちは')
+  assert.equal(new Headers(wire.options.headers).get('x-s2t-workload'), 'realtime'); assert.equal(timer.duration, 15000); assert.equal(timer.count, 0)
   assert.equal(JSON.parse(wire.options.body).temperature, .25); assert.equal(JSON.parse(wire.options.body).glossary, input.glossary)
   assert.equal(new Headers(wire.options.headers).get('x-s2t-model-id'), 'custom'); assert.ok(new Headers(wire.options.headers).get('x-s2t-idempotency-key'))
   const firstKey = wire.options.headers['x-s2t-idempotency-key']; await web.complete({ ...input, format: 'markdown' })
-  assert.equal(timer.duration, 90000); assert.equal(JSON.parse(wire.options.body).format, 'markdown'); assert.notEqual(wire.options.headers['x-s2t-idempotency-key'], firstKey)
+  assert.equal(new Headers(wire.options.headers).get('x-s2t-workload'), 'background'); assert.equal(timer.duration, 90000); assert.equal(JSON.parse(wire.options.body).format, 'markdown'); assert.notEqual(wire.options.headers['x-s2t-idempotency-key'], firstKey)
   const abort = new AbortController(); abort.abort()
   const noWire = createWebTextPort(binding, { clock: timer, fetch: async () => { throw Error('must not send') } })
   await assert.rejects(noWire.complete({ ...input, signal: abort.signal }), { name: 'AbortError' })

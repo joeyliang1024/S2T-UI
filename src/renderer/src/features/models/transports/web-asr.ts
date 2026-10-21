@@ -27,7 +27,7 @@ export const createWebAsrTransport = (profile: AsrProfile, fetch: typeof authFet
     try {
       const response = await fetch('/api/transcriptions', {
         method: 'POST', headers: {
-          'content-type': 'audio/wav', 'x-s2t-idempotency-key': request.key, 'x-s2t-language': request.language,
+          'content-type': 'audio/wav', 'x-s2t-workload': 'realtime', 'x-s2t-idempotency-key': request.key, 'x-s2t-language': request.language,
           ...(profile.gatewayProfileId ? { 'x-s2t-model-id': profile.gatewayProfileId } : {}),
           ...(profile.dynaudnormEnabled ? { 'x-s2t-dynaudnorm': 'true' } : {}),
           ...(prompt ? { 'x-s2t-prompt': encodeURIComponent(prompt) } : {})
@@ -50,7 +50,7 @@ export const createWebAsrTransport = (profile: AsrProfile, fetch: typeof authFet
     transcribe,
     hasSpeech: async audio => {
       checkOwner()
-      const response = await fetch('/api/audio-processing/silero-vad', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio })
+      const response = await fetch('/api/audio-processing/silero-vad', { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: audio, signal: AbortSignal.timeout(1500) })
       const payload = await readGatewayPayload(response) as { error?: string; speech?: unknown[]; processingMs?: number }
       checkOwner()
       if (!response.ok) throw new Error(payload.error || activeTranslate('svcSileroGatewayFailed').replace('{status}', String(response.status)))

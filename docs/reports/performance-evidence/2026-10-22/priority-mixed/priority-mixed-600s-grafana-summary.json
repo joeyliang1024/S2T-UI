@@ -1,0 +1,3373 @@
+{
+  "start": 1792625601.452,
+  "end": 1792626216.452,
+  "source": "Grafana s2t-prometheus datasource; real job=s2t",
+  "queries": {
+    "up": {
+      "query": "up{job=\"s2t\",metrics_scope=\"\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "up",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "up",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        }
+      ]
+    },
+    "client_errors": {
+      "query": "sum by(kind)(rate(s2t_perf_errors_total{instance=~\"performance-load-10m.*\"}[1m]))",
+      "series": [
+        {
+          "labels": {
+            "kind": "asr"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "kind": "chain"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "kind": "draft"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "kind": "translation"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "kind": "upload"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        }
+      ]
+    },
+    "dropped": {
+      "query": "sum(s2t_perf_dropped_total{instance=~\"performance-load-10m.*\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        }
+      ]
+    },
+    "pending": {
+      "query": "sum(s2t_perf_pending{instance=~\"performance-load-10m.*\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": 0.0,
+          "max": 177.0
+        }
+      ]
+    },
+    "max_shard_p95": {
+      "query": "max by(kind)(s2t_perf_duration_milliseconds{instance=~\"performance-load-10m.*\",quantile=\"0.95\"})",
+      "series": [
+        {
+          "labels": {
+            "kind": "asr"
+          },
+          "samples": 123,
+          "min": 779.4725780000008,
+          "max": 1340.4137310000006
+        },
+        {
+          "labels": {
+            "kind": "chain"
+          },
+          "samples": 123,
+          "min": 1329.6705660000007,
+          "max": 1882.4656590000013
+        },
+        {
+          "labels": {
+            "kind": "draft"
+          },
+          "samples": 123,
+          "min": 333.8380199999956,
+          "max": 764.1695599999985
+        },
+        {
+          "labels": {
+            "kind": "translation"
+          },
+          "samples": 123,
+          "min": 564.8721470000019,
+          "max": 634.0792550000187
+        },
+        {
+          "labels": {
+            "kind": "upload"
+          },
+          "samples": 123,
+          "min": 411.64614399999846,
+          "max": 913.9247060000016
+        }
+      ]
+    },
+    "max_shard_p90": {
+      "query": "max by(kind)(s2t_perf_duration_milliseconds{instance=~\"performance-load-10m.*\",quantile=\"0.9\"})",
+      "series": [
+        {
+          "labels": {
+            "kind": "asr"
+          },
+          "samples": 123,
+          "min": 746.0717469999945,
+          "max": 1337.5033570000014
+        },
+        {
+          "labels": {
+            "kind": "chain"
+          },
+          "samples": 123,
+          "min": 1278.7709269999905,
+          "max": 1879.903534000001
+        },
+        {
+          "labels": {
+            "kind": "draft"
+          },
+          "samples": 123,
+          "min": 266.65426600000137,
+          "max": 764.0789769999974
+        },
+        {
+          "labels": {
+            "kind": "translation"
+          },
+          "samples": 123,
+          "min": 560.08482,
+          "max": 584.5752619999985
+        },
+        {
+          "labels": {
+            "kind": "upload"
+          },
+          "samples": 123,
+          "min": 379.933183000001,
+          "max": 908.6440409999996
+        }
+      ]
+    },
+    "gateway_cpu": {
+      "query": "rate(s2t_process_cpu_seconds_total{job=\"s2t\"}[30s])",
+      "series": [
+        {
+          "labels": {
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway"
+          },
+          "samples": 124,
+          "min": 0.02261304,
+          "max": 0.47701540000000026
+        },
+        {
+          "labels": {
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway"
+          },
+          "samples": 124,
+          "min": 0.010458280000000002,
+          "max": 0.4610842000000002
+        }
+      ]
+    },
+    "event_loop": {
+      "query": "s2t_event_loop_p99_seconds{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_event_loop_p99_seconds",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway"
+          },
+          "samples": 124,
+          "min": 0.023183359,
+          "max": 0.123076607
+        },
+        {
+          "labels": {
+            "__name__": "s2t_event_loop_p99_seconds",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway"
+          },
+          "samples": 124,
+          "min": 0.022904831,
+          "max": 0.071434239
+        }
+      ]
+    },
+    "background_active": {
+      "query": "sum(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundActive\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": 0.0,
+          "max": 11.0
+        }
+      ]
+    },
+    "background_leases": {
+      "query": "max(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundLeases\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": -1.0,
+          "max": 8.0
+        }
+      ]
+    },
+    "background_lease_health": {
+      "query": "min(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundLeaseHealthy\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": 0.0,
+          "max": 1.0
+        }
+      ]
+    },
+    "background_lease_age": {
+      "query": "max(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundLeaseAgeSeconds\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": -1.0,
+          "max": 1.223
+        }
+      ]
+    },
+    "background_waiting": {
+      "query": "sum(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundWaiting\"})",
+      "series": [
+        {
+          "labels": {},
+          "samples": 124,
+          "min": 0.0,
+          "max": 18.0
+        }
+      ]
+    },
+    "host_pressure": {
+      "query": "s2t_host_pressure_ratio{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "io",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0038,
+          "max": 0.009899999999999999
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "io",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.0089,
+          "max": 0.011899999999999999
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "io",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0064,
+          "max": 0.009399999999999999
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0626,
+          "max": 0.46619999999999995
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.037200000000000004,
+          "max": 0.1777
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0535,
+          "max": 0.2762
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "io",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0105,
+          "max": 0.0219
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "io",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.013500000000000002,
+          "max": 0.016
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "resource": "io",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0116,
+          "max": 0.0174
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "io",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0031,
+          "max": 0.009899999999999999
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "io",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.0089,
+          "max": 0.011899999999999999
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "full",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "io",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0062,
+          "max": 0.009399999999999999
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.060599999999999994,
+          "max": 0.46619999999999995
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.0371,
+          "max": 0.1778
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "cpu",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0526,
+          "max": 0.2762
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "io",
+            "service": "gateway",
+            "window": "10s"
+          },
+          "samples": 124,
+          "min": 0.0105,
+          "max": 0.0215
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "io",
+            "service": "gateway",
+            "window": "300s"
+          },
+          "samples": 124,
+          "min": 0.013500000000000002,
+          "max": 0.016
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_pressure_ratio",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "kind": "some",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "resource": "io",
+            "service": "gateway",
+            "window": "60s"
+          },
+          "samples": 124,
+          "min": 0.0116,
+          "max": 0.0172
+        }
+      ]
+    },
+    "host_load": {
+      "query": "s2t_host_load_average{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_host_load_average",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "window": "15m"
+          },
+          "samples": 124,
+          "min": 1.37,
+          "max": 2.82
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_load_average",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "window": "1m"
+          },
+          "samples": 124,
+          "min": 2.12,
+          "max": 9.06
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_load_average",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "window": "5m"
+          },
+          "samples": 124,
+          "min": 1.37,
+          "max": 4.19
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_load_average",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "window": "15m"
+          },
+          "samples": 124,
+          "min": 1.37,
+          "max": 2.82
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_load_average",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "window": "1m"
+          },
+          "samples": 124,
+          "min": 2.12,
+          "max": 9.06
+        },
+        {
+          "labels": {
+            "__name__": "s2t_host_load_average",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "window": "5m"
+          },
+          "samples": 124,
+          "min": 1.37,
+          "max": 4.19
+        }
+      ]
+    },
+    "postgres_pools": {
+      "query": "s2t_postgres_connections{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "idle"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 5.0,
+          "max": 5.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "total"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 4.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "health",
+            "service": "gateway",
+            "state": "idle"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "health",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "health",
+            "service": "gateway",
+            "state": "total"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "health",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 2.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 124,
+          "min": 3.0,
+          "max": 3.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "idle"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 124,
+          "min": 12.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 12.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "total"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "idle"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 5.0,
+          "max": 5.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "total"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 4.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "fence",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "health",
+            "service": "gateway",
+            "state": "idle"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "health",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "health",
+            "service": "gateway",
+            "state": "total"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "health",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 124,
+          "min": 3.0,
+          "max": 3.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "idle"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 124,
+          "min": 12.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 12.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "total"
+          },
+          "samples": 124,
+          "min": 1.0,
+          "max": 12.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_postgres_connections",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "pool": "queries",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 1.0
+        }
+      ]
+    },
+    "redis_queues": {
+      "query": "s2t_redis_capacity_state{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "admissionProbes"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 7.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundLeaseAgeSeconds"
+          },
+          "samples": 124,
+          "min": -1.0,
+          "max": 0.509
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundLeaseHealthy"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundLeases"
+          },
+          "samples": 124,
+          "min": -1.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 15.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "pendingCommands"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 5.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "releasingCapacity"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 40.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "waitingCapacity"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 15.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "admissionProbes"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 2.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundLeaseAgeSeconds"
+          },
+          "samples": 124,
+          "min": -1.0,
+          "max": 1.223
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundLeaseHealthy"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 1.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundLeases"
+          },
+          "samples": 124,
+          "min": -1.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 13.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "pendingCommands"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "releasingCapacity"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 45.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_redis_capacity_state",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "waitingCapacity"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 29.0
+        }
+      ]
+    },
+    "minio_pool": {
+      "query": "s2t_minio_http_capacity{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 24.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 124,
+          "min": 20.0,
+          "max": 32.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "bufferedBytes"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 1536000.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "bufferedPending"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 24.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "idleSockets"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 60.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 124,
+          "min": 80.0,
+          "max": 128.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 128.0,
+          "max": 128.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "sockets"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 24.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 39.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 124,
+          "min": 20.0,
+          "max": 32.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "bufferedBytes"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 2496000.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "bufferedPending"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 39.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "idleSockets"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 59.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 124,
+          "min": 80.0,
+          "max": 128.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 124,
+          "min": 128.0,
+          "max": 128.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "sockets"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 39.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_minio_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 0.0
+        }
+      ]
+    },
+    "model_http_pool": {
+      "query": "s2t_model_http_capacity{job=\"s2t\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 56.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 4.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 123,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "connections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 59.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "idleConnections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 58.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 123,
+          "min": 256.0,
+          "max": 256.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 123,
+          "min": 512.0,
+          "max": 512.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "socketQueued"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "asr",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 2.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 2.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 122,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "connections"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 3.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "idleConnections"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 3.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 122,
+          "min": 256.0,
+          "max": 256.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 122,
+          "min": 512.0,
+          "max": 512.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "socketQueued"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 60.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 5.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 122,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "connections"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 72.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "idleConnections"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 70.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 122,
+          "min": 256.0,
+          "max": 256.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 122,
+          "min": 512.0,
+          "max": 512.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "socketQueued"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.145:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-k7b8k",
+            "role": "translations",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 122,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 54.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 5.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 123,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "connections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 56.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "idleConnections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 55.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 123,
+          "min": 256.0,
+          "max": 256.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 123,
+          "min": 512.0,
+          "max": 512.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "socketQueued"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "asr",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 2.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 2.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 123,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "connections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 4.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "idleConnections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 4.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 123,
+          "min": 256.0,
+          "max": 256.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 123,
+          "min": 512.0,
+          "max": 512.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "socketQueued"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "summaries",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "active"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 56.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "backgroundActive"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 6.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "backgroundLimit"
+          },
+          "samples": 123,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "backgroundWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "connections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 71.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "idleConnections"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 71.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "limit"
+          },
+          "samples": 123,
+          "min": 256.0,
+          "max": 256.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "maximum"
+          },
+          "samples": 123,
+          "min": 512.0,
+          "max": 512.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "realtimeWaiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "socketQueued"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        },
+        {
+          "labels": {
+            "__name__": "s2t_model_http_capacity",
+            "instance": "10.42.0.146:8787",
+            "job": "s2t",
+            "pod": "gateway-7df85bcdbc-twrmc",
+            "role": "translations",
+            "service": "gateway",
+            "state": "waiting"
+          },
+          "samples": 123,
+          "min": 0.0,
+          "max": 0.0
+        }
+      ]
+    },
+    "storage_p95": {
+      "query": "histogram_quantile(0.95,sum by(operation,le)(rate(s2t_storage_operation_duration_seconds_bucket{job=\"s2t\"}[1m])))",
+      "series": [
+        {
+          "labels": {
+            "operation": "claimRequest"
+          },
+          "samples": 122,
+          "min": 0.08941969196919691,
+          "max": 0.30668603124999966
+        },
+        {
+          "labels": {
+            "operation": "completeRequest"
+          },
+          "samples": 122,
+          "min": 0.023898083035735276,
+          "max": 0.09577095808383228
+        },
+        {
+          "labels": {
+            "operation": "diarizationBacklog"
+          },
+          "samples": 124,
+          "min": 0.023749999999999997,
+          "max": 0.48999999999999994
+        },
+        {
+          "labels": {
+            "operation": "health"
+          },
+          "samples": 124,
+          "min": 0.023749999999999997,
+          "max": 0.024428838046176307
+        },
+        {
+          "labels": {
+            "operation": "pruneExpiredRequests"
+          },
+          "samples": 124,
+          "min": 0.04375,
+          "max": 0.5800000000000002
+        },
+        {
+          "labels": {
+            "operation": "put"
+          },
+          "samples": 122,
+          "min": 0.23851961950059453,
+          "max": 0.7419402985074636
+        },
+        {
+          "labels": {
+            "operation": "putCheckpoint"
+          },
+          "samples": 122,
+          "min": 0.09789719626168225,
+          "max": 0.3926829268292682
+        },
+        {
+          "labels": {
+            "operation": "updateRecording"
+          },
+          "samples": 122,
+          "min": 0.02719370382221789,
+          "max": 0.25932926829268277
+        }
+      ]
+    },
+    "server_stage_p95": {
+      "query": "histogram_quantile(0.95,sum by(stage,le)(rate(s2t_server_stage_duration_seconds_bucket{job=\"s2t\"}[1m])))",
+      "series": [
+        {
+          "labels": {
+            "stage": "asr_capacity_wait"
+          },
+          "samples": 122,
+          "min": 0.024479336818033322,
+          "max": 0.06451351351351346
+        },
+        {
+          "labels": {
+            "stage": "asr_model"
+          },
+          "samples": 122,
+          "min": 0.59,
+          "max": 0.6416145833333335
+        },
+        {
+          "labels": {
+            "stage": "asr_upload_read"
+          },
+          "samples": 122,
+          "min": 0.023749999999999997,
+          "max": 0.023750000000000004
+        },
+        {
+          "labels": {
+            "stage": "background_capacity_wait"
+          },
+          "samples": 122,
+          "min": 1.5791666666666664,
+          "max": 2.847783951296438
+        },
+        {
+          "labels": {
+            "stage": "readiness_postgres"
+          },
+          "samples": 124,
+          "min": 0.023749999999999997,
+          "max": 0.024428838046176307
+        },
+        {
+          "labels": {
+            "stage": "readiness_redis"
+          },
+          "samples": 124,
+          "min": 0.023749999999999997,
+          "max": 0.024428838046176307
+        },
+        {
+          "labels": {
+            "stage": "translation_capacity_wait"
+          },
+          "samples": 122,
+          "min": 0.023749999999999997,
+          "max": 0.024498768472906406
+        },
+        {
+          "labels": {
+            "stage": "translation_model"
+          },
+          "samples": 122,
+          "min": 0.59,
+          "max": 0.5926883843369529
+        }
+      ]
+    },
+    "renderer_p95": {
+      "query": "histogram_quantile(0.95,sum by(stage,le)(rate(s2t_caption_stage_duration_seconds_bucket{job=\"s2t\",stage=~\"e2e_asr|e2e_translation|t5_network|t7_network\"}[1m])))",
+      "series": [
+        {
+          "labels": {
+            "stage": "e2e_asr"
+          },
+          "samples": 124,
+          "min": 0.9878947368421053,
+          "max": 1.9499999999999995
+        },
+        {
+          "labels": {
+            "stage": "e2e_translation"
+          },
+          "samples": 124,
+          "min": 1.4849999999999999,
+          "max": 2.4749999999999996
+        },
+        {
+          "labels": {
+            "stage": "t5_network"
+          },
+          "samples": 124,
+          "min": 0.023749999999999997,
+          "max": 0.03624999999999997
+        },
+        {
+          "labels": {
+            "stage": "t7_network"
+          },
+          "samples": 124,
+          "min": 0.023749999999999997,
+          "max": 0.08083333333333331
+        }
+      ]
+    },
+    "renderer_p90": {
+      "query": "histogram_quantile(0.90,sum by(stage,le)(rate(s2t_caption_stage_duration_seconds_bucket{job=\"s2t\",stage=~\"e2e_asr|e2e_translation|t5_network|t7_network\"}[1m])))",
+      "series": [
+        {
+          "labels": {
+            "stage": "e2e_asr"
+          },
+          "samples": 124,
+          "min": 0.9757894736842105,
+          "max": 1.4399999999999995
+        },
+        {
+          "labels": {
+            "stage": "e2e_translation"
+          },
+          "samples": 124,
+          "min": 1.47,
+          "max": 2.283333333333333
+        },
+        {
+          "labels": {
+            "stage": "t5_network"
+          },
+          "samples": 124,
+          "min": 0.0225,
+          "max": 0.02475
+        },
+        {
+          "labels": {
+            "stage": "t7_network"
+          },
+          "samples": 124,
+          "min": 0.0225,
+          "max": 0.061666666666666654
+        }
+      ]
+    },
+    "memory": {
+      "query": "container_memory_working_set_bytes{namespace=\"s2t-stress-20261005\",pod!=\"\"}",
+      "series": [
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod013f0db5-8538-4851-9da9-ece75874f87e",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "sentinel-f8cf6c746-g7zkn"
+          },
+          "samples": 124,
+          "min": 4247552.0,
+          "max": 4255744.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod135c6466-3cd2-4743-9050-b194ade7bf47",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "sentinel-f8cf6c746-lrc6h"
+          },
+          "samples": 124,
+          "min": 4263936.0,
+          "max": 4526080.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod14ab9dec-6f18-4760-a7ef-92a4bcc68c24",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "performance-load-10m-3-6685d85d5d-8wl69"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 76558336.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod4953b6b0-945e-417f-b164-c7ed528f95c7",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "sentinel-exporter-56b566647d-4749d"
+          },
+          "samples": 124,
+          "min": 8912896.0,
+          "max": 13467648.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod51af8615-ab71-4959-8efa-05c212931cb4",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "minio-6457869c57-ftpxj"
+          },
+          "samples": 124,
+          "min": 1363087360.0,
+          "max": 1564508160.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod5cc715c4-5b6d-42d8-bfc6-43cc1629c4ff",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "gateway-7df85bcdbc-k7b8k"
+          },
+          "samples": 124,
+          "min": 63971328.0,
+          "max": 454242304.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod6f5fd4be-502c-46cd-a266-65eed089c193",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "performance-load-10m-2-58d6f68f78-vjcmh"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 78450688.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod733c96e1-a723-4658-9fb9-e41704444251",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "redis-7fb68d8fbd-v622c"
+          },
+          "samples": 124,
+          "min": 11005952.0,
+          "max": 11886592.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod886b82a4-09af-401e-a687-4d2c77a3905d",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "redis-replica-5f4b578b68-t2sts"
+          },
+          "samples": 124,
+          "min": 9502720.0,
+          "max": 10190848.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod8fafbce6-41ba-4577-8b77-1db230254c0b",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "redis-replica-5f4b578b68-klplr"
+          },
+          "samples": 124,
+          "min": 9322496.0,
+          "max": 10006528.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod92e88ca7-d190-40b4-bcf4-d033ccbc746f",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "performance-background-74b7c99d4-5fxw9"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 53506048.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pod9a7823c4-77ce-4578-8b0b-dbe3436f3e10",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "grafana-8544bf6864-5jw6p"
+          },
+          "samples": 124,
+          "min": 150405120.0,
+          "max": 156266496.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/poda771e700-d8e9-4463-9df1-c0acfd6011d2",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "performance-load-10m-1-865c88658b-cvrmv"
+          },
+          "samples": 124,
+          "min": 42835968.0,
+          "max": 79900672.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podae5c8aa3-2f94-4eca-8c23-5ca5e8af3702",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "report-preview-576fcdcf49-mldqp"
+          },
+          "samples": 124,
+          "min": 23732224.0,
+          "max": 24682496.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podaf6a7f54-a61f-40b3-97eb-332417bb48e5",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "postgres-exporter-7fbcf6479c-t4n45"
+          },
+          "samples": 124,
+          "min": 9973760.0,
+          "max": 11354112.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podb7a5002e-e8ea-446f-ac99-2b7c5b758bc2",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "mock-models-847dcffc6c-6tzl2"
+          },
+          "samples": 56,
+          "min": 73555968.0,
+          "max": 73555968.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podb8dd0e68-59f5-4bb8-b844-7d9ce5b39012",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "gateway-7df85bcdbc-twrmc"
+          },
+          "samples": 124,
+          "min": 65470464.0,
+          "max": 457232384.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podc86602b2-75e5-4b15-a6b3-e5286408ff03",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "sentinel-f8cf6c746-9z44v"
+          },
+          "samples": 124,
+          "min": 4263936.0,
+          "max": 4272128.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podd0347c9c-f80a-4214-bf91-1ea342ef1c11",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "postgres-56b57dbc4d-nlt29"
+          },
+          "samples": 124,
+          "min": 260583424.0,
+          "max": 408346624.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podd552b0cc-6a10-4571-af7c-c9c41e86630c",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "redis-exporter-667c47b4d7-jb74h"
+          },
+          "samples": 124,
+          "min": 9551872.0,
+          "max": 11866112.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pode01f8d6f-8ae1-45f6-b97d-d892444c6d87",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "performance-load-10m-0-54478f595d-6n6xq"
+          },
+          "samples": 124,
+          "min": 0.0,
+          "max": 77221888.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/pode0dd62fc-02d7-48b3-9799-d02e6fe90f83",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "prometheus-84977c75d9-nrg2k"
+          },
+          "samples": 124,
+          "min": 380133376.0,
+          "max": 425533440.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podeeb73f2a-4fbd-4dac-9dea-2b59bab6bdf5",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "mock-models-6b597d686-nwmz5"
+          },
+          "samples": 124,
+          "min": 9838592.0,
+          "max": 26157056.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podf8c17803-7d30-4b14-8ec6-e4dbcb54b8b8",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "gateway-677758d64f-bzbgk"
+          },
+          "samples": 45,
+          "min": 245321728.0,
+          "max": 245321728.0
+        },
+        {
+          "labels": {
+            "__name__": "container_memory_working_set_bytes",
+            "id": "/kubepods/burstable/podfa2e4e4d-9ba1-4c7b-945a-d728785c70bd",
+            "instance": "colima-s2t-stress",
+            "job": "kubelet-cadvisor",
+            "namespace": "s2t-stress-20261005",
+            "node": "colima-s2t-stress",
+            "pod": "gateway-677758d64f-tkwzb"
+          },
+          "samples": 43,
+          "min": 225345536.0,
+          "max": 225345536.0
+        }
+      ]
+    },
+    "redis_memory": {
+      "query": "redis_memory_used_bytes",
+      "series": [
+        {
+          "labels": {
+            "__name__": "redis_memory_used_bytes",
+            "instance": "redis-replica:6379",
+            "job": "redis"
+          },
+          "samples": 124,
+          "min": 2792984.0,
+          "max": 3208056.0
+        },
+        {
+          "labels": {
+            "__name__": "redis_memory_used_bytes",
+            "instance": "redis:6379",
+            "job": "redis"
+          },
+          "samples": 124,
+          "min": 3143368.0,
+          "max": 3731912.0
+        }
+      ]
+    },
+    "redis_clients": {
+      "query": "redis_connected_clients",
+      "series": [
+        {
+          "labels": {
+            "__name__": "redis_connected_clients",
+            "instance": "redis-replica:6379",
+            "job": "redis"
+          },
+          "samples": 124,
+          "min": 8.0,
+          "max": 8.0
+        },
+        {
+          "labels": {
+            "__name__": "redis_connected_clients",
+            "instance": "redis:6379",
+            "job": "redis"
+          },
+          "samples": 124,
+          "min": 15.0,
+          "max": 15.0
+        },
+        {
+          "labels": {
+            "__name__": "redis_connected_clients",
+            "instance": "sentinel:26379",
+            "job": "sentinel"
+          },
+          "samples": 124,
+          "min": 3.0,
+          "max": 4.0
+        }
+      ]
+    }
+  }
+}

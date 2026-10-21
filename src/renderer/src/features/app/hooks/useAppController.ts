@@ -1,3 +1,4 @@
+import { orderedWindow } from '../../../shared/services/ordered-window'
 import { prompt, setPromptCatalog } from '../../../shared/services/prompts'
 import type { ComparisonKind } from '../../quality-comparison/domain/comparison'
 import { createTextSearch } from '../../../shared/services/search'
@@ -60,10 +61,11 @@ const maximumGeneratedSessionTitleLength = 's2t-YYYY-MM-DDTHH-MM-SS-sssZ'.length
 
 const requestBrowserAsr = async (init: RequestInit, controller = new AbortController()): Promise<Response> => {
   const timeout = window.setTimeout(() => controller.abort(), browserAsrTimeoutMs)
-  try { return await authFetch('/api/transcriptions', { ...init, signal: controller.signal }) }
+  try { return await authFetch('/api/transcriptions', { ...init, headers: { ...init.headers, 'x-s2t-workload': 'background' }, signal: controller.signal }) }
   finally { window.clearTimeout(timeout) }
 }
 
+const automaticSessionTitlePattern = /^s2t-\d{4}-\d{2}-\d{2}T/
 const automaticSessionTitle = (_transcript: string, createdAt = new Date().toISOString()): string => {
   return `s2t-${new Date(createdAt).toISOString().replace(/[:.]/g, '-')}`
 }
@@ -199,6 +201,9 @@ useEffect(() => {
           if (finished) {
             setSessions((current) => current.map((entry) => entry.id === job.id && entry.processingToken === job.token
               ? { ...finished, processingState: finished.processingError || finished.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined } : entry))
+            // The durable gateway job is the completion moment for web records;
+            // replace the fallback title now that the transcript is final.
+            if (!finished.processingError && !finished.processingFailures?.length) void generateSessionTitle(job.id, finished.transcript)
           } else {
             // The job answered but the record it belongs to was removed or
             // replaced by another tab. Leaving the poller running would
@@ -511,6 +516,7 @@ useEffect(() => () => {
 const cancelImportRef = useRef(false)
 
 const importAbortRef = useRef<AbortController | null>(null)
+const importRequestsRef = useRef(new Set<AbortController>())
 
 const liveDiarizationRunningRef = useRef(false)
 const liveDiarizationGroupsRef = useRef(new Map<string, string>())
@@ -608,7 +614,8 @@ useEffect(() => {
 }, [adminParameters?.translationConcurrency, adminParameters?.translationSentenceWaitMs])
 const translationReady = settings.translationEnabled && Boolean(settings.translationModel.trim()) && (!window.s2t || Boolean(settings.translationEndpoint.trim()))
 const textCompletionPort = useMemo(() => createTextPort({ id: settings.selectedTranslationModelId, endpoint: settings.translationEndpoint, model: settings.translationModel, requiresApiKey: settings.translationProfiles.find(profile => profile.id === settings.selectedTranslationModelId)?.requiresApiKey }), [settings.selectedTranslationModelId, settings.translationEndpoint, settings.translationModel, settings.translationProfiles, userId])
-const translateCaption = useCallback<TranslateCaption>((entry, signal, timeoutMs = 15_000) => textCompletionPort.complete({
+const translateCaption = useCallback<TranslateCaption>((entry, signal, timeoutMs = 15_000, workload = 'realtime') => textCompletionPort.complete({
+  workload,
   text: entry.sourceText, sourceLanguage: entry.detectedLanguage || settings.sourceLanguage,
   targetLanguage: resolveTranslationTarget(entry.detectedLanguage, settings.targetLanguage), glossary: settings.glossary,
   temperature: adminParameters?.translationTemperature, signal, timeoutMs
@@ -1943,6 +1950,10 @@ const stopCapture = async (): Promise<void> => {
               const audioVersions = currentEntry.audioVersions?.map((item) => item.id === targetVersionId ? { ...item, segments, transcript: updatedTranscript } : item)
               return { ...currentEntry, segments, transcript: updatedTranscript, processingState: currentEntry.processingError || currentEntry.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined, ...(audioVersions ? { audioVersions } : {}) }
             }))
+            // Background work just finished: this is the first moment the full
+            // transcript exists, so replace the fallback title with a real one.
+            const finishedEntry = sessionsRef.current.find((item) => item.id === sessionId)
+            if (finishedEntry?.processingState === 'completed') void generateSessionTitle(sessionId, finishedEntry.transcript)
           } catch (error) {
             patchProcessing({ processingState: 'failed', processingStage: undefined, processingFailures: [...new Set([...(sessionsRef.current.find(entry => entry.id === sessionId)?.processingFailures || []), 'diarization' as const])], processingError: error instanceof Error ? error.message : activeTranslate('stDiarizationFailed') })
             setStatus(error instanceof Error ? activeTranslate('stRecordingSavedDiarizationFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stRecordingSavedDiarizationFailed'))
@@ -2340,15 +2351,20 @@ const transcribeImportedFile = async (): Promise<void> => {
       const firstChunkIndex = checkpointMatches ? checkpoint!.nextChunkIndex : 0
       if (checkpointMatches) setImportError(activeTranslate('stImportResumedFromCheckpoint').replace('{index}', String(firstChunkIndex + 1)).replace('{total}', String(totalChunks)))
       setImportProgress({ current: firstChunkIndex, total: totalChunks })
-      for (let index = firstChunkIndex; index < totalChunks; index += 1) {
+      // Four bounded requests keep vLLM supplied without loading the whole
+      // file. Only ordered, contiguous results advance the durable checkpoint.
+      await orderedWindow({ start: firstChunkIndex, end: totalChunks, concurrency: 4,
+        cancelled: () => cancelImportRef.current,
+        produce: async index => {
         if (cancelImportRef.current) throw new Error(activeTranslate('stBatchCancelledCompletedKept'))
-        const chunk = await readPcmWavFileChunk(wavFile, wavLayout, wavStartByte)
-        if (wavLayout) wavStartByte = nextPcmWavChunkStart(wavLayout, wavStartByte)
+        const startByte = wavStartByte
+        const nextByteOffset = nextPcmWavChunkStart(wavLayout, startByte)
+        wavStartByte = nextByteOffset
+        const chunk = await readPcmWavFileChunk(wavFile, wavLayout, startByte)
         const targetSampleRate = wavLayout ? chooseModelSampleRate(wavLayout.sampleRate, selectedModel.capabilities.supportedSampleRates ?? []) : undefined
         const asrAudio = wavLayout && targetSampleRate !== undefined && targetSampleRate !== wavLayout.sampleRate
           ? await resampleAudioForAsr(chunk.audio, targetSampleRate)
           : chunk.audio
-        setImportProgress({ current: index + 1, total: totalChunks })
         let response: { text: string } | undefined
         let lastError: unknown
         for (const delay of [0, 400, 1_200]) {
@@ -2361,14 +2377,14 @@ const transcribeImportedFile = async (): Promise<void> => {
               filename: `batch-${index + 1}.wav`, contentType: 'audio/wav', audio: asrAudio
             }) : await (() => {
               const controller = new AbortController()
-              importAbortRef.current = controller
+              importRequestsRef.current.add(controller)
               return requestBrowserAsr({ method: 'POST', headers: {
               'content-type': 'audio/wav',
               'x-s2t-filename': headerValue(`batch-${index + 1}.wav`),
               ...(webGatewayAsrProfileId ? { 'x-s2t-model-id': webGatewayAsrProfileId } : {}),
               ...(asrLanguage(settings.sourceLanguage) ? { 'x-s2t-language': asrLanguage(settings.sourceLanguage) } : {}),
               ...(settings.glossary ? { 'x-s2t-prompt': headerValue(settings.glossary) } : {})
-            }, body: asrAudio }, controller).finally(() => { if (importAbortRef.current === controller) importAbortRef.current = null })
+            }, body: asrAudio }, controller).finally(() => { importRequestsRef.current.delete(controller) })
             })().then(async (result) => {
               const payload = await readJsonResponse<{ text?: string; error?: string }>(result, activeTranslate('stBatchAsrGatewayLabel'))
               if (!result.ok) throw new Error(payload.error || `HTTP ${result.status}`)
@@ -2381,12 +2397,17 @@ const transcribeImportedFile = async (): Promise<void> => {
           }
         }
         if (!response) throw lastError instanceof Error ? lastError : new Error(activeTranslate('stChunkTranscriptionFailed').replace('{index}', String(index + 1)))
+        return { chunk, response, nextByteOffset }
+        },
+        commit: async ({ chunk, response, nextByteOffset }, index) => {
         const mergedNext = joinOverlappedText(merged, response.text)
         const appended = mergedNext.slice(merged.length).trim()
         if (appended) segments.push({ id: crypto.randomUUID(), revision: 1, status: 'final', startMs: chunk.startMs, endMs: chunk.endMs, sourceText: appended })
         merged = mergedNext
-        if (wavLayout && !window.s2t) await remoteSessionStorage.saveImportCheckpoint({ fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, nextChunkIndex: index + 1, nextByteOffset: wavStartByte, totalChunks, segments, mergedText: merged, updatedAt: new Date().toISOString() })
-      }
+        if (wavLayout && !window.s2t) await remoteSessionStorage.saveImportCheckpoint({ fingerprint, modelId: selectedModel.id, modelSnapshot, sourceLanguage: settings.sourceLanguage, prompt: settings.glossary, nextChunkIndex: index + 1, nextByteOffset, totalChunks, segments, mergedText: merged, updatedAt: new Date().toISOString() })
+        setImportProgress({ current: index + 1, total: totalChunks })
+        }
+      })
       if (!segments.length) { if (wavLayout && !window.s2t) await remoteSessionStorage.deleteImportCheckpoint(); throw new Error(activeTranslate('stModelReturnedNoTranscript')) }
       if (wavLayout && !window.s2t) await remoteSessionStorage.deleteImportCheckpoint()
       setTranscripts(segments)
@@ -2399,6 +2420,7 @@ const transcribeImportedFile = async (): Promise<void> => {
 const cancelImport = (): void => {
     cancelImportRef.current = true
     importAbortRef.current?.abort()
+    for (const controller of importRequestsRef.current) controller.abort()
     setImportError(activeTranslate('stCancellingCurrentUpload'))
   }
 
@@ -2417,11 +2439,18 @@ const retryFailedSession = async (entry: SavedSession, backup?: File, legacyStag
     activeRecoveries: recoveryActiveRef.current, qualityCorrectionActive: qualityCorrectionActiveRef.current,
     loadSessionAudio, audioVersionsFor, activeAudioVersionFor, resampleAudioForAsr, requestBrowserAsr, authFetch,
     saveAudio: remoteSessionStorage.saveAudio,
-    translate: (segment, signal, timeout) => translationTransportRef.current!(segment, signal, timeout),
+    translate: (segment, signal, timeout) => translationTransportRef.current!(segment, signal, timeout ?? 90_000, 'background'),
     publish: (updated, previousToken, token) => setSessions(current => current.map(item =>
       item.id === updated.id && (item.processingToken === token || item.processingToken === previousToken) ? updated : item)),
     setStatus, activeTranslate
   }, entry, backup, legacyStage)
+  // A successful retry leaves a final transcript behind; take the same chance
+  // to replace the fallback title as a fresh recording would.
+  const recovered = sessionsRef.current.find((item) => item.id === entry.id)
+  if (recovered && recovered.processingState === 'completed') {
+    const transcript = recovered.transcript?.trim() || makeTranscriptText(recovered.segments)
+    if (transcript.trim()) void generateSessionTitle(recovered.id, transcript)
+  }
 }
 const transcribeCorrection = async (data: ArrayBuffer, model = selectedModel, language = settings.sourceLanguage, prompt = settings.glossary): Promise<{ text: string }> => {
     const profileId = gatewayAsrProfileId(model.id)
@@ -2528,7 +2557,7 @@ const finalizeSession = async (entry: SavedSession, items: ComparisonKind[] = ['
           if (segment.status !== 'final' || !segment.sourceText.trim()) continue
           // A single shared signal: it outlives no request, and any future
           // cancellation of this run reaches every segment at once.
-          const result = await translate(segment, abort.signal)
+          const result = await translate(segment, abort.signal, 90_000, 'background')
           if (!result.text.trim()) throw new Error(activeTranslate('stTranslationServiceEmpty'))
           segments[index] = { ...segment, translatedText: result.text, translationStatus: 'completed' }
         }
@@ -2945,7 +2974,9 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
       const visible = title.length > maximumGeneratedSessionTitleLength
         ? `${title.slice(0, maximumGeneratedSessionTitleLength - 1)}…`
         : title
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, title: visible } : entry))
+      // Never overwrite a title the user chose; only replace the deterministic
+      // s2t-timestamp fallback that recording/finalization assigned.
+      setSessions((current) => current.map((entry) => entry.id === sessionId && automaticSessionTitlePattern.test(entry.title ?? '') ? { ...entry, title: visible } : entry))
     } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
     finally {
       titleActiveRef.current.delete(sessionId)
@@ -3077,6 +3108,55 @@ const translateSummary = (entry: SavedSession, targetOverride?: string, signal?:
     emptyError: () => new Error(activeTranslate('stTranslationServiceEmpty')),
     publish: (source, text, translated, targetLanguage) => setSessions(current => current.map(item => item.id === source.id && item.summary?.trim() === text ? { ...item, summaryTranslation: translated, summaryTranslationTargetLanguage: targetLanguage } : item))
   })
+}
+
+const [sessionViewTranslation, setSessionViewTranslation] = useState<{ sessionId: string; targetLanguage: string; texts: Record<string, string>; fullText?: string; state: 'translating' | 'ready' | 'failed'; error?: string } | null>(null)
+const sessionViewTranslationAbortRef = useRef<AbortController | null>(null)
+
+const clearSessionViewTranslation = (): void => {
+  sessionViewTranslationAbortRef.current?.abort()
+  sessionViewTranslationAbortRef.current = null
+  setSessionViewTranslation(null)
+}
+
+/** Translate a saved transcript into a chosen language for display only.
+ *  The result lives in transient UI state: the record's own subtitles — the
+ *  original text and any stored translation — are never rewritten, so picking
+ *  a language here cannot damage the saved record. A newer request supersedes
+ *  an in-flight one. */
+const translateSessionForView = async (entry: SavedSession, targetLanguage: string): Promise<void> => {
+  if (!targetLanguage) { clearSessionViewTranslation(); return }
+  if (!settings.translationModel.trim() || (window.s2t && !settings.translationEndpoint.trim())) { setStatus(activeTranslate('stWebTranslationGateway') + ': model not configured'); return }
+  sessionViewTranslationAbortRef.current?.abort()
+  const abort = new AbortController()
+  sessionViewTranslationAbortRef.current = abort
+  setSessionViewTranslation({ sessionId: entry.id, targetLanguage, texts: {}, state: 'translating' })
+  const segments = entry.segments?.filter(segment => segment.status === 'final' && segment.sourceText.trim()) ?? []
+  const complete = (text: string, sourceLanguage: string, timeoutMs: number): Promise<{ text: string }> =>
+    textCompletionPort.complete({ text, sourceLanguage, targetLanguage, glossary: settings.glossary, temperature: adminParameters?.translationTemperature, signal: abort.signal, timeoutMs })
+  try {
+    if (segments.length) {
+      const texts: Record<string, string> = {}
+      await orderedWindow({ start: 0, end: segments.length, concurrency: 4,
+        cancelled: () => abort.signal.aborted,
+        produce: index => complete(segments[index].sourceText, segments[index].detectedLanguage || settings.sourceLanguage, 30_000),
+        commit: async (result, index) => {
+          if (!result.text.trim()) return
+          texts[segments[index].id] = result.text
+          setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, texts: { ...texts } } : current)
+        } })
+    } else if (entry.transcript?.trim()) {
+      const result = await complete(entry.transcript, settings.sourceLanguage, 60_000)
+      if (abort.signal.aborted) return
+      if (!result.text.trim()) throw new Error(activeTranslate('stTranslationServiceEmpty'))
+      setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, fullText: result.text } : current)
+    }
+    if (abort.signal.aborted) return
+    setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, state: 'ready' } : current)
+  } catch (error) {
+    if (abort.signal.aborted) return
+    setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, state: 'failed', error: error instanceof Error ? error.message : String(error) } : current)
+  }
 }
 
 const createSummary = async (): Promise<void> => {
@@ -3417,6 +3497,9 @@ createSummary,
 summarizeSession,
 cancelSessionSummary,
 translateSummary,
+sessionViewTranslation,
+translateSessionForView,
+clearSessionViewTranslation,
 canRecord,
 canContinueRecording: sessions.some((entry) => entry.id === liveSessionIdRef.current),
 startOrContinueRecording,

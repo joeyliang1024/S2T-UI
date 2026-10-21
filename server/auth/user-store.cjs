@@ -1,4 +1,5 @@
 const { randomUUID, createHash } = require('node:crypto')
+const { writer } = require('../storage/request-batches.cjs')
 
 const normalizeUsername = (value) => {
   if (typeof value !== 'string') throw new Error('帳號格式不正確')
@@ -114,7 +115,19 @@ class LocalUserStore {
 }
 
 class PostgresUserStore {
-  constructor(pool) { this.pool = pool }
+  constructor(pool) {
+    this.pool = pool
+    this.sessionReads = writer(async entries => {
+      const unique = [...new Map(entries.map(x => [JSON.stringify(x), x])).values()]
+      const result = await pool.query(`SELECT users.id, users.username, users.nt AS "NT", users.department AS "Department", users.role,
+        users.created_at AS "createdAt", users.deletion_state AS "deletionState", records.value AS revocations, input."revokedKey"
+        FROM jsonb_to_recordset($1::jsonb) AS input(id text,"revokedKey" text)
+        JOIN s2t_users users ON users.id=input.id
+        LEFT JOIN s2t_config_records records ON records.scope=users.id AND records.record_key=input."revokedKey"`, [JSON.stringify(unique)])
+      const found = new Map(result.rows.map(row => [JSON.stringify([row.id,row.revokedKey]),row]))
+      return entries.map(x => found.get(JSON.stringify([x.id,x.revokedKey])) || null)
+    })
+  }
   async create(input) {
     const user = userInput(input)
     const client = await this.pool.connect()
@@ -167,6 +180,9 @@ class PostgresUserStore {
     return result.rows[0] || null
   }
   async findByUsername(username) { const result = await this.pool.query('SELECT id, username, password_hash AS "passwordHash", nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState" FROM s2t_users WHERE username = $1', [normalizeUsername(username)]); return result.rows[0] || null }
+  async findSessionUser(id, revokedKey) {
+    return this.sessionReads.request({ id: userId(id), revokedKey })
+  }
   async findById(id) { const result = await this.pool.query('SELECT id, username, password_hash AS "passwordHash", nt AS "NT", department AS "Department", role, created_at AS "createdAt", deletion_state AS "deletionState" FROM s2t_users WHERE id = $1', [userId(id)]); return result.rows[0] || null }
   async markDeleting(id, actorId) {
     const targetId = userId(id); const actor = userId(actorId); const client = await this.pool.connect()

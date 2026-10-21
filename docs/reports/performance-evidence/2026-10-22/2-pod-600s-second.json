@@ -1,0 +1,1014 @@
+{
+  "users": 500,
+  "gatewayReplicas": 2,
+  "durationSeconds": 600,
+  "finished": true,
+  "startedAt": [
+    "2026-10-21T15:10:06.980Z",
+    "2026-10-21T15:10:06.980Z",
+    "2026-10-21T15:10:06.980Z",
+    "2026-10-21T15:10:06.980Z"
+  ],
+  "warmup": [
+    {
+      "requests": 250,
+      "errors": 0,
+      "durationMs": 596.1179200000006,
+      "p95Ms": 513.5625929999987,
+      "maxMs": 526.9218060000003,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    },
+    {
+      "requests": 250,
+      "errors": 0,
+      "durationMs": 640.9178950000005,
+      "p95Ms": 543.4707729999991,
+      "maxMs": 556.9177840000011,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    },
+    {
+      "requests": 250,
+      "errors": 0,
+      "durationMs": 561.5837010000014,
+      "p95Ms": 506.2715360000002,
+      "maxMs": 536.1186319999979,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    },
+    {
+      "requests": 250,
+      "errors": 0,
+      "durationMs": 611.6090810000005,
+      "p95Ms": 499.57038699999976,
+      "maxMs": 521.0242419999995,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    }
+  ],
+  "offered": 150000,
+  "dropped": 61768,
+  "offeredSuccessRate": 0.5881733333333333,
+  "httpAttempts": 277443,
+  "httpErrors": 17,
+  "httpSuccessRate": 0.9999387261527594,
+  "stages": {
+    "asr": {
+      "attempted": 88232,
+      "errors": 6,
+      "successRate": 0.9999319974612385,
+      "statuses": {
+        "200": 88226
+      },
+      "errorTypes": {
+        "transport_timeout_or_abort": 6
+      },
+      "p50Ms": 1692.4544590000005,
+      "p95Ms": 3271.591390000074,
+      "p99Ms": 4806.8051989999985,
+      "maxMs": 14483.264007000005,
+      "over3s": 6786,
+      "residualP95Ms": 741.1305160000222
+    },
+    "translation": {
+      "attempted": 88226,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {
+        "200": 88226
+      },
+      "errorTypes": {},
+      "p50Ms": 1256.4245879999944,
+      "p95Ms": 2929.5204959999974,
+      "p99Ms": 4243.549077000003,
+      "maxMs": 15687.873091999998,
+      "over3s": 4144,
+      "residualP95Ms": 346.7287779999974
+    },
+    "upload": {
+      "attempted": 88232,
+      "errors": 11,
+      "successRate": 0.9998753286789374,
+      "statuses": {
+        "200": 88221
+      },
+      "errorTypes": {
+        "transport_timeout_or_abort": 11
+      },
+      "p50Ms": 2068.7216310000513,
+      "p95Ms": 4827.561690000002,
+      "p99Ms": 6731.736439,
+      "maxMs": 14773.383987999998,
+      "over3s": 22280,
+      "residualP95Ms": null
+    },
+    "draft": {
+      "attempted": 12753,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {
+        "204": 12753
+      },
+      "errorTypes": {},
+      "p50Ms": 734.1461120000022,
+      "p95Ms": 1835.206338,
+      "p99Ms": 2255.310448999997,
+      "maxMs": 2960.6426199999987,
+      "over3s": 0,
+      "residualP95Ms": null
+    },
+    "chain": {
+      "attempted": 88232,
+      "errors": 6,
+      "successRate": 0.9999319974612385,
+      "statuses": {},
+      "errorTypes": {
+        "transport_timeout_or_abort": 6
+      },
+      "p50Ms": 3016.328891000012,
+      "p95Ms": 6306.086346999997,
+      "p99Ms": 8578.006971000003,
+      "maxMs": 21521.32872,
+      "over3s": 44881,
+      "residualP95Ms": null
+    }
+  },
+  "minutes": [
+    {
+      "minute": 0,
+      "stages": {
+        "asr": {
+          "attempted": 10437,
+          "errors": 6,
+          "successRate": 0.9994251221615407,
+          "statuses": {
+            "200": 10431
+          },
+          "errorTypes": {
+            "transport_timeout_or_abort": 6
+          },
+          "p50Ms": 2750.2716169999985,
+          "p95Ms": 4953.441378000003,
+          "p99Ms": 8804.722133000003,
+          "maxMs": 14483.264007000005,
+          "over3s": 4410,
+          "residualP95Ms": 1179.2937970000003
+        },
+        "translation": {
+          "attempted": 10139,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 10139
+          },
+          "errorTypes": {},
+          "p50Ms": 2264.300627000004,
+          "p95Ms": 4871.189661,
+          "p99Ms": 12408.065178999997,
+          "maxMs": 15687.873091999998,
+          "over3s": 3751,
+          "residualP95Ms": 1157.9861450000012
+        },
+        "upload": {
+          "attempted": 7350,
+          "errors": 11,
+          "successRate": 0.9985034013605442,
+          "statuses": {
+            "200": 7339
+          },
+          "errorTypes": {
+            "transport_timeout_or_abort": 11
+          },
+          "p50Ms": 3440.5484940000024,
+          "p95Ms": 5873.120214000002,
+          "p99Ms": 8754.777459999998,
+          "maxMs": 14773.383987999998,
+          "over3s": 4471,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1651,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1651
+          },
+          "errorTypes": {},
+          "p50Ms": 1185.7310380000017,
+          "p95Ms": 2287.737498999999,
+          "p99Ms": 2414.9552140000014,
+          "maxMs": 2960.6426199999987,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 10145,
+          "errors": 6,
+          "successRate": 0.9994085756530311,
+          "statuses": {},
+          "errorTypes": {
+            "transport_timeout_or_abort": 6
+          },
+          "p50Ms": 5468.762389999996,
+          "p95Ms": 10854.646383999996,
+          "p99Ms": 17853.63608,
+          "maxMs": 21521.32872,
+          "over3s": 8390,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 1,
+      "stages": {
+        "asr": {
+          "attempted": 8807,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8807
+          },
+          "errorTypes": {},
+          "p50Ms": 1684.0285339999973,
+          "p95Ms": 3043.197279999993,
+          "p99Ms": 4609.284121000004,
+          "maxMs": 5707.451245000004,
+          "over3s": 496,
+          "residualP95Ms": 747.5437280000053
+        },
+        "translation": {
+          "attempted": 8883,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8883
+          },
+          "errorTypes": {},
+          "p50Ms": 1219.2001969999983,
+          "p95Ms": 2812.8518410000106,
+          "p99Ms": 4484.187912999987,
+          "maxMs": 5483.938054999991,
+          "over3s": 293,
+          "residualP95Ms": 315.130553999993
+        },
+        "upload": {
+          "attempted": 8988,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8988
+          },
+          "errorTypes": {},
+          "p50Ms": 2272.295708999998,
+          "p95Ms": 5401.644676000011,
+          "p99Ms": 7862.07811799999,
+          "maxMs": 9408.010691000003,
+          "over3s": 2564,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 931,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 931
+          },
+          "errorTypes": {},
+          "p50Ms": 611.8133090000047,
+          "p95Ms": 1143.554832000009,
+          "p99Ms": 1263.6852500000095,
+          "maxMs": 1321.2190330000012,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 8883,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 3081.739355999991,
+          "p95Ms": 6214.001338999995,
+          "p99Ms": 7358.907152,
+          "maxMs": 7953.963902999996,
+          "over3s": 4629,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 2,
+      "stages": {
+        "asr": {
+          "attempted": 8300,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8300
+          },
+          "errorTypes": {},
+          "p50Ms": 1664.471313999995,
+          "p95Ms": 2533.4707190000045,
+          "p99Ms": 3451.2131339999905,
+          "maxMs": 3940.8328299999994,
+          "over3s": 169,
+          "residualP95Ms": 598.2271589999959
+        },
+        "translation": {
+          "attempted": 8287,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8287
+          },
+          "errorTypes": {},
+          "p50Ms": 1267.693836999999,
+          "p95Ms": 2076.42659800002,
+          "p99Ms": 2629.559800999996,
+          "maxMs": 3022.7052629999816,
+          "over3s": 17,
+          "residualP95Ms": 283.5647549999959
+        },
+        "upload": {
+          "attempted": 7986,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 7986
+          },
+          "errorTypes": {},
+          "p50Ms": 2106.5524349999905,
+          "p95Ms": 4068.749495999975,
+          "p99Ms": 5445.289885999984,
+          "maxMs": 8769.743891999999,
+          "over3s": 1662,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1432,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1432
+          },
+          "errorTypes": {},
+          "p50Ms": 666.4638599999889,
+          "p95Ms": 1407.4208240000007,
+          "p99Ms": 1711.1575980000198,
+          "maxMs": 1770.0098469999793,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 8287,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 3033.091610000003,
+          "p95Ms": 4486.450681000017,
+          "p99Ms": 5028.172378999996,
+          "maxMs": 5191.230391000019,
+          "over3s": 4388,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 3,
+      "stages": {
+        "asr": {
+          "attempted": 9022,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9022
+          },
+          "errorTypes": {},
+          "p50Ms": 1578.169950999989,
+          "p95Ms": 3103.546656999999,
+          "p99Ms": 3367.072352999996,
+          "maxMs": 3731.7845469999884,
+          "over3s": 681,
+          "residualP95Ms": 888.8137860000147
+        },
+        "translation": {
+          "attempted": 8825,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8825
+          },
+          "errorTypes": {},
+          "p50Ms": 1182.0077429999947,
+          "p95Ms": 2010.0017119999975,
+          "p99Ms": 2694.3736830000125,
+          "maxMs": 3129.932316999999,
+          "over3s": 17,
+          "residualP95Ms": 276.45032900000797
+        },
+        "upload": {
+          "attempted": 9524,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9524
+          },
+          "errorTypes": {},
+          "p50Ms": 1905.976874999993,
+          "p95Ms": 4382.671533000015,
+          "p99Ms": 5354.718116000004,
+          "maxMs": 7495.868291000021,
+          "over3s": 2016,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1479,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1479
+          },
+          "errorTypes": {},
+          "p50Ms": 939.2204500000225,
+          "p95Ms": 2053.214294000005,
+          "p99Ms": 2248.8984340000025,
+          "maxMs": 2293.538292000012,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 8825,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 2851.2171090000193,
+          "p95Ms": 5089.38081599999,
+          "p99Ms": 5505.385779000004,
+          "maxMs": 5598.906214999995,
+          "over3s": 3687,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 4,
+      "stages": {
+        "asr": {
+          "attempted": 9101,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9101
+          },
+          "errorTypes": {},
+          "p50Ms": 1743.6594520000508,
+          "p95Ms": 2650.962746999983,
+          "p99Ms": 2843.063242000004,
+          "maxMs": 3062.5614690000075,
+          "over3s": 21,
+          "residualP95Ms": 671.5792319999728
+        },
+        "translation": {
+          "attempted": 9036,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9036
+          },
+          "errorTypes": {},
+          "p50Ms": 1316.7078910000273,
+          "p95Ms": 2159.6368650000077,
+          "p99Ms": 2599.0738629999687,
+          "maxMs": 3039.8257729999605,
+          "over3s": 6,
+          "residualP95Ms": 355.18034299998317
+        },
+        "upload": {
+          "attempted": 9162,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9162
+          },
+          "errorTypes": {},
+          "p50Ms": 2071.973692999978,
+          "p95Ms": 3986.926395999966,
+          "p99Ms": 5073.872450000024,
+          "maxMs": 7822.481572999968,
+          "over3s": 1839,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1257,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1257
+          },
+          "errorTypes": {},
+          "p50Ms": 641.6904999999679,
+          "p95Ms": 993.9972200000193,
+          "p99Ms": 1051.8741140000056,
+          "maxMs": 1148.1813410000177,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 9036,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 3091.139259999967,
+          "p95Ms": 4582.516690999968,
+          "p99Ms": 5090.928131999972,
+          "maxMs": 5197.245290999999,
+          "over3s": 5189,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 5,
+      "stages": {
+        "asr": {
+          "attempted": 8915,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8915
+          },
+          "errorTypes": {},
+          "p50Ms": 1609.1700869999477,
+          "p95Ms": 2639.1646189999883,
+          "p99Ms": 3094.4566380000324,
+          "maxMs": 3318.3388709999854,
+          "over3s": 143,
+          "residualP95Ms": 601.599077999969
+        },
+        "translation": {
+          "attempted": 8986,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8986
+          },
+          "errorTypes": {},
+          "p50Ms": 1191.0546670000185,
+          "p95Ms": 2308.6174499999615,
+          "p99Ms": 2864.152439999976,
+          "maxMs": 3287.768963999988,
+          "over3s": 51,
+          "residualP95Ms": 291.33489300003043
+        },
+        "upload": {
+          "attempted": 8507,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8507
+          },
+          "errorTypes": {},
+          "p50Ms": 1903.9154240000062,
+          "p95Ms": 5612.1503870000015,
+          "p99Ms": 8335.953149000008,
+          "maxMs": 11840.914698000008,
+          "over3s": 2153,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1268,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1268
+          },
+          "errorTypes": {},
+          "p50Ms": 724.3086370000383,
+          "p95Ms": 1113.5065460000187,
+          "p99Ms": 1433.332231999957,
+          "maxMs": 1481.434156000032,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 8986,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 2848.627225999953,
+          "p95Ms": 5005.832137999998,
+          "p99Ms": 5322.516128999996,
+          "maxMs": 5405.394634000026,
+          "over3s": 3786,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 6,
+      "stages": {
+        "asr": {
+          "attempted": 8900,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8900
+          },
+          "errorTypes": {},
+          "p50Ms": 1589.371335999982,
+          "p95Ms": 3019.6714650000213,
+          "p99Ms": 5328.9678380000405,
+          "maxMs": 5617.962824999995,
+          "over3s": 452,
+          "residualP95Ms": 550.540048999982
+        },
+        "translation": {
+          "attempted": 9091,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9091
+          },
+          "errorTypes": {},
+          "p50Ms": 1170.951071999967,
+          "p95Ms": 1836.9728539999924,
+          "p99Ms": 2101.0146299999906,
+          "maxMs": 2645.985791999963,
+          "over3s": 0,
+          "residualP95Ms": 249.0561380000272
+        },
+        "upload": {
+          "attempted": 9246,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 9246
+          },
+          "errorTypes": {},
+          "p50Ms": 1800.3282250000047,
+          "p95Ms": 4753.49076299998,
+          "p99Ms": 7160.104093000002,
+          "maxMs": 7785.511682999961,
+          "over3s": 1756,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1393,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1393
+          },
+          "errorTypes": {},
+          "p50Ms": 827.4424710000167,
+          "p95Ms": 1683.111173000012,
+          "p99Ms": 2129.7303930000053,
+          "maxMs": 2304.6350530000054,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 9091,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 2860.443606999994,
+          "p95Ms": 5041.387785000028,
+          "p99Ms": 6747.397456000035,
+          "maxMs": 7234.563377999992,
+          "over3s": 3465,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 7,
+      "stages": {
+        "asr": {
+          "attempted": 8455,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8455
+          },
+          "errorTypes": {},
+          "p50Ms": 1640.849018000008,
+          "p95Ms": 2667.346029999957,
+          "p99Ms": 3047.3005789999734,
+          "maxMs": 3232.2501979999943,
+          "over3s": 140,
+          "residualP95Ms": 708.9328049999917
+        },
+        "translation": {
+          "attempted": 8590,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8590
+          },
+          "errorTypes": {},
+          "p50Ms": 1284.617637999996,
+          "p95Ms": 2115.5085940000135,
+          "p99Ms": 2417.963812000002,
+          "maxMs": 3054.051321999985,
+          "over3s": 6,
+          "residualP95Ms": 336.27776200001597
+        },
+        "upload": {
+          "attempted": 8276,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8276
+          },
+          "errorTypes": {},
+          "p50Ms": 2058.306840000034,
+          "p95Ms": 4784.060281999991,
+          "p99Ms": 5907.227248999989,
+          "maxMs": 7451.467142999987,
+          "over3s": 1973,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1142,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1142
+          },
+          "errorTypes": {},
+          "p50Ms": 882.5871090000146,
+          "p95Ms": 1793.4260859999922,
+          "p99Ms": 1953.6253039999865,
+          "maxMs": 2059.6098869999987,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 8590,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 3036.439370999986,
+          "p95Ms": 4578.964431,
+          "p99Ms": 5145.017017000006,
+          "maxMs": 5443.7094900000375,
+          "over3s": 4469,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 8,
+      "stages": {
+        "asr": {
+          "attempted": 7425,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 7425
+          },
+          "errorTypes": {},
+          "p50Ms": 1803.3709990000352,
+          "p95Ms": 2818.574984000006,
+          "p99Ms": 3141.7393659999943,
+          "maxMs": 3325.70996800001,
+          "over3s": 146,
+          "residualP95Ms": 632.5105100000742
+        },
+        "translation": {
+          "attempted": 7443,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 7443
+          },
+          "errorTypes": {},
+          "p50Ms": 1247.60527,
+          "p95Ms": 2242.8321609999985,
+          "p99Ms": 2680.1303740000003,
+          "maxMs": 3064.323245000036,
+          "over3s": 3,
+          "residualP95Ms": 322.6637170000422
+        },
+        "upload": {
+          "attempted": 7300,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 7300
+          },
+          "errorTypes": {},
+          "p50Ms": 2243.5689199999906,
+          "p95Ms": 4436.7500380000565,
+          "p99Ms": 6048.628573000024,
+          "maxMs": 7158.449757999973,
+          "over3s": 1757,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 944,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 944
+          },
+          "errorTypes": {},
+          "p50Ms": 571.3458349999855,
+          "p95Ms": 1106.1732000000193,
+          "p99Ms": 1229.5030319999787,
+          "maxMs": 1358.6870259999996,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 7443,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 3128.8500969999004,
+          "p95Ms": 4704.827884999977,
+          "p99Ms": 5119.032050000038,
+          "maxMs": 5197.203179000004,
+          "over3s": 4025,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 9,
+      "stages": {
+        "asr": {
+          "attempted": 8870,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8870
+          },
+          "errorTypes": {},
+          "p50Ms": 1561.652529999963,
+          "p95Ms": 2434.954803999979,
+          "p99Ms": 3253.4579260000028,
+          "maxMs": 3421.7869550000178,
+          "over3s": 128,
+          "residualP95Ms": 535.2132960000076
+        },
+        "translation": {
+          "attempted": 8621,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8621
+          },
+          "errorTypes": {},
+          "p50Ms": 1151.6119990000734,
+          "p95Ms": 1674.6134349999484,
+          "p99Ms": 2041.7268290000502,
+          "maxMs": 2460.2515659999335,
+          "over3s": 0,
+          "residualP95Ms": 239.58396099993956
+        },
+        "upload": {
+          "attempted": 8784,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 8784
+          },
+          "errorTypes": {},
+          "p50Ms": 1977.7424420000752,
+          "p95Ms": 4208.52829799999,
+          "p99Ms": 4942.117475999985,
+          "maxMs": 5706.899666000041,
+          "over3s": 2089,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 1256,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 1256
+          },
+          "errorTypes": {},
+          "p50Ms": 597.7677070000209,
+          "p95Ms": 988.1747789999936,
+          "p99Ms": 1086.6900509999832,
+          "maxMs": 1161.6473009999609,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 8621,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 2729.0904940000037,
+          "p95Ms": 3931.4189350000815,
+          "p99Ms": 4782.577001999947,
+          "maxMs": 4983.063822000055,
+          "over3s": 2826,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 10,
+      "stages": {
+        "asr": {
+          "attempted": 0,
+          "errors": 0,
+          "successRate": null,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": null,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "translation": {
+          "attempted": 325,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 325
+          },
+          "errorTypes": {},
+          "p50Ms": 1000.646510999999,
+          "p95Ms": 1861.0829709999962,
+          "p99Ms": 1939.7023889999837,
+          "maxMs": 1983.7652350000571,
+          "over3s": 0,
+          "residualP95Ms": 804.1114900000348
+        },
+        "upload": {
+          "attempted": 3109,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3109
+          },
+          "errorTypes": {},
+          "p50Ms": 349.50197600002866,
+          "p95Ms": 1921.9952530000592,
+          "p99Ms": 2098.370101999957,
+          "maxMs": 2711.3740719999187,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 0,
+          "errors": 0,
+          "successRate": null,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": null,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": null,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 325,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 2569.480813000002,
+          "p95Ms": 4039.48600299994,
+          "p99Ms": 4133.037346999976,
+          "maxMs": 4176.367178999935,
+          "over3s": 27,
+          "residualP95Ms": null
+        }
+      }
+    }
+  ],
+  "generatorLoopP99Ms": [
+    243.269631,
+    238.157823,
+    255.197183,
+    194.904063
+  ],
+  "generatorLoopMaxMs": [
+    1708.130303,
+    1329.594367,
+    1676.673023,
+    1484.783615
+  ],
+  "note": "Real K8s Gateway, PostgreSQL, Redis Sentinel and MinIO; 500 accounts send 2-second PCM chunks every 2 seconds. Model APIs fixed at 500ms. Includes recording chunk persistence and live drafts. HTTP residual excludes browser rendering, microphone/VAD, ingress and WAN.",
+  "failures": {
+    "fetch failed": 11,
+    "fetch failed (ECONNREFUSED)": 6
+  },
+  "strictApiChainPassed": false,
+  "acceptance10mComplete": true
+}

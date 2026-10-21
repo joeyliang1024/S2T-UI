@@ -1,5 +1,11 @@
-const { S3CompatibleClient: MinioClient } = require('./s3.cjs')
+const { BufferedS3Client: MinioClient } = require('./buffered-s3.cjs')
 const { Pool } = require('pg')
+const { postgresOptions, observePoolErrors } = require('./postgres-options.cjs')
+const { adaptPostgresPool } = require('./adaptive-postgres.cjs')
+const { createConcurrencyGate } = require('../concurrency-gate.cjs')
+const { createRecordingBatches } = require('./recording-batches.cjs')
+const { createRequestBatches } = require('./request-batches.cjs')
+const { createCheckpointBatches } = require('./checkpoint-batches.cjs')
 const { safePart, validateEmbedding, validateVectorRecord } = require('./local.cjs')
 const { logger } = require('../logger.cjs')
 
@@ -8,19 +14,34 @@ const minioOptions = (config) => {
   return { endPoint: endpoint.hostname, port: endpoint.port ? Number(endpoint.port) : endpoint.protocol === 'https:' ? 443 : 80, useSSL: endpoint.protocol === 'https:', accessKey: config.S2T_MINIO_ACCESS_KEY, secretKey: config.S2T_MINIO_SECRET_KEY }
 }
 class MinioBlobStore {
+  close() { this.closed = true; this.client.destroy() }
   constructor(config) {
     this.bucket = config.S2T_MINIO_BUCKET; this.client = new MinioClient(minioOptions(config))
+    this.streams = createConcurrencyGate({ maximum: 8, maxWaiting: 1000, waitMs: 120000 })
     // Readiness failures name the component: without this line the aggregated
     // storage.ready rejection only says "connect ECONNREFUSED" and does not
     // tell an operator whether MinIO, Postgres or Milvus is the broken one.
-    this.ready = this.ensureBucket().catch((error) => { logger.error('storage.blob.unavailable', { bucket: this.bucket, error }); throw error })
+    this.ready = this.initializeBucket().catch((error) => { logger.error('storage.blob.unavailable', { bucket: this.bucket, error }); throw error })
+  }
+  async initializeBucket() {
+    const deadline = Date.now() + 30000
+    let attempt = 0
+    for (;;) {
+      try { return await this.ensureBucket() }
+      catch (error) {
+        const transient = ['ECONNREFUSED','ECONNRESET','EPIPE','ETIMEDOUT','EAI_AGAIN','ENETUNREACH'].includes(error.code) || ['TimeoutError','RequestTimeout'].includes(error.name) || error.$metadata?.httpStatusCode >= 500
+        if (this.closed || !transient || Date.now() >= deadline) throw error
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000, 100 * 2 ** Math.min(attempt++,4), deadline - Date.now())))
+      }
+    }
   }
   async ensureBucket() { if (!await this.client.bucketExists(this.bucket)) { try { await this.client.makeBucket(this.bucket) } catch (error) { if (!['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'].includes(error.code || error.name) || !await this.client.bucketExists(this.bucket)) throw error } } }
   key(scope, key) { return `${safePart(scope, 'scope')}/${key.split('/').map((part) => safePart(part, 'blob key')).join('/')}` }
   async put(scope, key, bytes) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), bytes) }
-  async putStream(scope, key, stream, size) { await this.ready; await this.client.putObject(this.bucket, this.key(scope, key), stream, size) }
+  async putStream(scope, key, stream, size) { await this.ready; return this.streams(() => this.client.putObject(this.bucket, this.key(scope, key), stream, size)) }
   async get(scope, key) { await this.ready; try { const stream = await this.client.getObject(this.bucket, this.key(scope, key)); const chunks = []; for await (const chunk of stream) chunks.push(chunk); return Buffer.concat(chunks) } catch (error) { if (error && error.code === 'NoSuchKey') return null; throw error } }
   async readStream(scope, key) { await this.ready; try { return await this.client.getObject(this.bucket, this.key(scope, key)) } catch (error) { if (error.code === 'NoSuchKey') return null; throw error } }
+  async copy(scope, source, target) { await this.ready; await this.client.copyObject(this.bucket, this.key(scope, source), this.key(scope, target)) }
   async remove(scope, key) { await this.ready; await this.client.removeObject(this.bucket, this.key(scope, key)) }
   async list(scope, prefix = '') {
     await this.ready
@@ -34,18 +55,21 @@ class MinioBlobStore {
   }
 }
 class PostgresConfigStore {
-  close() { return this.pool.end() }
+  async close() { await this.recordingBatches?.close(); await this.requestBatches?.close(); await this.checkpointBatches?.close(); await Promise.all([this.pool.end(), this.healthPool.end()]) }
 
   constructor(config) {
-    const maxConnections = Number.parseInt(config.S2T_POSTGRES_MAX_CONNECTIONS || '10', 10)
-    this.pool = new Pool({
-      host: config.S2T_POSTGRES_HOST, port: Number(config.S2T_POSTGRES_PORT), database: config.S2T_POSTGRES_DB_NAME, user: config.S2T_POSTGRES_USER, password: config.S2T_POSTGRES_PASSWORD,
-      max: Number.isInteger(maxConnections) && maxConnections > 0 && maxConnections <= 100 ? maxConnections : 10,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 5_000
-    })
+    this.pool = adaptPostgresPool(observePoolErrors(new Pool(postgresOptions(config)), 'queries'))
+    this.healthPool = observePoolErrors(new Pool({ ...postgresOptions(config), max: 1, connectionTimeoutMillis: 1000, query_timeout: 1000, statement_timeout: 1000 }), 'health')
+    this.requestBatches = createRequestBatches(this.pool)
+    this.recordingBatches = createRecordingBatches(this.pool)
+    this.checkpointBatches = createCheckpointBatches(this.pool)
     this.schemaVersion = '002-account-deletion'
     this.ready = config.S2T_STORAGE_MIGRATIONS === 'verify' ? this.verifySchema() : this.migrate()
+  }
+  async health() {
+    await this.ready
+    const result = await this.healthPool.query('SELECT 1 FROM s2t_schema_migrations WHERE version=$1', [this.schemaVersion])
+    if (!result.rowCount) throw new Error('Storage migration 記錄缺失')
   }
   async verifySchema() {
     let result
@@ -168,6 +192,11 @@ class PostgresConfigStore {
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
   }
   async put(scope, key, value) { await this.ready; await this.pool.query('INSERT INTO s2t_config_records(scope, record_key, value) VALUES ($1, $2, $3::jsonb) ON CONFLICT(scope, record_key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()', [safePart(scope, 'scope'), safePart(key, 'record key'), JSON.stringify(value)]) }
+  async putCheckpoint(scope, key, value) {
+    await this.ready
+    if (!['live-draft','import-checkpoint'].includes(key)) throw new Error('Invalid checkpoint key')
+    if (!await this.checkpointBatches.request({ scope:safePart(scope,'scope'),key,value })) throw Object.assign(new Error('帳號已不存在或正在刪除中'),{status:409,code:'ACCOUNT_DELETING'})
+  }
   async compareAndSwap(scope, key, expectedVersion, value) {
     await this.ready
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 0) throw new Error('無效的資料版本')
@@ -197,7 +226,7 @@ class PostgresConfigStore {
   // writers queue up and each transform sees the previous writer's result; a
   // fresh row (no lock possible) can still lose the insert race, which is
   // retried on the unique violation.
-  async update(scope, key, transform) {
+  async update(scope, key, transform, { activeAccount } = {}) {
     await this.ready
     const cleanScope = safePart(scope, 'scope'); const cleanKey = safePart(key, 'record key')
     const client = await this.pool.connect()
@@ -205,6 +234,14 @@ class PostgresConfigStore {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
           await client.query('BEGIN')
+          if (activeAccount) {
+            // Short account metadata writes share a row lock with each other;
+            // markDeleting's UPDATE must wait for them to commit. No advisory
+            // session or pool client is retained while inference is running.
+            const owner = await client.query('SELECT deletion_state FROM s2t_users WHERE id = $1 FOR SHARE', [safePart(activeAccount, 'user id')])
+            if (!owner.rowCount) throw Object.assign(new Error('帳號已不存在'), { status: 401, code: 'ACCOUNT_UNAVAILABLE' })
+            if (owner.rows[0].deletion_state !== 'active') throw Object.assign(new Error('帳號正在刪除中'), { status: 409, code: 'ACCOUNT_DELETING' })
+          }
           const current = await client.query('SELECT value FROM s2t_config_records WHERE scope = $1 AND record_key = $2 FOR UPDATE', [cleanScope, cleanKey])
           const stored = current.rows[0]?.value ?? null
           const outcome = await transform(stored)
@@ -221,6 +258,13 @@ class PostgresConfigStore {
       throw new Error('storage 資料更新衝突，請稍後重試')
     } finally { client.release() }
   }
+  async updateRecording(scope, key, transform) {
+    await this.ready
+    const result = await this.recordingBatches.request({ scope: safePart(scope, 'scope'), key: safePart(key, 'record key'), transform })
+    if (result.error) throw result.error
+    return result
+  }
+  async updateForActiveAccount(userId, key, transform) { return this.update(userId, key, transform, { activeAccount: userId }) }
   async enqueueDiarizationJob({ id, userId, sessionId, audioKey, payload }) {
     await this.ready
     const ownerId = safePart(userId, 'user id')
@@ -296,9 +340,54 @@ class PostgresConfigStore {
       return 'committed'
     } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error } finally { client.release() }
   }
+  async claimRequest(userId, key, record) {
+    await this.ready
+    const value = await this.requestBatches.claims.request({ userId: safePart(userId, 'user id'), key: safePart(key, 'request key'), record })
+    if (!value) throw Object.assign(new Error('帳號已不存在或正在刪除中'), { status: 409, code: 'ACCOUNT_DELETING' })
+    return value
+  }
+  async completeRequest(userId, key, owner, record) {
+    await this.ready
+    return this.requestBatches.completions.request({ userId, key, owner, record })
+  }
+  async renewRequest(userId, key, owner) {
+    await this.ready
+    const now = Date.now()
+    const result = await this.pool.query(`WITH account AS MATERIALIZED (
+      SELECT id FROM s2t_users WHERE id = $1 AND deletion_state = 'active' FOR SHARE
+    ) UPDATE s2t_config_records records SET value = records.value || jsonb_build_object('leaseUntil', $5::bigint), updated_at = NOW() FROM account
+      WHERE records.scope = account.id AND records.record_key = $2 AND records.value->>'owner' = $3
+        AND records.value->>'state' = 'running' AND (records.value->>'leaseUntil')::bigint > $4 RETURNING 1`, [userId, key, owner, now, now + 120000])
+    return result.rowCount > 0
+  }
+  async failRequest(userId, key, owner) {
+    await this.ready
+    await this.pool.query(`UPDATE s2t_config_records SET value = value || '{"leaseUntil":0,"expiresAt":0}'::jsonb
+      WHERE scope = $1 AND record_key = $2 AND value->>'owner' = $3`, [userId, key, owner])
+  }
   async pruneExpiredRequests() {
     await this.ready
-    await this.pool.query("DELETE FROM s2t_config_records WHERE record_key ~ '^request-[a-f0-9]{64}$' AND (value->>'expiresAt')::numeric < $1", [Date.now()])
+    // Walk the existing primary key in bounded pages. A full-table DELETE on
+    // every Pod can hold thousands of row locks and time out repeatedly as
+    // caption traffic grows. Never wait behind an active request's row lock.
+    const cursor = this.requestPruneCursor || ['', '']
+    const result = await this.pool.query(`WITH batch AS MATERIALIZED (
+      SELECT scope,record_key FROM s2t_config_records
+      WHERE (scope,record_key) > ($2::text,$3::text)
+      ORDER BY scope,record_key LIMIT 1024
+    ), expired AS MATERIALIZED (
+      SELECT r.ctid FROM s2t_config_records r JOIN batch b USING(scope,record_key)
+      WHERE r.record_key ~ '^request-[a-f0-9]{64}$'
+        AND CASE WHEN jsonb_typeof(r.value->'expiresAt') = 'number'
+          THEN (r.value->>'expiresAt')::numeric < $1 ELSE false END
+      FOR UPDATE OF r SKIP LOCKED
+    ), removed AS (
+      DELETE FROM s2t_config_records r USING expired e WHERE r.ctid=e.ctid RETURNING 1
+    ) SELECT scope,record_key,(SELECT count(*)::int FROM removed) AS removed
+      FROM batch ORDER BY scope DESC,record_key DESC LIMIT 1`, [Date.now(), ...cursor])
+    const last = result.rows[0]
+    this.requestPruneCursor = last ? [last.scope, last.record_key] : null
+    return last?.removed || 0
   }
   async diarizationBacklog() {
     await this.ready

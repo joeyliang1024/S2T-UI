@@ -1,0 +1,18 @@
+{
+  "run": "71afdabd",
+  "workers": 32,
+  "seconds": 600,
+  "finished": true,
+  "attempted": 8980,
+  "errors": 0,
+  "completed": {
+    "asr": 4023,
+    "translation": 4014,
+    "summary": 943
+  },
+  "statuses": {
+    "200": 8980
+  },
+  "failures": {},
+  "startedAt": "2026-10-21T23:33:21.459Z"
+}
