@@ -1,0 +1,352 @@
+{
+  "users": 100,
+  "gatewayReplicas": 2,
+  "durationSeconds": 120,
+  "finished": true,
+  "startedAt": [
+    "2026-10-21T16:58:56.052Z",
+    "2026-10-21T16:58:56.052Z",
+    "2026-10-21T16:58:56.053Z",
+    "2026-10-21T16:58:56.053Z"
+  ],
+  "warmup": [
+    {
+      "requests": 50,
+      "errors": 0,
+      "durationMs": 127.6317369999997,
+      "p95Ms": 113.255631,
+      "maxMs": 115.07797299999947,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    },
+    {
+      "requests": 50,
+      "errors": 0,
+      "durationMs": 129.45982899999944,
+      "p95Ms": 119.57745100000102,
+      "maxMs": 124.7521829999987,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    },
+    {
+      "requests": 50,
+      "errors": 0,
+      "durationMs": 128.94524300000012,
+      "p95Ms": 116.13051900000028,
+      "maxMs": 116.73923099999956,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    },
+    {
+      "requests": 50,
+      "errors": 0,
+      "durationMs": 122.84500800000023,
+      "p95Ms": 106.59030999999959,
+      "maxMs": 116.35522800000035,
+      "scenario": "Authenticated users loaded session and app configuration before simultaneous audio"
+    }
+  ],
+  "offered": 6000,
+  "dropped": 0,
+  "offeredSuccessRate": 1.0,
+  "httpAttempts": 19200,
+  "httpErrors": 0,
+  "httpSuccessRate": 1.0,
+  "stages": {
+    "asr": {
+      "attempted": 6000,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {
+        "200": 6000
+      },
+      "errorTypes": {},
+      "p50Ms": 692.0717880000011,
+      "p90Ms": 914.8742679999996,
+      "p95Ms": 1030.3820689999993,
+      "p99Ms": 1154.0704270000133,
+      "maxMs": 1262.0879470000073,
+      "over3s": 0,
+      "residualP95Ms": 128.07145700000342
+    },
+    "translation": {
+      "attempted": 6000,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {
+        "200": 6000
+      },
+      "errorTypes": {},
+      "p50Ms": 537.0954820000043,
+      "p90Ms": 584.4094709999918,
+      "p95Ms": 613.9593380000006,
+      "p99Ms": 682.041108999998,
+      "maxMs": 796.8994450000027,
+      "over3s": 0,
+      "residualP95Ms": 15.85856400000091
+    },
+    "upload": {
+      "attempted": 6000,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {
+        "200": 6000
+      },
+      "errorTypes": {},
+      "p50Ms": 308.5433180000109,
+      "p90Ms": 632.7098260000057,
+      "p95Ms": 764.8984940000082,
+      "p99Ms": 883.1226949999982,
+      "maxMs": 1144.5341740000003,
+      "over3s": 0,
+      "residualP95Ms": null
+    },
+    "draft": {
+      "attempted": 1200,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {
+        "204": 1200
+      },
+      "errorTypes": {},
+      "p50Ms": 233.6136620000034,
+      "p90Ms": 471.1729369999957,
+      "p95Ms": 516.4590679999965,
+      "p99Ms": 561.9964689999906,
+      "maxMs": 584.1076990000001,
+      "over3s": 0,
+      "residualP95Ms": null
+    },
+    "chain": {
+      "attempted": 6000,
+      "errors": 0,
+      "successRate": 1.0,
+      "statuses": {},
+      "errorTypes": {},
+      "p50Ms": 1238.2983199999726,
+      "p90Ms": 1486.4299520000059,
+      "p95Ms": 1662.449609000003,
+      "p99Ms": 1795.8056769999966,
+      "maxMs": 1853.9866540000075,
+      "over3s": 0,
+      "residualP95Ms": null
+    }
+  },
+  "minutes": [
+    {
+      "minute": 0,
+      "stages": {
+        "asr": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3000
+          },
+          "errorTypes": {},
+          "p50Ms": 670.2254729999986,
+          "p90Ms": 777.756644000001,
+          "p95Ms": 822.3690149999966,
+          "p99Ms": 1055.809233,
+          "maxMs": 1112.7390720000003,
+          "over3s": 0,
+          "residualP95Ms": 105.22466699999848
+        },
+        "translation": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3000
+          },
+          "errorTypes": {},
+          "p50Ms": 536.1038689999914,
+          "p90Ms": 570.4138129999992,
+          "p95Ms": 594.5410279999996,
+          "p99Ms": 684.7239469999986,
+          "maxMs": 730.576986,
+          "over3s": 0,
+          "residualP95Ms": 14.407791000004181
+        },
+        "upload": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3000
+          },
+          "errorTypes": {},
+          "p50Ms": 277.92786799999885,
+          "p90Ms": 408.3971620000011,
+          "p95Ms": 445.53422899999714,
+          "p99Ms": 613.2235830000027,
+          "maxMs": 641.9864190000008,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 600,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 600
+          },
+          "errorTypes": {},
+          "p50Ms": 198.39018899999792,
+          "p90Ms": 408.3449980000005,
+          "p95Ms": 480.8957799999989,
+          "p99Ms": 515.9453549999998,
+          "maxMs": 526.264234000002,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 1219.9149000000034,
+          "p90Ms": 1328.9210630000016,
+          "p95Ms": 1391.1213100000023,
+          "p99Ms": 1742.6015230000012,
+          "maxMs": 1776.4335920000012,
+          "over3s": 0,
+          "residualP95Ms": null
+        }
+      }
+    },
+    {
+      "minute": 1,
+      "stages": {
+        "asr": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3000
+          },
+          "errorTypes": {},
+          "p50Ms": 739.7382669999934,
+          "p90Ms": 1017.6927169999981,
+          "p95Ms": 1112.3517169999977,
+          "p99Ms": 1199.141982000001,
+          "maxMs": 1262.0879470000073,
+          "over3s": 0,
+          "residualP95Ms": 143.69312200000047
+        },
+        "translation": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3000
+          },
+          "errorTypes": {},
+          "p50Ms": 537.9302850000095,
+          "p90Ms": 595.0502879999985,
+          "p95Ms": 627.4041809999908,
+          "p99Ms": 676.8584220000048,
+          "maxMs": 796.8994450000027,
+          "over3s": 0,
+          "residualP95Ms": 18.52665099999058
+        },
+        "upload": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "200": 3000
+          },
+          "errorTypes": {},
+          "p50Ms": 363.38864900000044,
+          "p90Ms": 764.8984940000082,
+          "p95Ms": 840.8591040000028,
+          "p99Ms": 902.2057810000115,
+          "maxMs": 1144.5341740000003,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "draft": {
+          "attempted": 600,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {
+            "204": 600
+          },
+          "errorTypes": {},
+          "p50Ms": 255.08793200000946,
+          "p90Ms": 509.0107410000055,
+          "p95Ms": 531.9784329999966,
+          "p99Ms": 569.3912540000019,
+          "maxMs": 584.1076990000001,
+          "over3s": 0,
+          "residualP95Ms": null
+        },
+        "chain": {
+          "attempted": 3000,
+          "errors": 0,
+          "successRate": 1.0,
+          "statuses": {},
+          "errorTypes": {},
+          "p50Ms": 1289.762035000007,
+          "p90Ms": 1622.9562009999936,
+          "p95Ms": 1710.654607000004,
+          "p99Ms": 1831.678964000006,
+          "maxMs": 1853.9866540000075,
+          "over3s": 0,
+          "residualP95Ms": null
+        }
+      }
+    }
+  ],
+  "generatorLoopP99Ms": [
+    23.199743,
+    23.183359,
+    23.199743,
+    23.199743
+  ],
+  "generatorLoopMaxMs": [
+    250.478591,
+    265.289727,
+    386.400255,
+    214.827007
+  ],
+  "note": "Real K8s Gateway, PostgreSQL, Redis Sentinel and MinIO; Configured accounts send 2-second PCM chunks every 2 seconds. Model APIs fixed at 500ms. Includes recording chunk persistence and live drafts. HTTP residual excludes browser rendering, microphone/VAD, ingress and WAN.",
+  "failures": {},
+  "gatewayAtCollection": {
+    "replicas": 2,
+    "image": "s2t-ui:performance-final-20261021",
+    "resources": {
+      "limits": {
+        "memory": "1536Mi"
+      },
+      "requests": {
+        "cpu": "1",
+        "memory": "64Mi"
+      }
+    },
+    "settings": {
+      "S2T_POSTGRES_MAX_CONNECTIONS": "12",
+      "S2T_BACKGROUND_MAX_INFLIGHT": "8",
+      "S2T_ASR_MAX_INFLIGHT": "512",
+      "S2T_TRANSLATION_MAX_INFLIGHT": "512",
+      "S2T_MODEL_HTTP_MAX_CONNECTIONS": "512",
+      "NODE_OPTIONS": "--experimental-async-context-frame --max-semi-space-size=64"
+    }
+  },
+  "targetUsers": 100,
+  "workloadComplete": true,
+  "strictApiChainPassed": true,
+  "p90LatencyPassed": true,
+  "p90ApiChainPassed": true,
+  "acceptance10mComplete": false,
+  "latencyCriterion": {
+    "percentile": 90,
+    "thresholdMs": 3000,
+    "stages": [
+      "asr",
+      "chain"
+    ],
+    "scope": "HTTP; separately verify synchronized browser E2E including paint",
+    "method": "nearest-rank over combined raw samples; no averaging shard quantiles"
+  },
+  "rawSamplesArchive": "priority-mixed-100users-120s.raw.json.gz"
+}

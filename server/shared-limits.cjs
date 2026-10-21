@@ -173,6 +173,27 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     }
   }
   const command = (name, ...args) => commandWithTimeout(sentinelMode ? 10000 : 3000, name, ...args)
+  // Pod-local active gauges cannot be summed into a strict global ceiling:
+  // Prometheus scrapes each pod at a different instant. Sample the authoritative
+  // Redis lease cardinality instead, with explicit freshness/health indicators.
+  let backgroundSampleTimer, backgroundReading = false
+  const backgroundSnapshot = { value: -1, at: 0, healthy: 0 }
+  const sampleBackground = async () => {
+    if (backgroundReading || closing) return
+    backgroundReading = true
+    try {
+      const value = Number(await commandWithTimeout(1000, 'zCard', 's2t:capacity:background'))
+      if (!Number.isSafeInteger(value) || value < 0) throw new Error('Invalid background lease count')
+      backgroundSnapshot.value = value; backgroundSnapshot.at = Date.now(); backgroundSnapshot.healthy = 1
+    } catch { backgroundSnapshot.healthy = 0 }
+    finally { backgroundReading = false }
+  }
+  const startBackgroundSampling = () => {
+    if (backgroundSampleTimer || !distributed) return
+    void sampleBackground()
+    backgroundSampleTimer = setInterval(() => { void sampleBackground() }, 5000)
+    backgroundSampleTimer.unref?.()
+  }
   // An asynchronous primary switch can resurrect a lease whose ZREM was
   // acknowledged only by the former primary. Reconcile only our completed
   // operations against the current primary; never remove another live lease.
@@ -216,7 +237,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
   }
   return {
     ready, configurationError,
-    stats: () => ({ pendingCommands: pending, waitingCapacity, backgroundActive, backgroundWaiting, releasingCapacity: releasing.size, admissionProbes: [...admissions.values()].reduce((sum, admission) => sum + admission.stats().probing, 0) }),
+    stats: () => ({ pendingCommands: pending, waitingCapacity, backgroundActive, backgroundWaiting, backgroundLeases: distributed ? backgroundSnapshot.value : backgroundActive, backgroundLeaseHealthy: distributed ? backgroundSnapshot.healthy : 1, backgroundLeaseAgeSeconds: distributed ? (backgroundSnapshot.at ? (Date.now() - backgroundSnapshot.at) / 1000 : -1) : 0, releasingCapacity: releasing.size, admissionProbes: [...admissions.values()].reduce((sum, admission) => sum + admission.stats().probing, 0) }),
     async health() { if (distributed) { if (configurationError) throw configurationError; if (!client?.isReady) throw new Error('共享限流服務暫時不可用'); await commandWithTimeout(1000, 'ping') } },
     async accept(identity, bucket) { return distributed ? window(identity, bucket, limits[bucket] ?? 30, 60000, 'take') : local(identity, bucket) },
     async withCapacity(bucket, operation, { signal } = {}) {
@@ -262,7 +283,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
         active.set(bucket, (active.get(bucket) || 0) + 1)
       }
       metrics.observe('s2t_server_stage_duration_seconds', { stage: `${bucket}_capacity_wait` }, (performance.now() - admissionStart) / 1000)
-      if (bucket === 'background') backgroundActive++
+      if (bucket === 'background') { backgroundActive++; startBackgroundSampling() }
       // Model calls have a <= 30s timeout; the lease also covers preprocessing.
       let lost = false
       const timer = distributed ? setInterval(() => {
@@ -290,7 +311,7 @@ const createSharedLimits = (env, limits, suppliedClient) => {
     async loginAllowed(key) { return distributed ? window(key, 'login', 8, 900000, 'peek') : { accepted: localFailures(key).length < 8, retryAfterSeconds: 900 } },
     async loginFailed(key) { if (distributed) return window(key, 'login', 8, 900000, 'take'); const times = localFailures(key); times.push(Date.now()); return { count: times.length } },
     async loginSucceeded(key) { if (distributed) return window(key, 'login', 8, 900000, 'clear'); failures.delete(key) },
-    async close() { backgroundLocal.close(); await windowBatch?.close(); await Promise.all([...releases.keys()].map(flushRelease)); await Promise.all([...releasing]); closing = true; for (const admission of admissions.values()) admission.close(); if (releaseCleanup) clearInterval(releaseCleanup); released.clear(); clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (commandLeases) { const leases = await commandLeases.catch(() => []); await Promise.allSettled(leases.map(lease => Promise.resolve().then(() => lease.release()))) } if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
+    async close() { clearInterval(backgroundSampleTimer); backgroundLocal.close(); await windowBatch?.close(); await Promise.all([...releases.keys()].map(flushRelease)); await Promise.all([...releasing]); closing = true; for (const admission of admissions.values()) admission.close(); if (releaseCleanup) clearInterval(releaseCleanup); released.clear(); clearTimeout(retryTimer); retryResolve?.(); if (sentinelMode) await ready.catch(() => undefined); if (commandLeases) { const leases = await commandLeases.catch(() => []); await Promise.allSettled(leases.map(lease => Promise.resolve().then(() => lease.release()))) } if (client?.isOpen) await Promise.resolve(client.destroy()).catch(() => undefined) }
   }
 }
 module.exports = { createSharedLimits, WINDOW, WINDOW_BATCH, ACQUIRE, ACQUIRE_BATCH }

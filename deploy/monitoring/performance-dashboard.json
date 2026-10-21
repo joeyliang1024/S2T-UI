@@ -609,7 +609,7 @@
       "id": 105,
       "type": "timeseries",
       "title": "即時優先 · 背景在途／等待",
-      "description": "背景模型工作全叢集預設最多 8；模型 HTTP 等待先派即時，背景不得占滿容量。",
+      "description": "Redis 全叢集背景租約預設最多 8，包含釋放中；跨 Pod 的本地 active 瞬時值不同步，不可相加驗證硬上限。健康／age 用來識別陳舊快照。",
       "gridPos": {
         "x": 0,
         "y": 80,
@@ -623,13 +623,28 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by(state) (s2t_redis_capacity_state{job=\"s2t\",state=~\"backgroundActive|backgroundWaiting\"})",
-          "legendFormat": "global {{state}}"
+          "expr": "max(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundLeases\"})",
+          "legendFormat": "Redis global background leases"
         },
         {
           "refId": "B",
           "expr": "sum by(role,state) (s2t_model_http_capacity{job=\"s2t\",state=~\"realtimeWaiting|backgroundWaiting|backgroundActive|backgroundLimit\"})",
           "legendFormat": "{{role}} {{state}}"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundWaiting\"})",
+          "legendFormat": "queued background (sampled)"
+        },
+        {
+          "refId": "D",
+          "expr": "min(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundLeaseHealthy\"})",
+          "legendFormat": "lease snapshot healthy"
+        },
+        {
+          "refId": "E",
+          "expr": "max(s2t_redis_capacity_state{job=\"s2t\",state=\"backgroundLeaseAgeSeconds\"})",
+          "legendFormat": "lease snapshot age seconds"
         }
       ],
       "fieldConfig": {

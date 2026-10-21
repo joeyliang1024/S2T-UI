@@ -1,0 +1,96 @@
+{
+  "seconds": 600,
+  "startedAt": "2026-10-21T23:33:21.466Z",
+  "startSkewMs": 16,
+  "synchronizationValid": true,
+  "captions": 250,
+  "translated": 250,
+  "errors": [],
+  "asr": {
+    "requests": 250,
+    "completed": 250,
+    "rateLimited": 0,
+    "gaps": 0,
+    "inFlight": 0,
+    "maximumQueued": 1,
+    "totalRequestMs": 138275,
+    "totalQueueWaitMs": 1,
+    "maximumPendingMs": 2400
+  },
+  "translation": {
+    "requests": 250,
+    "completed": 250,
+    "failedAttempts": 0,
+    "rateLimited": 0,
+    "staleResults": 0,
+    "peakConcurrent": 1,
+    "totalRequestMs": 135439
+  },
+  "note": "One visible Chromium probe under concurrent K8s load; see synchronized controller for user count. Synthetic PCM uses real renderer energy VAD, ASR adapter, translation queue and double-RAF caption paint; excludes physical microphone, Silero model and WAN.",
+  "stages": {
+    "e2e_asr": {
+      "count": 250,
+      "p50Ms": 815.2000002861023,
+      "p90Ms": 877.3000001907349,
+      "p95Ms": 920.3000001907349,
+      "p99Ms": 1456.5999999046326,
+      "maxMs": 2026.8000001907346,
+      "over3s": 0
+    },
+    "e2e_translation": {
+      "count": 250,
+      "p50Ms": 1360.1999998092651,
+      "p90Ms": 1497.6999998092651,
+      "p95Ms": 1560,
+      "p99Ms": 2123.4000000953674,
+      "maxMs": 2743,
+      "over3s": 0
+    },
+    "t5_network": {
+      "count": 250,
+      "p50Ms": 4.8799999999999955,
+      "p90Ms": 8.680000095367404,
+      "p95Ms": 11.5600000953674,
+      "p99Ms": 21.06999980926514,
+      "maxMs": 27.149999904632523,
+      "over3s": 0
+    },
+    "t7_network": {
+      "count": 250,
+      "p50Ms": 3.700000095367386,
+      "p90Ms": 8.309999904632605,
+      "p95Ms": 17.79999961853025,
+      "p99Ms": 60.77000019073489,
+      "maxMs": 93.00000019073491,
+      "over3s": 0
+    },
+    "t5_paint": {
+      "count": 250,
+      "p50Ms": 25.90000009536743,
+      "p90Ms": 32.19999980926514,
+      "p95Ms": 33,
+      "p99Ms": 33.69999980926514,
+      "maxMs": 48.10000038146973,
+      "over3s": 0
+    },
+    "t7_paint": {
+      "count": 250,
+      "p50Ms": 25.399999618530273,
+      "p90Ms": 32.19999980926514,
+      "p95Ms": 33,
+      "p99Ms": 33.5,
+      "maxMs": 34.10000038146973,
+      "over3s": 0
+    }
+  },
+  "acceptance": {
+    "percentile": 90,
+    "thresholdMs": 3000,
+    "p90LatencyPassed": true,
+    "probeHealthy": true,
+    "acceptance10mComplete": true,
+    "scope": "One synchronized browser probe; verify configured-user HTTP success and dropped work separately"
+  },
+  "browserErrors": [],
+  "httpFailures": []
+}

@@ -47,3 +47,7 @@ python3 scripts/benchmarks/k8s/collect.py performance-load-smoke /tmp/s2t-priori
 ```
 
 `performance-background` 的 9096 `/report` 保留背景完成／錯誤統計；mock-models `/metrics` 的 `s2t_mock_workload_peak{workload="background"}` 驗證模型實際在途上限。測試後保存資料再將該 Deployment 與四個產生端縮為 0。
+
+背景上限驗證應使用 `max(s2t_redis_capacity_state{state="backgroundLeases"})` 與 mock 的 background peak；跨 Pod 的本地 active 抓取時間不同，直接 sum 可能誤報超過上限。`backgroundLeaseHealthy` 與 `backgroundLeaseAgeSeconds` 必須同時查看。
+
+完整混合長測可將上述 `--smoke` 改成 `--load`（600 秒）；用 `S2T_PROBE_REPORT` 指定獨立結果檔，保留既有單純 100 人結果。增量 base 被回收時，建置工具會驗證現有映像 package-lock 雜湊後才重用，依賴不同須 `--full`。

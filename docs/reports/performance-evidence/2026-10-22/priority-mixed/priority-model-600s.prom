@@ -1,0 +1,9 @@
+s2t_mock_workload_active{workload="realtime"} 0
+s2t_mock_workload_peak{workload="realtime"} 192
+s2t_mock_workload_completed_total{workload="realtime"} 60500
+s2t_mock_workload_active{workload="background"} 0
+s2t_mock_workload_peak{workload="background"} 8
+s2t_mock_workload_completed_total{workload="background"} 8980
+s2t_mock_model_active 0
+s2t_mock_model_peak 197
+s2t_mock_model_completed_total 69480

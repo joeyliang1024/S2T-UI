@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { createServer } = require('node:http')
+const { createSharedLimits } = require('../../server/shared-limits.cjs')
 const { createAdaptiveCapacity } = require('../../server/adaptive-capacity.cjs')
 const { runWithWorkload, workloadForRequest } = require('../../server/workload-context.cjs')
 const { createModelFetch, modelHttpStats, closeModelHttp } = require('../../server/model-http.cjs')
@@ -24,6 +25,19 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
   assert.equal(workloadForRequest({url:'/api/summaries',headers:{'x-s2t-workload':'realtime'}}),'background','summary cannot promote itself')
   assert.equal(workloadForRequest({url:'/api/transcriptions',headers:{'x-s2t-workload':'background'}}),'background')
   assert.equal(workloadForRequest({url:'http://[',headers:{}}),'realtime','malformed URL must not escape the HTTP listener')
+  const fake = { isOpen:true, isReady:true, on(){}, withCommandOptions(){return this},
+    eval:async(_script,args)=>args.arguments.slice(1), zRem:async()=>1,
+    zCard:async()=>7, destroy(){this.isOpen=false} }
+  const shared=createSharedLimits({S2T_KUBERNETES_MODE:'true',REDIS_URL:'redis://fixture'}, {}, fake)
+  let began,finish
+  const started=new Promise(resolve=>{began=resolve})
+  const operation=shared.withCapacity('background',async()=>{began();await new Promise(resolve=>{finish=resolve})})
+  await started;await delay(10)
+  assert.equal(shared.stats().backgroundActive,1)
+  assert.equal(shared.stats().backgroundLeases,7,'global gauge comes from Redis, not the local active count')
+  assert.equal(shared.stats().backgroundLeaseHealthy,1)
+  assert.ok(shared.stats().backgroundLeaseAgeSeconds>=0)
+  finish();await operation;await shared.close()
   process.env.S2T_MODEL_HTTP_MAX_CONNECTIONS='4'
   process.env.S2T_BACKGROUND_MAX_INFLIGHT='1'
   const seen=[]

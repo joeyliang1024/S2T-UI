@@ -11,7 +11,7 @@ base='performance-load-'+('10m' if mode=='--load' else 'smoke')
 d=json.loads(subprocess.check_output(K+['get','deployment',base+'-0','-o','json']))
 settings={x['name']:x.get('value') for x in d['spec']['template']['spec']['containers'][0]['env']}
 seconds=settings['S2T_PERF_SECONDS']
-report='experiment/evaluation-reports/k8s-performance/2-pod-browser-'+str(users)+'users-'+seconds+'s.json'
+report=os.environ.get('S2T_PROBE_REPORT','experiment/evaluation-reports/k8s-performance/2-pod-browser-'+str(users)+'users-'+seconds+'s.json')
 env.update({'S2T_BROWSER_EXECUTABLE':os.environ.get('S2T_BROWSER_EXECUTABLE','/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),'S2T_PROBE_SECONDS':seconds,'S2T_PROBE_START_AT':settings['S2T_PERF_START_AT'],'S2T_PROBE_REPORT':report})
-print(json.dumps({'event':'synchronized_run','gatewayPods':2,'users':users,'seconds':int(seconds),'plannedStartEpochMs':settings['S2T_PERF_START_AT'],'browserReport':report}),flush=True)
+print(json.dumps({'event':'synchronized_run','gatewayPods':2,'users':users,'backgroundWorkers':int(env.get('S2T_PERF_BACKGROUND_WORKERS','0')),'seconds':int(seconds),'plannedStartEpochMs':settings['S2T_PERF_START_AT'],'browserReport':report}),flush=True)
 subprocess.run(['node',str(Path(__file__).with_name('browser-probe.cjs'))],env=env,check=True)
