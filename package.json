@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Local-first desktop shell for real-time speech-to-text and translation",
-  "license": "CC-BY-NC-SA-4.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "author": "Joey Liang",
   "main": "out/main/index.js",
   "scripts": {
