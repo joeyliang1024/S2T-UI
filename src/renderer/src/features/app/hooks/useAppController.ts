@@ -65,6 +65,7 @@ const requestBrowserAsr = async (init: RequestInit, controller = new AbortContro
   finally { window.clearTimeout(timeout) }
 }
 
+const automaticSessionTitlePattern = /^s2t-\d{4}-\d{2}-\d{2}T/
 const automaticSessionTitle = (_transcript: string, createdAt = new Date().toISOString()): string => {
   return `s2t-${new Date(createdAt).toISOString().replace(/[:.]/g, '-')}`
 }
@@ -200,6 +201,9 @@ useEffect(() => {
           if (finished) {
             setSessions((current) => current.map((entry) => entry.id === job.id && entry.processingToken === job.token
               ? { ...finished, processingState: finished.processingError || finished.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined } : entry))
+            // The durable gateway job is the completion moment for web records;
+            // replace the fallback title now that the transcript is final.
+            if (!finished.processingError && !finished.processingFailures?.length) void generateSessionTitle(job.id, finished.transcript)
           } else {
             // The job answered but the record it belongs to was removed or
             // replaced by another tab. Leaving the poller running would
@@ -1946,6 +1950,10 @@ const stopCapture = async (): Promise<void> => {
               const audioVersions = currentEntry.audioVersions?.map((item) => item.id === targetVersionId ? { ...item, segments, transcript: updatedTranscript } : item)
               return { ...currentEntry, segments, transcript: updatedTranscript, processingState: currentEntry.processingError || currentEntry.processingFailures?.length ? 'failed' : 'completed', processingStage: undefined, ...(audioVersions ? { audioVersions } : {}) }
             }))
+            // Background work just finished: this is the first moment the full
+            // transcript exists, so replace the fallback title with a real one.
+            const finishedEntry = sessionsRef.current.find((item) => item.id === sessionId)
+            if (finishedEntry?.processingState === 'completed') void generateSessionTitle(sessionId, finishedEntry.transcript)
           } catch (error) {
             patchProcessing({ processingState: 'failed', processingStage: undefined, processingFailures: [...new Set([...(sessionsRef.current.find(entry => entry.id === sessionId)?.processingFailures || []), 'diarization' as const])], processingError: error instanceof Error ? error.message : activeTranslate('stDiarizationFailed') })
             setStatus(error instanceof Error ? activeTranslate('stRecordingSavedDiarizationFailedDetail').replace('{error}', String(error.message)) : activeTranslate('stRecordingSavedDiarizationFailed'))
@@ -2436,6 +2444,13 @@ const retryFailedSession = async (entry: SavedSession, backup?: File, legacyStag
       item.id === updated.id && (item.processingToken === token || item.processingToken === previousToken) ? updated : item)),
     setStatus, activeTranslate
   }, entry, backup, legacyStage)
+  // A successful retry leaves a final transcript behind; take the same chance
+  // to replace the fallback title as a fresh recording would.
+  const recovered = sessionsRef.current.find((item) => item.id === entry.id)
+  if (recovered && recovered.processingState === 'completed') {
+    const transcript = recovered.transcript?.trim() || makeTranscriptText(recovered.segments)
+    if (transcript.trim()) void generateSessionTitle(recovered.id, transcript)
+  }
 }
 const transcribeCorrection = async (data: ArrayBuffer, model = selectedModel, language = settings.sourceLanguage, prompt = settings.glossary): Promise<{ text: string }> => {
     const profileId = gatewayAsrProfileId(model.id)
@@ -2959,7 +2974,9 @@ const generateSessionTitle = async (sessionId: string, transcript: string): Prom
       const visible = title.length > maximumGeneratedSessionTitleLength
         ? `${title.slice(0, maximumGeneratedSessionTitleLength - 1)}…`
         : title
-      setSessions((current) => current.map((entry) => entry.id === sessionId ? { ...entry, title: visible } : entry))
+      // Never overwrite a title the user chose; only replace the deterministic
+      // s2t-timestamp fallback that recording/finalization assigned.
+      setSessions((current) => current.map((entry) => entry.id === sessionId && automaticSessionTitlePattern.test(entry.title ?? '') ? { ...entry, title: visible } : entry))
     } catch { /* Keep deterministic fallback title when the LLM is unavailable. */ }
     finally {
       titleActiveRef.current.delete(sessionId)
@@ -3091,6 +3108,55 @@ const translateSummary = (entry: SavedSession, targetOverride?: string, signal?:
     emptyError: () => new Error(activeTranslate('stTranslationServiceEmpty')),
     publish: (source, text, translated, targetLanguage) => setSessions(current => current.map(item => item.id === source.id && item.summary?.trim() === text ? { ...item, summaryTranslation: translated, summaryTranslationTargetLanguage: targetLanguage } : item))
   })
+}
+
+const [sessionViewTranslation, setSessionViewTranslation] = useState<{ sessionId: string; targetLanguage: string; texts: Record<string, string>; fullText?: string; state: 'translating' | 'ready' | 'failed'; error?: string } | null>(null)
+const sessionViewTranslationAbortRef = useRef<AbortController | null>(null)
+
+const clearSessionViewTranslation = (): void => {
+  sessionViewTranslationAbortRef.current?.abort()
+  sessionViewTranslationAbortRef.current = null
+  setSessionViewTranslation(null)
+}
+
+/** Translate a saved transcript into a chosen language for display only.
+ *  The result lives in transient UI state: the record's own subtitles — the
+ *  original text and any stored translation — are never rewritten, so picking
+ *  a language here cannot damage the saved record. A newer request supersedes
+ *  an in-flight one. */
+const translateSessionForView = async (entry: SavedSession, targetLanguage: string): Promise<void> => {
+  if (!targetLanguage) { clearSessionViewTranslation(); return }
+  if (!settings.translationModel.trim() || (window.s2t && !settings.translationEndpoint.trim())) { setStatus(activeTranslate('stWebTranslationGateway') + ': model not configured'); return }
+  sessionViewTranslationAbortRef.current?.abort()
+  const abort = new AbortController()
+  sessionViewTranslationAbortRef.current = abort
+  setSessionViewTranslation({ sessionId: entry.id, targetLanguage, texts: {}, state: 'translating' })
+  const segments = entry.segments?.filter(segment => segment.status === 'final' && segment.sourceText.trim()) ?? []
+  const complete = (text: string, sourceLanguage: string, timeoutMs: number): Promise<{ text: string }> =>
+    textCompletionPort.complete({ text, sourceLanguage, targetLanguage, glossary: settings.glossary, temperature: adminParameters?.translationTemperature, signal: abort.signal, timeoutMs })
+  try {
+    if (segments.length) {
+      const texts: Record<string, string> = {}
+      await orderedWindow({ start: 0, end: segments.length, concurrency: 4,
+        cancelled: () => abort.signal.aborted,
+        produce: index => complete(segments[index].sourceText, segments[index].detectedLanguage || settings.sourceLanguage, 30_000),
+        commit: async (result, index) => {
+          if (!result.text.trim()) return
+          texts[segments[index].id] = result.text
+          setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, texts: { ...texts } } : current)
+        } })
+    } else if (entry.transcript?.trim()) {
+      const result = await complete(entry.transcript, settings.sourceLanguage, 60_000)
+      if (abort.signal.aborted) return
+      if (!result.text.trim()) throw new Error(activeTranslate('stTranslationServiceEmpty'))
+      setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, fullText: result.text } : current)
+    }
+    if (abort.signal.aborted) return
+    setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, state: 'ready' } : current)
+  } catch (error) {
+    if (abort.signal.aborted) return
+    setSessionViewTranslation(current => current && current.sessionId === entry.id && current.targetLanguage === targetLanguage ? { ...current, state: 'failed', error: error instanceof Error ? error.message : String(error) } : current)
+  }
 }
 
 const createSummary = async (): Promise<void> => {
@@ -3431,6 +3497,9 @@ createSummary,
 summarizeSession,
 cancelSessionSummary,
 translateSummary,
+sessionViewTranslation,
+translateSessionForView,
+clearSessionViewTranslation,
 canRecord,
 canContinueRecording: sessions.some((entry) => entry.id === liveSessionIdRef.current),
 startOrContinueRecording,
