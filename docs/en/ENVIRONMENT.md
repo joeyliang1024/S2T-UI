@@ -33,7 +33,7 @@ Redis accepts `REDIS_URL`, or Sentinel nodes with a master service name. Existin
 
 | Variable | Purpose |
 | --- | --- |
-| `S2T_HTTP_MAX_CONCURRENCY` | HTTP admission concurrency; example 1024 |
+| `S2T_HTTP_MAX_CONCURRENCY` | Uvicorn connection/task limit; example 1024, separate from API admission |
 | `S2T_HTTP_MAX_WAITING` | Admission waiting limit; example 512 |
 | `S2T_POSTGRES_POOL_MAX` | Query pool size; example 16, Kubernetes default 8 per worker |
 | `S2T_POSTGRES_FENCE_SESSIONS` | Shared fence sessions; example 4, Kubernetes default 4 per worker |
@@ -53,8 +53,10 @@ See [deployment](DEPLOYMENT.md) and [validation](VALIDATION.md).
 
 `S2T_WEB_WORKERS` selects Uvicorn processes per Pod: development defaults to 1, Kubernetes to 2, with 2 backend Pods. SQL, model HTTP and native audio pools are per process. Multiply their budgets by replicas and worker count. Kubernetes defaults to 8 main SQL connections, at most 5 account-fence connections and one reserved health connection per process: 2 × 2 × 14 = 56 application connections, leaving capacity for monitoring and maintenance.
 
-`S2T_NOFILE` defaults to 8192. Startup raises the soft descriptor limit within the host hard limit, logging a warning if that target is unavailable. Multiprocess Prometheus uses a fresh private temporary directory per service start. Counters and latency histograms merge across workers; active requests sum, shared backlog takes the maximum, and worker CPU/RSS has a `pid` label. Never share this metrics directory between Pods.
+`S2T_NOFILE` defaults to 8192. Startup raises the soft descriptor limit within the host hard limit, logging a warning if that target is unavailable. Multiprocess Prometheus uses a fresh private temporary directory per service start. Counters and latency histograms merge across workers; active requests sum, shared backlog uses the latest value within a Pod and the maximum across Pods, and worker CPU/RSS has a `pid` label. Never share this metrics directory between Pods.
 
 `S2T_HTTP_ACTIVE_PER_WORKER` defaults to 64. It bounds active API work before authentication and SQL access, with a maximum ten-second wait and `S2T_HTTP_MAX_WAITING` queued callers per worker. Background HTTP work has a separate four-active-request budget; health probes bypass these queues. This differs from Uvicorn's connection limit. See `deploy/k8s/examples/backend-capacity.env.example` for the test profile and connection budgets including rolling surge Pods.
 
 Known-length ASR chunks up to 256 KiB use bounded memory when normalization is not requested. This avoids temporary files, rereads and thread-pool hops. Actual body size remains bounded. Larger, unknown-length and normalization requests retain file streaming. This transient request optimization does not replace durable OPFS/MinIO recording storage.
+
+The validated capacity profile uses four workers per Pod, 16 query connections, 16 shared fences plus one exclusive fence, and one health connection: 34 per worker, 272 across two Pods, 408 at a three-Pod rolling surge. Its PostgreSQL limit is 448. These are measured test settings, not base defaults. Each Pod publishes metrics snapshots every 15 seconds; snapshots older than 45 seconds return HTTP 503. ASR/translation use bounded aiohttp pools; summary streaming retains HTTPX.

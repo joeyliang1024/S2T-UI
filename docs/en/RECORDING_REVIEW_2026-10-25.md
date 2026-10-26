@@ -1,5 +1,8 @@
 # Recording and cleanup review — 2026-10-25
 
+> Historical report: measurements and commands describe the recorded version. Use [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md) for current scope and operations.
+
+
 Status: all five findings are fixed. Findings and original reproduction assertions below describe the pre-fix implementation. See [fix report](RECORDING_FIXES_2026-10-25.md).
 
 [繁體中文](../reports/RECORDING_REVIEW_2026-10-25.zh-TW.md) | English

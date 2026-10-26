@@ -24,7 +24,7 @@ Nginx 代理使用 namespace 完整 Service DNS；`K8S_DNS_RESOLVER` 必須是�
 
 兩個後端共用 PostgreSQL／MinIO／Redis，以 immutable 音訊 chunks、CAS、撤銷紀錄、工作 lease generation 與 account fencing 協調，不要求 sticky session。
 
-`/livez` 檢查程序存活；`/readyz` 檢查必要儲存依賴。部署含關閉排空與 preStop，應避免強制結束正在寫入的音訊工作。每 Pod query pool 預設 8、shared fence 2、exclusive fence 1，兩 Pod 至少預留 22 條，再加 migration／exporter。
+`/livez` 檢查程序存活；`/readyz` 檢查必要儲存依賴。部署含關閉排空與 preStop，應避免強制結束正在寫入的音訊工作。base 每 Pod 預設 2 個 Uvicorn 進程，每進程 query 8＋shared fence 4＋exclusive fence 1＋health 1，共 14；兩 Pod 合計 56 條。另保留滾動更新、migration 與維護連線，容量 profile 見 `deploy/k8s/examples/backend-capacity.env.example`。
 
 ```sh
 S2T_ALLOW_DEPLOYMENT_TESTS=true npm run test:deployment
@@ -33,6 +33,6 @@ node scripts/forward.cjs --monitoring
 S2T_ALLOW_DEPLOYMENT_TESTS=true npm run test:monitoring
 ```
 
-整合測試用於 localhost 隔離環境，會建立及清理專用測試帳號。最新實測與限制見 [2026-10-24 報告](../reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md)。
+整合測試用於 localhost 隔離環境，會建立及清理專用測試帳號。最新實測與限制見 [2026-10-26 結果](../reports/VALIDATION_2026-10-26.zh-TW.md)。
 
 `npm run k8s:down` 刪除應用 workloads／Services，保留儲存、Secret 與監控。`deploy/k8s/examples/` 的角色分層與 HPA 是另案範例，不在本次固定 1＋2 部署中啟用。

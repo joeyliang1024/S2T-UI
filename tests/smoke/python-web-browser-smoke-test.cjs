@@ -1,6 +1,6 @@
 // Real React/Vite frontend + Python backend. No Node business API is started.
 const assert = require('node:assert/strict')
-const { spawn } = require('node:child_process')
+const { spawn, spawnSync } = require('node:child_process')
 const { mkdtemp, rm } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const { join, resolve } = require('node:path')
@@ -31,7 +31,7 @@ const ready = async (url, process, logs) => {
   const children = []
   let browser, page, output = ''
   const start = (executable, args, env) => {
-    const child = spawn(executable, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(executable, args, { cwd: root, env, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] })
     children.push(child)
     child.stdout.on('data', value => { output += value })
     child.stderr.on('data', value => { output += value })
@@ -40,7 +40,7 @@ const ready = async (url, process, logs) => {
   try {
     const api = start(python(), ['-m', 'app'], {
       PATH: process.env.PATH, PYTHONPATH: join(root, 'backend'), PYTHON_DOTENV_DISABLED: '1',
-      S2T_BIND_HOST: '127.0.0.1', BACKEND_PORT: String(apiPort), S2T_PROCESS_ROLE: 'api',
+      S2T_BIND_HOST: '127.0.0.1', BACKEND_PORT: String(apiPort), S2T_PROCESS_ROLE: 'api', S2T_SHUTDOWN_GRACE_SECONDS: '2',
       S2T_DATA_DIR: directory, S2T_MODEL_DIR: join(directory, 'models'),
       S2T_AUTH_SECRET: 'isolated-browser-test-secret-123456789', S2T_ALLOW_DEFAULT_ADMIN: 'true'
     })
@@ -76,19 +76,30 @@ const ready = async (url, process, logs) => {
   } catch (error) {
     if (page) {
       console.error((await page.locator('body').innerText()).slice(0, 2500))
-      await page.screenshot({ path: '/private/tmp/s2t-python-web-error.png' })
+      await page.screenshot({ path: join(tmpdir(), 's2t-python-web-error.png') })
     }
     console.error(output.slice(-5000))
     throw error
   } finally {
     await browser?.close()
     for (const child of children.reverse()) {
+      // Vite and Python can spawn descendants that retain stdout/stderr pipes.
+      // Kill only this test's private process group, including orphan descendants.
+      const signal = value => {
+        try {
+          if (process.platform !== 'win32') process.kill(-child.pid, value)
+          else if (value === 'SIGKILL') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+          else child.kill(value)
+        } catch (error) { if (error.code !== 'ESRCH') throw error }
+      }
       if (child.exitCode === null) {
         const exited = new Promise(resolve => child.once('exit', resolve))
-        child.kill('SIGTERM')
-        await Promise.race([exited, new Promise(resolve => setTimeout(resolve, 5000))])
-        if (child.exitCode === null) child.kill('SIGKILL')
+        signal('SIGTERM')
+        let timer
+        try { await Promise.race([exited, new Promise(resolve => { timer = setTimeout(resolve, 5000) })]) }
+        finally { clearTimeout(timer) }
       }
+      signal('SIGKILL')
     }
     await rm(directory, { recursive: true, force: true })
   }

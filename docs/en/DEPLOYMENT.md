@@ -17,7 +17,7 @@ The frontend defaults to 5173 and Python defaults to 8787. Both ports load from 
 Build from the repository root. Replace the registry and version placeholders before running these commands:
 
 ```sh
-docker build -f deploy/docker/frontend.Dockerfile -t <registry>/s2t-frontend:<version> .
+docker build -f deploy/docker/frontend.Dockerfile --build-arg NPM_REGISTRY=https://registry.npmjs.org -t <registry>/s2t-frontend:<version> .
 docker build -f deploy/docker/backend.Dockerfile --target audio -t <registry>/s2t-backend:<version> .
 ```
 

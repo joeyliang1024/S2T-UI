@@ -1,5 +1,8 @@
 # Dependency, performance and UI review — 2026-10-25
 
+> Historical report: measurements and commands describe the recorded version. Use [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md) for current scope and operations.
+
+
 [繁體中文](../reports/SECURITY_CODE_REVIEW_2026-10-25.zh-TW.md) | English
 
 This was a read-only product review with isolated reproductions. Dependencies,

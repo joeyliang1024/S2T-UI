@@ -1,5 +1,8 @@
 # 1011：Chunking 自動切分可行性（VAD + Diarization）
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](../reports/VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 研究性文件：回答「能否讓 VAD + Diarization 自動決定怎麼切 chunk」。結合本專案既有量測、codebase 現況與外部論文／成熟 repo 做法，給出結論與分階段建議；待追蹤的缺口以 [Enhancement.md](../Enhancement.md) 的 U02 為準。
 
 ## 一句話結論

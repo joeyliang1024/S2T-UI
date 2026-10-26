@@ -1,6 +1,6 @@
 # 管理員與資料恢復
 
-繁體中文 | [English](../en/DEPLOYMENT.md)
+繁體中文 | [English](../en/ADMIN_RECOVERY.md)
 
 Admin 以帳號角色判定，名稱與 Department 不授予權限。管理頁可建立、刪除帳號；刪除目前登入帳號或最後一個可用 admin 會被拒絕。清理失敗時保留停用狀態與清理意圖，再由管理頁重試。
 

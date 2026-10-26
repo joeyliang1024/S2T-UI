@@ -1,5 +1,8 @@
 # 即時字幕效能、辨識品質與 K8s 多副本可靠性研究
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](../reports/VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 研究即時字幕在多副本 K8s 下的效能目標、可靠性設計與驗收方法。部署模式、角色與 Redis／Sentinel 設定以 [K8s 多副本部署](../guide/K8S_SCALE_DEPLOYMENT.zh-TW.md) 為準；容量測試的負載指令、同步指標與門檻以 [K8s 容量測試](../guide/CAPACITY_TEST.zh-TW.md) 為準，本檔不重複其操作細節。
 
 ## 目標與驗收

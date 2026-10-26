@@ -49,7 +49,7 @@ S2T_ALLOW_DEPLOYMENT_TESTS=true npm run test:monitoring
 
 標準 K8s 部署應逐 Pod 抓取 Python metrics，不能只抓負載平衡 Service。部署、授權與 datasource 應依實際環境設定；隔離環境的匿名 Viewer 設定不可直接當成公開站點配置。
 
-[2026-10-24 實測](../reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md) 核對了瀏覽器原始 ASR／翻譯延遲與 Prometheus histogram 的 count／sum，並檢查主看板及 Python 效能看板的查詢。P90 是 histogram 估計值。未經真實模型與 GPU 量測的部分不能推論為生產效能。
+[2026-10-26 驗證](../reports/VALIDATION_2026-10-26.zh-TW.md) 核對了瀏覽器原始 ASR／翻譯延遲與 Prometheus histogram 的 count／sum，並檢查主看板及 Python 效能看板的查詢。P90 是 histogram 估計值。未經真實模型與 GPU 量測的部分不能推論為生產效能。
 
 ### ASR／翻譯延遲的量測邊界
 

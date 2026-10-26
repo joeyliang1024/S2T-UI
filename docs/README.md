@@ -27,21 +27,13 @@
 
 [現行 Web／Python 架構](reference/ARCHITECTURE.zh-TW.md)、[模型 adapter](reference/MODEL_ADAPTER.md)、[Python Web API](reference/WEB_GATEWAY.zh-TW.md)、[講者分離 API](reference/DIARIZATION_API.zh-TW.md)、[音訊品質](reference/AUDIO_QUALITY.zh-TW.md)、[介面與匯入](reference/INTERFACE.zh-TW.md)。
 
-## 最新部署驗證
+## 目前結果與重現
 
-[2026-10-26：NT、相依漏洞稽核、錄音極限、Grafana 與 500 人容量結果](reports/VALIDATION_2026-10-26.zh-TW.md)。每一種請求頻率與失敗證據分開記錄；英文版見 [English validation](en/VALIDATION_2026-10-26.md)。
+[2026-10-26 完整驗證結果](reports/VALIDATION_2026-10-26.zh-TW.md)、[字幕合併](reports/CAPTION_MERGE_2026-10-26.zh-TW.md)、[重現指南](guide/REPRODUCE.zh-TW.md)。目前功能部署基線為前端 r16／後端 r24；容量數字維持原 r23／r24 的實測範圍，後續 UI 更新未重新壓測。
 
-[2026-10-25：五項錄音／清理修正與故障驗證](reports/RECORDING_FIXES_2026-10-25.zh-TW.md)，含跨重載清理、51 項前端與 38 項 Python 測試。
+500 人／600 秒／3 秒 cadence 的容量及錄音完整性通過；2 秒 cadence 未通過。同步瀏覽器翻譯 P90 3.023 秒，未達嚴格小於 3 秒目標。測試模型為各 500ms mock，不代表真實推論運算或 500 個實體瀏覽器。歷史與本機 ASR 研究不是目前顯示合併的準確率證據。
 
-[錄音可靠性修正與故障驗證](reports/RECORDING_PIPELINE_2026-10-24.zh-TW.md)：前端 r8，65 秒上傳中斷與 durable ACK 遺失測試通過。
-
-[2026-10-24 Web／Python／K8s 實測報告](reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md)：前端 1 Pod、後端 2 Pods、跨 Pod、錄音流程及 Grafana 計時核對。外部模型使用 mock，真實模型品質與 GPU 尚需另驗。
-
-## 品質研究與量測
-
-[字幕穩定性](reports/CAPTION_STABILITY.zh-TW.md)、[聲紋準確率](reports/VOICEPRINT_ACCURACY.zh-TW.md)。完整實驗數據與回放集中在 experiment，文件不複製 JSON／CSV。
-
-H100／H200 的環境變數與部署方式見 [GPU 部署指南](guide/GPU.zh-TW.md)。
+原始實驗與中間輸出保留在本機忽略路徑；只提交整理後結果、測試腳本和重現方式。歷史研究保留其當時數字並明確標示，不取代現行 guide。完整結果入口見 [結果索引](reports/README.md)。
 
 ## 設計研究（research）
 
@@ -52,3 +44,5 @@ H100／H200 的環境變數與部署方式見 [GPU 部署指南](guide/GPU.zh-TW
 
 
 [結果重現指南](guide/REPRODUCE.zh-TW.md)；[目前字幕合併結果](reports/CAPTION_MERGE_2026-10-26.zh-TW.md)。
+
+本次預發行版：[0.2.0-rc.1 更新說明](releases/0.2.0-rc.1.zh-TW.md)。

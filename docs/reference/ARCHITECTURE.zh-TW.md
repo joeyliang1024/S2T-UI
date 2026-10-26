@@ -2,7 +2,7 @@
 
 繁體中文 | [English](../en/ARCHITECTURE.md)
 
-更新日期：2026-10-24。產品程式僅保留 React Web 前端與 Python 後端；Node 用於前端建置及測試。
+更新日期：2026-10-26。產品程式僅保留 React Web 前端與 Python 後端；Node 用於前端建置及測試。
 
 ```mermaid
 flowchart LR
@@ -29,8 +29,10 @@ port 由兩端各自環境變數載入。開發使用 Vite 代理；正式前端
 | `models/` | 唯讀模型權重與原生 runtime |
 | `deploy/` | Docker、Compose、K8s、監控 |
 
-每個後端以單一 Uvicorn 程序處理非同步 I/O，音訊計算交給常駐子程序池。跨 Pod 狀態透過共享儲存與 Redis 協調；immutable chunks、設定 CAS、帳號 fencing、工作 lease generation 與 JWT 撤銷避免依賴程序內 session。
+每個後端透過 `S2T_WEB_WORKERS` 設定 Uvicorn 進程數，base 預設每 Pod 2 個，已驗證容量設定為 4 個。每個進程各有 SQL／模型 HTTP 連線池、常駐音訊子程序池與 durable worker；每 Pod 另有一個受監督 metrics exporter 程序，API 不執行大量指標序列化。跨 Pod 狀態透過共享儲存與 Redis 協調；immutable chunks、設定 CAS、帳號 fencing、工作 lease generation 與 JWT 撤銷避免依賴程序內 session。
 
 ASR／翻譯／摘要可連外部服務；Silero、Sherpa、FFmpeg／Nemotron 的本機流程需準備權重與 runtime。角色分層及 HPA 範例不屬於目前固定 1 前端＋2 完整後端部署。
 
-操作見 [Web 分離指南](../guide/WEB_SPLIT.zh-TW.md)，驗證證據見 [部署報告](../reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md)。舊報告與流程圖保留設計歷史，不代表目前 runtime。
+操作見 [Web 分離指南](../guide/WEB_SPLIT.zh-TW.md)，驗證證據見 [目前驗證結果](../reports/VALIDATION_2026-10-26.zh-TW.md)。舊報告與流程圖保留設計歷史，不代表目前 runtime。
+
+正常收音維持 3000ms／250ms；字幕合併的句號分行門檻為 40 字，仍遵守明確邊界、說話者／語言、凍結群組及 10 秒／70 字規則。原始實驗資料僅留本機，整理後結果與重現方式見 [結果索引](../reports/README.md)。

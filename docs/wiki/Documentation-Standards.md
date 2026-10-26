@@ -10,7 +10,7 @@
 | API／資料／架構契約 | `docs/reference/<TOPIC>.zh-TW.md` | 邊界、不變條件、輸入輸出、錯誤、相容性 |
 | 可行性與方案比較 | `docs/research/<TOPIC>.zh-TW.md` | 問題、來源、事實／推論、取捨、未驗證事項 |
 | 審查與執行結果 | `docs/reports/<TOPIC>_YYYY-MM-DD.zh-TW.md` | 日期、commit、範圍、方法、證據、限制 |
-| 實驗 | `experiment/<topic>/<case-YYYY-MM-DD>/README.md` | 素材來源、設定、重現指令、指標、比較與限制 |
+| 可提交結果 | `docs/reports/` 與 `docs/en/` | 精簡結論、環境、驗收限制及重現指南；原始實驗僅在本機忽略目錄 |
 | 跨主題導覽與開發規範 | `docs/wiki/<Page-Name>.md` | 可讀的摘要、單一來源連結、維護方式 |
 
 既有英文檔名不因新規範強制改名。新檔名用穩定英文主題，Wiki 用 `Title-Case-With-Hyphens.md`；主標題可用繁中。不要用 `final`、`new`、`v2-final` 當檔名。
@@ -48,6 +48,6 @@ repo 內優先使用相對連結；Wiki 指向程式或 repo 文件時使用完�
 <repo 文件與直接支持結論的官方來源>
 ````
 
-repo 的 `docs/templates/` 可提供分類範本。新增／搬移文件後更新 `docs/README.md`；實驗更新該主題 README 與 `experiment/README.md`；Wiki 新頁更新 `_Sidebar.md` 與 Home。
+repo 的 `docs/templates/` 可提供分類範本。新增／搬移文件後更新 `docs/README.md`；可提交結果同步更新 `docs/reports/README.md` 與中英文重現指南；`experiment/` 除根入口外不追蹤；Wiki 新頁更新 `_Sidebar.md` 與 Home。
 
 已完成開發不留在 enhancement 當歷史；驗收清單留在驗收手冊，報告與 experiment 保留方法和證據。舊文件若被替代，留下導向或更新引用後再刪，避免斷鏈。

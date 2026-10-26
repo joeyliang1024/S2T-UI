@@ -1,5 +1,8 @@
 # S2T-UI：早期功能研究與架構起源
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](../reports/VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 研究日期：2026-09-20。本文件整理專案初期以 Vurbo.ai 為參考的功能研究，以及沿用至今的架構決策與其理由，作為設計起源背景。模型由使用者提供，僅參考 faster-whisper 與 sherpa-onnx 的語音處理設計。
 
 後端研究詳見 [語音處理技術參考與自有模型整合方案](OPEN_SOURCE_BACKENDS.zh-TW.md)。目前的需求狀態與優先順序統一見 [Enhancement.md](../Enhancement.md)，驗收步驟與證據見 [驗收手冊](../guide/VALIDATION.zh-TW.md)。

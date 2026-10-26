@@ -46,8 +46,10 @@ Verify recording finalization, job draining, and Pod restart recovery under load
 
 ### Reproducible mixed recording/model load
 
-Run `npm run test:load:k8s -- start` with `S2T_ALLOW_DEPLOYMENT_TESTS=true`, `S2T_LOAD_TOKENS_FILE` pointing to a private JSON array of 500 distinct test-user JWTs, `LOAD_POD=s2t-recording-acceptance` and `LOAD_SECONDS=600`. The selected context/namespace comes from `deploy/k8s/.env`. Every identity is validated before measurement. Credentials are mounted as a Secret and never written to reports. Use `collect` with `S2T_LOAD_REPORT` to save the report, then `cleanup` to remove the runner and its credential Secret.
+Run `npm run test:load:k8s -- start` with `S2T_ALLOW_DEPLOYMENT_TESTS=true`, `S2T_LOAD_TOKENS_FILE` pointing to a private JSON array of 500 distinct test-user JWTs, `LOAD_POD=s2t-recording-acceptance` `LOAD_SECONDS=600`, and `LOAD_CADENCE_MS=3000` for the historically passing workload. The selected context/namespace comes from `deploy/k8s/.env`. Every identity is validated before measurement. Credentials are mounted as a Secret and never written to reports. Use `collect` with `S2T_LOAD_REPORT` to save the report, then `cleanup` to remove the runner and its credential Secret.
 
 The default workload sends ASR followed by translation every two seconds per user, with each mock fixed at 500ms. Independent 16kHz PCM uploads total 9.6 GB for 500 users over 600 seconds. Reserve additional storage for assembly, database growth, logs and Kubernetes disk-pressure thresholds. This uses a virtual PCM spool, not 500 real browsers; real browser OPFS, captions and paint measurements are separate.
 
 Dropped work, failed operations, incomplete byte verification or missing cleanup confirmation fail acceptance. Report original HTTP failures even after retries. A generator that cannot maintain its schedule also fails; extending capture to eventually send all scheduled work cannot establish a successful 600-second run.
+
+Current capture/merge settings: [caption speed](CAPTION_SPEED.md). Complete commands and cleanup: [reproduction](REPRODUCE.md).

@@ -1,5 +1,8 @@
 # Recording cleanup follow-up — 2026-10-25
 
+> Historical report: measurements and commands describe the recorded version. Use [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md) for current scope and operations.
+
+
 [繁體中文](../reports/RECORDING_FOLLOWUP_2026-10-25.zh-TW.md) | English
 
 The five previous fixes are implemented. This follow-up identified three adjacent unresolved cases; the first is a cross-transaction race not closed by the cleanup change. This was a review with isolated reproductions, not an application fix or deployment.

@@ -1,5 +1,8 @@
 # Code graph 分析
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 以 TypeScript compiler AST 建立 `src/`、`server/` 的模組依賴圖，涵蓋 import、export-from、字串 require 與動態 import。環境未找到名稱為 code-graph 的工具或 plugin，本報告使用本機靜態分析，並非宣稱已使用該第三方產品。
 
 重跑：`node scripts/analysis/code-graph.cjs`。原始節點、依賴、來源行號與指標在 `CODE_GRAPH_2026-10-13.json`。本次 100 個模組、226 條本地依賴；邊數保留重複引用，fan-in/out 按不同模組去重。排除 declaration files、外部套件、測試、部署與實驗腳本。

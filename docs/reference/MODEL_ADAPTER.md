@@ -1,6 +1,6 @@
 # 自有模型接入契約
 
-繁體中文 | [English](../en/API.md)
+繁體中文 | [English](../en/MODEL_ADAPTER.md)
 
 ## 目前支援的模型介面
 

@@ -1,5 +1,8 @@
 # 錄音與清理問題修正驗證 — 2026-10-25
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 繁體中文 | [English](../en/RECORDING_FIXES_2026-10-25.md)
 
 [審查中的五項問題](RECORDING_REVIEW_2026-10-25.zh-TW.md) 已全部修正。部署於既有本機隔離 K8s：前端 `s2t-frontend:web-20261025-r1` 1/1 Ready，後端 `s2t-backend:web-20261025-r1` 2/2 Ready。

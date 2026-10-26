@@ -1,5 +1,8 @@
 # Web／Python／K8s 驗證紀錄
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 繁體中文 | [English](../en/VALIDATION-REPORT-2026-10-24.md)
 
 日期：2026-10-24（Asia/Taipei）。本機叢集 `colima-s2t-stress`，namespace `s2t-stress-20261005`。

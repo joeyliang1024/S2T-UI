@@ -1,6 +1,6 @@
 # 音訊品質與取樣率
 
-繁體中文 | [English](../en/MODELS.md)
+繁體中文 | [English](../en/AUDIO_QUALITY.md)
 
 ## 目前策略
 

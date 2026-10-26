@@ -1,5 +1,8 @@
 # Recording and cleanup fixes — 2026-10-25
 
+> Historical report: measurements and commands describe the recorded version. Use [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md) for current scope and operations.
+
+
 [繁體中文](../reports/RECORDING_FIXES_2026-10-25.zh-TW.md) | English
 
 All five findings from the [recording review](RECORDING_REVIEW_2026-10-25.md) have been fixed and deployed in the existing isolated local Kubernetes environment. Images: `s2t-frontend:web-20261025-r1` with one ready Pod, and `s2t-backend:web-20261025-r1` with two ready Pods.

@@ -1,6 +1,6 @@
 # 自動講者分離 API 契約
 
-繁體中文 | [English](../en/API.md)
+繁體中文 | [English](../en/DIARIZATION_API.md)
 
 S2T UI 不以音量、停頓或 VAD 推測講者。錄音結束後，使用者從「記錄」選擇「自動識別講者」，Python 後端在遠端模型模式會以 `multipart/form-data` 上傳完整 PCM16 WAV。
 

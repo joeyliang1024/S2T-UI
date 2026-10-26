@@ -1,5 +1,8 @@
 # 錄音寫入與背景上傳修正驗證
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 繁體中文 | [English](../en/RECORDING_VALIDATION_2026-10-24.md)
 
 日期：2026-10-24。既有本機隔離 Colima／K3s：前端 `s2t-frontend:web-20261024-r8` 1/1 Ready，Python 後端 `s2t-backend:web-20261024-r5` 2/2 Ready。此次只修改前端錄音流程，後端介面與共享儲存沿用既有部署。

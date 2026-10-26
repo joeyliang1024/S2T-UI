@@ -26,8 +26,10 @@ The optional H100/H200 image is `deploy/docker/audio-cuda.Dockerfile`, with the 
 
 Nemotron checks CUDA runtime/device compatibility; requested CUDA does not silently fall back to CPU. Sherpa and Silero retain the application's CPU strategy. This setting does not control external ASR, translation, or summary services.
 
-GPU deployment has not been verified on GPU hardware. The verified native path is Linux ARM64 CPU; see the [validation report](VALIDATION-REPORT-2026-10-24.md). A standalone optional Nemotron CLI image is defined by `deploy/docker/nemotron.Dockerfile`.
+GPU deployment has not been verified on GPU hardware. The verified native path is Linux ARM64 CPU; see the [current validation scope](VALIDATION_2026-10-26.md). A standalone optional Nemotron CLI image is defined by `deploy/docker/nemotron.Dockerfile`.
 
 ## Audio quality
 
 Saved WAV files use the actual capture sample rate. Resampling must transform samples rather than only change the WAV header. Speaker embedding processing uses real resampling to the model input rate. Browser noise suppression is a requested browser constraint, not guaranteed denoising. Evaluate recognition and speaker quality with representative recordings before production use.
+
+For individual setup and constraints see [Silero](SILERO_VAD.md), [Sherpa](SHERPA_ONNX.md), [Nemotron](NEMOTRON.md), [GPU](GPU.md) and [diarization API](DIARIZATION_API.md). Temporary local MLX ASR testing completed and was shut down; the test weights/environment were removed. It is not a resident production ASR service.

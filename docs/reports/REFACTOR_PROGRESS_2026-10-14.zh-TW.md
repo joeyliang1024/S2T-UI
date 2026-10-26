@@ -1,5 +1,8 @@
 # 第一批實作進度（2026-10-14）
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 Worktree：codex/technical-debt-refactor。以複製的未提交變更為基線；本批沒有修改原 checkout、stage、commit 或 push。
 
 ## 已完成

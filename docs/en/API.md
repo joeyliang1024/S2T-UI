@@ -41,3 +41,7 @@ Administrative sharing authorization uses `GET`/`PUT /api/admin/users/:id/sharin
 ## Health and verification
 
 Use `/livez` for process liveness, `/readyz` for required dependencies, and `/metrics` for per-Pod monitoring. See [validation](VALIDATION.md) for account isolation, cross-Pod recording, CAS, and token-revocation checks.
+
+## Caption presentation
+
+Normal capture remains 3000ms/250ms. Compatible punctuated display rows below 40 characters can accept the next chunk; explicit boundaries, frozen membership and existing bounds remain. Display grouping preserves canonical event IDs and does not change upstream ASR scheduling. See [caption speed](CAPTION_SPEED.md) and [model adapters](MODEL_ADAPTER.md).

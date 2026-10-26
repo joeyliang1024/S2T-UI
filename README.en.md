@@ -1,5 +1,7 @@
 # S2T UI
 
+Current prerelease: **0.2.0-rc.1**. [Release notes](docs/releases/0.2.0-rc.1.md). Targets the feature branch; this does not indicate a merge into main.
+
 [繁體中文](README.md) | English
 
 Real-time speech transcription, translation, recording, and summaries for the web. React frontend, Python backend, and Nginx for production frontend hosting.
@@ -13,8 +15,8 @@ python3.12 -m venv .venv
 .venv/bin/pip install --require-hashes -r backend/requirements-audio.lock
 .venv/bin/pip install -r backend/requirements-integration.txt
 npm ci --ignore-scripts
-cp frontend/.env.example frontend/.env
-cp backend/.env.example backend/.env
+cp -n frontend/.env.example frontend/.env
+cp -n backend/.env.example backend/.env
 npm run dev
 ```
 

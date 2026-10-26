@@ -33,4 +33,4 @@ S2T_ALLOW_DEPLOYMENT_TESTS=true npm run test:monitoring
 
 ## 已驗證範圍
 
-[2026-10-24 實測報告](../reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md) 記錄 1 前端／2 後端、跨 Pod 與計時核對結果。外部 ASR／翻譯／摘要使用 mock，只能證明串接；辨識品質、真實模型延遲與生產容量需要可用服務另測。GPU 未經實機驗證。最新測試數量、相依稽核與容量限制見 [2026-10-26 驗證報告](../reports/VALIDATION_2026-10-26.zh-TW.md)。
+[2026-10-26 驗證報告](../reports/VALIDATION_2026-10-26.zh-TW.md) 記錄 1 前端／2 後端、跨 Pod 與計時核對結果。外部 ASR／翻譯／摘要使用 mock，只能證明串接；辨識品質、真實模型延遲與生產容量需要可用服務另測。GPU 未經實機驗證。最新測試數量、相依稽核與容量限制見 [2026-10-26 驗證報告](../reports/VALIDATION_2026-10-26.zh-TW.md)。

@@ -1,5 +1,8 @@
 # 整合修改計劃：目前驗收盤點
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 完整目標維持 REFACTOR_PLAN_2026-10-13.zh-TW.md，本盤點不將目標縮成已完成的部分。所有變更在 codex/technical-debt-refactor worktree，原 checkout 保持原狀；尚未 stage、commit 或 push。
 
 ## 已有直接證據

@@ -22,3 +22,5 @@ Deployment and monitoring tests require an isolated localhost environment and ex
 Keep network I/O asynchronous, use persistent audio processes for CPU/native work, and store cross-Pod state in shared storage. Test failure recovery and account boundaries when changing storage or background jobs.
 
 Update Traditional Chinese and English documentation together for changes to setup, commands, environment variables, deployment, or validation scope. Dated evidence must state the tested environment and distinguish mocked integration from real model quality and capacity.
+
+The Kubernetes base defaults to two Uvicorn workers per Pod, each budgeting 8 query + 4 shared-fence + 1 exclusive-fence + 1 health connection (56 across two Pods). Include rolling surge and maintenance. The measured capacity profile differs; see [environment](docs/en/ENVIRONMENT.md). Curated results and reproduction instructions are versioned; raw experiment/evidence directories are local-only.

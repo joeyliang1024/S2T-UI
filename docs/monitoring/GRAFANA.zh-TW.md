@@ -1,5 +1,9 @@
 # Grafana 指標口徑
 
+繁體中文 | [English](../en/GRAFANA.md)
+
+更新日期：2026-10-26。
+
 執行 `python3 deploy/monitoring/generate.py` 會同步產生 dashboard.json、oncall.json 與 stack.json。值班總覽重用詳細總覽的 KPI、部門分析與 storage 健康圖，避免口徑漂移。
 
 - E2E P90：所選時間區間，音訊時鐘上的最後 VAD 語音樣本到該段譯文在可見即時頁呈現。扣除 VAD 靜音確認區間，但仍是語音尾端估計，非逐字強制對齊。目標嚴格小於 3 秒。翻譯未開啟、分頁隱藏、切換頁面或未呈現時不補零。
@@ -21,22 +25,19 @@
 
 遙測是 best effort；不自動重送事件以避免回應遺失造成重複計數。Prometheus 的 increase 是 scrape 間估算，新帳號第一個 scrape 前的事件、程序重啟及遙測失敗可能造成低估，不作稽核帳本。舊 API 計數不能回補成 L1／L2／L3。
 
-## 部署
+## 現行部署與驗證
 
-本次工作只更新原始碼與產生的設定，未更新線上服務。
+目前由 Python 後端 `/metrics` 提供指標；Prometheus 直接抓取兩個後端 Pod。`generate.py` 及生成的 dashboard／oncall／stack 檔案需同步維護，連線參數取自 `deploy/monitoring/.env`。保留既有 datasource、Secret 與 PVC，不以重建儲存更新看板。
 
-1. 建置、更新 Web 與 Gateway，兩者需同時支援新 phase／E2E 樣本及 `/api/telemetry/journey`。
-2. 將 stack.json 的 s2t-dashboard ConfigMap 更新至既有 Grafana 部署。保留既有 datasource／連線設定；不要為更新報表重建整個叢集或重設 Secret。
-3. Prometheus 產生設定改為最多 90 天／8 GB，PVC 需求改為 10 GiB。既有 PVC 必須先確認 StorageClass 可擴充及磁碟容量後再調整；Grafana PVC 維持 2 GiB。容量上限可能使實際保留時間短於 90 天。
-4. 新事件需累積資料，部署前週次不會有歷史事件；部署後第一週為部分資料。確認來源選擇正確，避免與 acceptance 模擬資料混用。
+```sh
+node scripts/forward.cjs --monitoring
+S2T_ALLOW_DEPLOYMENT_TESTS=true npm run test:deployment
+S2T_ALLOW_DEPLOYMENT_TESTS=true npm run test:monitoring
+```
 
-## 獨立測試資料預覽
+在另一個終端執行測試，forward 程序持續運行。監控比對需沿用最新瀏覽器測試的同一批 Pod。Grafana 3000、Prometheus 9090；不再提供已移除的 report-preview installer。模擬流量與真實流量須分開標記，不補造歷史資料。
 
-`python3 deploy/monitoring/install-report-preview.py` 在既有測試叢集建立 metrics-only 的 `report-preview`，來源為 `gateway-report-preview`。3 部門／12 位使用者皆有「測試」標記，不呼叫模型、不寫正式帳號與儲存；僅產生合成監控數據，15 分鐘後停止增加。
-
-預覽大表為 `/d/s2t-report-preview`，值班版為 `/d/s2t-oncall-preview`，標題均顯示「測試資料預覽」。正式報表只保留真實 gateway-web 來源，並移除 mock 模型圖與 mock／驗收／預覽 Pod 資源列。預覽沿用最近一週、每 30 秒刷新的預設，沒有回填歷史資料。
-
-停止預覽可將 `deployment/report-preview` scale 至 0；重新執行 installer 可重跑。Prometheus restart 不會清除既有 TSDB。此 installer 僅追加獨立 scrape job 和 Grafana 預覽掛載，不更新真實 Gateway。完整重新產生 stack 後，若仍需預覽，須重新執行 installer 保留其 scrape／掛載。
+每 Pod 一個 exporter 約每 15 秒原子產生快照，超過 45 秒回 503。工作積壓在 Pod 內取最新 worker 值、跨 Pod 取最大值；event-loop lag 取 worker 最大值。此更新延遲與主機時鐘誤差不同。
 
 ## 使用量趨勢
 
@@ -61,3 +62,7 @@ ASR 階段堆疊圖加大為半版寬、8 格高，使用 50% 填色、可見資
 ## ASR 分鐘平均趨勢
 
 依最新需求，原「ASR 端到端延遲趨勢 P50／P95／P99」替換為「ASR t1～t5 每分鐘平均耗時」。每個 phase 一條折線，使用完整 phase 的 `_sum`／`_count` 之 1 分鐘增量比例；固定 1 分鐘取樣，預設一週可容納 10,080 個時間點。這張圖是明確指定 1 分鐘窗口的例外，橫軸仍跟隨上方區間；其餘圖維持自動窗口。無樣本留白，不補零。
+
+## 實測限制
+
+500 人／600 秒／3 秒 cadence 的容量通過；同步瀏覽器翻譯 P90 3.023 秒，未通過嚴格小於 3 秒目標。2 秒 cadence 未通過容量。這是固定 500ms 模型 mock 測試，不代表正式模型推論效能。詳見 [目前結果](../reports/VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md)。

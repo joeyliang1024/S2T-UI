@@ -39,7 +39,7 @@ Browser telemetry is best effort. Failed requests may be dropped rather than rep
 
 `deploy/monitoring/generate.py` generates monitoring resources and the main dashboard; keep generated output consistent when editing its source. Connection configuration belongs in `deploy/monitoring/.env`. `PROMETHEUS_URL` must be reachable from Grafana. The compatibility name `S2T_GATEWAY_METRICS_URL` configures an optional metrics source reachable from Prometheus. Container localhost does not refer to the developer's computer.
 
-The [2026-10-24 report](VALIDATION-REPORT-2026-10-24.md) verifies browser samples against Prometheus count/sum and checks queries on the main and Python performance dashboards. Real-model performance and GPU capacity still require separate measurement.
+The [2026-10-26 results](VALIDATION_2026-10-26.md) verifies browser samples against Prometheus count/sum and checks queries on the main and Python performance dashboards. Real-model performance and GPU capacity still require separate measurement.
 
 ### ASR and translation measurement boundaries
 
@@ -52,3 +52,5 @@ When started with `python -m app`, each backend Pod uses one supervised process 
 Ordinary ASR and translation model requests use separate aiohttp sessions with bounded connection pools; summary streaming retains its existing streaming client. Model sessions neither retain nor forward cookies, do not follow redirects, and do not automatically replay disconnected POST requests. See the [aiohttp session, pooling and DummyCookieJar reference](https://docs.aiohttp.org/en/stable/client_reference.html). Local and Linux client CPU benchmarks are retained with validation evidence and do not establish whole-service capacity.
 
 Shared pending-job and pending-audio gauges select the most recent worker measurement within a Pod, preventing a drained queue from retaining another worker's old maximum. Grafana takes the maximum across Pods so the shared queue is not counted twice. Event-loop lag still takes the maximum worker value to expose the slowest worker.
+
+The synchronized capacity probe recorded translation P90 3.023s: the strict under-three-second objective did not pass. Three-second cadence passed capacity; two-second cadence did not. See [reproduction](REPRODUCE.md) and [Grafana details](GRAFANA.md).

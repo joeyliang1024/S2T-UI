@@ -1,5 +1,8 @@
 # 錄音與暫存清理審查 — 2026-10-25
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 狀態：五項均已修正。以下保留修正前的審查與重現條件，舊重現腳本的斷言不代表目前行為。最新驗證見 [fix report](RECORDING_FIXES_2026-10-25.zh-TW.md).
 
 繁體中文 | [English](../en/RECORDING_REVIEW_2026-10-25.md)

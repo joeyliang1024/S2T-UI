@@ -1,5 +1,8 @@
 # code-review-graph 審查補充與修改順序
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 本次實際使用 `code-review-graph 2.3.5`，在 `/tmp/s2t-code-review-graph-venv` 隔離安裝。原本全域 CLI 的 editable source `/Users/liangzhiquan/Desktop/code-review-graph` 已不存在，因此無法 import cli；未改動原安裝與 MCP 設定。
 
 ## 建圖結果與必要補充

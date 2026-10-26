@@ -6,4 +6,4 @@ Playwright 缺少內建瀏覽器時自動尋找本機 Chrome／Edge／Chromium�
 
 隔離部署測試需明確設定 `S2T_ALLOW_DEPLOYMENT_TESTS=true`，再執行 `test:deployment`、`test:replicas`、`test:monitoring`。測試會清理專用帳號。
 
-完整步驟見 [驗收手冊](https://github.com/joeyliang1024/S2T-UI/blob/codex/feature-python-backend/docs/guide/VALIDATION.zh-TW.md)，目前證據見 [2026-10-24 報告](https://github.com/joeyliang1024/S2T-UI/blob/codex/feature-python-backend/docs/reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md)。
+完整步驟見 [驗收手冊](https://github.com/joeyliang1024/S2T-UI/blob/codex/feature-python-backend/docs/guide/VALIDATION.zh-TW.md)，目前證據見 [2026-10-26 結果](https://github.com/joeyliang1024/S2T-UI/blob/codex/feature-python-backend/docs/reports/VALIDATION_2026-10-26.zh-TW.md)。

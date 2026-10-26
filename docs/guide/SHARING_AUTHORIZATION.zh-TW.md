@@ -1,6 +1,6 @@
 # 聲紋共享授權
 
-繁體中文 | [English](../en/API.md)
+繁體中文 | [English](../en/SHARING_AUTHORIZATION.md)
 
 公開註冊的 NT／Department 是展示資料，不授予聲紋共享權限。Admin 在「設定 → 帳號管理」核准共享並指定可信部門。Admin 新建帳號會依其指定部門建立核准紀錄；公開註冊與舊帳號預設未核准，需逐一核實。
 

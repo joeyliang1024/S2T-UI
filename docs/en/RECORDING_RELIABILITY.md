@@ -56,3 +56,7 @@ Reproduce with `S2T_OPFS_STALL_MS=600000 node tests/smoke/opfs-recording-browser
 ### Upload batching and local commits
 
 Recording still commits to browser OPFS approximately every 2 seconds. Network uploads independently accumulate ranges of at most 1 MiB, with a randomized 15–30 second deadline to spread requests across users. Stopping recording flushes the remaining data immediately. Retries preserve the exact byte range; progress advances only after a durable server acknowledgement. Batching reduces upload request volume without changing caption inference scheduling.
+
+## Latest recorded storage result — 2026-10-26
+
+With batched uploads, a separate 600-second outage recovered 58,754,560 bytes exactly through 307 OPFS commits, without capture-pressure pauses. Earlier byte counts above describe their own fixtures/runs. The 96kHz/30-times-real-time test recovered 115,200,000 bytes. Neither test represents 500 physical browsers. See [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md).

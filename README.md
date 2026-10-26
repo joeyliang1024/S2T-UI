@@ -1,5 +1,7 @@
 # S2T UI
 
+目前預發行版：**0.2.0-rc.1**。[更新說明](docs/releases/0.2.0-rc.1.zh-TW.md)；發布目標為 feature branch，未表示已合併至 main。
+
 繁體中文 | [English](README.en.md)
 
 Web 即時語音辨識、翻譯、錄音與摘要。React 前端、Python 後端；正式環境由 Nginx 提供前端。
@@ -13,8 +15,8 @@ python3.12 -m venv .venv
 .venv/bin/pip install --require-hashes -r backend/requirements-audio.lock
 .venv/bin/pip install -r backend/requirements-integration.txt
 npm ci --ignore-scripts
-cp frontend/.env.example frontend/.env
-cp backend/.env.example backend/.env
+cp -n frontend/.env.example frontend/.env
+cp -n backend/.env.example backend/.env
 npm run dev
 ```
 

@@ -1,5 +1,8 @@
 # 背景處理工作生命週期設計
 
+> 歷史／研究文件：以下數據、路徑與命令僅代表記錄版本，不是現行操作入口。最新操作與驗收請以 [文件入口](../README.md)、[目前結果](../reports/VALIDATION_2026-10-26.zh-TW.md) 及 [重現指南](../guide/REPRODUCE.zh-TW.md) 為準。
+
+
 本文件整理背景工作（durable job）的生命週期設計：持久化佇列、取消 API、租約續期、多分頁 owner 與 Electron metadata 同步。系統整體背景見 [架構文件](../reference/ARCHITECTURE.zh-TW.md)，部署與重送行為見 [部署指南](../guide/DEPLOYMENT.zh-TW.md)。
 
 ## 刪除與 durable job

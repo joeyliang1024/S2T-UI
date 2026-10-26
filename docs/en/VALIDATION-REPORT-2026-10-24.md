@@ -1,5 +1,8 @@
 # Web/Python/Kubernetes validation — 2026-10-24
 
+> Historical report: measurements and commands describe the recorded version. Use [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md) for current scope and operations.
+
+
 [繁體中文及原始證據](../reports/WEB_PYTHON_K8S_2026-10-24.zh-TW.md) | English
 
 This report summarizes the recorded local validation, not a promise about other environments. The detailed report and machine-readable evidence remain the source for measured values.

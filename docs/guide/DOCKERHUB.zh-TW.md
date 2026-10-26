@@ -5,7 +5,7 @@
 從 repository 根目錄建置，Dockerfile 集中於 `deploy/docker/`：
 
 ```sh
-docker build -f deploy/docker/frontend.Dockerfile -t <registry>/s2t-frontend:<version> .
+docker build -f deploy/docker/frontend.Dockerfile --build-arg NPM_REGISTRY=https://registry.npmjs.org -t <registry>/s2t-frontend:<version> .
 docker build -f deploy/docker/backend.Dockerfile --target audio -t <registry>/s2t-backend:<version> .
 ```
 

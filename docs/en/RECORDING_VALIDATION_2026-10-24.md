@@ -1,5 +1,8 @@
 # Recording pipeline validation — 2026-10-24
 
+> Historical report: measurements and commands describe the recorded version. Use [current results](VALIDATION_2026-10-26.md) and [reproduction](REPRODUCE.md) for current scope and operations.
+
+
 [繁體中文](../reports/RECORDING_PIPELINE_2026-10-24.zh-TW.md) | English
 
 The existing local Colima/K3s environment now runs frontend `s2t-frontend:web-20261024-r8` with one ready Pod and Python backend `s2t-backend:web-20261024-r5` with two ready Pods. Backend APIs and shared storage were unchanged.

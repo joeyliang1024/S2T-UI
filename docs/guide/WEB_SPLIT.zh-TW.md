@@ -72,7 +72,7 @@ node scripts/forward.cjs --monitoring
 錄音 immutable chunks、sessions CAS、JWT 撤銷、工作 lease generation 與 account fencing 支援跨 Pod。
 模型使用 `s2t-models` PVC；本機單節點叢集可以明確指定 `K8S_MODEL_HOST_PATH`。
 `K8S_DNS_RESOLVER` 必須是實際 cluster DNS IP，Nginx upstream 使用 namespace 的完整 Service DNS。
-API 每 Pod 預設 query pool 8、shared fence 2、exclusive fence 1；計算 PostgreSQL budget 時加上 migration／exporters。
+K8s base 每 Pod 預設 2 個 Uvicorn 進程；每進程 query 8＋shared fence 4＋exclusive fence 1＋health 1，共 14。兩 Pod 共 56 條，再預留滾動更新、migration 與維護空間。容量 profile 為每 Pod 4 個進程，詳見環境指南。
 
 映像需預先推至 registry 或載入本機 runtime。多節點環境必須每個節點可取得同一個 immutable image。
 目前 active base 為 `web.json`；既有分層 API／audio workloads 與 HPA 範例保留供另案擴容，未套用至此次固定 1＋2 部署。
