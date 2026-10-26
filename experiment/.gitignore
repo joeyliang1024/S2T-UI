@@ -1,4 +1,0 @@
-# Local credentials, account tokens and scratch output are never experiment evidence.
-**/private/
-**/__pycache__/
-**/*.pyc

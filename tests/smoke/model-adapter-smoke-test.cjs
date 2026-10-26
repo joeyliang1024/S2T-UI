@@ -1,31 +1,31 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/features/models/model-adapter.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/features/models/model-adapter.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('model-adapter-smoke-module')
 loaded.filename = 'model-adapter-smoke-module.cjs'
 loaded.paths = module.paths
 loaded._compile(result.outputFiles[0].text, loaded.filename)
-const { createOpenAiChunkedModelAdapter, isRepetitiveAsrText } = loaded.exports
+const { createOpenAiChunkedModelAdapter: makeAdapter, isRepetitiveAsrText } = loaded.exports
+
+const createOpenAiChunkedModelAdapter = (profile, transport) => makeAdapter(profile, transport || (profile.gatewayProfileId ? undefined : {
+  cancellation: 'result', ensureReady: async () => {}, hasSpeech: async () => true,
+  transcribe: request => window.asr.transcribeAudioChunk(request)
+}))
 
 const main = async () => {
   assert.equal(isRepetitiveAsrText('請稍候請稍候請稍候請稍候'), true)
   assert.equal(isRepetitiveAsrText('你該睡覺你該睡覺'), false, 'twofold repetition may be genuine speech')
   assert.equal(isRepetitiveAsrText('今天的會議討論模型和部署'), false)
   assert.equal(isRepetitiveAsrText('哈哈哈哈哈哈哈哈'), true)
-  let keyChecks = 0
-  global.window = { s2t: { hasModelApiKey: async () => { keyChecks += 1; return false } } }
-  const noKey = createOpenAiChunkedModelAdapter({ id: 'local-asr', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false })
-  await noKey.start({ sampleRate: 16_000, language: 'auto', targetLanguage: 'en' })
-  assert.equal(keyChecks, 0, 'keyless models must not require a stored key')
-  const requiresKey = createOpenAiChunkedModelAdapter({ id: 'protected-asr', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'protected', requiresApiKey: true })
-  await assert.rejects(requiresKey.start({ sampleRate: 16_000, language: 'auto', targetLanguage: 'en' }), /API key/)
-  assert.equal(keyChecks, 1)
+  global.window = { setTimeout, clearTimeout }
   const requests = []
   const transcripts = []
-  global.window = { s2t: { transcribeAudioChunk: async (request) => { requests.push(request); return { text: '測試即時字幕' } } } }
-  const live = createOpenAiChunkedModelAdapter({ id: 'live-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false })
+  const live = createOpenAiChunkedModelAdapter({ id: 'live-test', model: 'local', endpoint: '/test' }, {
+    cancellation: 'request', ensureReady: async () => {}, hasSpeech: async () => true,
+    transcribe: async request => { requests.push(request); return { text: '測試即時字幕' } }
+  })
   live.onTranscript((entry) => transcripts.push(entry))
   await live.start({ sampleRate: 48_000, language: 'zh-TW', targetLanguage: 'en' })
   for (let offset = 0; offset < 48_000 * 7; offset += 128) {
@@ -43,6 +43,7 @@ const main = async () => {
   await live.stop()
   assert.ok(requests.length >= 2, 'the final flush must send the remaining pending audio')
   assert.ok(requests.some(request => String(request.prompt || '').includes('測試即時字幕')), 'later chunks must carry the previous caption as rolling prompt')
+  window.asr = { transcribeAudioChunk: async request => { requests.push(request); return { text: '測試即時字幕' } } }
   const shortEvents = []
   const short = createOpenAiChunkedModelAdapter({ id: 'short-test', endpoint: 'http://127.0.0.1/v1/audio/transcriptions', model: 'local', requiresApiKey: false, vadConfig: { minSpeechMs:120, minSilenceMs:250, preRollMs:300, noiseFloorOffsetDb:12, chunkMinMs:700, chunkMaxMs:1500 } })
   short.onTranscript(e=>shortEvents.push(e))
@@ -53,7 +54,7 @@ const main = async () => {
   assert.equal(shortEvents[0].isSentenceBoundary,true)
   await short.stop()
   const adminRequests = []
-  global.window = { s2t: { transcribeAudioChunk: async request => { adminRequests.push(request); return { text: 'admin caption' } } } }
+  global.window = { asr: { transcribeAudioChunk: async request => { adminRequests.push(request); return { text: 'admin caption' } } } }
   const admin = createOpenAiChunkedModelAdapter({ id: 'admin', endpoint: '/test', model: 'local', requiresApiKey: false, strictChunkLimits: true, vadConfig: { minSpeechMs: 120, minSilenceMs: 250, preRollMs: 300, noiseFloorOffsetDb: 12, chunkMinMs: 700, chunkMaxMs: 1500 } })
   await admin.start({ sampleRate: 16000, language: 'zh-TW', targetLanguage: 'en' })
   for (let offset = 0; offset < 8000; offset += 160) admin.pushAudio(new Float32Array(160).fill(offset < 3200 ? .1 : 0), offset)
@@ -68,7 +69,7 @@ const main = async () => {
   assert.ok(adminRequests.every(request => (request.audio.byteLength - 44) / 2 <= 24000), 'backlog and stop obey admin maximum')
   const naturalRequests = []
   const naturalEvents = []
-  global.window = { setTimeout, s2t: { transcribeAudioChunk: async request => { naturalRequests.push(request); return { text: '完整的一句' } } } }
+  global.window = { setTimeout, asr: { transcribeAudioChunk: async request => { naturalRequests.push(request); return { text: '完整的一句' } } } }
   const natural = createOpenAiChunkedModelAdapter({ id: 'natural-default', endpoint: '/test', model: 'local', requiresApiKey: false })
   natural.onTranscript(event => naturalEvents.push(event))
   await natural.start({ sampleRate: 16_000, language: 'zh-TW', targetLanguage: 'en' })
@@ -98,7 +99,7 @@ const main = async () => {
   const loopRequests = []
   const loopEvents = []
   const replies = ['正常的第一段', '請稍候請稍候請稍候請稍候', '恢復正常辨識']
-  global.window = { setTimeout, s2t: { transcribeAudioChunk: async request => { loopRequests.push(request); return { text: replies.shift() } } } }
+  global.window = { setTimeout, asr: { transcribeAudioChunk: async request => { loopRequests.push(request); return { text: replies.shift() } } } }
   const loop = createOpenAiChunkedModelAdapter({ id: 'loop-test', endpoint: '/test', model: 'local', requiresApiKey: false })
   loop.onTranscript(event => loopEvents.push(event))
   await loop.start({ sampleRate: 16_000, language: 'zh-TW', targetLanguage: 'en' })

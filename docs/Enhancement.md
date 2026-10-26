@@ -1,13 +1,13 @@
 # S2T-UI 開發待辦與待決定規格
 
-更新日期：2026-10-17。本檔只列**尚待開發與尚未決定**的工作。測試、品質量測與待驗收項目暫時移出，集中於 [驗收手冊](guide/VALIDATION.zh-TW.md#暫移出開發待辦的驗收項目)，不表示已驗收完成。已完成工作由 Git、reports 與 experiment 保留。
+架構更新日期：2026-10-24；產品待辦原始整理日期：2026-10-17。本檔只列**尚待開發與尚未決定**的工作。測試、品質量測與待驗收項目暫時移出，集中於 [驗收手冊](guide/VALIDATION.zh-TW.md)，不表示已驗收完成。已完成工作由 Git、reports 與 experiment 保留。
 
-目前只推進 Web 版本（gateway `8787`）；Electron 專屬開發暫停，移至第四節。Web 優先仍為語者分離、斷句速度、翻譯模式及其直接依賴。項目 ID 保留，不因移除而重新編號。
+目前產品為 Web 前端 `5173`＋Python 後端 `8787`，環境變數分開；K8s 為前端 1 Pod＋後端 2 Pods。Web 優先仍為語者分離、斷句速度、翻譯模式及其直接依賴。項目 ID 保留，不因移除而重新編號。
 
 ## 已確定的邊界
 
 - NT 為公司唯一代號，已有大小寫不敏感的唯一性保護；授權以後端驗證的 user ID 為準，Department 展示欄位不授予共享權限。
-- Web gateway 同源提供 UI 與 API，預設只有 `8787`；Electron 載入本機 renderer，正式版連外部 HTTPS gateway。
+- Web 前端經 Vite／Nginx 同源代理 Python API；port 分別由 `FRONTEND_PORT` 與 `BACKEND_PORT` 載入。
 - blob、config、vector 可各自配置；已配置服務故障不得靜默改存本機。聲紋預設私有，共享需同意與可信授權。
 - 人工修改不得被晚到自動結果覆寫，模型失敗不得丟失音訊。重講保留舊版本，目前固定原時間槽裁切／補靜音，其他規則依 Q04 決定。
 - UI 五語系為繁中、簡中、英文、日文、德文；不等同模型支援語言。維持既有翻譯策略，摘要翻譯由按鈕明確觸發。
@@ -17,7 +17,7 @@
 ### O01 結構拆分與共用契約
 
 - [ ] 抽離大型 `useAppController`／`AppView` 的 capture lifecycle、摘要 generation／標題狀態及 feature hooks。
-- [ ] 按領域拆分剩餘 gateway routes／scheduler，避免只搬大檔或新增沒有替換需求的 abstract class。
+- [ ] 按領域整理 Python routes／jobs，避免只搬大檔或新增沒有替換需求的 abstract class。
 
 ### O02 長時間錄音、字幕與資源上限
 
@@ -70,17 +70,7 @@
 | Q04 | 固定時間槽重講是否改為平移後續音訊／字幕，以及完整文字編輯歷史的保存規則。未決定前保留現行行為。 |
 | Q05 | 是否需要二選一以外的合併／保留雙份策略、最後更新時間排序，以及資料保留期限。 |
 | Q06 | 左側 history/settings 與舊右側功能欄需求的最終取捨；未定前保留現行左側。 |
-| Q07 | TSSO 契約／時程、最低 OS、macOS／Windows 架構、打包工具與簽署、正式網域／TLS／模型版本。 |
+| Q07 | TSSO 契約／時程、瀏覽器支援範圍、正式網域／TLS／模型版本。 |
 | Q08 | 尚未承諾的候選：獨立降噪模型、字幕同步回放／變速、MP3 匯出、逐字稿優化／問答、視覺摘要、語音口譯、會後重轉錄。 |
 
-## 4. Electron 專屬工作 — 暫停
-
-以下保留範圍，待使用者恢復 Electron 開發後再排程，不計入目前 Web 待辦：
-
-- O01：Electron IPC／session／金鑰／視窗服務的領域拆分。
-- O02：錄音 manifest 與字幕游標、暫停／換源／gap 事件的同批復原。
-- F02：Electron 當前 ASR 匯入請求的取消能力。
-- F04：安裝包設定、平台圖示、產出／發布 CI、架構／工具選擇、簽署與 notarization。
-- Q07 中 Electron 最低 OS、平台架構、打包工具與簽署的決策；Web 的 HTTPS 與部署設定繼續處理。
-
-操作與契約見 [文件索引](README.md)，測試與驗收集中於 [驗收手冊](guide/VALIDATION.zh-TW.md)。
+操作與契約見 [文件索引](README.md)，測試與驗收見 [驗收手冊](guide/VALIDATION.zh-TW.md)。

@@ -1,0 +1,35 @@
+# Optional fixture for an isolated local load-test PostgreSQL deployment.
+# This is not installed by the application kustomization. Back up and restore
+# existing databases explicitly before switching an existing volume.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s2t-web-postgres-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 4Gi
+---
+# Strategic merge patch for the isolated test fixture, not a standalone server.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  template:
+    spec:
+      containers:
+        - name: postgres
+          args: ['-c', 'max_connections=448', '-c', 'shared_buffers=128MB', '-c', 'work_mem=1MB']
+          resources:
+            limits:
+              memory: 3Gi
+      volumes:
+        - name: data
+          emptyDir: null
+          persistentVolumeClaim:
+            claimName: s2t-web-postgres-data

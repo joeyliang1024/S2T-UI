@@ -6,7 +6,7 @@
 
 新增頁使用 ASCII `Page-Name.md`，標題用繁中；一般頁連結寫 `[文件規範](Documentation-Standards)`。Home 是入口，`_Sidebar.md` 管理導覽，`_Footer.md` 管理共同版本提醒。新增頁要同步更新入口與側欄。
 
-目前開發基準是 `feat/bug-fix`，不是舊 main。repo 連結使用明確 ref；分支合併或路徑移動後，更新 `manifest.json` 與頁面連結，再檢查遠端檔案確實存在。不能把只在本機的 feature／GPU 測試寫成已發布能力。
+目前文件對應 Web／Python 工作分支；`manifest.json` 記錄 checkout 基準，未提交修改不代表遠端已發布。repo 連結使用明確 ref；分支合併或路徑移動後，更新 `manifest.json` 與頁面連結，再檢查遠端檔案確實存在。不能把只在本機的 feature／GPU 測試寫成已發布能力。
 
 ## 維護流程
 

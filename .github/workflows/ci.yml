@@ -1,16 +1,25 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  local-checks:
+  web-and-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r backend/requirements-integration.txt
+      - run: ruff check backend
+      - run: PYTHONPATH=backend S2T_TEST_EMBEDDED_PG=1 python -m pytest backend/tests -q
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: node scripts/testing/prepare-runtime.cjs
       - run: npm run check
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: S2T_PYTHON_EXECUTABLE=python npm run test:e2e
+      - run: docker build --target api -f deploy/docker/backend.Dockerfile -t s2t-api:test .
+      - run: docker build -f deploy/docker/frontend.Dockerfile --build-arg NPM_REGISTRY=https://registry.npmjs.org -t s2t-frontend:test .

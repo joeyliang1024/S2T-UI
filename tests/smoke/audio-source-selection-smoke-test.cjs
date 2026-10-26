@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const { buildSync } = require('esbuild')
-const source = fs.readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
+const source = fs.readFileSync('frontend/src/features/app/hooks/useAppController.ts', 'utf8')
 const handler = source.slice(source.indexOf('const applyAudioSources ='), source.indexOf('const startCapture ='))
 const code = buildSync({ stdin: { contents: handler + '\nreturn applyAudioSources;', loader: 'ts' }, format: 'cjs', write: false }).outputFiles[0].text
 const stream = () => { const audio = { readyState: 'live', stopped: false, stop() { this.stopped = true; this.readyState = 'ended' } }; const video = { stopped: false, stop() { this.stopped = true } }; return { audio, video, getAudioTracks: () => [audio], getTracks: () => [audio, video] } }

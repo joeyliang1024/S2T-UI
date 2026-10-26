@@ -1,10 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - workloads.yaml
-  - migration.yaml
-  - autoscaling.yaml
+  - web.json
+configMapGenerator:
+  - name: s2t-frontend-nginx
+    files:
+      - default.conf.template
 images:
-  - name: s2t-ui
-    newName: YOUR_REGISTRY/s2t-ui
+  - name: s2t-frontend
+    newName: YOUR_REGISTRY/s2t-frontend
+    newTag: REPLACE_WITH_IMMUTABLE_TAG
+  - name: s2t-backend
+    newName: YOUR_REGISTRY/s2t-backend
     newTag: REPLACE_WITH_IMMUTABLE_TAG

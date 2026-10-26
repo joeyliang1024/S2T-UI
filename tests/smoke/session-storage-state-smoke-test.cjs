@@ -1,14 +1,14 @@
 const assert=require('node:assert/strict'),{buildSync}=require('esbuild')
-const bundled=buildSync({entryPoints:['src/renderer/src/features/sessions/domain/storage-state.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
+const bundled=buildSync({entryPoints:['frontend/src/features/sessions/domain/storage-state.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports',bundled)(m,m.exports)
 const {sessionStorageStatesForSnapshot:states,displayedSessionStorageState:display}=m.exports
-const mergeCode=buildSync({entryPoints:['src/renderer/src/features/sessions/domain/session-merge.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
+const mergeCode=buildSync({entryPoints:['frontend/src/features/sessions/domain/session-merge.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
 const mergeModule={exports:{}};new Function('module','exports','require',mergeCode)(mergeModule,mergeModule.exports,require)
 const a={id:'a',createdAt:'2026-10-14',title:'A',processingState:'completed'},b={id:'b',createdAt:'2026-10-14',title:'B',processingState:'completed'}
 assert.deepEqual(states([{...a,title:'edited'},b],[a,b],{a:'both',b:'remote'}),{a:'pending',b:'remote'})
 assert.equal(states([{...a,processingState:'running'}],[{...a,processingState:'running'}],{a:'both'}).a,'pending')
 for(const value of ['both','remote','local','pending'])assert.equal(display(value,true),'pending')
-const syncCode=buildSync({entryPoints:['src/renderer/src/features/sessions/services/sync-coordinator.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
+const syncCode=buildSync({entryPoints:['frontend/src/features/sessions/services/sync-coordinator.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
 const syncModule={exports:{}};new Function('module','exports','require',syncCode)(syncModule,syncModule.exports,require)
 const {createSessionSyncCoordinator}=syncModule.exports
 ;(async()=>{

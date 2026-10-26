@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { createServer } = require('node:http'), { buildSync } = require('esbuild')
 const { chromium, browserOptions } = require('../helpers/browser.cjs')
 ;(async () => {
-  const code = buildSync({ entryPoints: ['src/renderer/src/features/sessions/services/session-outbox.ts'], bundle: true, format: 'iife', globalName: 'Outbox', platform: 'browser', write: false }).outputFiles[0].text
+  const code = buildSync({ entryPoints: ['frontend/src/features/sessions/services/session-outbox.ts'], bundle: true, format: 'iife', globalName: 'Outbox', platform: 'browser', write: false }).outputFiles[0].text
   const server = createServer((req, res) => { res.setHeader('content-type', 'text/html'); res.end('<!doctype html><title>Outbox test</title>') })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const browser = await chromium.launch(browserOptions()), context = await browser.newContext()
@@ -31,8 +31,10 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
       return { restored: restored.local[0].title, oldAck, retained: retained.local[0].title, foreignEmpty: other === undefined }
     })
     assert.deepEqual(restored, { restored: 'local', oldAck: false, retained: 'newer', foreignEmpty: true })
+    await page.evaluate(async () => { window.liveOwner = Outbox.createSessionOutbox('user-a'); await window.liveOwner.read() })
     const otherPage = await context.newPage(); await otherPage.goto(origin); await otherPage.addScriptTag({ content: code })
     assert.equal(await otherPage.evaluate(async () => { const store = Outbox.createSessionOutbox('user-a'); const row = await store.read(); await store.close(); return row === undefined }), true, 'another tab must not consume this tab checkpoint')
+    await page.evaluate(() => window.liveOwner.close())
     const deleted = await page.evaluate(async () => {
       const store = Outbox.createSessionOutbox('user-a'), row = await store.read()
       const ack = await store.acknowledge(row.local), empty = await store.read(); await store.close()
@@ -63,7 +65,20 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
       const retained = await new Promise((resolve, reject) => { const tx = db.transaction('pending'); const r = tx.objectStore('pending').get(key); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error) })
       db.close(); return rejected === 2 && retained.local[0].title === 'missing ID'
     }), true)
+    // A closed tab's pending edits are discoverable, but retained until remote ACK.
+    const abandoned = await context.newPage(); await abandoned.goto(origin); await abandoned.addScriptTag({ content: code })
+    await abandoned.evaluate(async () => { const store = Outbox.createSessionOutbox('user-closed'); await store.save({ baseline: [], local: [{ id: 'abandoned', title: 'retained edit' }] }) })
+    await abandoned.close()
+    const recovered = await otherPage.evaluate(async () => {
+      const store = Outbox.createSessionOutbox('user-closed'), row = await store.read()
+      if (row?.local[0]?.id !== 'abandoned') throw Error('Closed-tab edit was not recovered')
+      await store.save(row)
+      const ack = await store.acknowledge(row.local)
+      const empty = await store.read(); await store.close()
+      return ack && empty === undefined
+    })
+    assert.equal(recovered, true, 'closed-tab handoff is acknowledged and cleared')
     assert.deepEqual(errors, [])
-    console.log('PASS real IndexedDB: durable reload, immutable accepted checkpoint, stale ACK retention, account/tab isolation, matching ACK cleanup, close drain and corrupt-data retention')
+    console.log('PASS real IndexedDB: durable reload, immutable accepted checkpoint, stale ACK retention, active-tab isolation, closed-tab handoff, matching ACK cleanup, close drain and corrupt-data retention')
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }
 })().catch(error => { console.error(error); process.exitCode = 1 })

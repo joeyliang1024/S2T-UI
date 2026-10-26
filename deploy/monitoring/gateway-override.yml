@@ -1,5 +1,0 @@
-services:
-  gateway:
-    image: s2t-ui:monitoring-20261011
-    pull_policy: never
-    stop_grace_period: 45s

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/features/summary/domain/plan.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/features/summary/domain/plan.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('summary-plan-smoke-module')
 loaded.filename = 'summary-plan-smoke-module.cjs'

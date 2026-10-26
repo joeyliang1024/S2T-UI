@@ -8,6 +8,11 @@ node_modules
 out
 dist
 .s2t-data
+data
+__pycache__
+.pytest_cache
+.ruff_cache
+.venv
 tmp
 music
 # Local weights/runtimes and experiments are mounted, never baked into images.
@@ -19,3 +24,6 @@ dependencies/ffmpeg-static/*
 !dependencies/ffmpeg-static/ffmpeg-linux-arm64
 !dependencies/ffmpeg-static/*.LICENSE
 !dependencies/ffmpeg-static/*.README
+
+**/.env
+**/.env.*

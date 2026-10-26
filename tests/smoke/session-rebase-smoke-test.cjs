@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/sessions/domain/session-merge.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/features/sessions/domain/session-merge.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }; new Function('module', 'exports', 'require', code)(m, m.exports, require)
 const { rebaseSessions, SessionMergeConflictError } = m.exports
 const row = (id, title = id) => ({ id, title, createdAt: '2026-10-14', segments: [], transcript: '', durationMs: 0, source: 'fixture' })

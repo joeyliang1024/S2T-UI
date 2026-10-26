@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'), {readFileSync}=require('node:fs'),transpile=require('../helpers/transpile-typescript.cjs'),{buildSync}=require('esbuild')
-const hook=readFileSync('src/renderer/src/features/app/hooks/useAppController.ts','utf8')
+const hook=readFileSync('frontend/src/features/app/hooks/useAppController.ts','utf8')
 const source=hook.slice(hook.indexOf('const finalizeSession ='),hook.indexOf('const appendAudio ='))
 const code=transpile(source).code
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}}
@@ -40,7 +40,7 @@ async function selectionScenario(items, failure) {
  if(items.length)assert.equal(progress.selected.stage,'completed')
 }
 async function main(){global.fetch=()=>{throw Error('Real API forbidden')};await scenario();await scenario(true);for(const items of [[],['transcript'],['diarization'],['translation'],['transcript','diarization','translation']])await selectionScenario(items);for(const failure of ['http','empty'])await selectionScenario(['transcript','diarization','translation'],failure);for(const stage of ['asr','translation','diarization','saving'])await scenario(false,stage)
- const view=readFileSync('src/renderer/src/features/app/views/AppView.tsx','utf8'),start=view.indexOf('const qualityCorrectionRunning ='),end=view.indexOf('const sessionTranscript =',start)
+ const view=readFileSync('frontend/src/features/app/views/AppView.tsx','utf8'),start=view.indexOf('const qualityCorrectionRunning ='),end=view.indexOf('const sessionTranscript =',start)
  const bundle=buildSync({stdin:{contents:`const qualityCorrectionProgress={test:{stage:'asr'},loading:{stage:'loading'},speakers:{stage:'diarization'},translation:{stage:'translation'},done:{stage:'completed'},failed:{stage:'failed'}}; ${view.slice(start,end)};export {qualityCorrectionRunning};`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
  const m={exports:{}};new Function('module','exports','require',bundle)(m,m.exports,require)
  for(const id of ['test','loading','speakers','translation']) assert.equal(m.exports.qualityCorrectionRunning({id}),true)

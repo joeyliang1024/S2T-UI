@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/features/transcript/import-checkpoint.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/features/transcript/import-checkpoint.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('import-checkpoint-smoke-module')
 loaded.filename = 'import-checkpoint-smoke-module.cjs'

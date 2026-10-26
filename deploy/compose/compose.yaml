@@ -1,0 +1,47 @@
+name: s2t-web
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: deploy/docker/frontend.Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+    env_file: frontend/.env
+    environment:
+      BACKEND_UPSTREAM: http://backend:${BACKEND_PORT:-8787}
+      DNS_RESOLVER: 127.0.0.11
+    ports:
+    - 127.0.0.1:${FRONTEND_PORT:-5173}:${FRONTEND_PORT:-5173}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+      target: audio
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    env_file: backend/.env
+    environment:
+      BACKEND_PORT: ${BACKEND_PORT:-8787}
+      S2T_PROCESS_ROLE: all
+      S2T_BIND_HOST: 0.0.0.0
+      S2T_MODEL_DIR: /models
+      S2T_DATA_DIR: /data
+    ports:
+    - 127.0.0.1:${BACKEND_PORT:-8787}:${BACKEND_PORT:-8787}
+    volumes:
+    - ${S2T_MODEL_DIR:-./models}:/models:ro
+    - ${S2T_DATA_DIR:-./data}:/data
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:'+os.environ['BACKEND_PORT']+'/readyz',timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped

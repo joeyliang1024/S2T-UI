@@ -4,9 +4,9 @@ const load=path=>{
  const code=buildSync({entryPoints:[path],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
  const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);return m.exports
 }
-const {createTextSearch,normalizeSearchText}=load('src/renderer/src/shared/services/search.ts')
-const {searchCaptionGroups}=load('src/renderer/src/features/transcript/domain/search.ts')
-const {sessionHistory}=load('src/renderer/src/features/sessions/domain/history.ts')
+const {createTextSearch,normalizeSearchText}=load('frontend/src/shared/services/search.ts')
+const {searchCaptionGroups}=load('frontend/src/features/transcript/domain/search.ts')
+const {sessionHistory}=load('frontend/src/features/sessions/domain/history.ts')
 assert.equal(normalizeSearchText('  Ｈｅｌｌｏ\t World\n '),'hello world')
 assert.equal(createTextSearch('  HELLO  ').matches('hello'),true)
 assert.equal(createTextSearch('Café').matches('Cafe\u0301'),true)
@@ -39,7 +39,7 @@ assert.equal(sessionHistory([record],{...options,search:'no match'}).filteredSes
 for(const locale of ['zh-TW','en','ja','de'])assert.equal(sessionHistory([record],{...options,search:'WEEKLY',locale}).filteredSessions.length,1)
 // Legacy records without segments must apply the same matcher to their full text.
 assert.equal(sessionHistory([{...record,segments:[],transcript:'Legacy HELLO'}],{...options,search:' hello '}).filteredSessions.length,1)
-const {renderedLiveCaptionWindow}=load('src/renderer/src/features/transcript/domain/live-caption.ts')
+const {renderedLiveCaptionWindow}=load('frontend/src/features/transcript/domain/live-caption.ts')
 const many=Array.from({length:520},(_,i)=>caption(String(i),i===0?'older searchable caption':'recent caption',{startMs:i*1000,endMs:(i+1)*1000,isSentenceBoundary:true}))
 const needle=createTextSearch('older searchable')
 assert.equal(searchCaptionGroups(renderedLiveCaptionWindow(many,needle.active),needle)[0].members[0].id,'0','explicit search includes older captions beyond the 500-entry live window')

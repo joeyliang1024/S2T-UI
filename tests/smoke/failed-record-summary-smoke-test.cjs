@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const transpile = require('../helpers/transpile-typescript.cjs')
-const source = fs.readFileSync('src/renderer/src/features/app/hooks/useAppController.ts','utf8')
+const source = fs.readFileSync('frontend/src/features/app/hooks/useAppController.ts','utf8')
 const code = transpile(source.slice(source.indexOf('const summarizeSession ='),source.indexOf('const canRecord =',source.indexOf('const summarizeSession =')))).code
 ;(async()=>{
   const calls=[],statuses=[],active={current:new Set()}

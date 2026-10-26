@@ -1,5 +1,7 @@
 # 音訊品質與取樣率
 
+繁體中文 | [English](../en/MODELS.md)
+
 ## 目前策略
 
 - 瀏覽器取得麥克風後，以 `AudioContext.sampleRate` 作為實際錄音取樣率，WAV header 與 PCM 資料使用相同數值，不修改 header 偽裝重採樣。若 ASR 模型宣告不同支援取樣率，僅送模型的分支會使用串流 windowed-sinc 低通與重採樣；保存 WAV 仍維持裝置原生取樣率。

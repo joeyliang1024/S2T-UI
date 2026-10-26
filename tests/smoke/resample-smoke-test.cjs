@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
 const result = buildSync({
-  entryPoints: ['src/renderer/src/features/capture/resample.ts'],
+  entryPoints: ['frontend/src/features/capture/resample.ts'],
   bundle: true,
   format: 'cjs',
   platform: 'node',

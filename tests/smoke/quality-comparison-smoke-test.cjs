@@ -6,7 +6,7 @@ const load = file => {
   const code = buildSync({ entryPoints: [file], bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/jsx-runtime'], write: false }).outputFiles[0].text
   const module = { exports: {} }; new Function('module', 'exports', 'require', code)(module, module.exports, require); return module.exports
 }
-const { comparisonRows, comparisonText } = load('src/renderer/src/features/quality-comparison/domain/comparison.ts')
+const { comparisonRows, comparisonText } = load('frontend/src/features/quality-comparison/domain/comparison.ts')
 const validate = (before, after) => {
   const rows = comparisonRows(before, after)
   assert.equal(rows.filter(row => row.before !== undefined).map(row => row.before).join('\n'), before)
@@ -41,7 +41,7 @@ assert.equal(compact.after.split('\n').length, 2, 'comparison segments use one r
 assert.doesNotMatch(compact.after, /\n\n/)
 const preserved = comparisonText({ ...withSegments, segments:[{...newSegment,sourceText:'line one\nline two'}] }, 'transcript')
 assert.match(preserved.after, /line one\nline two/, 'line breaks inside original content are retained')
-const { QualityComparisonWorkspace } = load('src/renderer/src/features/quality-comparison/views/QualityComparisonWorkspace.tsx')
+const { QualityComparisonWorkspace } = load('frontend/src/features/quality-comparison/views/QualityComparisonWorkspace.tsx')
 const props = { sessions: [base], progress: {}, correct: async () => {}, canCorrect: true, ui: key => key }
 const render = changes => renderToStaticMarkup(React.createElement(QualityComparisonWorkspace, { ...props, ...changes }))
 const html = render()

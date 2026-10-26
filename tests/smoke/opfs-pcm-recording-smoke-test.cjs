@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict'), { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/capture/recording/adapters/opfs-pcm-recording.ts'], bundle: true, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/features/capture/recording/adapters/opfs-pcm-recording.ts'], bundle: true, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text
 const m = { exports: {} }; new Function('module','exports','require',code)(m,m.exports,require)
 const { OpfsPcmRecording } = m.exports
 const state = { forbidFullRead: false, failClose: false }

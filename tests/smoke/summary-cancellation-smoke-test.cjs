@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
 const code = buildSync({
-  entryPoints: ['src/renderer/src/features/summary/services/summarize-transcript.ts'],
+  entryPoints: ['frontend/src/features/summary/services/summarize-transcript.ts'],
   bundle: true, platform: 'node', format: 'cjs', write: false
 }).outputFiles[0].text
 const moduleValue = { exports: {} }

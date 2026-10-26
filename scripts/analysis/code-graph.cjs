@@ -3,10 +3,10 @@ const root = path.resolve(__dirname, '../..')
 const { parse } = require('@babel/parser')
 const files = []
 function walk(dir) { for (const e of fs.readdirSync(path.join(root,dir), {withFileTypes:true})) {const f=path.posix.join(dir,e.name); if(e.isDirectory())walk(f);else if(/\.(?:tsx?|[cm]?js)$/.test(f)&&! /\.d\.(?:ts|cts)$/.test(f))files.push(f)} }
-walk('src');walk('server')
+walk('frontend/src');walk('frontend/shared')
 const nodes=new Map(files.map(f=>[f,{file:f,lines:fs.readFileSync(path.join(root,f),'utf8').split('\n').length,imports:[],calls:0,functions:0,hooks:0,platformBranches:0}]))
 const edges=[],unresolved=[]
-function resolve(from,spec) {if(!spec.startsWith('.')&&!spec.startsWith('@renderer/'))return null;const base=spec.startsWith('@renderer/')?path.join(root,'src/renderer/src',spec.slice(10)):path.resolve(root,path.dirname(from),spec);for(const p of [base,...['.ts','.tsx','.js','.cjs','.mjs','/index.ts','/index.tsx','/index.js','/index.cjs'].map(s=>base+s)]){const rel=path.relative(root,p);if(nodes.has(rel))return rel}return undefined}
+function resolve(from,spec) {if(!spec.startsWith('.')&&!spec.startsWith('@renderer/'))return null;const base=spec.startsWith('@renderer/')?path.join(root,'frontend/src',spec.slice(10)):path.resolve(root,path.dirname(from),spec);for(const p of [base,...['.ts','.tsx','.js','.cjs','.mjs','/index.ts','/index.tsx','/index.js','/index.cjs'].map(s=>base+s)]){const rel=path.relative(root,p);if(nodes.has(rel))return rel}return undefined}
 for (const f of files) {
   const source = fs.readFileSync(path.join(root, f), 'utf8')
   const ast = parse(source, { sourceType: 'unambiguous', createImportExpressions: true, plugins: ['typescript', ...(f.endsWith('.tsx') ? ['jsx'] : [])] })
@@ -41,9 +41,9 @@ for (const f of files) {
 function graph(includeTypes){const adj=new Map(files.map(f=>[f,new Set()]));for(const e of edges)if(includeTypes||!e.typeOnly)adj.get(e.from).add(e.to);let clock=0;const index=new Map(),low=new Map(),stack=[],on=new Set(),components=[];function visit(v){index.set(v,clock);low.set(v,clock++);stack.push(v);on.add(v);for(const w of adj.get(v)){if(!index.has(w)){visit(w);low.set(v,Math.min(low.get(v),low.get(w)))}else if(on.has(w))low.set(v,Math.min(low.get(v),index.get(w)))}if(low.get(v)===index.get(v)){const c=[];let w;do{w=stack.pop();on.delete(w);c.push(w)}while(w!==v);if(c.length>1||adj.get(v).has(v))components.push(c)}}for(const f of files)if(!index.has(f))visit(f);return {adj,cycles:components}}
 const all=graph(true),runtime=graph(false),incoming=new Map(files.map(f=>[f,new Set()]));for(const [from,tos]of all.adj)for(const to of tos)incoming.get(to).add(from)
 const ranked=files.map(f=>({...nodes.get(f),imports:undefined,fanOut:all.adj.get(f).size,fanIn:incoming.get(f).size}));const top=(key)=>[...ranked].sort((a,b)=>b[key]-a[key]).slice(0,12)
-const feature=f=>/^src\/renderer\/src\/features\/([^/]+)/.exec(f)?.[1],violations=edges.filter(e=>(e.from.startsWith('src/renderer/src/shared/')&&feature(e.to))||(e.from.startsWith('src/')&&e.to.startsWith('server/')))
+const feature=f=>/^frontend\/src\/features\/([^/]+)/.exec(f)?.[1],violations=edges.filter(e=>(e.from.startsWith('frontend/src/shared/')&&feature(e.to))||((e.from.startsWith('src/')||e.from.startsWith('frontend/'))&&e.to.startsWith('server/')))
 const featureEdges={};for(const e of edges){const a=feature(e.from),b=feature(e.to);if(a&&b&&a!==b){const key=a+' -> '+b;featureEdges[key]=(featureEdges[key]||0)+1}}
-const report={scope:['src','server'],nodeCount:files.length,edgeCount:edges.length,runtimeCycles:runtime.cycles,allCycles:all.cycles,topFanOut:top('fanOut'),topFanIn:top('fanIn'),topLines:top('lines'),violations,featureEdges,unresolved}
+const report={scope:['frontend/src','frontend/shared'],nodeCount:files.length,edgeCount:edges.length,runtimeCycles:runtime.cycles,allCycles:all.cycles,topFanOut:top('fanOut'),topFanIn:top('fanIn'),topLines:top('lines'),violations,featureEdges,unresolved}
 module.exports = { ...report, nodes: ranked, edges }
 if (require.main === module) {
   const output = process.argv[2] || 'docs/reports/CODE_GRAPH_CURRENT.json'

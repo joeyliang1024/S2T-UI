@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),{buildSync}=require('esbuild')
 const load=path=>{const code=buildSync({entryPoints:[path],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text;const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require);return m.exports}
-const recovery=load('src/renderer/src/features/sessions/domain/recovery.ts'),wav=load('src/renderer/src/features/transcript/wav-batch.ts'),http=load('src/renderer/src/shared/services/http.ts')
-const {retrySession}=load('src/renderer/src/features/sessions/services/recovery-handlers.ts')
+const recovery=load('frontend/src/features/sessions/domain/recovery.ts'),wav=load('frontend/src/features/transcript/wav-batch.ts'),http=load('frontend/src/shared/services/http.ts')
+const {retrySession}=load('frontend/src/features/sessions/services/recovery-handlers.ts')
 const data=Buffer.alloc(44+64000);data.write('RIFF');data.writeUInt32LE(data.length-8,4);data.write('WAVEfmt ',8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(16000,24);data.writeUInt32LE(32000,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write('data',36);data.writeUInt32LE(64000,40);const audio=new Blob([data],{type:'audio/wav'})
 const good={id:'good',status:'final',startMs:1000,endMs:2000,sourceText:'kept',translatedText:'keep translation',translationStatus:'completed',speaker:'manual',speakerManuallyEdited:true}
 const base={diarizationJobId:'old-job',id:'record',title:'test',audioKey:'record',durationMs:2000,createdAt:'2026-10-11',source:'test',processingState:'failed',processingError:'failed',segments:[good],transcript:'kept'}

@@ -1,8 +1,13 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),{buildSync}=require('esbuild')
-const code=buildSync({stdin:{contents:"export * from './src/renderer/src/features/models/model-adapter'; export * from './src/renderer/src/features/transcript/domain/live-caption';",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
+const code=buildSync({stdin:{contents:"export * from './frontend/src/features/models/model-adapter'; export * from './frontend/src/features/transcript/domain/live-caption';",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require)
-const {createOpenAiChunkedModelAdapter,upsertLiveCaption}=m.exports
+const {createOpenAiChunkedModelAdapter:makeAdapter,upsertLiveCaption}=m.exports
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve()}
+const createOpenAiChunkedModelAdapter = profile => profile.gatewayProfileId ? makeAdapter(profile) : makeAdapter(profile, {
+ cancellation: 'result', ensureReady: async () => {}, hasSpeech: async () => true,
+ transcribe: request => window.asr.transcribeAudioChunk({ ...request, profileId: profile.id })
+})
+
 class Clock{
  constructor(){this.now=0;this.id=0;this.tasks=new Map()}
  timer(fn,delay){const id=++this.id;this.tasks.set(id,{at:this.now+delay,fn});return id}
@@ -13,7 +18,7 @@ class Clock{
 const profile=id=>({id,endpoint:'http://mock/v1',model:'mock',requiresApiKey:false,vadConfig:{minSpeechMs:120,minSilenceMs:250,preRollMs:300,noiseFloorOffsetDb:12,chunkMinMs:700,chunkMaxMs:1500}})
 ;(async()=>{
  const clock=new Clock(),hash=crypto.createHash('sha256'),streams=Array.from({length:100},()=>({samples:0,calls:0,hash:crypto.createHash('sha256'),events:[]}))
- global.window={...clock.window(),s2t:{transcribeAudioChunk:async r=>{const s=streams[Number(r.profileId)],view=new DataView(r.audio),pcm=Buffer.alloc(r.audio.byteLength-44);let bytes=0;s.samples+=(r.audio.byteLength-44)/2;s.calls++;for(let i=44;i<r.audio.byteLength;i+=2){const v=view.getInt16(i,true);if(v){pcm.writeInt16LE(v,bytes);bytes+=2}}s.hash.update(pcm.subarray(0,bytes));await clock.wait(s.calls===1?12000:400);return{text:'mock'}}}}
+ global.window={...clock.window(),asr:{transcribeAudioChunk:async r=>{const s=streams[Number(r.profileId)],view=new DataView(r.audio),pcm=Buffer.alloc(r.audio.byteLength-44);let bytes=0;s.samples+=(r.audio.byteLength-44)/2;s.calls++;for(let i=44;i<r.audio.byteLength;i+=2){const v=view.getInt16(i,true);if(v){pcm.writeInt16LE(v,bytes);bytes+=2}}s.hash.update(pcm.subarray(0,bytes));await clock.wait(s.calls===1?12000:400);return{text:'mock'}}}}
  const adapters=streams.map((s,i)=>{const a=createOpenAiChunkedModelAdapter(profile(String(i)));a.onTranscript(e=>s.events.push(e));return a})
  await Promise.all(adapters.map(a=>a.start({sampleRate:16000,language:'en',targetLanguage:'zh-TW'})))
  for(let offset=0;offset<16000*45;offset+=160){
@@ -33,7 +38,7 @@ const profile=id=>({id,endpoint:'http://mock/v1',model:'mock',requiresApiKey:fal
  assert.equal(calls.length,2);assert.deepEqual(calls[0],calls[1]);assert.equal(new Headers(calls[0]).get('x-s2t-language'),'zh')
  await web.stop()
  const endClock=new Clock();let entries=[],endCalls=0
- global.window={...endClock.window(),s2t:{transcribeAudioChunk:async()=>{const call=++endCalls;await endClock.wait(400);return{text:call===1?'recognized speech':''}}}}
+ global.window={...endClock.window(),asr:{transcribeAudioChunk:async()=>{const call=++endCalls;await endClock.wait(400);return{text:call===1?'recognized speech':''}}}}
  const endpoint=createOpenAiChunkedModelAdapter(profile('endpoint'))
  endpoint.onTranscript(e=>{entries=upsertLiveCaption(entries,e,-1,()=>false);if(!e.boundaryOnly&&e.sourceText)entries=entries.map(v=>({...v,sourceText:'manual edit',translatedText:'manual translation',speaker:'user speaker',revision:42}))})
  await endpoint.start({sampleRate:16000,language:'en',targetLanguage:'zh-TW'})
@@ -42,7 +47,7 @@ const profile=id=>({id,endpoint:'http://mock/v1',model:'mock',requiresApiKey:fal
  assert.equal(entries.length,1);assert.equal(entries[0].isSentenceBoundary,true)
  assert.equal(entries[0].sourceText,'manual edit');assert.equal(entries[0].translatedText,'manual translation');assert.equal(entries[0].speaker,'user speaker');assert.equal(entries[0].revision,42)
  // An indefinitely slow provider cannot grow the unsent audio buffer forever.
- const boundClock=new Clock();global.window={...boundClock.window(),s2t:{transcribeAudioChunk:async r=>{assert.ok((r.audio.byteLength-44)/2<=16000*6,'stop clips remain bounded');await boundClock.wait(120000);return{text:'late'}}}}
+ const boundClock=new Clock();global.window={...boundClock.window(),asr:{transcribeAudioChunk:async r=>{assert.ok((r.audio.byteLength-44)/2<=16000*6,'stop clips remain bounded');await boundClock.wait(120000);return{text:'late'}}}}
  const bounded=createOpenAiChunkedModelAdapter(profile('bounded')),gapUpdates=[];bounded.onTranscript(e=>{if(e.status==='gap')gapUpdates.push(e)});await bounded.start({sampleRate:16000,language:'en',targetLanguage:'zh-TW'})
  for(let offset=0;offset<16000*50;offset+=160){bounded.pushAudio(new Float32Array(160).fill(.05),offset);await boundClock.advance((offset+160)/16)}
  assert.ok(bounded.pendingSamples<=16000*30);assert.ok(bounded.diagnostics.gaps>0)

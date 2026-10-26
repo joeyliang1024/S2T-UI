@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/features/capture/vad.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
-const sileroResult = buildSync({ entryPoints: ['src/renderer/src/features/capture/silero-vad.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/features/capture/vad.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const sileroResult = buildSync({ entryPoints: ['frontend/src/features/capture/silero-vad.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('vad-smoke-module')
 loaded.filename = 'vad-smoke-module.cjs'

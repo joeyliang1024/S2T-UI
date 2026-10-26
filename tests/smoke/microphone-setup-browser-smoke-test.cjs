@@ -6,8 +6,8 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
 ;(async () => {
   const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
     import React, {useState} from 'react'; import {createRoot} from 'react-dom/client';
-    import {MicrophoneSetupDialog} from './src/renderer/src/features/capture/views/MicrophoneSetupDialog';
-    import {interfaceTranslate} from './src/renderer/src/shared/i18n';
+    import {MicrophoneSetupDialog} from './frontend/src/features/capture/views/MicrophoneSetupDialog';
+    import {interfaceTranslate} from './frontend/src/shared/i18n';
     window.testState={streams:[],contexts:[],applied:[],signal:0,denied:false,details:0,delays:[],systemStreams:[],audioApplied:[]};
     const state=window.testState;
     const devices=[{kind:'audioinput',deviceId:'usb',label:'USB Microphone'},{kind:'audioinput',deviceId:'headset',label:'Headset'}];
@@ -39,7 +39,7 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
     </>}createRoot(document.getElementById('root')).render(<App/>);
   ` }, bundle: true, format: 'iife', write: false })
   const script = bundle.outputFiles[0].text
-  const server = http.createServer((req, res) => { if (req.url === '/style.css') { res.setHeader('content-type', 'text/css'); return res.end(fs.readFileSync('src/renderer/src/styles.css')) } res.setHeader('content-type', req.url === '/app.js' ? 'application/javascript' : 'text/html'); res.end(req.url === '/app.js' ? script : '<html><head><link rel="stylesheet" href="/style.css"></head><body><div id="root"></div><script src="/app.js"></script></body></html>') })
+  const server = http.createServer((req, res) => { if (req.url === '/style.css') { res.setHeader('content-type', 'text/css'); return res.end(fs.readFileSync('frontend/src/styles.css')) } res.setHeader('content-type', req.url === '/app.js' ? 'application/javascript' : 'text/html'); res.end(req.url === '/app.js' ? script : '<html><head><link rel="stylesheet" href="/style.css"></head><body><div id="root"></div><script src="/app.js"></script></body></html>') })
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
   let browser
   try {

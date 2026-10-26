@@ -12,7 +12,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
  const results=[],pageErrors={},network={requests:0,externalBlocked:0}
  try{
   temporary=await fs.mkdtemp(path.join(os.tmpdir(),'s2t-recording-stress-'))
-  const hook=await fs.readFile('src/renderer/src/features/app/hooks/useAppController.ts','utf8')
+  const hook=await fs.readFile('frontend/src/features/app/hooks/useAppController.ts','utf8')
   const start=hook.indexOf('liveCorrectionRunnerRef.current = async'),end=hook.indexOf('\nuseEffect(',start)
   const keys=['liveCorrectionAudioRef','activeModelSnapshotRef','isFloatingCaptionWindow','liveCorrectionBusyRef','captureState','liveCorrectionEpochRef','continuationTargetRef','transcriptsRef','liveCorrectionDoneRef','liveCorrectionFailuresRef','liveCorrectionRunnerRef','correctionGroups','captionGroupSignature','selectedModel','makeWav','applySentenceCorrection','transcribeCorrection','setTranscripts','setStatus','activeTranslate']
   const previewStart=hook.indexOf('          const maximumPreviewSamples ='),previewEnd=hook.indexOf('\n        }',previewStart)
@@ -20,7 +20,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
   const bundle=await build({entryPoints:['tests/fixtures/recording-stress-browser.jsx'],bundle:true,format:'iife',platform:'browser',write:false,define:{'process.env.NODE_ENV':'"production"'},
    plugins:[{name:'production-hook-excerpts',setup(build){build.onResolve({filter:/recording-stress-production\.generated$/},()=>({path:'hook-excerpts',namespace:'hook-excerpts'}));build.onLoad({filter:/.*/,namespace:'hook-excerpts'},()=>({contents:generated,loader:'ts'}))}}]})
   const script=bundle.outputFiles[0].text
-  const worklet=await fs.readFile('src/renderer/src/features/capture/audio-capture.worklet.js','utf8')
+  const worklet=await fs.readFile('frontend/src/features/capture/audio-capture.worklet.js','utf8')
   let sequence=0
   server=createServer(async(request,response)=>{
    try{

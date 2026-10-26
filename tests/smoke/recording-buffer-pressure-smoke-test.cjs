@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
 const { buildSync } = require('esbuild')
 const transpile = require('../helpers/transpile-typescript.cjs')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/capture/recording/buffered-writer.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/features/capture/recording/buffered-writer.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const moduleResult = { exports: {} }; new Function('module', 'exports', 'require', code)(moduleResult, moduleResult.exports, require)
 const { BufferedPcmWriter, pcmRecordingBufferLimits } = moduleResult.exports
 let timerId = 0
@@ -19,15 +19,15 @@ async function check(rate, stalledSeconds, remote = false) {
   const push = byteLength => { const bytes = new Uint8Array(byteLength).fill(sequence++); expected.push(bytes); writer.push(bytes.buffer) }
   push(limits.batchBytes)
   for (let second = 0; second < stalledSeconds; second++) push(rate * 2)
-  assert.deepEqual(pressure, stalledSeconds >= 8 ? [true] : [], 'short stalls must not pause capture at any sample rate')
+  assert.deepEqual(pressure, stalledSeconds * rate * 2 >= limits.maximumPendingBytes ? [true] : [], 'short stalls must not pause capture at any sample rate')
   release(); await flush()
   await writer.closeAndDrain()
-  if (stalledSeconds >= 8) assert.deepEqual(pressure, [true, false], 'sustained stalls pause and resume when writes catch up')
+  if (stalledSeconds * rate * 2 >= limits.maximumPendingBytes) assert.deepEqual(pressure, [true, false], 'sustained stalls pause and resume when writes catch up')
   assert.equal(writes.length, 2, 'the backlog catches up in one write instead of replaying small batches')
   assert.deepEqual(Buffer.concat(writes.map(bytes => Buffer.from(bytes))), Buffer.concat(expected.map(bytes => Buffer.from(bytes))), 'every accepted audio byte is preserved in order')
 }
 function preview() {
-  const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
+  const hook = readFileSync('frontend/src/features/app/hooks/useAppController.ts', 'utf8')
   const start = hook.indexOf('          const maximumPreviewSamples =')
   const end = hook.indexOf('\n        }', start)
   const source = 'liveDiarizationChunksRef.current.push(samples);\n' + hook.slice(start, end)
@@ -44,8 +44,9 @@ function preview() {
   assert.equal(remaining.at(-1)[0], 48000 * 120 / 128 - 1)
 }
 (async () => {
-  for (const rate of [16000, 48000, 96000]) { await check(rate, 3); await check(rate, 8) }
-  await check(48000, 3, true); await check(48000, 8, true)
+  for (const rate of [16000, 48000, 96000]) { await check(rate, 3); await check(rate, 10); await check(rate, 30); await check(rate, 60) }
+  await check(48000, 10, true); await check(48000, 60, true)
+  assert.ok(pcmRecordingBufferLimits(384000).maximumPendingBytes <= 16 * 1024 * 1024, 'high sample rates must retain the memory cap')
   preview()
   console.log('Recording buffer passed: sample-rate-independent short/sustained stalls, pause/resume, byte-perfect catch-up, and two-minute live preview retention.')
 })().catch(error => { console.error(error); process.exitCode = 1 })

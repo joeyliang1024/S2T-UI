@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
 const code = buildSync({
-  entryPoints: ['src/renderer/src/features/sessions/services/remote-session-storage.ts'],
+  entryPoints: ['frontend/src/features/sessions/services/remote-session-storage.ts'],
   bundle: true, platform: 'node', format: 'cjs', write: false,
   external: ['../../auth/services/auth-client', '../../../shared/i18n']
 }).outputFiles[0].text

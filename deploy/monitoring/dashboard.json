@@ -1087,7 +1087,7 @@
     },
     {
       "id": 29,
-      "title": "Diarization 最老等待",
+      "title": "Diarization 待處理音訊長度（秒）",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
@@ -1102,13 +1102,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(s2t_diarization_oldest_seconds{job=\"$caption_gateway\"})",
+          "expr": "max(s2t_diarization_pending_audio_seconds{job=\"$caption_gateway\"})",
           "legendFormat": "",
           "instant": false,
           "range": true
         }
       ],
-      "description": "",
+      "description": "共享工作佇列內待處理的音訊總長度；不是等待時間。",
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -1441,7 +1441,7 @@
           "range": false
         }
       ],
-      "description": "1=健康，0=異常；缺失顯示無資料。MinIO／Milvus 此處只確認 metrics endpoint 可達，不代表完整讀寫驗證。",
+      "description": "選用服務；目前 Python 使用 PostgreSQL 向量 fallback，未部署時可無資料。",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -1508,7 +1508,7 @@
           "range": false
         }
       ],
-      "description": "1=健康，0=異常；缺失顯示無資料。MinIO／Milvus 此處只確認 metrics endpoint 可達，不代表完整讀寫驗證。",
+      "description": "選用服務；目前 Python 使用 PostgreSQL 向量 fallback，未部署時可無資料。",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -2263,15 +2263,15 @@
         "name": "caption_gateway",
         "label": "字幕量測來源",
         "type": "custom",
-        "query": "8787 網頁入口 : gateway-web",
+        "query": "Python backend : s2t",
         "current": {
-          "text": "8787 網頁入口",
-          "value": "gateway-web"
+          "text": "Python backend",
+          "value": "s2t"
         },
         "options": [
           {
-            "text": "8787 網頁入口",
-            "value": "gateway-web",
+            "text": "Python backend",
+            "value": "s2t",
             "selected": true
           }
         ],

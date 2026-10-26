@@ -15,7 +15,7 @@ const fixture = (title) => ({
 
 ;(async () => {
   const outboxCode = buildSync({
-    entryPoints: ['src/renderer/src/features/sessions/services/session-outbox.ts'],
+    entryPoints: ['frontend/src/features/sessions/services/session-outbox.ts'],
     bundle: true, format: 'iife', globalName: 'Outbox', platform: 'browser', write: false
   }).outputFiles[0].text
   const root = path.resolve('out/web')

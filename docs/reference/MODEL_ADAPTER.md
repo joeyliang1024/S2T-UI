@@ -1,5 +1,7 @@
 # 自有模型接入契約
 
+繁體中文 | [English](../en/API.md)
+
 ## 目前支援的模型介面
 
 ### OpenAI 相容 HTTP（目前即時字幕預設）
@@ -34,9 +36,9 @@
 
 ## Breeze-ASR-26
 
-`MediaTek-Research/Breeze-ASR-26` 是台語 ASR，並以中文漢字輸出；它不提供翻譯，也不是文字轉語音模型。此 Electron／TypeScript 專案不內嵌 Python 執行環境或模型推論服務。若以 vLLM 或其他自有服務部署，優先確認其是否提供 OpenAI 相容 `/audio/transcriptions`；只有在服務另行提供並約定 WebSocket 串流格式時，才使用下列 WebSocket 協定。
+`MediaTek-Research/Breeze-ASR-26` 是台語 ASR，並以中文漢字輸出；它不提供翻譯，也不是文字轉語音模型。目前 Web 前端透過 Python 後端呼叫模型服務；本機音訊模型由 Python 音訊引擎處理。若以 vLLM 或其他自有服務部署，優先確認其是否提供 OpenAI 相容 `/audio/transcriptions`；只有在服務另行提供並約定 WebSocket 串流格式時，才使用下列 WebSocket 協定。
 
-Electron 應用已透過 `src/renderer/src/features/models/model-adapter.ts` 將收音與字幕 UI 分離。整合自有模型時，實作 `ModelAdapter` 並替換 `NoopModelAdapter` 即可；收音、音量、錄音、逐字稿版本控制與匯出不需要重寫。
+Web 前端透過 `frontend/src/features/models/model-adapter.ts` 將收音與字幕 UI 分離。整合自有模型時，實作 `ModelAdapter` 並替換 `NoopModelAdapter` 即可；收音、音量、錄音、逐字稿版本控制與匯出不需要重寫。
 
 模型適配器在 `start()` 收到音訊採樣率、來源語言及目標語言。收音期間，`pushAudio()` 會收到單聲道 Float32 PCM 分塊與從會議開始累積的樣本位移。模型需要其他格式時，在適配器中重採樣、量化或封裝，不要修改錄音分支。
 
@@ -58,6 +60,6 @@ Electron 應用已透過 `src/renderer/src/features/models/model-adapter.ts` 將
 
 ## OpenAI 相容 HTTP 轉錄
 
-設定頁可選擇「OpenAI 相容轉錄 API」，填入完整的 `/v1/audio/transcriptions` URL、模型 ID（例如 `Breeze-ASR-25`）並儲存 API key。API key 僅交給 Electron 主程序，使用 Electron `safeStorage` 加密後保存，不會寫進 renderer 設定、錄音檔或 Git。
+設定頁可選擇「OpenAI 相容轉錄 API」，填入完整的 `/v1/audio/transcriptions` URL、模型 ID（例如 `Breeze-ASR-25`）並儲存 API key。API key 交給 Python 後端處理，使用既有加密憑證格式保存；前端取得的設定不包含可還原的明文 key，不應寫入錄音檔或 Git。
 
-此類 API 本身不是雙向串流，應用會將錄音切成約 0.8–1.5 秒的單聲道 PCM WAV，按順序以 `multipart/form-data` 送出 `model`、`language`、`file`。每個回應的 `text` 會立即成為一個 final 字幕段落；時間軸根據原始 sample offset 計算。API 沒有 partial 回應時，無法在該片段完成前顯示同一段的暫定文字。
+此類 API 本身不是雙向串流，應用依字幕速度設定與負載將錄音切成單聲道 PCM WAV，按順序以 `multipart/form-data` 送出 `model`、`language`、`file`。每個回應的 `text` 會立即成為一個 final 字幕段落；時間軸根據原始 sample offset 計算。API 沒有 partial 回應時，無法在該片段完成前顯示同一段的暫定文字。

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createOpenAiChunkedModelAdapter } from '../../src/renderer/src/features/models/model-adapter'
-import { speedToVadConfig } from '../../src/renderer/src/features/capture/vad'
-import { TranslationQueue } from '../../src/renderer/src/features/translation/services/queue'
-import { upsertLiveCaption, renderedLiveCaptionWindow } from '../../src/renderer/src/features/transcript/domain/live-caption'
-import { readJsonResponse } from '../../src/renderer/src/shared/services/http'
-import { pcm16 } from '../../src/renderer/src/shared/services/audio'
-import { BufferedPcmWriter } from '../../src/renderer/src/features/capture/recording/buffered-writer'
-import { OpfsPcmRecording } from '../../src/renderer/src/features/capture/recording/adapters/opfs-pcm-recording'
+import { createOpenAiChunkedModelAdapter } from '../../frontend/src/features/models/model-adapter'
+import { speedToVadConfig } from '../../frontend/src/features/capture/vad'
+import { TranslationQueue } from '../../frontend/src/features/translation/services/queue'
+import { upsertLiveCaption, renderedLiveCaptionWindow } from '../../frontend/src/features/transcript/domain/live-caption'
+import { readJsonResponse } from '../../frontend/src/shared/services/http'
+import { pcm16 } from '../../frontend/src/shared/services/audio'
+import { BufferedPcmWriter } from '../../frontend/src/features/capture/recording/buffered-writer'
+import { OpfsPcmRecording } from '../../frontend/src/features/capture/recording/adapters/opfs-pcm-recording'
 
 const durationMs = window.localTestDurationMs
 const originalFetch = window.fetch.bind(window)

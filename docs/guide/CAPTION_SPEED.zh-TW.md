@@ -1,4 +1,4 @@
-# 字幕回應速度：五個位置（2026-10-13）
+# 字幕回應速度：五個位置（2026-10-26）
 
 滑桿提供五個可選位置；只在第 1、3、5 格顯示「快／正常／慢」，第 2、4 格不顯示名稱。選擇會保存於設定，重新啟動後仍保留原位置。舊的 `fast`／`normal`／`slow` 設定對應第 1／3／5 格，未指定或未知值回到正常。
 
@@ -14,18 +14,8 @@
 
 收到自然句界可以提早送出，不是每句都等滿表中上限。一般非管理員覆寫的流程允許自然短句少於 700ms；ASR 排隊較多時會放大強制切段長度以降低請求量，整體最多 6 秒。因此表中是健康負載下的目標，不是所有情境下每個 WAV 的硬上下限。管理員客製參數會覆蓋滑桿設定。
 
-## 驗證範圍
+## 字幕合併與驗證
 
-最新完整成績、未採用方案與選擇理由見 [五檔實驗](../../experiment/silero-vad-chunking/speed-tiers-2026-10-13/README.md)。同一 Taiwan-Tongues test 子集、79 句、648 個正規化字元、372 詞、約 301 秒，Breeze-ASR-25，48kHz、無 overlap。主指標為語料 CER，同時報告 WER 與 adapter 首個字幕事件延遲。
+字幕顯示與收音分段分開：句號分行門檻從 24 字放寬至 40 字，原有語音邊界、換人、10 秒與 70 字限制保留，ASR 請求節奏不變。詳見 [目前合併結果](../reports/CAPTION_MERGE_2026-10-26.zh-TW.md)。
 
-這份中文子集上的延遲 **P95 不是 ≤2.5 秒保證**，也不包含真實瀏覽器 paint、翻譯或另外的字幕校正。較慢的含義是「句子起點到第一段字幕顯示的等待較久」，不是逐字播放速度。英文、其他資料集與正式多人負載未在本輪驗收；英文尚未開始，中文慢檔 10.34% 仍未達 CER≤10%。
-
-先前 [Taiwan-Tongues CER 優先實驗](../../experiment/silero-vad-chunking/taiwan-tongues-2026-10-12/README.md) 曾將 6 秒方案套在正常檔；該名稱只描述當時版本。依最新分檔，該 **6 秒／250ms／700ms 方案完整移到慢檔**，没有沿用舊慢檔的 800ms 停頓或 1000ms minimum。
-
-## 重跑目前產品設定
-
-```sh
-node scripts/evaluation/caption-latency-eval.cjs --preset speedFast,speedFastNormal,speedNormal,speedNormalSlow,speedSlow --audio music/taiwan-tongues/fixture-300s.wav --tsv music/taiwan-tongues/fixture-300s.tsv --out experiment/silero-vad-chunking/speed-tiers-2026-10-13/recheck
-```
-
-這五個 aliases 從載入的原始碼讀取配置；歷史候選名稱保留固定參數。`--source-ref <commit>` 會直接載入指定 commit 的程式碼，baseline 使用 main 的 `5783fed98b10a26feb384c67f03d4625141fda2e`。原始音訊與 tar 不提交 Git；抽樣清單、WAV/TSV checksum 與重建步驟保存在實驗紀錄。
+[重現指南](REPRODUCE.zh-TW.md) 提供單元測試、實際瀏覽器部署驗證與可選本地 ASR 比較。收音 4 秒／400ms 的先前實驗已撤回，不是目前採用設定。原始實驗留在本機忽略路徑，不作為目前版本的準確率或延遲保證。

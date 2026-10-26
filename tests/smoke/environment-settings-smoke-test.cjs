@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/settings/domain/environment-settings.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/features/settings/domain/environment-settings.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const m = { exports: {} }
 new Function('module', 'exports', 'require', code)(m, m.exports, require)
 const { applyEnvironmentSettings } = m.exports
@@ -18,8 +18,8 @@ const config = {
   summary: { endpoint: '/api/summaries', model: 'env-summary', configured: true },
   diarization: { endpoint: '/api/diarizations', model: 'env-diarization', configured: true }
 }
-for (const desktop of [false, true]) {
-  const loaded = applyEnvironmentSettings(account, config, desktop)
+{
+  const loaded = applyEnvironmentSettings(account, config)
   assert.equal(loaded.selectedModelId, 'user-asr', 'saved admin selection survives environment hydration')
   assert.equal(loaded.selectedTranslationModelId, 'user-translation')
   assert.equal(loaded.modelProfiles.find(p => p.id === 'user-asr').endpoint, 'https://user/asr')
@@ -27,28 +27,32 @@ for (const desktop of [false, true]) {
   assert.equal(loaded.summaryEndpoint, '/api/summaries')
   assert.equal(loaded.diarizationModel, 'env-diarization')
   assert.equal(loaded.translationEndpoint, 'https://user/translation')
-  const registryLoaded = applyEnvironmentSettings({ ...loaded, summaryEndpoint: 'https://user/summary', summaryModel: 'user-summary', selectedModelId: 'user-asr' }, config, desktop)
+  const registryLoaded = applyEnvironmentSettings({ ...loaded, summaryEndpoint: 'https://user/summary', summaryModel: 'user-summary', selectedModelId: 'user-asr' }, config)
   assert.equal(registryLoaded.summaryModel, 'env-summary', 'account registry cannot overwrite environment settings')
   assert.equal(registryLoaded.selectedModelId, loaded.selectedModelId)
   assert.equal(registryLoaded.modelProfiles.length, loaded.modelProfiles.length, 'environment profiles are not duplicated')
 }
 const unavailable = Object.fromEntries(Object.entries(config).map(([key, value]) => [key, { ...value, configured: false }]))
-const fallback = applyEnvironmentSettings(account, unavailable, false)
+const fallback = applyEnvironmentSettings(account, unavailable)
 assert.equal(fallback.selectedModelId, 'user-asr')
 assert.equal(fallback.selectedTranslationModelId, 'user-translation')
 assert.equal(fallback.summaryEndpoint, account.summaryEndpoint)
 assert.equal(fallback.diarizationEndpoint, account.diarizationEndpoint)
-const catalog = applyEnvironmentSettings(account, { ...config, asrProfiles: [{ id: 'default', name: 'Default', endpoint: '/api/transcriptions', model: 'default', configured: true }, { id: 'secondary', name: 'Secondary', endpoint: '/api/transcriptions', model: 'second', configured: true }] }, false)
+const catalog = applyEnvironmentSettings(account, { ...config, asrProfiles: [{ id: 'default', name: 'Default', endpoint: '/api/transcriptions', model: 'default', configured: true }, { id: 'secondary', name: 'Secondary', endpoint: '/api/transcriptions', model: 'second', configured: true }] })
 assert.equal(catalog.selectedModelId, 'user-asr')
 assert.equal(catalog.modelProfiles.length, 3)
 console.log('Environment settings: defaults, user model preservation, registry precedence and unavailable environment fallback passed.')
 
-const both = applyEnvironmentSettings(account, { ...config, diarizationProfiles: [ { id:'local-sherpa-onnx-speaker-diarization', name:'Sherpa', model:'sherpa-onnx-speaker-diarization', endpoint:'/api/diarizations', configured:true }, { id:'local-nemotron-3-diarization', name:'Nemotron', model:'nemotron-3-diarization', endpoint:'/api/diarizations', configured:true } ], diarization:{endpoint:'/api/diarizations',model:'nemotron-3-diarization',configured:true} }, false)
+const both = applyEnvironmentSettings(account, { ...config, diarizationProfiles: [ { id:'local-sherpa-onnx-speaker-diarization', name:'Sherpa', model:'sherpa-onnx-speaker-diarization', endpoint:'/api/diarizations', configured:true }, { id:'local-nemotron-3-diarization', name:'Nemotron', model:'nemotron-3-diarization', endpoint:'/api/diarizations', configured:true } ], diarization:{endpoint:'/api/diarizations',model:'nemotron-3-diarization',configured:true} })
 assert.equal(both.diarizationProfiles.filter(p=>p.id.startsWith('local-')).length,2)
 assert.equal(both.diarizationModel,'nemotron-3-diarization')
 assert.ok(both.diarizationProfiles.some(p=>p.endpoint===account.diarizationEndpoint))
 console.log('Both local diarization models are listed; environment selects only the default; user model remains available.')
 
-const missingSelection = applyEnvironmentSettings({ ...account, modelProfiles: [], translationProfiles: [], selectedModelId: 'removed', selectedTranslationModelId: 'removed' }, config, false)
+const missingSelection = applyEnvironmentSettings({ ...account, modelProfiles: [], translationProfiles: [], selectedModelId: 'removed', selectedTranslationModelId: 'removed' }, config)
 assert.equal(missingSelection.selectedModelId, 'web-environment-asr')
 assert.equal(missingSelection.selectedTranslationModelId, 'web-environment-translation')
+
+const initial = applyEnvironmentSettings({ modelProfiles: [], selectedModelId: 'none', translationProfiles: [], selectedTranslationModelId: 'none' }, config)
+assert.equal(initial.selectedModelId, 'web-environment-asr', 'a new account selects the configured site ASR instead of the placeholder')
+assert.equal(initial.selectedTranslationModelId, 'web-environment-translation')

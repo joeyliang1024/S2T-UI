@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{buildSync}=require('esbuild')
-const code=buildSync({entryPoints:['src/renderer/src/features/sessions/services/sync-coordinator.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
+const code=buildSync({entryPoints:['frontend/src/features/sessions/services/sync-coordinator.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require)
 const {createSessionSyncCoordinator}=m.exports
 const row=(title,token='old')=>({id:'a',title,createdAt:'2026-10-14',durationMs:0,source:'fixture',transcript:'',segments:[],audioKey:'a',audioUnavailable:false,processingState:'completed',processingToken:token})
@@ -54,5 +54,9 @@ function fixture(){
  const unread=fixture();unread.disk={baseline:[row('base')],local:[row('disk edit')]};let unavailable=true;unread.outbox.read=async()=>{if(unavailable){unavailable=false;throw Error('unavailable')}return unread.disk}
  await assert.rejects(unread.sync.restoreCheckpoint());unread.sync.initialize({baseline:unread.server,local:[row('memory edit')],version:1});await unread.sync.retry();await unread.sync.retry()
  assert.equal(unread.calls.length,0);assert.equal(unread.disk.local[0].title,'disk edit');assert.equal(unread.sync.getState().pending[0].title,'memory edit');await unread.sync.close()
+ // A recovered cleanup runs even when the user makes no subsequent edit.
+ const recoveredCleanup=fixture();await recoveredCleanup.start();let recoveredCleaned=0
+ recoveredCleanup.sync.registerCleanup('a','a',async()=>{recoveredCleaned++},'old')
+ await recoveredCleanup.fire();assert.equal(recoveredCleaned,1);await recoveredCleanup.sync.close()
  console.log('PASS coordinator: lost ACK, unseen revision conflicts, edits during choices, capture-token/identity cleanup fences, automatic cleanup retry, closed-owner fencing and safe outbox reopen')
 })().catch(error=>{console.error(error);process.exitCode=1})

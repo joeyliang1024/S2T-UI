@@ -1,88 +1,42 @@
-# 環境變數與模型設定
+# 環境設定
 
-`.env.example` 提供 `S2T_MODEL_DIR`／`S2T_DATA_DIR`、模型連線、Gateway／登入／遠端儲存連線，以及 K8s／Redis／音訊服務部署設定。連線欄位留空，依實際部署填寫；單機不需填 K8s 區段。具有預設值的 worker 數量、佇列、逾時與其他調校參數請見[選填環境參數完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)。
+繁體中文 | [English](../en/ENVIRONMENT.md)
 
-一般部署分成模型服務、共用模型目錄、音訊 worker、聲紋辨識與儲存／登入五組。所有設定需重新啟動讀取；既有程序的環境變數優先於 .env（dotenv override=false）。本次只整理設定與修正載入順序，未更換 ASR、翻譯、embedding 或權重。
+環境檔依責任分開，實際欄位以各目錄的 `.env.example` 與 Python 設定實作為準。命令從 repository 根目錄執行；既有私有檔案不要以 example 覆蓋。
 
-## 模型選擇
+| 檔案 | 設定內容 |
+| --- | --- |
+| `frontend/.env` | `FRONTEND_PORT=5173`、`S2T_DEV_API_URL=http://127.0.0.1:8787` |
+| `backend/.env` | `BACKEND_PORT=8787`、模型、資料位置、認證與儲存憑證 |
+| `backend/.env.k8s` | K8s 專用共享儲存與共用認證密鑰 |
+| `deploy/compose/.env` | npm／PyPI 建置來源 |
+| `deploy/k8s/.env` | namespace、context、映像與 cluster DNS |
+| `deploy/monitoring/.env` | Prometheus 與 metrics 連線 |
 
-|設定|用途|是否改變模型|
-|---|---|---|
-|S2T_ASR_ENDPOINT / MODEL / API_KEY|預設 ASR 服務|會；需成套設定|
-|S2T_ASR_MODELS_JSON|多個環境 ASR profile|有效陣列建立候選；實際仍由 UI 選用 profile 決定|
-|S2T_TRANSLATION_ENDPOINT / MODEL / API_KEY|翻譯服務|會；與 ASR 獨立|
-|S2T_SUMMARY_ENDPOINT / MODEL / API_KEY|摘要服務|會；目前全部留空|
-|S2T_DIARIZATION_MODEL|講者分離後端|nemotron-3-diarization 且 endpoint 空白＝本機 CPU；model 空白＝sherpa，不是停用|
-|S2T_DIARIZATION_ENDPOINT|遠端分離服務|設定 endpoint＋model 會優先使用遠端|
+程序環境變數優先。Python 明確載入 `backend/.env`；Vite 使用前端環境目錄。後端憑證不可放入前端或 `VITE_*`。根目錄不再使用一份共用 `.env`。
 
-環境值不會刪除帳戶保存的模型清單、API key 或 UI 選擇。已存的自訂模型可能另行決定請求目的地；不能把 .env 的預設模型視為每個帳戶正在使用的模型。本輪未讀寫帳戶模型清單或聲紋資料。
+## 模型、資料與認證
 
-## 本機模型目錄
+`S2T_MODEL_DIR=./models`、`S2T_DATA_DIR=./data` 從專案根目錄啟動時使用這兩個目錄。內建提示詞與範本位於 `backend/resources/`，首次啟動只補缺檔案。
 
-```dotenv
-S2T_MODEL_DIR=./models
-S2T_DIARIZATION_MODEL=nemotron-3-diarization
-S2T_DIARIZATION_ENDPOINT=
-S2T_DIARIZATION_API_KEY=
-```
+ASR、翻譯、摘要各有 `S2T_*_ENDPOINT`、`S2T_*_MODEL`、`S2T_*_API_KEY`。先設定可用模型再驗證實際辨識；mock 測試只證明串接。講者分離使用 Sherpa 或 Nemotron 本機權重時不需遠端 key，詳細選項見 example。
 
-|子目錄|內容|
-|---|---|
-|sherpa-onnx/|sherpa segmentation 與現有 512 維 embedding|
-|silero-vad/|silero_vad.onnx|
-|nemotron-3-diarization/|Q8_0 權重與 runtime/<platform>-<arch>/|
+正式部署設定 `S2T_AUTH_SECRET`、`S2T_BOOTSTRAP_ADMIN_USERNAME`、`S2T_BOOTSTRAP_ADMIN_PASSWORD`（至少 12 字元）。所有後端共用且保留同一密鑰；輪替前須處理登入 token 與已加密模型憑證。
 
-模型檔案皆從 `S2T_MODEL_DIR` 的固定子目錄載入，不提供個別模型檔案或舊目錄覆寫。相對路徑與 `~/` 會自動轉為絕對路徑。
+## 儲存與多 Pod
 
-舊 sherpa／Silero 路徑覆寫已移除。若搬到不同目錄，先檢查所有檔案存在，再重啟。Docker 預設 /models；macOS runtime 不能直接在 Linux 使用。
+PostgreSQL、MinIO、Milvus 每組設定完整填寫或全部留空。本機模式與遠端模式不可在故障時靜默互換。固定 2 個後端使用共享 PostgreSQL／MinIO／Redis；Milvus 可選。
 
-## 運算與匹配
+Redis 可用 `REDIS_URL`，或 Sentinel nodes 與 master name。現有相容欄位 `REDIS_PASSWARD`、`REDIS_SENTINEL_PASSWARD` 的拼字需依 example 使用。
 
-- `S2T_AUDIO_HEAVY_*` 控制 Nemotron／sherpa 共用的重型工作池；`S2T_AUDIO_INTERACTIVE_*` 控制聲紋註冊等互動池，`S2T_SILERO_VAD_*` 控制獨立 VAD 池。`S2T_AUDIO_JOB_TIMEOUT_*`、`S2T_AUDIO_CACHE_*` 與 `S2T_AUDIO_CLOSE_GRACE_MS` 為共用逾時、快取與關閉設定。舊共用 `S2T_SHERPA_*` 參數已移除。
-- S2T_SHERPA_INFER_THREADS 與 CLUSTERING_THRESHOLD、SHORT_AUDIO_SEC、MIN_DURATION_ON/OFF 只調 sherpa；不改 Nemotron 的 native 設定。
-- Nemotron 的 CPU 幾何與 cache=528 目前固定在已驗證實作，沒有新增可誤設的環境旋鈕。
-- S2T_VOICEPRINT_* 調整姓名匹配、抽樣與拒識，不更換講者分離模型。調高門檻可能增加匿名標籤。
-- S2T_VOICEPRINT_EMBEDDING_MODEL_NAME／VERSION 是聲紋相容性標記，不是權重下載器。真正更換 embedding 權重需同步版本與重新建立相容聲紋；本輪未改。
-- S2T_SILERO_VAD_SHA256 是模型校驗值；不要為了讓陌生權重通過就隨意更改。
+參數調校見 [環境選項](ENVIRONMENT-OPTIONS.zh-TW.md)，部署流程見 [Web 分離指南](WEB_SPLIT.zh-TW.md)。
 
-### 共用音訊工作池命名
+## Python 工作進程與連線預算
 
-|工作池|參數前綴|處理工作|
-|---|---|---|
-|heavy|`S2T_AUDIO_HEAVY_*`|Nemotron／sherpa 講者分離、說話者 embedding|
-|interactive|`S2T_AUDIO_INTERACTIVE_*`|聲紋註冊、音訊前處理、互動狀態檢查|
-|silero|`S2T_SILERO_VAD_*`|即時 VAD|
+`S2T_WEB_WORKERS` 控制每 Pod 的 Uvicorn 進程數，開發預設 1，K8s 預設 2；後端維持 2 Pods。每個進程各有 SQL、模型 HTTP 與原生音訊工作池，總預算必須乘上 Pod 數與進程數。K8s 預設每進程主 SQL 池 8、帳號保護池最多 5、健康檢查保留池 1，因此 2 Pods × 2 進程最多 56 條應用 SQL 連線，還需為監控及維護保留空間。
 
-預設值與工作分派維持原狀。程式入口為 `server/audio-worker-pool.cjs`，監控指標使用 `s2t_audio_worker_jobs` 與 `s2t_audio_op_*`。更新既有部署時，請將原本共用的 `S2T_SHERPA_WORKERS` 改為 `S2T_AUDIO_HEAVY_WORKERS`，`S2T_SHERPA_FAST_WORKERS` 改為 `S2T_AUDIO_INTERACTIVE_WORKERS`，其餘佇列、逾時、快取與關閉參數依[完整範例](ENVIRONMENT-OPTIONS.zh-TW.md)更新；舊共用參數不再讀取。`S2T_SHERPA_INFER_THREADS` 等 sherpa 專屬模型參數保留原名。
+`S2T_NOFILE` 預設 8192，啟動時提高開檔軟限制但不超過主機硬限制；不足時會記錄警告。多進程 Prometheus 使用服務啟動時建立的專屬暫存目錄合併計數與延遲，收音請求數相加、共用工作積壓取最大值；每個進程的 CPU／RSS 帶 `pid` 標籤。不要讓不同 Pod 共用這個指標目錄。
 
-## 載入與其他設定
+`S2T_HTTP_ACTIVE_PER_WORKER` 預設 64，在登入驗證與 SQL 查詢前限制活躍 API 請求。等待數受 `S2T_HTTP_MAX_WAITING` 限制，最多等 10 秒；背景請求另有每進程 4 個活躍名額，健康檢查不排這條隊。這與 Uvicorn 的連線總上限不同。容量設定範例位於 `deploy/k8s/examples/backend-capacity.env.example`，不能只改單一池大小而忽略 Pod、進程及滾動更新時的總連線數。
 
-Gateway 現在先讀 .env，再建立 worker pool，避免檔案裡的 worker 數／逾時被初始化預設值忽略。目前本機未指定這些 worker 變數，修正不改本機現有預設並行數。
-
-儲存、登入、CORS、gateway URL 與測試工具變數保持原值；.env.local-storage 不會被 gateway 自動合併，它由 compose／明確選用的工具流程讀取。服務分組不要半套設定。範例 ASR／翻譯／摘要 endpoint 改成留空，示範網址只放註解，避免複製後變成半套模型設定。
-
-已刪除 .env 中無程式讀取的 VITE_S2T_ASR_ENDPOINT／MODEL；瀏覽器從 gateway config 取得模型資訊，API key 維持伺服器端。
-
-## 本次驗證
-
-重複鍵／不明啟用變數：皆無。其餘 .env 值逐項不變；Breeze-ASR-25、HY-MT1.5-1.8B、Nemotron 與所有解析後模型／runtime 檔案位置維持。已補 TTL／音訊快取大小三個缺少的正式 worker 變數說明。
-
-路徑優先序與真實 Nemotron／sherpa 回退已驗證；gateway .env 載入與 process.env 優先序另以隔離啟動測試驗證。測試命令：
-
-```sh
-node tests/smoke/model-paths-smoke-test.cjs
-node tests/smoke/gateway-env-smoke-test.cjs
-node tests/smoke/nemotron-diarization-smoke-test.cjs
-```
-
-## 主機與容器範例
-
-Docker Compose 會將主機 `S2T_MODEL_DIR` 與 `S2T_DATA_DIR` 掛載至容器 `/models`、`/data`，並自動設定容器內路徑。未設定資料來源時沿用既有 `gateway-data` volume；指定主機目錄時，請先將原 volume 的完整資料搬入該目錄。
-
-摘要模板預設從 `${S2T_DATA_DIR}/template` 載入；未指定 `S2T_DATA_DIR` 時以程式的資料目錄預設值為準。Gateway Compose 將資料根目錄掛載至 `/data`，模板由 `/data/template` 載入。
-
-`.env.local-storage.example` 預設只啟用 MinIO／PostgreSQL；需要 Milvus 時，依部署指南同時啟動 profile 與填齊四項變數。選填參數文件的完整 Storage 範例選用三個遠端 adapter；使用 fallback 時省略或清空對應整組設定。
-
-Docker image 使用 production 模式。啟動前必須填入 `S2T_AUTH_SECRET`；全新資料庫還需設定 bootstrap admin 帳號及至少 12 字元的密碼。`S2T_ALLOW_DEFAULT_ADMIN=true` 僅在開發模式有效，不會讓正式部署接受預設密碼。跨站 Cookie 值必須是小寫 `S2T_COOKIE_SAME_SITE=none`，並搭配 `S2T_COOKIE_SECURE=true`。
-
-`S2T_POSTGRES_MAX_CONNECTIONS` 同時限制資料操作池與獨立帳號圍欄池（各預設 10），每個 gateway／worker 最多使用兩倍設定值；請將所有副本的總連線數納入 PostgreSQL 容量。
+短 ASR 音訊在已知 `Content-Length` 且不需正規化時，最多使用 256 KiB 的記憶體路徑，避免暫存檔、重讀及執行緒往返。實際讀取仍有大小上限；大檔、未知長度或正規化請求使用既有的有界檔案流程。這個暫存策略不取代正式錄音的 OPFS／MinIO 持久化。

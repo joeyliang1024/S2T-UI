@@ -9,8 +9,8 @@ const load = entry => {
   loaded._compile(bundle.outputFiles[0].text, entry + '.cjs')
   return loaded.exports
 }
-const { normalizeSettings } = load('src/renderer/src/shared/services/settings.ts')
-const { ResponseSpeedControl } = load('src/renderer/src/features/capture/views/ResponseSpeedControl.tsx')
+const { normalizeSettings } = load('frontend/src/shared/services/settings.ts')
+const { ResponseSpeedControl } = load('frontend/src/features/capture/views/ResponseSpeedControl.tsx')
 const values = ['fast', 'fast-normal', 'normal', 'normal-slow', 'slow']
 for (const [index, speed] of values.entries()) {
   const restored = normalizeSettings(JSON.parse(JSON.stringify({ responseSpeed: speed })))

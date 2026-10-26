@@ -1,0 +1,19 @@
+#!/bin/sh
+# Sourced by the official Nginx entrypoint before template expansion.
+BACKEND_UPSTREAM=${BACKEND_UPSTREAM:-http://backend:8787}
+case "$BACKEND_UPSTREAM" in
+    http://*) BACKEND_PROXY_SCHEME=http; BACKEND_PROXY_AUTHORITY=${BACKEND_UPSTREAM#http://} ;;
+    https://*) BACKEND_PROXY_SCHEME=https; BACKEND_PROXY_AUTHORITY=${BACKEND_UPSTREAM#https://} ;;
+    *) echo 'BACKEND_UPSTREAM must be an HTTP(S) origin' >&2; exit 1 ;;
+esac
+BACKEND_PROXY_AUTHORITY=${BACKEND_PROXY_AUTHORITY%/}
+if ! printf '%s' "$BACKEND_PROXY_AUTHORITY" | LC_ALL=C grep -Eq '^([A-Za-z0-9_][A-Za-z0-9_.-]*|\[[A-Fa-f0-9:]+\])(:[0-9]{1,5})?$'; then
+    echo 'BACKEND_UPSTREAM must contain only a host and optional port' >&2
+    exit 1
+fi
+case "$BACKEND_PROXY_AUTHORITY" in
+    \[*\]*) BACKEND_PROXY_HOST=${BACKEND_PROXY_AUTHORITY%%]*}; BACKEND_PROXY_HOST=${BACKEND_PROXY_HOST#\[} ;;
+    *:*) BACKEND_PROXY_HOST=${BACKEND_PROXY_AUTHORITY%:*} ;;
+    *) BACKEND_PROXY_HOST=$BACKEND_PROXY_AUTHORITY ;;
+esac
+export BACKEND_PROXY_SCHEME BACKEND_PROXY_AUTHORITY BACKEND_PROXY_HOST

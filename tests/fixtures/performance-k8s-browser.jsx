@@ -2,13 +2,13 @@
 // Only capture input is synthetic; all inference goes through the K8s Gateway.
 import React, { useState, useLayoutEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { OpenAiChunkedModelAdapter } from '../../src/renderer/src/features/models/adapters/openai-chunked'
-import { speedToVadConfig } from '../../src/renderer/src/features/capture/vad'
-import { TranslationQueue } from '../../src/renderer/src/features/translation/services/queue'
-import { upsertLiveCaption } from '../../src/renderer/src/features/transcript/domain/live-caption'
-import { CaptionPaintMetric } from '../../src/renderer/src/features/captions/views/CaptionPaintMetric'
-import { registerCaptionTiming, setCaptionMeasurementActive, parseServerTiming } from '../../src/renderer/src/shared/services/caption-metrics'
-import { authFetch } from '../../src/renderer/src/shared/http/authenticated-client'
+import { OpenAiChunkedModelAdapter } from '../../frontend/src/features/models/adapters/openai-chunked'
+import { speedToVadConfig } from '../../frontend/src/features/capture/vad'
+import { TranslationQueue } from '../../frontend/src/features/translation/services/queue'
+import { upsertLiveCaption } from '../../frontend/src/features/transcript/domain/live-caption'
+import { CaptionPaintMetric } from '../../frontend/src/features/captions/views/CaptionPaintMetric'
+import { registerCaptionTiming, setCaptionMeasurementActive, parseServerTiming } from '../../frontend/src/shared/services/caption-metrics'
+import { authFetch } from '../../frontend/src/shared/http/authenticated-client'
 let entries = [], publish = () => {}, samples = 0
 const errors = [], seconds = window.probeSeconds || 600
 const read = async response => { const body = await response.json(); if (!response.ok) throw Error(`HTTP ${response.status}: ${body.error}`); return { text: body.text, server: parseServerTiming(response.headers.get('server-timing')) } }

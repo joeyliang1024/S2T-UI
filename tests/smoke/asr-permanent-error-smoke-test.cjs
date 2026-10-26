@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{buildSync}=require('esbuild')
-const code=buildSync({entryPoints:['src/renderer/src/features/models/model-adapter.ts'],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
+const code=buildSync({entryPoints:['frontend/src/features/models/model-adapter.ts'],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require)
 const {createOpenAiChunkedModelAdapter}=m.exports
 ;(async()=>{

@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{buildSync}=require('esbuild')
-const code=buildSync({entryPoints:['src/renderer/src/features/capture/recording/checkpoint.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
+const code=buildSync({entryPoints:['frontend/src/features/capture/recording/checkpoint.ts'],bundle:true,format:'cjs',platform:'node',write:false}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require)
 const {startRecordingCheckpoints}=m.exports
 const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve()}

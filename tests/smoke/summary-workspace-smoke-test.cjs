@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/summary/views/SummaryWorkspace.tsx'], bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/jsx-runtime'], write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/features/summary/views/SummaryWorkspace.tsx'], bundle: true, platform: 'node', format: 'cjs', external: ['react', 'react/jsx-runtime'], write: false }).outputFiles[0].text
 // Render the real component and invoke its event handlers with deterministic
 // hook storage; no network, audio devices or external browser are needed.
 let hooks = [], cursor = 0, effects = [], dirty = false

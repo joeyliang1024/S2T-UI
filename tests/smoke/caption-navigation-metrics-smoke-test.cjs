@@ -6,7 +6,7 @@ const saved = { document: global.document, window: global.window, metricSamples:
 global.document = { visibilityState: 'visible', addEventListener: (name, handler) => { listeners[name] = handler } }
 let now = -1; global.performance = { now: () => now };
 global.window = {}; global.metricSamples = samples
-const source = fs.readFileSync('src/renderer/src/shared/services/caption-metrics.ts', 'utf8')
+const source = fs.readFileSync('frontend/src/shared/services/caption-metrics.ts', 'utf8')
   .replace(/import .* from '\.\/caption-metric-transport'/, 'class CaptionMetricTransport { constructor(sender: unknown) {} enqueue(samples: unknown[]) { globalThis.metricSamples.push(...samples) } } type CaptionMetricSample = {stage: string; seconds: number}')
   .replace(/import .* from .*(?:auth-client|authenticated-client)'/, 'const authFetch = async () => ({ok: true})')
 const code = buildSync({ stdin: { contents: source, loader: 'ts' }, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text

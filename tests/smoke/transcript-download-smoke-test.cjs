@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/features/transcript/services/documents.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/features/transcript/services/documents.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('transcript-download-smoke-module')
 loaded.filename = 'transcript-download-smoke-module.cjs'; loaded.paths = module.paths

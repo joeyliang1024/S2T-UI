@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
 
-const result = buildSync({ entryPoints: ['src/renderer/src/shared/i18n/index.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/shared/i18n/index.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('i18n-smoke-module')
 loaded.filename = 'i18n-smoke-module.cjs'
@@ -21,10 +21,10 @@ console.log('I18n smoke test passed.')
 // Each context starts with a fresh language cache, as a new renderer would.
 const { runInNewContext } = require('node:vm')
 for (const [tags, expected] of [[['zh-TW'], 'zh-TW'], [['zh-Hans-CN'], 'zh-CN'], [['ja-JP'], 'ja'], [['de-DE'], 'de'], [['fr-FR'], 'en'], [['zh_Hant_TW'], 'zh-TW']]) {
-  const context = { exports: {}, module: { exports: {} }, window: { s2t: { systemLanguages: tags } }, navigator: { languages: ['en-US'] } }
+  const context = { exports: {}, module: { exports: {} }, navigator: { languages: tags } }
   context.exports = context.module.exports
   runInNewContext(result.outputFiles[0].text, context)
-  assert.equal(context.module.exports.resolveUiLanguage('system'), expected, `native ${tags} overrides Chromium English`)
+  assert.equal(context.module.exports.resolveUiLanguage('system'), expected, `browser ${tags} resolves the supported language`)
   assert.equal(context.module.exports.resolveUiLanguage('de'), 'de', 'explicit preference overrides system')
 }
 const browserContext = { module: { exports: {} }, navigator: { languages: ['ja-JP'] } }
@@ -48,4 +48,4 @@ function checkLookups(directory) {
     }
   }
 }
-checkLookups('src/renderer/src')
+checkLookups('frontend/src')

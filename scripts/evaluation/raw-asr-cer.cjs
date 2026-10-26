@@ -13,7 +13,7 @@ const { readFileSync, writeFileSync } = require('node:fs')
 const { spawnSync } = require('node:child_process')
 const path = require('node:path')
 const { createHash } = require('node:crypto')
-require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') })
+require('dotenv').config({ path: path.join(__dirname, '..', '..', 'backend', '.env') })
 
 const { corpusRates, sentenceRates } = require(path.join(__dirname, 'text-metrics.cjs'))
 

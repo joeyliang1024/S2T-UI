@@ -1,0 +1,332 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "s2t-backend-env"
+      },
+      "data": {
+        "BACKEND_PORT": "8787",
+        "S2T_KUBERNETES_MODE": "true",
+        "S2T_PROCESS_ROLE": "all",
+        "S2T_STORAGE_MIGRATIONS": "verify",
+        "S2T_MODEL_DIR": "/models",
+        "S2T_DATA_DIR": "/data",
+        "S2T_POSTGRES_POOL_MAX": "8",
+        "S2T_POSTGRES_FENCE_SESSIONS": "4",
+        "S2T_ASR_MAX_INFLIGHT": "128",
+        "S2T_TRANSLATION_MAX_INFLIGHT": "64",
+        "S2T_HTTP_MAX_WAITING": "512",
+        "S2T_SHUTDOWN_GRACE_SECONDS": "660",
+        "S2T_WEB_WORKERS": "2"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "s2t-frontend-env"
+      },
+      "data": {
+        "FRONTEND_PORT": "5173",
+        "BACKEND_UPSTREAM": "http://s2t-backend.default.svc.cluster.local:8787",
+        "DNS_RESOLVER": "10.43.0.10"
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "s2t-backend"
+      },
+      "spec": {
+        "replicas": 2,
+        "strategy": {
+          "type": "RollingUpdate",
+          "rollingUpdate": {
+            "maxSurge": 1,
+            "maxUnavailable": 0
+          }
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "s2t-backend"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "s2t-backend"
+            }
+          },
+          "spec": {
+            "terminationGracePeriodSeconds": 720,
+            "containers": [
+              {
+                "name": "backend",
+                "image": "s2t-backend",
+                "ports": [
+                  {
+                    "name": "http",
+                    "containerPort": 8787
+                  }
+                ],
+                "envFrom": [
+                  {
+                    "configMapRef": {
+                      "name": "s2t-backend-env"
+                    }
+                  },
+                  {
+                    "secretRef": {
+                      "name": "s2t-secrets"
+                    }
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/readyz",
+                    "port": "http"
+                  },
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3,
+                  "failureThreshold": 3
+                },
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/livez",
+                    "port": "http"
+                  },
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 6
+                },
+                "resources": {
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "384Mi"
+                  },
+                  "limits": {
+                    "memory": "3Gi"
+                  }
+                },
+                "securityContext": {
+                  "runAsNonRoot": true,
+                  "runAsUser": 10001,
+                  "allowPrivilegeEscalation": false,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "models",
+                    "mountPath": "/models",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "jargon",
+                    "mountPath": "/data/jargon",
+                    "readOnly": true
+                  }
+                ],
+                "startupProbe": {
+                  "httpGet": {
+                    "path": "/readyz",
+                    "port": "http"
+                  },
+                  "failureThreshold": 60,
+                  "periodSeconds": 5
+                },
+                "lifecycle": {
+                  "preStop": {
+                    "exec": {
+                      "command": [
+                        "python",
+                        "-c",
+                        "import time; time.sleep(10)"
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "volumes": [
+              {
+                "name": "models",
+                "persistentVolumeClaim": {
+                  "claimName": "s2t-models"
+                }
+              },
+              {
+                "name": "jargon",
+                "configMap": {
+                  "name": "s2t-jargon"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "s2t-backend"
+      },
+      "spec": {
+        "selector": {
+          "app": "s2t-backend"
+        },
+        "ports": [
+          {
+            "name": "http",
+            "port": 8787,
+            "targetPort": "http"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "policy/v1",
+      "kind": "PodDisruptionBudget",
+      "metadata": {
+        "name": "s2t-backend"
+      },
+      "spec": {
+        "minAvailable": 1,
+        "selector": {
+          "matchLabels": {
+            "app": "s2t-backend"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "s2t-frontend"
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "RollingUpdate",
+          "rollingUpdate": {
+            "maxSurge": 1,
+            "maxUnavailable": 0
+          }
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "s2t-frontend"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "s2t-frontend"
+            }
+          },
+          "spec": {
+            "terminationGracePeriodSeconds": 30,
+            "containers": [
+              {
+                "name": "frontend",
+                "image": "s2t-frontend",
+                "ports": [
+                  {
+                    "name": "http",
+                    "containerPort": 5173
+                  }
+                ],
+                "envFrom": [
+                  {
+                    "configMapRef": {
+                      "name": "s2t-frontend-env"
+                    }
+                  }
+                ],
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/livez",
+                    "port": "http"
+                  },
+                  "periodSeconds": 5,
+                  "timeoutSeconds": 3,
+                  "failureThreshold": 3
+                },
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/livez",
+                    "port": "http"
+                  },
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 6
+                },
+                "resources": {
+                  "requests": {
+                    "cpu": "50m",
+                    "memory": "64Mi"
+                  },
+                  "limits": {
+                    "memory": "512Mi"
+                  }
+                },
+                "volumeMounts": [
+                  {
+                    "name": "nginx-template",
+                    "mountPath": "/etc/nginx/templates",
+                    "readOnly": true
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "nginx-template",
+                "configMap": {
+                  "name": "s2t-frontend-nginx"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "s2t-frontend"
+      },
+      "spec": {
+        "selector": {
+          "app": "s2t-frontend"
+        },
+        "ports": [
+          {
+            "name": "http",
+            "port": 5173,
+            "targetPort": "http"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "s2t-jargon"
+      },
+      "data": {}
+    }
+  ]
+}

@@ -8,7 +8,7 @@ const seconds = Number(process.env.S2T_PROBE_SECONDS || 600)
 const upstream = process.env.S2T_PROBE_GATEWAY || 'http://127.0.0.1:18787'
 if (!['127.0.0.1','localhost'].includes(new URL(upstream).hostname)) throw new Error('Probe requires an explicitly port-forwarded local test Gateway')
 const reportPath = resolve(process.env.S2T_PROBE_REPORT || 'experiment/evaluation-reports/k8s-browser-500.json')
-let browser, server
+let browser, server, testUser
 ;(async () => {
   const bundle = (await build({ entryPoints: ['tests/fixtures/performance-k8s-browser.jsx'], bundle: true, platform: 'browser', format: 'iife', write: false, define: { 'process.env.NODE_ENV': '"production"' } })).outputFiles[0].text
   const agent = new Agent({ keepAlive: true, maxSockets: 8 })
@@ -28,6 +28,8 @@ let browser, server
   const id = 'probe-' + randomUUID().slice(0,12)
   const registration = await context.request.post(origin+'/api/auth/register',{data:{username:id,password:randomUUID(),NT:id,Department:'performance'}})
   if (registration.status()!==201) throw Error(`Probe registration failed: ${registration.status()}`)
+  testUser = {id:(await registration.json()).user.id,NT:id}
+  await mkdir(dirname(reportPath),{recursive:true}); await writeFile(reportPath+'.identity.json',JSON.stringify(testUser)+'\n')
   const samples = [], browserErrors = [], httpFailures = [], telemetryResponses = []
   page.on('pageerror',error => browserErrors.push(error.message))
   page.on('requestfailed',request => httpFailures.push({path:new URL(request.url()).pathname,error:request.failure()?.errorText,at:new Date().toISOString()}))
@@ -46,7 +48,7 @@ let browser, server
   }))
   const p90LatencyPassed = ['e2e_asr','e2e_translation'].every(stage => stages[stage].p90Ms !== null && stages[stage].p90Ms < 3000)
   const probeHealthy = result.synchronizationValid === true && !result.error && !(result.errors?.length) && !browserErrors.length && !httpFailures.length && stages.e2e_asr.count > 0 && stages.e2e_translation.count > 0
-  const acceptance = {percentile:90,thresholdMs:3000,p90LatencyPassed,probeHealthy,acceptance10mComplete:seconds===600 && probeHealthy,scope:'One synchronized browser probe; verify configured-user HTTP success and dropped work separately'}
-  await mkdir(dirname(reportPath),{recursive:true}); await writeFile(reportPath,JSON.stringify({...result,stages,acceptance,browserErrors,httpFailures,telemetryResponses,samples},null,2)+'\n')
+  const acceptance = {percentile:90,thresholdMs:3000,p90LatencyPassed,probeHealthy,acceptance10mComplete:seconds===600 && probeHealthy,scope:'One browser probe; compare timestamps with load report for overlap and verify configured-user HTTP success/dropped work separately'}
+  await mkdir(dirname(reportPath),{recursive:true}); await writeFile(reportPath,JSON.stringify({...result,testUser,stages,acceptance,browserErrors,httpFailures,telemetryResponses,samples},null,2)+'\n')
   console.log(JSON.stringify({event:'browser_probe_completed',...result,stages,acceptance,browserErrors,httpFailures,telemetryResponses,reportPath}))
-})().catch(error=>{console.error(error);process.exitCode=1}).finally(async()=>{await browser?.close();server?.closeAllConnections();await new Promise(resolve=>server?server.close(resolve):resolve())})
+})().catch(async error=>{await mkdir(dirname(reportPath),{recursive:true});await writeFile(reportPath,JSON.stringify({seconds,testUser,complete:false,acceptance:{probeHealthy:false,p90LatencyPassed:false},error:String(error.message).split('\n')[0]},null,2)+'\n');console.error(error.message);process.exitCode=1}).finally(async()=>{await browser?.close();server?.closeAllConnections();await new Promise(resolve=>server?server.close(resolve):resolve())})

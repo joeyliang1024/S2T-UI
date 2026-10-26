@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{buildSync}=require('esbuild')
-const code=buildSync({stdin:{contents:"export * from './src/renderer/src/shared/services/caption-metric-transport'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
+const code=buildSync({stdin:{contents:"export * from './frontend/src/shared/services/caption-metric-transport'",resolveDir:process.cwd(),loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text
 const m={exports:{}};new Function('module','exports','require',code)(m,m.exports,require)
 const {CaptionMetricTransport}=m.exports
 class Clock{

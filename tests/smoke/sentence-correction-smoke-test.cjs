@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const { readFileSync } = require('node:fs')
 const { buildSync } = require('esbuild')
 const transpile = require('../helpers/transpile-typescript.cjs')
-const code = buildSync({ stdin: { contents: `export * from './src/renderer/src/features/transcript/services/quality-correction'; export * from './src/renderer/src/features/transcript/domain/live-caption'; export * from './src/renderer/src/shared/services/audio'; export * from './src/renderer/src/features/transcript/wav-batch'; export * from './src/renderer/src/features/transcript/views/CorrectedText';`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
+const code = buildSync({ stdin: { contents: `export * from './frontend/src/features/transcript/services/quality-correction'; export * from './frontend/src/features/transcript/domain/live-caption'; export * from './frontend/src/shared/services/audio'; export * from './frontend/src/features/transcript/wav-batch'; export * from './frontend/src/features/transcript/views/CorrectedText';`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
 const mod = { exports: {} }; new Function('module', 'exports', 'require', code)(mod, mod.exports, require)
 const { correctionGroups, correctedCaption, applySentenceCorrection, correctionRuns, CorrectionAudioBuffer, captionGroupSignature, makeWav, readPcmWavFileLayout, readPcmWavSentence, CorrectedText } = mod.exports
 const caption = (id, startMs, endMs, sourceText, closed = false) => ({ id, startMs, endMs, sourceText, status: 'final', revision: 1, isSentenceBoundary: closed })
@@ -51,9 +51,9 @@ const html = render(require('react').createElement(CorrectedText, { text: '今�
 assert.match(html, /<mark class="correction-highlight">很<\/mark>/)
 assert.doesNotMatch(html, /<mark[^>]*>今天/)
 // Render the production history preview, with editing details collapsed.
-const viewSource = readFileSync('src/renderer/src/features/app/views/AppView.tsx', 'utf8')
+const viewSource = readFileSync('frontend/src/features/app/views/AppView.tsx', 'utf8')
 const previewSource = 'const sessionViewTranslation = null; const sessionViewLanguage = \'zh-TW\';\n' + viewSource.slice(viewSource.indexOf('const sessionTranscript ='), viewSource.indexOf('const liveCaptionGroups ='))
-const previewBundle = buildSync({ stdin: { contents: `import React from 'react'; import { CorrectedCaptionText } from './src/renderer/src/features/transcript/views/CorrectedText'; import { groupLiveCaptions } from './src/renderer/src/features/transcript/domain/live-caption'; import { searchCaptionGroups } from './src/renderer/src/features/transcript/domain/search'; import { createTextSearch } from './src/renderer/src/shared/services/search'; const timestamp = value => String(value); const ui = value => value; const canManageFeatures = false; const editingSessionSegmentId = null; const CaptionMemberDetails = () => null; ${previewSource}; export { sessionTranscript };`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
+const previewBundle = buildSync({ stdin: { contents: `import React from 'react'; import { CorrectedCaptionText } from './frontend/src/features/transcript/views/CorrectedText'; import { groupLiveCaptions } from './frontend/src/features/transcript/domain/live-caption'; import { searchCaptionGroups } from './frontend/src/features/transcript/domain/search'; import { createTextSearch } from './frontend/src/shared/services/search'; const timestamp = value => String(value); const ui = value => value; const canManageFeatures = false; const editingSessionSegmentId = null; const CaptionMemberDetails = () => null; ${previewSource}; export { sessionTranscript };`, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', write: false, external: ['react'] }).outputFiles[0].text
 const previewModule = { exports: {} }; new Function('module', 'exports', 'require', previewBundle)(previewModule, previewModule.exports, require)
 const savedPreview = render(previewModule.exports.sessionTranscript({ segments: [correctedCaption(correctionGroups([caption('saved', 0, 1000, '今天天氣好', true)])[0], '今天天氣很好')] }, ''))
 assert.match(savedPreview, /今天天氣很好/, 'history displays the latest text without legacy comparison highlights')
@@ -66,7 +66,7 @@ assert.match(legacyMiss, /noSearchMatches/)
 assert.match(render(previewModule.exports.sessionTranscript({segments:[caption('search',0,1000,'content',true)]}, 'missing')), /noSearchMatches/)
 
 async function modelRouting() {
-  const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
+  const hook = readFileSync('frontend/src/features/app/hooks/useAppController.ts', 'utf8')
   const source = hook.slice(hook.indexOf('const transcribeCorrection ='), hook.indexOf('liveCorrectionRunnerRef.current = async'))
   const js = transpile(source).code
   const calls = []
@@ -91,7 +91,7 @@ async function live(stale = false, edit = false) {
     selectedModel: {}, makeWav, applySentenceCorrection, transcribeCorrection: async () => { requests++; await pending; return { text: '今天討論模型部署與效能。' } },
     setStatus: () => {}, activeTranslate: x => x }
   context.setTranscripts = fn => { context.transcriptsRef.current = fn(context.transcriptsRef.current) }
-  const hook = readFileSync('src/renderer/src/features/app/hooks/useAppController.ts', 'utf8')
+  const hook = readFileSync('frontend/src/features/app/hooks/useAppController.ts', 'utf8')
   const start = hook.indexOf('liveCorrectionRunnerRef.current = async')
   const source = hook.slice(start, hook.indexOf('\nuseEffect(', start))
   const js = transpile(source).code

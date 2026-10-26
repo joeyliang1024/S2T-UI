@@ -1,14 +1,14 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/shared/http/authenticated-client.ts'], bundle: true, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/shared/http/authenticated-client.ts'], bundle: true, format: 'cjs', platform: 'node', write: false }).outputFiles[0].text
 const load = () => { const module = { exports: {} }; new Function('module', 'exports', 'require', code)(module, module.exports, require); return module.exports }
 ;(async () => {
-  let release, requests = 0
-  global.window = { s2t: { getGatewayUrl: () => new Promise(resolve => { release = resolve }) } }
+  let requests = 0
+  global.window = {}
   global.fetch = async () => { requests++; return new Response('{}') }
   const first = load(); first.setAccessToken('account-a')
   const stale = first.authFetch('/api/data/sessions', { method: 'POST', body: 'private-a' })
-  first.setAccessToken('account-b'); release('http://localhost:9000')
+  first.setAccessToken('account-b')
   await assert.rejects(stale, { name: 'AbortError' }); assert.equal(requests, 0)
   global.window = { setTimeout: callback => { callback(); return 1 } }
   const next = load(); next.setAccessToken('account-a')

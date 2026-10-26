@@ -1,6 +1,9 @@
 node_modules/
 out/
 dist/
+__pycache__/
+.pytest_cache/
+.venv/
 .DS_Store
 .env
 .env.local-storage
@@ -8,11 +11,33 @@ dist/
 .env.*
 !.env.example
 !.env.local-storage.example
-/models/
+/models/*
+!/models/README.md
+/data/*
+!/data/README.md
+!/data/jargon/
+/data/jargon/*
+!/data/jargon/README.md
+!/data/jargon/jargon_en.csv.example
+.ruff_cache/
 .s2t-data/
 # Local diarization benchmark fixtures (VoxConverse, ~2 GB) — never commit.
 tmp/
 experiment/evaluation-reports/
 # Downloaded Taiwan-Tongues audio shards and generated WAV fixtures.
-# Reproduction metadata and evaluation reports live under experiment/.
+# Final results and reproduction instructions live under docs/reports/ and docs/en/.
 music/taiwan-tongues/
+
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local-storage.example
+
+# Local experiment history, intermediate measurements and raw evidence.
+# Keep the small navigation stub; publish only curated results and reproduction docs.
+/experiment/*
+!/experiment/README.md
+/docs/reports/evidence/
+# Withdrawn capture-parameter experiment; current behavior is in CAPTION_MERGE.
+/docs/reports/SEGMENTATION_2026-10-26.zh-TW.md
+/docs/en/SEGMENTATION_2026-10-26.md

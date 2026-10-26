@@ -1,25 +1,28 @@
-# Animated editorial artwork
+# Animated layered artwork
 
-Eight transparent foreground illustrations generated with the built-in imagegen tool.
-The previous metallic audio ribbon has been replaced entirely.
+The eight page illustrations share matte charcoal panels, thin theme-colored edges,
+a restrained accent tile, and a small page-specific motif. They replace the previous
+paper illustrations. Each PNG has a transparent background and is bundled locally
+by Vite; no image host or runtime image-generation service is needed.
 
-| Asset | Page | Motion |
+| Asset | Page | Edge/accent color |
 | --- | --- | --- |
-| live.png | Login / live captions | Breathing microphone scene and animated sound bars; faster while recording |
-| history.png | Recording archive | Light paper drift and sequential signal marks |
-| summary.png | Meeting summary | Gentle notebook/paper movement |
-| quality.png | Quality comparison | Alignment movement and scanning guide |
-| models.png | Model management | Calibration movement and signal marks |
-| voiceprints.png | Voiceprint management | Breathing illustration and expanding identity ring |
-| settings.png | Preferences | Slow instrument movement |
-| import.png | File import | Soft vertical intake movement |
+| live.png | Login / live captions | Blue `#8caeff` |
+| history.png | Recording archive | Apricot `#edab82` |
+| summary.png | Meeting summary | Lavender `#baa4ed` |
+| quality.png | Quality comparison | Mint `#82d2b5` |
+| models.png | Model management | Slate blue `#93baff` |
+| voiceprints.png | Voiceprint management | Rose `#e7a3bd` |
+| settings.png | Preferences | Teal `#92c7c6` |
+| import.png | File import | Sand `#e0c084` |
 
-Full final generation prompts: [artwork-generation.json](../../data/prompt/artwork-generation.json).
-Each request used `transparent_background: true`. Original alpha is preserved.
-The foreground artwork is bundled and fingerprinted by Vite and loaded by the pages
-that use it. No external image host, image service or runtime API key is required.
+Generation specifications: [artwork-generation.json](../../backend/resources/prompt/artwork-generation.json).
+The approved dark-panel concept was used as a style reference for each asset.
 
-`StudioArtwork` separates decorative layers from interactive content and live regions.
-CSS animation never moves labels or hit targets. All artwork and live-navigation
-animation stop with `prefers-reduced-motion: reduce`; paused recording pauses its
-main illustration. UI text remains localized and is not embedded in raster art.
+`StudioArtwork` supplies gentle transform-based floating motion and a separate,
+subtle accent-light layer. Live captions also have small animated signal strokes;
+their pace increases while recording. Decorative animation never moves controls,
+labels or hit targets. Pausing capture pauses its artwork. All artwork animation is
+disabled for `prefers-reduced-motion: reduce`. Text is localized in the interface,
+not embedded in the images. Both light and dark interface themes use the same
+transparent charcoal foreground, without a baked-in rectangular background.

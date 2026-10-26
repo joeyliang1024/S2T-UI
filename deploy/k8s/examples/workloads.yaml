@@ -1,0 +1,375 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s2t-runtime
+data:
+  S2T_KUBERNETES_MODE: 'true'
+  S2T_STORAGE_MIGRATIONS: verify
+  S2T_WEB_PORT: '8787'
+  S2T_POSTGRES_MAX_CONNECTIONS: '4'
+  S2T_MODEL_DIR: /models
+  S2T_DATA_DIR: /data
+  S2T_BACKGROUND_MAX_INFLIGHT: '8'
+  S2T_ASR_MAX_INFLIGHT: '128'
+  S2T_TRANSLATION_MAX_INFLIGHT: '64'
+  S2T_POSTGRES_POOL_MAX: '16'
+  S2T_SHUTDOWN_GRACE_SECONDS: '660'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s2t-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: s2t-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: s2t-api
+    spec:
+      terminationGracePeriodSeconds: 720
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: s2t-api
+      containers:
+      - name: app
+        image: s2t-api
+        ports:
+        - containerPort: 8787
+          name: http
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - python
+              - -c
+              - import time; time.sleep(10)
+        envFrom:
+        - configMapRef:
+            name: s2t-runtime
+        - secretRef:
+            name: s2t-secrets
+        env:
+        - name: S2T_PROCESS_ROLE
+          value: api
+        - name: S2T_AUDIO_SERVICE_URL
+          value: http://s2t-audio-service:8787
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 5
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: http
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+        volumeMounts:
+        - name: models
+          mountPath: /models
+          readOnly: true
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: s2t-models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s2t-api
+spec:
+  selector:
+    app: s2t-api
+  ports:
+  - port: 8000
+    targetPort: http
+    name: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: s2t-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: s2t-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s2t-audio-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: s2t-audio-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: s2t-audio-service
+    spec:
+      terminationGracePeriodSeconds: 720
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: s2t-audio-service
+      containers:
+      - name: app
+        image: s2t-audio
+        ports:
+        - containerPort: 8787
+          name: http
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - python
+              - -c
+              - import time; time.sleep(10)
+        envFrom:
+        - configMapRef:
+            name: s2t-runtime
+        - secretRef:
+            name: s2t-secrets
+        env:
+        - name: S2T_PROCESS_ROLE
+          value: audio-service
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 5
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: http
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+          limits:
+            memory: 4Gi
+        volumeMounts:
+        - name: models
+          mountPath: /models
+          readOnly: true
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: s2t-models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s2t-audio-service
+spec:
+  selector:
+    app: s2t-audio-service
+  ports:
+  - port: 8787
+    targetPort: http
+    name: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: s2t-audio-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: s2t-audio-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s2t-audio-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s2t-audio-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: s2t-audio-worker
+    spec:
+      terminationGracePeriodSeconds: 720
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: s2t-audio-worker
+      containers:
+      - name: app
+        image: s2t-audio
+        ports:
+        - containerPort: 8787
+          name: http
+        envFrom:
+        - configMapRef:
+            name: s2t-runtime
+        - secretRef:
+            name: s2t-secrets
+        env:
+        - name: S2T_PROCESS_ROLE
+          value: audio-worker
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 5
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: http
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+          limits:
+            memory: 4Gi
+        volumeMounts:
+        - name: models
+          mountPath: /models
+          readOnly: true
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: s2t-models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s2t-gateway
+spec:
+  selector:
+    app: s2t-api
+  ports:
+  - port: 8787
+    targetPort: http
+    name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s2t-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: s2t-frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: s2t-frontend
+    spec:
+      containers:
+      - name: nginx
+        image: s2t-frontend
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: http
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: http
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+      volumes:
+      - name: config
+        configMap:
+          name: s2t-frontend-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s2t-frontend
+spec:
+  selector:
+    app: s2t-frontend
+  ports:
+  - port: 8080
+    targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: s2t-frontend
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: s2t-frontend

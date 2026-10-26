@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const { buildSync } = require('esbuild')
-const code = buildSync({ entryPoints: ['src/renderer/src/features/sessions/domain/history.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
+const code = buildSync({ entryPoints: ['frontend/src/features/sessions/domain/history.ts'], bundle: true, platform: 'node', format: 'cjs', write: false }).outputFiles[0].text
 const moduleValue = { exports: {} }
 new Function('module', 'exports', 'require', code)(moduleValue, moduleValue.exports, require)
 const { sessionHistory } = moduleValue.exports

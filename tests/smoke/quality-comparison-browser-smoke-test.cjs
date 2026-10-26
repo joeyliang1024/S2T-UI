@@ -7,8 +7,8 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
   let browser
   const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: 'tsx', contents: `
     import React, {useState} from 'react'; import {createRoot} from 'react-dom/client';
-    import {QualityComparisonWorkspace} from './src/renderer/src/features/quality-comparison/views/QualityComparisonWorkspace';
-    import {interfaceTranslate} from './src/renderer/src/shared/i18n';
+    import {QualityComparisonWorkspace} from './frontend/src/features/quality-comparison/views/QualityComparisonWorkspace';
+    import {interfaceTranslate} from './frontend/src/shared/i18n';
     const original = '今天討論產品上線的計畫。\\n下個星期三進行內側。\\n預計邀請十位同事參與。';
     const corrected = '今天討論產品上線計畫。\\n下個星期三進行內測。\\n預計邀請十二位同事參與。';
     const segment={id:'s',status:'final',sourceText:original,speaker:'SPEAKER_01',translatedText:'Old translation',startMs:0,endMs:1000,revision:1};
@@ -33,7 +33,7 @@ const { chromium, browserOptions } = require('../helpers/browser.cjs')
       return <main style={{padding:32,maxWidth:1440,margin:'auto'}}><QualityComparisonWorkspace sessionId={selectedId} onSelectSession={setSelectedId} sessions={sessions} progress={progress} correct={correct} canCorrect={true} ui={key=>interfaceTranslate('zh-TW',key)}/></main>
     }createRoot(document.getElementById('root')).render(<App/>);
   ` }, bundle: true, define: { 'process.env.NODE_ENV': '"production"' }, format: 'iife', write: false })
-  const css = await fs.readFile('src/renderer/src/styles.css')
+  const css = await fs.readFile('frontend/src/styles.css')
   const server = createServer((req, res) => {
     if (req.url === '/fixture.js') { res.setHeader('content-type', 'application/javascript'); return res.end(bundle.outputFiles[0].contents) }
     if (req.url === '/style.css') { res.setHeader('content-type', 'text/css'); return res.end(css) }

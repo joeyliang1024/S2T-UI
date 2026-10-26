@@ -1,6 +1,6 @@
 const { createServer } = require('node:http')
 const stats = { counts: {}, active: {}, peak: {}, latency: {}, rejected: 0 }
-let controls = { asrMs: 400, translationMs: 180, diarizationMs: 750, errorEvery: 0 }
+let controls = { asrMs: 500, translationMs: 500, diarizationMs: 750, errorEvery: 0 }
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const send = (res, status, value) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(value)) }
 createServer(async (req, res) => {

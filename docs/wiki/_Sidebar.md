@@ -9,4 +9,4 @@
 - [部署與維運](Deployment-and-Operations)
 - [Wiki 維護](Wiki-Maintenance)
 
-[程式碼](https://github.com/joeyliang1024/S2T-UI) · [開發分支文件](https://github.com/joeyliang1024/S2T-UI/tree/feat/bug-fix/docs)
+[程式碼](https://github.com/joeyliang1024/S2T-UI) · [文件入口](https://github.com/joeyliang1024/S2T-UI/blob/codex/feature-python-backend/docs/README.md)

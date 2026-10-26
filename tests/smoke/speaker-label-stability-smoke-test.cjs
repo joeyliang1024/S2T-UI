@@ -4,7 +4,7 @@ const { buildSync } = require('esbuild')
 
 // Bundles the real renderer module so the assertions run against production
 // code, not a copy of it.
-const result = buildSync({ entryPoints: ['src/renderer/src/features/speakers/diarization.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
+const result = buildSync({ entryPoints: ['frontend/src/features/speakers/diarization.ts'], bundle: true, format: 'cjs', platform: 'node', write: false })
 const LoadedModule = module.constructor
 const loaded = new LoadedModule('label-stability-module')
 loaded.filename = 'label-stability-module.cjs'

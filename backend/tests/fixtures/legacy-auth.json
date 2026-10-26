@@ -1,0 +1,12 @@
+{
+  "secret": "legacy-fixture-secret-only-0123456789",
+  "id": "legacy-fixture-user",
+  "hash": "$2b$04$idhS8tY4JuSdaeg5CvNRMumSnWtJS8qnlV0Bi4zFNUBuRtPAnlqOq",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsZWdhY3ktZml4dHVyZS11c2VyIiwiZXhwIjo0MTAyNDQ0ODAwLCJqdGkiOiJsZWdhY3ktdGVzdC10b2tlbiJ9.6AckSSJzOqoIaKzvWlnk6fbTG8Ru5iyd5-WFJjRXQzk",
+  "credential": {
+    "v": 1,
+    "iv": "ABEiM0RVZneImaq7",
+    "tag": "XIyLhCjmGlxXri6ns9BrhA",
+    "ciphertext": "F6bq92ruXBcRRBKqgqQ"
+  }
+}

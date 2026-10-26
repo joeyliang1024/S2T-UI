@@ -1,0 +1,24 @@
+# Apply separately after configuring your organization's controller and TLS.
+# Controller settings must allow 2 GiB uploads, stream request/response bodies,
+# retain Host, and set read/send idle timeouts >= 660s on API routes.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: s2t-web
+spec:
+  rules:
+    - host: s2t.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: s2t-backend
+                port: {number: 8787}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: s2t-frontend
+                port: {number: 5173}

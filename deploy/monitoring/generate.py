@@ -38,7 +38,7 @@ scrape_configs:
       - role: pod
         namespaces: {names: [s2t-stress-20261005]}
     relabel_configs:
-      - {source_labels: [__meta_kubernetes_pod_label_app], regex: 'gateway|audio-worker', action: keep}
+      - {source_labels: [__meta_kubernetes_pod_label_app], regex: 's2t-backend', action: keep}
       - {source_labels: [__meta_kubernetes_pod_phase], regex: Running, action: keep}
       - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '8787', action: keep}
       - {source_labels: [__meta_kubernetes_pod_name], target_label: pod}
@@ -64,15 +64,27 @@ scrape_configs:
     static_configs: [{targets: ['mock-models:9090']}]
   - job_name: redis
     metrics_path: /scrape
-    static_configs: [{targets: ['redis-0.redis:6379', 'redis-1.redis:6379', 'redis-2.redis:6379']}]
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces: {names: [s2t-stress-20261005]}
     relabel_configs:
+      - {source_labels: [__meta_kubernetes_pod_label_app], regex: 'redis|redis-replica', action: keep}
+      - {source_labels: [__meta_kubernetes_pod_phase], regex: Running, action: keep}
+      - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '6379', action: keep}
+      - {source_labels: [__meta_kubernetes_pod_name], target_label: pod}
       - {source_labels: [__address__], target_label: __param_target}
       - {source_labels: [__param_target], target_label: instance}
       - {target_label: __address__, replacement: 'redis-exporter:9121'}
   - job_name: sentinel
     metrics_path: /scrape
-    static_configs: [{targets: ['sentinel-0.sentinel:26379', 'sentinel-1.sentinel:26379', 'sentinel-2.sentinel:26379']}]
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces: {names: [s2t-stress-20261005]}
     relabel_configs:
+      - {source_labels: [__meta_kubernetes_pod_label_app], regex: 'sentinel', action: keep}
+      - {source_labels: [__meta_kubernetes_pod_phase], regex: Running, action: keep}
+      - {source_labels: [__meta_kubernetes_pod_container_port_number], regex: '26379', action: keep}
+      - {source_labels: [__meta_kubernetes_pod_name], target_label: pod}
       - {source_labels: [__address__], target_label: __param_target}
       - {source_labels: [__param_target], target_label: instance}
       - {target_label: __address__, replacement: 'sentinel-exporter:9121'}
@@ -126,17 +138,14 @@ deploy('postgres-exporter','quay.io/prometheuscommunity/postgres-exporter:v0.17.
 for name,key in [('redis-exporter','redis-password'),('sentinel-exporter','sentinel-password')]:
     deploy(name,'oliver006/redis_exporter:v1.88.0',9121,args=['--redis.addr='],env=[secretEnv('REDIS_PASSWORD',key)],cpu='10m')
 cm('monitoring-connection', {'PROMETHEUS_URL': 'http://prometheus:9090'})
-# The acceptance installer patches the live config; keep regeneration consistent.
-for obj in items:
-    if obj['kind'] == 'ConfigMap' and obj['metadata']['name'] == 'prometheus-config':
-        obj['data']['prometheus.yml'] += '  - job_name: gateway-acceptance\n    static_configs: [{targets: ["monitoring-acceptance:8787"], labels: {service: acceptance, pod: synthetic-acceptance}}]\n'
 cm('grafana-provisioning',{'datasources.yaml':'apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: s2t-prometheus\n    type: prometheus\n    access: proxy\n    url: ${PROMETHEUS_URL}\n    isDefault: true\n    jsonData: {timeInterval: 5s}\n','dashboards.yaml':'apiVersion: 1\nproviders:\n  - name: S2T\n    type: file\n    updateIntervalSeconds: 10\n    options: {path: /var/lib/grafana/dashboards}\n'})
 # The tracked dashboard is the authoritative, reviewable source for provisioning.
 dashboard = json.loads(Path(__file__).with_name('dashboard.json').read_text())
 from oncall import build_oncall
 oncall = build_oncall(dashboard)
 Path(__file__).with_name('oncall.json').write_text(json.dumps(oncall,ensure_ascii=False,indent=2)+'\n')
-cm('s2t-dashboard',{'dashboard.json':json.dumps(dashboard,ensure_ascii=False),'oncall.json':json.dumps(oncall,ensure_ascii=False)})
+performance = json.loads(Path(__file__).with_name('performance-dashboard.json').read_text())
+cm('s2t-dashboard',{'dashboard.json':json.dumps(dashboard,ensure_ascii=False),'oncall.json':json.dumps(oncall,ensure_ascii=False),'performance.json':json.dumps(performance,ensure_ascii=False)})
 deploy('grafana','grafana/grafana:12.2.0',3000,env=[{'name':'PROMETHEUS_URL','valueFrom':{'configMapKeyRef':{'name':'monitoring-connection','key':'PROMETHEUS_URL'}}},secretEnv('GF_SECURITY_ADMIN_PASSWORD','grafana-password'),{'name':'GF_USERS_ALLOW_SIGN_UP','value':'false'},{'name':'GF_AUTH_ANONYMOUS_ENABLED','value':'true'},{'name':'GF_AUTH_ANONYMOUS_ORG_ROLE','value':'Viewer'},{'name':'GF_ANALYTICS_REPORTING_ENABLED','value':'false'},{'name':'GF_ANALYTICS_CHECK_FOR_UPDATES','value':'false'},{'name':'GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH','value':'/var/lib/grafana/dashboards/dashboard.json'}],volumes=[{'name':'data','persistentVolumeClaim':{'claimName':'grafana-data'}},{'name':'provisioning','configMap':{'name':'grafana-provisioning'}},{'name':'dashboards','configMap':{'name':'s2t-dashboard'}}],mounts=[{'name':'data','mountPath':'/var/lib/grafana'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/datasources/datasources.yaml','subPath':'datasources.yaml'},{'name':'provisioning','mountPath':'/etc/grafana/provisioning/dashboards/dashboards.yaml','subPath':'dashboards.yaml'},{'name':'dashboards','mountPath':'/var/lib/grafana/dashboards'}],cpu='100m',mem='128Mi')
 items[-2]['spec']['template']['spec']['securityContext']={'fsGroup':472,'runAsUser':472}
 Path(__file__).with_name('stack.json').write_text(json.dumps({'apiVersion':'v1','kind':'List','items':items},indent=2)+'\n')

@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/docker/audio-cuda.Dockerfile
+      target: ''
+    environment:
+      S2T_INFERENCE_BACKEND: ${S2T_INFERENCE_BACKEND:-cuda}
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: 1
+            capabilities:
+            - gpu
